@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AWS Side Quests — Interactive Visualizations</title>
-  <meta name="description" content="A collection of deep-dive, interactive visualizations explaining AWS internals — from RDS backup retention to storage mechanics and beyond." />
+  <meta name="description" content="A collection of deep-dive, interactive visualizations explaining AWS and security internals — from RDS backup retention to OAuth 2.0 flows and beyond." />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
   <style>
     /* ── Tokens ──────────────────────────────────────────────── */
@@ -245,6 +245,12 @@
     .theme-purp .tag-primary  { background: rgba(167,139,250,.12); border: 1px solid rgba(167,139,250,.25); color: var(--accent-purp); }
     .theme-purp .tag-secondary{ background: rgba(79,142,247,.1);   border: 1px solid rgba(79,142,247,.2);  color: var(--accent-blue); }
 
+    /* OAuth2 / Security */
+    .theme-rose .card-strip   { background: linear-gradient(90deg, var(--accent-purp), var(--accent-cyan)); }
+    .theme-rose .card-glow    { background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(167,139,250,.08) 0%, transparent 70%); }
+    .theme-rose .tag-primary  { background: rgba(167,139,250,.12); border: 1px solid rgba(167,139,250,.25); color: var(--accent-purp); }
+    .theme-rose .tag-secondary{ background: rgba(34,211,238,.1);   border: 1px solid rgba(34,211,238,.2);  color: var(--accent-cyan); }
+
     /* ── Footer ──────────────────────────────────────────────── */
     footer {
       border-top: 1px solid var(--border);
@@ -281,10 +287,6 @@
 <!-- ── Hero ──────────────────────────────────────────────────── -->
 <section class="hero">
   <div class="container">
-    <div class="hero-eyebrow">
-      <span class="dot"></span>
-      Interactive Deep Dives
-    </div>
     <h1>
       <span class="gradient-text">Visualized.</span>
     </h1>
@@ -292,22 +294,7 @@
       Interactive walkthrough of a devops,cloud concepts — how it actually works under the hood.
     </p>
 
-    <div class="stats">
-      <div class="stat">
-        <div class="stat-value" id="viz-count">1</div>
-        <div class="stat-label">Visualizations</div>
-      </div>
-      <div class="stat">
-        <div class="stat-value">AWS</div>
-        <div class="stat-label">Cloud Provider</div>
-      </div>
-      <div class="stat">
-        <div class="stat-value">100%</div>
-        <div class="stat-label">Interactive</div>
-      </div>
-    </div>
-
-    <div class="section-label">Available Now</div>
+    
   </div>
 </section>
 
@@ -341,7 +328,32 @@
         </div>
       </a>
 
-      <!-- ② S3 Lifecycle — Coming Soon -->
+      <!-- ② OAuth 2.0 OIDC — LIVE -->
+      <a class="viz-card theme-rose" href="./oauth2-explainer.html" id="card-oauth2">
+        <div class="card-glow"></div>
+        <div class="card-strip"></div>
+        <div class="card-body">
+          <div class="card-tags">
+            <span class="tag tag-primary">OAuth 2.0</span>
+            <span class="tag tag-secondary">OIDC</span>
+            <span class="tag tag-secondary">JWT</span>
+          </div>
+          <div class="card-icon">🔐</div>
+          <div class="card-title">OAuth 2.0 &amp; OIDC Flows</div>
+          <div class="card-desc">
+            Interactive walkthrough of every OAuth 2.0 grant type — Authorization Code, Implicit, PKCE, and Client Credentials. Includes a live JWT decoder and animated flow simulator.
+          </div>
+          <div class="card-footer">
+            <div class="card-meta">
+              <span class="meta-item">🔑 4 Grant Types</span>
+              <span class="meta-item">🎫 JWT Decoder</span>
+            </div>
+            <span class="card-arrow">→</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- ③ S3 Lifecycle — Coming Soon -->
       <div class="viz-card theme-green coming-soon">
         <span class="soon-badge">COMING SOON</span>
         <div class="card-strip"></div>
