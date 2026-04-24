@@ -251,6 +251,18 @@
     .theme-rose .tag-primary  { background: rgba(167,139,250,.12); border: 1px solid rgba(167,139,250,.25); color: var(--accent-purp); }
     .theme-rose .tag-secondary{ background: rgba(34,211,238,.1);   border: 1px solid rgba(34,211,238,.2);  color: var(--accent-cyan); }
 
+    /* GitHub Actions */
+    .theme-gh .card-strip   { background: linear-gradient(90deg, #39ff7e, #4d9fff); }
+    .theme-gh .card-glow    { background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(57,255,126,.07) 0%, transparent 70%); }
+    .theme-gh .tag-primary  { background: rgba(57,255,126,.1);  border: 1px solid rgba(57,255,126,.25); color: #39ff7e; }
+    .theme-gh .tag-secondary{ background: rgba(77,159,255,.1);  border: 1px solid rgba(77,159,255,.2);  color: #4d9fff; }
+
+    /* DevSecOps Pipeline */
+    .theme-sec .card-strip   { background: linear-gradient(90deg, #58a6ff, #3fb950); }
+    .theme-sec .card-glow    { background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(88,166,255,.08) 0%, transparent 70%); }
+    .theme-sec .tag-primary  { background: rgba(88,166,255,.12); border: 1px solid rgba(88,166,255,.25); color: #58a6ff; }
+    .theme-sec .tag-secondary{ background: rgba(63,185,80,.1);  border: 1px solid rgba(63,185,80,.2);   color: #3fb950; }
+
     /* ── Footer ──────────────────────────────────────────────── */
     footer {
       border-top: 1px solid var(--border);
@@ -353,53 +365,55 @@
         </div>
       </a>
 
-      <!-- ③ S3 Lifecycle — Coming Soon -->
-      <div class="viz-card theme-green coming-soon">
-        <span class="soon-badge">COMING SOON</span>
+      <!-- ③ GitHub Actions Cheatsheet — LIVE -->
+      <a class="viz-card theme-gh" href="./github-actions-cheatsheet.html" id="card-ghactions">
+        <div class="card-glow"></div>
         <div class="card-strip"></div>
         <div class="card-body">
           <div class="card-tags">
-            <span class="tag tag-primary">S3</span>
-            <span class="tag tag-secondary">Storage Classes</span>
+            <span class="tag tag-primary">GitHub Actions</span>
+            <span class="tag tag-secondary">CI/CD</span>
+            <span class="tag tag-secondary">YAML</span>
           </div>
-          <div class="card-icon">🪣</div>
-          <div class="card-title">S3 Lifecycle Transitions</div>
+          <div class="card-icon">⚙️</div>
+          <div class="card-title">GitHub Actions Cheatsheet</div>
           <div class="card-desc">
-            Visualize how S3 objects move between Standard → IA → Glacier over time, what triggers each transition, and the real cost breakdown at each storage tier.
+            Complete syntax reference for workflows, triggers, jobs, secrets, matrix builds, caching, and more. Searchable, filterable, with copy-ready snippets for 11 categories.
           </div>
           <div class="card-footer">
             <div class="card-meta">
-              <span class="meta-item">📦 6 Storage Classes</span>
-              <span class="meta-item">💰 Cost Explorer</span>
+              <span class="meta-item">📋 44 Snippets</span>
+              <span class="meta-item">🔍 Searchable</span>
             </div>
             <span class="card-arrow">→</span>
           </div>
         </div>
-      </div>
+      </a>
 
-      <!-- ③ Lambda Cold Start — Coming Soon -->
-      <div class="viz-card theme-amber coming-soon">
-        <span class="soon-badge">COMING SOON</span>
+      <!-- ④ DevSecOps Pipeline — LIVE -->
+      <a class="viz-card theme-sec" href="./secopspipeline.html" id="card-secops">
+        <div class="card-glow"></div>
         <div class="card-strip"></div>
         <div class="card-body">
           <div class="card-tags">
-            <span class="tag tag-primary">Lambda</span>
-            <span class="tag tag-secondary">Firecracker</span>
+            <span class="tag tag-primary">DevSecOps</span>
+            <span class="tag tag-secondary">EKS</span>
+            <span class="tag tag-secondary">Shift-Left</span>
           </div>
-          <div class="card-icon">⚡</div>
-          <div class="card-title">Lambda Cold Start Anatomy</div>
+          <div class="card-icon">🛡️</div>
+          <div class="card-title">DevSecOps Pipeline v3</div>
           <div class="card-desc">
-            Step through the exact sequence of events during a Lambda cold start — from microVM boot to init code to your handler — and see where each millisecond is spent.
+            Shift-left security for containerised apps on AWS EKS. Interactive pipeline flow with Gitleaks, CodeQL, Trivy, Cosign, OWASP ZAP, Argo Rollouts canary, and manual approval gates.
           </div>
           <div class="card-footer">
             <div class="card-meta">
-              <span class="meta-item">⏱️ ms-level Timeline</span>
-              <span class="meta-item">🔥 Warm vs Cold</span>
+              <span class="meta-item">🔒 9 Security Controls</span>
+              <span class="meta-item">🚀 Canary Deploy</span>
             </div>
             <span class="card-arrow">→</span>
           </div>
         </div>
-      </div>
+      </a>
 
       <!-- ④ VPC Flow — Coming Soon -->
       <div class="viz-card theme-purp coming-soon">
@@ -438,9 +452,7 @@
 </footer>
 
 <script>
-  // Update live viz count dynamically
-  const liveCards = document.querySelectorAll('.viz-card:not(.coming-soon)').length;
-  document.getElementById('viz-count').textContent = liveCards;
+  // no-op — viz-count element removed from hero
 </script>
 
 </body>

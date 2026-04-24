@@ -1,0 +1,1589 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitHub Actions Cheatsheet</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Syne:wght@400;600;700;800&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d0f0e;
+      --surface: #131614;
+      --surface2: #1a1d1b;
+      --surface3: #212421;
+      --border: #262b27;
+      --border2: #2f352f;
+      --green: #39ff7e;
+      --green-dim: #1a7a3c;
+      --green-glow: rgba(57, 255, 126, 0.12);
+      --green-subtle: rgba(57, 255, 126, 0.06);
+      --amber: #f0a500;
+      --blue: #4d9fff;
+      --pink: #ff6eb4;
+      --teal: #3dccbb;
+      --red: #ff5f5f;
+      --purple: #b97cff;
+      --text: #d4ddd6;
+      --text-dim: #7a8a7d;
+      --text-muted: #4a564d;
+      --mono: 'JetBrains Mono', monospace;
+      --display: 'Syne', sans-serif;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: var(--mono);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(0deg,
+          transparent,
+          transparent 2px,
+          rgba(0, 0, 0, 0.08) 2px,
+          rgba(0, 0, 0, 0.08) 4px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(ellipse at 20% 20%, rgba(57, 255, 126, 0.03) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 80%, rgba(77, 159, 255, 0.02) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* HEADER */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(13, 15, 14, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+    }
+
+    .header-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      height: 60px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .logo-icon {
+      width: 28px;
+      height: 28px;
+      border: 1.5px solid var(--green);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--green);
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 0 12px var(--green-glow);
+    }
+
+    .logo-text {
+      font-family: var(--display);
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+
+    .logo-text span {
+      color: var(--green);
+    }
+
+    .header-search {
+      flex: 1;
+      max-width: 400px;
+      position: relative;
+    }
+
+    .header-search input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+      padding: 7px 12px 7px 34px;
+      font-family: var(--mono);
+      font-size: 12.5px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .header-search input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .header-search input:focus {
+      border-color: var(--green-dim);
+      box-shadow: 0 0 0 3px var(--green-subtle);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 13px;
+      pointer-events: none;
+    }
+
+    .header-stats {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    .stat {
+      display: flex;
+      align-items: baseline;
+      gap: 5px;
+      font-size: 11px;
+    }
+
+    .stat-num {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--green);
+      line-height: 1;
+    }
+
+    .stat-label {
+      color: var(--text-muted);
+    }
+
+    /* LAYOUT */
+    .layout {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      position: sticky;
+      top: 60px;
+      height: calc(100vh - 60px);
+      overflow-y: auto;
+      border-right: 1px solid var(--border);
+      padding: 1.5rem 0;
+    }
+
+    .sidebar::-webkit-scrollbar {
+      width: 3px;
+    }
+
+    .sidebar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .sidebar::-webkit-scrollbar-thumb {
+      background: var(--border2);
+      border-radius: 2px;
+    }
+
+    .sidebar-label {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 0 1.25rem;
+      margin-bottom: .75rem;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 1.25rem;
+      font-size: 12.5px;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.15s;
+      border-left: 2px solid transparent;
+      margin-right: 0;
+    }
+
+    .nav-item:hover {
+      color: var(--text);
+      background: var(--green-subtle);
+    }
+
+    .nav-item.active {
+      color: var(--green);
+      border-left-color: var(--green);
+      background: var(--green-subtle);
+    }
+
+    .nav-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .nav-count {
+      margin-left: auto;
+      font-size: 10px;
+      color: var(--text-muted);
+      background: var(--surface3);
+      padding: 1px 6px;
+      border-radius: 10px;
+    }
+
+    /* MAIN CONTENT */
+    .main {
+      padding: 2rem 2rem 4rem;
+    }
+
+    /* HERO */
+    .hero {
+      padding: 2.5rem 0 2rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2rem;
+      animation: fadeUp 0.5s ease both;
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .hero-eyebrow {
+      font-size: 10px;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      color: var(--green);
+      margin-bottom: .6rem;
+    }
+
+    .hero h1 {
+      font-family: var(--display);
+      font-size: clamp(26px, 4vw, 40px);
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: .75rem;
+    }
+
+    .hero h1 em {
+      font-style: normal;
+      color: var(--green);
+      text-shadow: 0 0 30px var(--green-glow);
+    }
+
+    .hero-sub {
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.6;
+      max-width: 500px;
+    }
+
+    /* FILTER PILLS */
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 1.75rem;
+    }
+
+    .pill {
+      padding: 5px 13px;
+      border-radius: 4px;
+      font-size: 11.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      border: 1px solid var(--border2);
+      background: var(--surface2);
+      color: var(--text-dim);
+      font-family: var(--mono);
+    }
+
+    .pill:hover {
+      border-color: var(--green-dim);
+      color: var(--text);
+    }
+
+    .pill.active {
+      background: var(--green-glow);
+      border-color: var(--green);
+      color: var(--green);
+      box-shadow: 0 0 12px var(--green-glow);
+    }
+
+    /* SECTION */
+    .section {
+      margin-bottom: 3rem;
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .section:nth-child(2) {
+      animation-delay: .05s;
+    }
+
+    .section:nth-child(3) {
+      animation-delay: .1s;
+    }
+
+    .section:nth-child(4) {
+      animation-delay: .15s;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 1rem;
+    }
+
+    .section-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .section-title {
+      font-family: var(--display);
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.01em;
+    }
+
+    .section-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .section-count {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    /* CARD GRID */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 12px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+      animation: fadeUp 0.35s ease both;
+    }
+
+    .card:hover {
+      border-color: var(--border2);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 14px 10px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+    }
+
+    .card-title {
+      font-size: 12.5px;
+      font-weight: 500;
+      color: #fff;
+    }
+
+    .tag {
+      font-size: 9.5px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 3px;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    .card-body {
+      padding: 12px 14px;
+    }
+
+    .card-desc {
+      font-family: 'Syne', sans-serif;
+      font-size: 12px;
+      color: var(--text-dim);
+      line-height: 1.55;
+      margin-bottom: 10px;
+    }
+
+    .code-wrap {
+      position: relative;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: var(--surface3);
+      border: 1px solid var(--border2);
+      border-radius: 4px;
+      padding: 3px 9px;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      z-index: 2;
+    }
+
+    .copy-btn:hover {
+      color: var(--green);
+      border-color: var(--green-dim);
+    }
+
+    .copy-btn.copied {
+      color: var(--green);
+      border-color: var(--green);
+    }
+
+    pre {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 14px;
+      font-size: 11.5px;
+      line-height: 1.7;
+      overflow-x: auto;
+      color: var(--text);
+      font-family: var(--mono);
+    }
+
+    pre::-webkit-scrollbar {
+      height: 3px;
+    }
+
+    pre::-webkit-scrollbar-thumb {
+      background: var(--border2);
+    }
+
+    /* SYNTAX HIGHLIGHT */
+    .c-key {
+      color: #4d9fff;
+    }
+
+    .c-str {
+      color: #7ec98f;
+    }
+
+    .c-cm {
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    .c-expr {
+      color: #f0a500;
+    }
+
+    .c-ctx {
+      color: #b97cff;
+    }
+
+    .c-bool {
+      color: #ff6eb4;
+    }
+
+    .c-num {
+      color: #3dccbb;
+    }
+
+    /* TAGS PER CATEGORY */
+    .t-trigger {
+      background: rgba(77, 159, 255, 0.12);
+      color: #4d9fff;
+    }
+
+    .t-jobs {
+      background: rgba(57, 255, 126, 0.1);
+      color: #39ff7e;
+    }
+
+    .t-steps {
+      background: rgba(185, 124, 255, 0.12);
+      color: #b97cff;
+    }
+
+    .t-context {
+      background: rgba(240, 165, 0, 0.12);
+      color: #f0a500;
+    }
+
+    .t-secrets {
+      background: rgba(255, 95, 95, 0.12);
+      color: #ff5f5f;
+    }
+
+    .t-matrix {
+      background: rgba(61, 204, 187, 0.12);
+      color: #3dccbb;
+    }
+
+    .t-cache {
+      background: rgba(255, 110, 180, 0.12);
+      color: #ff6eb4;
+    }
+
+    .t-artifacts {
+      background: rgba(160, 160, 160, 0.1);
+      color: #9aaa9d;
+    }
+
+    .t-conditions {
+      background: rgba(240, 165, 0, 0.12);
+      color: #f0a500;
+    }
+
+    .t-reusable {
+      background: rgba(57, 255, 126, 0.1);
+      color: #39ff7e;
+    }
+
+    .t-permissions {
+      background: rgba(255, 95, 95, 0.12);
+      color: #ff5f5f;
+    }
+
+    /* NAV DOTS */
+    .nd-trigger {
+      background: #4d9fff;
+    }
+
+    .nd-jobs {
+      background: #39ff7e;
+    }
+
+    .nd-steps {
+      background: #b97cff;
+    }
+
+    .nd-context {
+      background: #f0a500;
+    }
+
+    .nd-secrets {
+      background: #ff5f5f;
+    }
+
+    .nd-matrix {
+      background: #3dccbb;
+    }
+
+    .nd-cache {
+      background: #ff6eb4;
+    }
+
+    .nd-artifacts {
+      background: #9aaa9d;
+    }
+
+    .nd-conditions {
+      background: #f0a500;
+    }
+
+    .nd-reusable {
+      background: #39ff7e;
+    }
+
+    .nd-permissions {
+      background: #ff5f5f;
+    }
+
+    /* SECTION DOTS */
+    .sd-trigger {
+      background: #4d9fff;
+      box-shadow: 0 0 8px #4d9fff66;
+    }
+
+    .sd-jobs {
+      background: #39ff7e;
+      box-shadow: 0 0 8px #39ff7e66;
+    }
+
+    .sd-steps {
+      background: #b97cff;
+      box-shadow: 0 0 8px #b97cff66;
+    }
+
+    .sd-context {
+      background: #f0a500;
+      box-shadow: 0 0 8px #f0a50066;
+    }
+
+    .sd-secrets {
+      background: #ff5f5f;
+      box-shadow: 0 0 8px #ff5f5f66;
+    }
+
+    .sd-matrix {
+      background: #3dccbb;
+      box-shadow: 0 0 8px #3dccbb66;
+    }
+
+    .sd-cache {
+      background: #ff6eb4;
+      box-shadow: 0 0 8px #ff6eb466;
+    }
+
+    .sd-artifacts {
+      background: #9aaa9d;
+      box-shadow: 0 0 8px #9aaa9d44;
+    }
+
+    .sd-conditions {
+      background: #f0a500;
+      box-shadow: 0 0 8px #f0a50066;
+    }
+
+    .sd-reusable {
+      background: #39ff7e;
+      box-shadow: 0 0 8px #39ff7e66;
+    }
+
+    .sd-permissions {
+      background: #ff5f5f;
+      box-shadow: 0 0 8px #ff5f5f66;
+    }
+
+    /* EMPTY STATE */
+    .empty {
+      text-align: center;
+      padding: 5rem 2rem;
+      color: var(--text-muted);
+      font-size: 13px;
+      grid-column: 1 / -1;
+    }
+
+    .empty span {
+      display: block;
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 1.5rem 2rem;
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-muted);
+      position: relative;
+      z-index: 1;
+    }
+
+    footer strong {
+      color: var(--green);
+      font-weight: 400;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        display: none;
+      }
+
+      .header-stats {
+        display: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<style>
+  .back-btn {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1000;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background: rgba(13, 15, 14, 0.80);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(57, 255, 126, 0.18);
+    border-radius: 100px;
+    color: #7a8a7d;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color .2s, border-color .2s, transform .2s, box-shadow .2s;
+    box-shadow: 0 4px 24px rgba(0,0,0,.5);
+  }
+  .back-btn:hover {
+    color: #d4ddd6;
+    border-color: rgba(57, 255, 126, 0.45);
+    transform: translateX(-3px);
+    box-shadow: 0 4px 32px rgba(57,255,126,.12);
+  }
+  .back-btn .arrow {
+    font-size: 15px;
+    transition: transform .2s;
+  }
+  .back-btn:hover .arrow {
+    transform: translateX(-2px);
+  }
+</style>
+
+<a class="back-btn" href="./index.html">
+  <span class="arrow">←</span>
+  All Visualizations
+</a>
+
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-icon">&#9654;</div>
+        <span class="logo-text">GH <span>Actions</span></span>
+      </div>
+      <div class="header-search">
+        <span class="search-icon">&#9906;</span>
+        <input type="text" id="search" placeholder="Search snippets, keywords..." autocomplete="off" spellcheck="false">
+      </div>
+      <div class="header-stats">
+        <div class="stat"><span class="stat-num" id="count-snippets">44</span><span class="stat-label">snippets</span>
+        </div>
+        <div class="stat"><span class="stat-num">11</span><span class="stat-label">categories</span></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-label">Categories</div>
+      <nav id="nav"></nav>
+    </aside>
+
+    <main class="main">
+      <div class="hero">
+        <div class="hero-eyebrow">// reference — 2024</div>
+        <h1>GitHub <em>Actions</em><br>Cheatsheet</h1>
+        <p class="hero-sub">Complete syntax reference for workflows, triggers, jobs, secrets, matrix builds, caching,
+          and more. Copy-ready snippets.</p>
+      </div>
+
+      <div class="filters" id="filters"></div>
+      <div id="content"></div>
+    </main>
+  </div>
+
+  <footer>
+    <strong>GitHub Actions Cheatsheet</strong> &mdash; All snippets use current API syntax &mdash; actions/checkout@v4
+    &bull; actions/cache@v4 &bull; actions/upload-artifact@v4
+  </footer>
+
+  <script>
+    const DATA = [
+      {
+        cat: "Triggers", slug: "trigger", items: [
+          {
+            title: "push / pull_request", desc: "Run on push to specific branches or PR events.", code: `on:
+  push:
+    branches: [main, 'release/**']
+    paths-ignore: ['**.md']
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]`},
+          {
+            title: "schedule (cron)", desc: "Run on a UTC cron schedule.", code: `on:
+  schedule:
+    - cron: '0 2 * * 1-5'  # 2am Mon-Fri UTC
+    - cron: '30 6 * * 0'   # 6:30am every Sunday`},
+          {
+            title: "workflow_dispatch", desc: "Allow manual trigger with optional inputs.", code: `on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options: [staging, production]
+      dry_run:
+        type: boolean
+        default: false`},
+          {
+            title: "workflow_call", desc: "Trigger from another workflow (reusable).", code: `on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      deploy_env:
+        type: string
+        default: 'staging'
+    secrets:
+      TOKEN:
+        required: true`},
+          {
+            title: "release", desc: "Trigger on GitHub release events.", code: `on:
+  release:
+    types: [published, prereleased]
+
+# Useful context:
+# \${{ github.event.release.tag_name }}
+# \${{ github.event.release.body }}`},
+          {
+            title: "repository_dispatch", desc: "Trigger via external API call.", code: `on:
+  repository_dispatch:
+    types: [deploy-request, test-trigger]
+
+# Trigger via:
+# curl -X POST \\
+#   -H "Authorization: token $TOKEN" \\
+#   https://api.github.com/repos/OWNER/REPO/dispatches \\
+#   -d '{"event_type":"deploy-request"}'`},
+        ]
+      },
+      {
+        cat: "Jobs", slug: "jobs", items: [
+          {
+            title: "basic job structure", desc: "Define a job with a runner and steps.", code: `jobs:
+  build:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci && npm test`},
+          {
+            title: "job dependencies (needs)", desc: "Chain jobs — one waits for another to complete.", code: `jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps: [...]
+
+  lint:
+    runs-on: ubuntu-latest
+    steps: [...]
+
+  deploy:
+    needs: [test, lint]  # both must pass
+    runs-on: ubuntu-latest
+    steps: [...]`},
+          {
+            title: "runner options", desc: "Target specific OS or self-hosted runners.", code: `runs-on: ubuntu-latest
+runs-on: ubuntu-22.04
+runs-on: windows-latest
+runs-on: macos-14          # Apple Silicon
+runs-on: [self-hosted, linux, X64]
+runs-on: [self-hosted, macOS, ARM64]`},
+          {
+            title: "job outputs", desc: "Pass data from one job to another.", code: `jobs:
+  build:
+    outputs:
+      sha: \${{ steps.tag.outputs.sha }}
+      version: \${{ steps.ver.outputs.version }}
+    steps:
+      - id: tag
+        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+      - id: ver
+        run: echo "version=1.2.3" >> $GITHUB_OUTPUT
+
+  deploy:
+    needs: build
+    steps:
+      - run: echo "Deploying \${{ needs.build.outputs.sha }}"
+      - run: echo "Version \${{ needs.build.outputs.version }}"`},
+          {
+            title: "concurrency", desc: "Cancel in-progress runs when new pushes arrive.", code: `concurrency:
+  group: \${{ github.workflow }}-\${{ github.ref }}
+  cancel-in-progress: true
+
+# Per-environment concurrency:
+concurrency:
+  group: deploy-\${{ inputs.environment }}
+  cancel-in-progress: false  # don't cancel deploys!`},
+          {
+            title: "timeout", desc: "Kill jobs or steps that run too long.", code: `jobs:
+  build:
+    timeout-minutes: 30
+    steps:
+      - name: Long test suite
+        run: ./run-tests.sh
+        timeout-minutes: 20
+
+      - name: Quick lint
+        run: npm run lint
+        timeout-minutes: 5`},
+        ]
+      },
+      {
+        cat: "Steps", slug: "steps", items: [
+          {
+            title: "run shell commands", desc: "Execute shell commands with full control.", code: `steps:
+  - name: Install and build
+    run: |
+      npm ci
+      npm run build
+      npm run lint
+    shell: bash
+    working-directory: ./packages/frontend
+    env:
+      NODE_ENV: production`},
+          {
+            title: "uses (action)", desc: "Use published GitHub Actions.", code: `steps:
+  - uses: actions/checkout@v4
+    with:
+      fetch-depth: 0        # full history
+      token: \${{ secrets.GITHUB_TOKEN }}
+
+  - uses: actions/setup-node@v4
+    with:
+      node-version: '20'
+      cache: 'npm'
+
+  - uses: ./.github/actions/my-local-action`},
+          {
+            title: "set env & step outputs", desc: "Persist values for subsequent steps and jobs.", code: `steps:
+  - name: Generate values
+    id: meta
+    run: |
+      echo "VERSION=1.2.3" >> $GITHUB_ENV
+      echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+      echo "BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_ENV
+
+  - name: Use them
+    run: |
+      echo "SHA: \${{ steps.meta.outputs.sha }}"
+      echo "Ver: $VERSION"   # env var`},
+          {
+            title: "step conditions", desc: "Skip or run steps based on conditions.", code: `steps:
+  - name: Only on main branch
+    if: github.ref == 'refs/heads/main'
+    run: ./deploy.sh
+
+  - name: Only on tags
+    if: startsWith(github.ref, 'refs/tags/v')
+    run: ./publish.sh
+
+  - name: Always clean up
+    if: always()
+    run: ./cleanup.sh
+
+  - name: On failure only
+    if: failure()
+    run: ./notify-slack.sh`},
+          {
+            title: "continue-on-error", desc: "Let the job pass even if a step fails.", code: `steps:
+  - name: Optional security scan
+    continue-on-error: true
+    run: npm audit --audit-level=moderate
+
+  - name: Non-critical lint
+    continue-on-error: true
+    id: lint
+    run: npm run lint
+
+  - name: Report lint status
+    run: echo "Lint outcome was \${{ steps.lint.outcome }}"`},
+          {
+            title: "matrix step env", desc: "Pass per-step environment variables cleanly.", code: `steps:
+  - name: Deploy
+    run: ./deploy.sh
+    env:
+      DEPLOY_ENV: \${{ matrix.environment }}
+      AWS_SECRET: \${{ secrets.AWS_SECRET_KEY }}
+      DATABASE_URL: \${{ vars.DATABASE_URL }}
+      NODE_ENV: production
+      API_BASE: https://api.example.com`},
+        ]
+      },
+      {
+        cat: "Context", slug: "context", items: [
+          {
+            title: "github context", desc: "Access repo, event, and run metadata.", code: `\${{ github.repository }}      # owner/repo
+\${{ github.sha }}             # full commit SHA
+\${{ github.ref }}             # refs/heads/main
+\${{ github.ref_name }}        # main
+\${{ github.actor }}           # username
+\${{ github.event_name }}      # push, pull_request...
+\${{ github.run_id }}          # unique run ID (number)
+\${{ github.run_number }}      # sequential run number
+\${{ github.workflow }}        # workflow name
+\${{ github.server_url }}      # https://github.com`},
+          {
+            title: "runner & env context", desc: "Runner details and environment variables.", code: `\${{ runner.os }}          # Linux / Windows / macOS
+\${{ runner.arch }}        # X64 / ARM64
+\${{ runner.temp }}        # temp directory
+\${{ runner.tool_cache }}  # tool cache path
+
+# Accessing env vars:
+\${{ env.MY_VAR }}         # set via GITHUB_ENV
+\${{ vars.MY_CONFIG_VAR }} # repo/org configuration var`},
+          {
+            title: "job & steps context", desc: "Check job and step outcomes during a run.", code: `\${{ job.status }}                    # success/failure/cancelled
+\${{ steps.my-step.outputs.val }}    # step output value
+\${{ steps.my-step.outcome }}        # success/failure/skipped
+\${{ steps.my-step.conclusion }}     # outcome after continue-on-error
+\${{ needs.build.result }}           # success/failure/skipped/cancelled
+\${{ needs.build.outputs.version }}  # job output`},
+          {
+            title: "event payload context", desc: "Access webhook event data.", code: `# On pull_request:
+\${{ github.event.pull_request.number }}
+\${{ github.event.pull_request.title }}
+\${{ github.event.pull_request.head.sha }}
+\${{ github.event.pull_request.labels.*.name }}
+
+# On push:
+\${{ github.event.head_commit.message }}
+\${{ github.event.pusher.name }}
+
+# On release:
+\${{ github.event.release.tag_name }}`},
+        ]
+      },
+      {
+        cat: "Secrets", slug: "secrets", items: [
+          {
+            title: "using secrets", desc: "Access encrypted secrets in steps.", code: `steps:
+  - name: Deploy
+    run: ./deploy.sh
+    env:
+      AWS_KEY_ID: \${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET: \${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      DB_PASS: \${{ secrets.DATABASE_PASSWORD }}
+
+  - uses: some-action@v1
+    with:
+      token: \${{ secrets.MY_PAT }}`},
+          {
+            title: "GITHUB_TOKEN", desc: "Auto-provided token for repo operations.", code: `# Auto-provided — no setup needed
+- uses: actions/github-script@v7
+  with:
+    github-token: \${{ secrets.GITHUB_TOKEN }}
+    script: |
+      github.rest.issues.createComment({
+        issue_number: context.issue.number,
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        body: 'Tests passed! Ready for review.'
+      })`},
+          {
+            title: "environment secrets", desc: "Secrets scoped to a named environment with protection rules.", code: `jobs:
+  deploy:
+    environment: production   # requires approval if configured
+    steps:
+      - run: ./deploy.sh
+        env:
+          DB_PASS: \${{ secrets.DB_PASS }}
+          DEPLOY_KEY: \${{ secrets.PROD_DEPLOY_KEY }}
+
+# Configure at:
+# Settings > Environments > production > Secrets`},
+        ]
+      },
+      {
+        cat: "Matrix", slug: "matrix", items: [
+          {
+            title: "basic matrix strategy", desc: "Run a job across multiple variable combinations.", code: `strategy:
+  matrix:
+    node: [18, 20, 22]
+    os: [ubuntu-latest, windows-latest, macos-latest]
+  fail-fast: false  # don't cancel siblings on failure
+  max-parallel: 6
+
+runs-on: \${{ matrix.os }}
+steps:
+  - uses: actions/setup-node@v4
+    with:
+      node-version: \${{ matrix.node }}`},
+          {
+            title: "include / exclude", desc: "Add or remove specific matrix combinations.", code: `strategy:
+  matrix:
+    os: [ubuntu-latest, macos-latest]
+    node: [18, 20]
+    include:
+      - os: ubuntu-latest
+        node: 22
+        experimental: true   # custom variable
+    exclude:
+      - os: macos-latest
+        node: 18
+
+steps:
+  - if: matrix.experimental == true
+    continue-on-error: true
+    run: ./experimental-test.sh`},
+          {
+            title: "dynamic matrix", desc: "Generate matrix values from a prior job.", code: `jobs:
+  generate:
+    outputs:
+      matrix: \${{ steps.gen.outputs.matrix }}
+    steps:
+      - id: gen
+        run: |
+          MATRIX='{"service":["api","web","worker","scheduler"]}'
+          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+
+  test:
+    needs: generate
+    strategy:
+      matrix: \${{ fromJson(needs.generate.outputs.matrix) }}
+    steps:
+      - run: ./test.sh \${{ matrix.service }}`},
+        ]
+      },
+      {
+        cat: "Cache", slug: "cache", items: [
+          {
+            title: "actions/cache", desc: "Cache arbitrary paths with a hash-based key.", code: `- uses: actions/cache@v4
+  with:
+    path: |
+      ~/.npm
+      ~/.cache/pip
+    key: \${{ runner.os }}-deps-\${{ hashFiles('**/package-lock.json','**/requirements.txt') }}
+    restore-keys: |
+      \${{ runner.os }}-deps-
+      \${{ runner.os }}-`},
+          {
+            title: "built-in setup caching", desc: "setup-* actions have first-class cache support.", code: `- uses: actions/setup-node@v4
+  with:
+    node-version: '20'
+    cache: 'npm'       # caches ~/.npm
+
+- uses: actions/setup-python@v5
+  with:
+    python-version: '3.12'
+    cache: 'pip'       # caches pip cache dir
+
+- uses: actions/setup-java@v4
+  with:
+    java-version: '21'
+    distribution: 'temurin'
+    cache: 'gradle'    # or 'maven'`},
+          {
+            title: "Rust / Go cache", desc: "Cache compiled dependencies for systems languages.", code: `# Rust
+- uses: actions/cache@v4
+  with:
+    path: |
+      ~/.cargo/registry
+      ~/.cargo/git
+      target/
+    key: \${{ runner.os }}-cargo-\${{ hashFiles('**/Cargo.lock') }}
+
+# Go
+- uses: actions/cache@v4
+  with:
+    path: ~/go/pkg/mod
+    key: \${{ runner.os }}-go-\${{ hashFiles('**/go.sum') }}`},
+        ]
+      },
+      {
+        cat: "Artifacts", slug: "artifacts", items: [
+          {
+            title: "upload artifact", desc: "Save build outputs or test reports for download.", code: `- uses: actions/upload-artifact@v4
+  with:
+    name: build-output-\${{ github.run_id }}
+    path: |
+      dist/
+      reports/
+      !reports/tmp/
+    retention-days: 14
+    compression-level: 6  # 0-9, default 6`},
+          {
+            title: "download artifact", desc: "Retrieve artifacts in a later job.", code: `- uses: actions/download-artifact@v4
+  with:
+    name: build-output-\${{ github.run_id }}
+    path: ./downloaded
+
+# Download ALL artifacts from this run:
+- uses: actions/download-artifact@v4
+  with:
+    path: all-artifacts  # creates subdirs per artifact`},
+          {
+            title: "cross-job artifact share", desc: "Share build artifacts between jobs.", code: `jobs:
+  build:
+    steps:
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  test-e2e:
+    needs: build
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - run: npm run test:e2e`},
+        ]
+      },
+      {
+        cat: "Conditions", slug: "conditions", items: [
+          {
+            title: "common if expressions", desc: "Control when jobs or steps execute.", code: `if: github.ref == 'refs/heads/main'
+if: github.ref != 'refs/heads/main'
+if: github.event_name == 'pull_request'
+if: github.event_name != 'schedule'
+if: startsWith(github.ref, 'refs/tags/v')
+if: contains(github.event.pull_request.labels.*.name, 'deploy')
+if: contains(fromJson('["push","workflow_dispatch"]'), github.event_name)
+if: needs.build.result == 'success'
+if: failure() || cancelled()
+if: always()
+if: success() && github.actor != 'dependabot[bot]'`},
+          {
+            title: "expression functions", desc: "Built-in functions available in expressions.", code: `# String functions
+contains(str, 'substr')
+startsWith(str, 'prefix')
+endsWith(str, 'suffix')
+format('{0} built {1}', 'v1', 'ok')
+
+# Array / object functions
+join(array, ', ')
+toJSON(value)
+fromJSON('{"key":"val"}')
+
+# File hash
+hashFiles('**/package-lock.json')
+hashFiles('**/*.go', '**/*.sum')
+
+# Status check
+success() / failure() / always() / cancelled()`},
+        ]
+      },
+      {
+        cat: "Reusable", slug: "reusable", items: [
+          {
+            title: "call a reusable workflow", desc: "Invoke a workflow file from another workflow.", code: `jobs:
+  deploy:
+    uses: ./.github/workflows/deploy.yml
+    # or from another repo:
+    # uses: myorg/shared/.github/workflows/deploy.yml@main
+    with:
+      environment: production
+      version: \${{ github.sha }}
+      dry_run: false
+    secrets:
+      TOKEN: \${{ secrets.DEPLOY_TOKEN }}
+      # Or pass ALL secrets:
+      # secrets: inherit`},
+          {
+            title: "composite action", desc: "Bundle reusable steps into a local action.", code: `# .github/actions/setup-project/action.yml
+name: 'Setup Project'
+description: 'Install deps and configure env'
+inputs:
+  node-version:
+    default: '20'
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: \${{ inputs.node-version }}
+        cache: 'npm'
+    - run: npm ci
+      shell: bash
+
+# Usage in workflow:
+- uses: ./.github/actions/setup-project
+  with:
+    node-version: '22'`},
+          {
+            title: "reusable workflow definition", desc: "Define a workflow that can be called by others.", code: `on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      version:
+        required: true
+        type: string
+    secrets:
+      DEPLOY_TOKEN:
+        required: true
+    outputs:
+      deploy_url:
+        value: \${{ jobs.deploy.outputs.url }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    outputs:
+      url: \${{ steps.deploy.outputs.url }}
+    environment: \${{ inputs.environment }}
+    steps: [...]`},
+        ]
+      },
+      {
+        cat: "Permissions", slug: "permissions", items: [
+          {
+            title: "least-privilege permissions", desc: "Restrict GITHUB_TOKEN to exactly what's needed.", code: `# Workflow-level (applies to all jobs)
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+# Job-level override
+jobs:
+  publish:
+    permissions:
+      packages: write
+      contents: read
+      id-token: write   # for OIDC auth
+
+# Deny all (most secure)
+permissions: {}
+
+# Grant all (avoid in production)
+permissions: write-all`},
+          {
+            title: "OIDC — keyless cloud auth", desc: "Authenticate to AWS, GCP, or Azure without stored secrets.", code: `permissions:
+  id-token: write  # required for OIDC
+  contents: read
+
+steps:
+  # AWS
+  - uses: aws-actions/configure-aws-credentials@v4
+    with:
+      role-to-assume: arn:aws:iam::123456789:role/my-role
+      aws-region: us-east-1
+
+  # GCP
+  - uses: google-github-actions/auth@v2
+    with:
+      workload_identity_provider: 'projects/123/locations/global/workloadIdentityPools/...'
+      service_account: 'my-sa@project.iam.gserviceaccount.com'`},
+        ]
+      },
+    ];
+
+    const SLUG_MAP = {};
+    DATA.forEach(s => SLUG_MAP[s.cat] = s.slug);
+
+    function totalSnippets() {
+      return DATA.reduce((a, s) => a + s.items.length, 0);
+    }
+
+    document.getElementById('count-snippets').textContent = totalSnippets();
+
+    let activeCat = null;
+
+    // Build sidebar nav
+    function buildNav() {
+      const nav = document.getElementById('nav');
+      DATA.forEach(sec => {
+        const a = document.createElement('div');
+        a.className = 'nav-item';
+        a.dataset.cat = sec.cat;
+        a.innerHTML = `<span class="nav-dot nd-${sec.slug}"></span>${sec.cat}<span class="nav-count">${sec.items.length}</span>`;
+        a.onclick = () => {
+          activeCat = activeCat === sec.cat ? null : sec.cat;
+          document.getElementById('search').value = '';
+          syncActiveState();
+          render();
+        };
+        nav.appendChild(a);
+      });
+    }
+
+    function syncActiveState() {
+      document.querySelectorAll('.nav-item').forEach(el => {
+        el.classList.toggle('active', el.dataset.cat === activeCat);
+      });
+      document.querySelectorAll('.pill').forEach(el => {
+        el.classList.toggle('active', el.dataset.cat === (activeCat || '__all__'));
+      });
+    }
+
+    // Build filter pills
+    function buildFilters() {
+      const f = document.getElementById('filters');
+      const all = document.createElement('button');
+      all.className = 'pill active';
+      all.textContent = 'All';
+      all.dataset.cat = '__all__';
+      all.onclick = () => { activeCat = null; document.getElementById('search').value = ''; syncActiveState(); render(); };
+      f.appendChild(all);
+      DATA.forEach(sec => {
+        const p = document.createElement('button');
+        p.className = 'pill';
+        p.textContent = sec.cat;
+        p.dataset.cat = sec.cat;
+        p.onclick = () => {
+          activeCat = activeCat === sec.cat ? null : sec.cat;
+          document.getElementById('search').value = '';
+          syncActiveState();
+          render();
+        };
+        f.appendChild(p);
+      });
+    }
+
+    function highlight(code) {
+      return code
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/(#.+)$/gm, '<span class=c-cm>$1</span>')
+        .replace(/(\$\{\{[^}]+\}\})/g, '<span class=c-expr>$1</span>')
+        .replace(/\b(true|false)\b/g, '<span class=c-bool>$1</span>')
+        .replace(/\b(\d+)\b/g, '<span class=c-num>$1</span>')
+        .replace(/^([ \t]*)([\w_-]+)(:)/gm, '$1<span class=c-key>$2</span>$3')
+        .replace(/'([^'<>]*)'/g, "<span class=c-str>'$1'</span>")
+        .replace(/"([^"<>]*)"/g, '<span class=c-str>"$1"</span>');
+    }
+
+    function copyCode(btn, code) {
+      navigator.clipboard.writeText(code).then(() => {
+        btn.textContent = 'copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 1800);
+      });
+    }
+
+    function render() {
+      const q = (document.getElementById('search').value || '').toLowerCase().trim();
+      const content = document.getElementById('content');
+      let html = '';
+      let visibleSnippets = 0;
+
+      DATA.forEach(sec => {
+        if (activeCat && sec.cat !== activeCat) return;
+        const items = sec.items.filter(it =>
+          !q || it.title.toLowerCase().includes(q) || it.desc.toLowerCase().includes(q) || it.code.toLowerCase().includes(q)
+        );
+        if (!items.length) return;
+        visibleSnippets += items.length;
+
+        html += `<div class="section" id="sec-${sec.slug}">
+<div class="section-header">
+  <span class="section-dot sd-${sec.slug}"></span>
+  <span class="section-title">${sec.cat}</span>
+  <span class="section-line"></span>
+  <span class="section-count">${items.length} snippet${items.length > 1 ? 's' : ''}</span>
+</div>
+<div class="cards">`;
+
+        items.forEach((it, i) => {
+          const codeId = `code-${sec.slug}-${i}`;
+          html += `<div class="card" style="animation-delay:${i * 0.04}s">
+<div class="card-head">
+  <span class="card-title">${it.title}</span>
+  <span class="tag t-${sec.slug}">${sec.slug}</span>
+</div>
+<div class="card-body">
+  <p class="card-desc">${it.desc}</p>
+  <div class="code-wrap">
+    <button class="copy-btn" data-target="${codeId}">copy</button>
+    <pre id="${codeId}">${highlight(it.code)}</pre>
+  </div>
+</div>
+</div>`;
+        });
+
+        html += '</div></div>';
+      });
+
+      if (!html) {
+        html = `<div class="empty"><span>&#9906;</span>No snippets match <strong>"${q}"</strong></div>`;
+      }
+
+      document.getElementById('count-snippets').textContent = visibleSnippets;
+      content.innerHTML = html;
+    }
+
+    buildNav();
+    buildFilters();
+    render();
+
+    document.getElementById('content').addEventListener('click', function (e) {
+      const btn = e.target.closest('.copy-btn');
+      if (!btn) return;
+      const pre = document.getElementById(btn.dataset.target);
+      if (!pre) return;
+      navigator.clipboard.writeText(pre.textContent).then(() => {
+        btn.textContent = 'copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 1800);
+      });
+    });
+
+    document.getElementById('search').addEventListener('input', () => {
+      activeCat = null;
+      syncActiveState();
+      render();
+    });
+  </script>
+</body>
+
+</html>

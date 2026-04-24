@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>DevSecOps Pipeline v3</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #21262d;
+      --border: #30363d;
+      --accent: #58a6ff;
+      --accent2: #3fb950;
+      --warn: #f85149;
+      --yellow: #d29922;
+      --purple: #bc8cff;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --tag-bg: #1f3547;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* NAV */
+    nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      gap: 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    nav .logo {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--accent);
+      padding: 1rem 1.5rem 1rem 0;
+      border-right: 1px solid var(--border);
+      margin-right: 1rem;
+      white-space: nowrap;
+    }
+
+    nav .logo span {
+      color: var(--accent2);
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      padding: .8rem 1.1rem;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      font-size: .85rem;
+      font-weight: 500;
+      border-bottom: 2px solid transparent;
+      transition: color .2s, border-color .2s;
+    }
+
+    .tab-btn:hover {
+      color: var(--text);
+    }
+
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    /* SECTIONS */
+    .section {
+      display: none;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+
+    .section.active {
+      display: block;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: .4rem;
+    }
+
+    h2 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: var(--accent);
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: .9rem;
+      margin-bottom: 2rem;
+    }
+
+    /* PIPELINE FLOW */
+    .pipeline-wrap {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .pr-lane,
+    .push-lane {
+      flex: 1;
+      min-width: 260px;
+    }
+
+    .lane-label {
+      font-size: .7rem;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: .8rem;
+      padding: .3rem .7rem;
+      background: var(--surface2);
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    .job-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.2rem;
+      margin-bottom: .5rem;
+      cursor: pointer;
+      transition: border-color .2s, transform .2s, box-shadow .2s;
+      position: relative;
+    }
+
+    .job-card:hover {
+      border-color: var(--accent);
+      transform: translateX(4px);
+      box-shadow: 0 0 16px rgba(88, 166, 255, .15);
+    }
+
+    .job-card.active-card {
+      border-color: var(--accent);
+      background: var(--tag-bg);
+    }
+
+    .job-card .job-name {
+      font-weight: 600;
+      font-size: .92rem;
+      margin-bottom: .3rem;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+
+    .job-card .job-meta {
+      font-size: .78rem;
+      color: var(--muted);
+    }
+
+    .badge {
+      font-size: .68rem;
+      padding: .15rem .45rem;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+
+    .badge-pr {
+      background: #1f2d1f;
+      color: var(--accent2);
+    }
+
+    .badge-push {
+      background: #1f2a3d;
+      color: var(--accent);
+    }
+
+    .badge-fail {
+      background: #3d1f23;
+      color: var(--warn);
+    }
+
+    .badge-manual {
+      background: #3d2f10;
+      color: var(--yellow);
+    }
+
+    .connector {
+      width: 2px;
+      height: 24px;
+      background: linear-gradient(to bottom, var(--accent), transparent);
+      margin: 0 0 0 1.6rem;
+    }
+
+    /* DETAIL PANEL */
+    .detail-panel {
+      flex: 0 0 340px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.4rem;
+      position: sticky;
+      top: 72px;
+      min-height: 320px;
+    }
+
+    .detail-panel h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: .5rem;
+    }
+
+    .detail-panel .dp-meta {
+      font-size: .78rem;
+      color: var(--muted);
+      margin-bottom: 1rem;
+      display: flex;
+      gap: .5rem;
+      flex-wrap: wrap;
+    }
+
+    .tool-tag {
+      background: var(--tag-bg);
+      color: var(--accent);
+      padding: .2rem .6rem;
+      border-radius: 4px;
+      font-size: .75rem;
+      font-weight: 500;
+    }
+
+    .tool-tag.warn {
+      background: #3d1f23;
+      color: var(--warn);
+    }
+
+    .tool-tag.green {
+      background: #1f3027;
+      color: var(--accent2);
+    }
+
+    .tool-tag.yellow {
+      background: #3d2d10;
+      color: var(--yellow);
+    }
+
+    .detail-panel .dp-steps {
+      list-style: none;
+    }
+
+    .detail-panel .dp-steps li {
+      font-size: .82rem;
+      color: var(--muted);
+      padding: .35rem 0;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      gap: .5rem;
+    }
+
+    .detail-panel .dp-steps li:last-child {
+      border-bottom: none;
+    }
+
+    .detail-panel .dp-steps li::before {
+      content: '›';
+      color: var(--accent);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .placeholder {
+      color: var(--muted);
+      font-size: .88rem;
+      line-height: 1.6;
+    }
+
+    /* TABLES */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .84rem;
+      margin-bottom: 1.5rem;
+    }
+
+    th {
+      background: var(--surface2);
+      color: var(--muted);
+      text-align: left;
+      padding: .65rem 1rem;
+      font-weight: 600;
+      font-size: .78rem;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+
+    td {
+      padding: .65rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    tr:hover td {
+      background: var(--surface2);
+    }
+
+    code {
+      background: var(--surface2);
+      padding: .1rem .35rem;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .8em;
+      color: var(--accent);
+    }
+
+    .yes {
+      color: var(--accent2);
+      font-weight: 600;
+    }
+
+    .no {
+      color: var(--warn);
+    }
+
+    .info {
+      color: var(--yellow);
+    }
+
+    /* DESIGN DECISIONS */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.2rem;
+    }
+
+    .card h3 {
+      font-size: .92rem;
+      font-weight: 600;
+      margin-bottom: .5rem;
+      color: var(--accent);
+    }
+
+    .card p {
+      font-size: .82rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* CODE VIEWER */
+    .file-tabs {
+      display: flex;
+      gap: .5rem;
+      margin-bottom: 1rem;
+    }
+
+    .file-tab {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: .4rem .9rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: .82rem;
+      font-family: 'Inter', sans-serif;
+      transition: all .15s;
+    }
+
+    .file-tab:hover {
+      color: var(--text);
+    }
+
+    .file-tab.active {
+      background: var(--tag-bg);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    pre {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.4rem;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .78rem;
+      line-height: 1.7;
+      color: #cdd9e5;
+      max-height: 600px;
+    }
+
+    pre .k {
+      color: #ff7b72;
+    }
+
+    pre .kn {
+      color: var(--purple);
+    }
+
+    pre .s {
+      color: var(--accent2);
+    }
+
+    pre .c {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* CONFIG */
+    .config-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .config-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.2rem;
+    }
+
+    .config-card h3 {
+      font-size: .88rem;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: .8rem;
+    }
+
+    .config-card table {
+      margin-bottom: 0;
+    }
+
+    /* COPY BTN */
+    .copy-wrap {
+      position: relative;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: .7rem;
+      right: .7rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: .3rem .7rem;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: .75rem;
+      font-family: 'Inter', sans-serif;
+      transition: all .15s;
+    }
+
+    .copy-btn:hover {
+      color: var(--text);
+      border-color: var(--accent);
+    }
+
+    .copy-btn.copied {
+      color: var(--accent2);
+      border-color: var(--accent2);
+    }
+  </style>
+</head>
+
+<body>
+
+<style>
+  .back-btn {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 200;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background: rgba(13, 17, 23, 0.82);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(88, 166, 255, 0.2);
+    border-radius: 100px;
+    color: #8b949e;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color .2s, border-color .2s, transform .2s, box-shadow .2s;
+    box-shadow: 0 4px 24px rgba(0,0,0,.5);
+  }
+  .back-btn:hover {
+    color: #e6edf3;
+    border-color: rgba(88, 166, 255, 0.45);
+    transform: translateX(-3px);
+    box-shadow: 0 4px 32px rgba(88,166,255,.15);
+  }
+  .back-btn .arrow {
+    font-size: 16px;
+    transition: transform .2s;
+  }
+  .back-btn:hover .arrow {
+    transform: translateX(-2px);
+  }
+</style>
+
+<a class="back-btn" href="./index.html">
+  <span class="arrow">←</span>
+  All Visualizations
+</a>
+
+  <nav>
+    <div class="logo">DevSecOps <span>Pipeline v3</span></div>
+    <button class="tab-btn active" onclick="showTab('flow')">Pipeline Flow</button>
+    <button class="tab-btn" onclick="showTab('jobs')">Jobs Reference</button>
+    <button class="tab-btn" onclick="showTab('security')">Security Controls</button>
+    <button class="tab-btn" onclick="showTab('design')">Design Decisions</button>
+    <button class="tab-btn" onclick="showTab('config')">Configuration</button>
+    <button class="tab-btn" onclick="showTab('code')">YAML Source</button>
+  </nav>
+
+  <!-- FLOW TAB -->
+  <div id="tab-flow" class="section active">
+    <h1>Pipeline Flow</h1>
+    <p class="subtitle">Shift-left security for containerised apps on AWS EKS. Click a job to inspect it.</p>
+    <div class="pipeline-wrap">
+      <!-- left lanes -->
+      <div style="flex:1;min-width:260px;">
+        <div class="pr-lane">
+          <div class="lane-label">Pull Request</div>
+          <div class="job-card" onclick="detail('dep-review')">
+            <div class="job-name"><span>🔍</span> dependency-review <span class="badge badge-pr">PR only</span></div>
+            <div class="job-meta">Blocks merge on HIGH/CRITICAL deps · dependency-review-action@v4</div>
+          </div>
+        </div>
+        <div class="push-lane" style="margin-top:1.5rem;">
+          <div class="lane-label">Push main / tag</div>
+          <div class="job-card" onclick="detail('code-quality')">
+            <div class="job-name"><span>🔒</span> code-quality</div>
+            <div class="job-meta">20 min · Gitleaks · CodeQL · Semgrep · Super-Linter</div>
+          </div>
+          <div class="connector"></div>
+          <div class="job-card" onclick="detail('build')">
+            <div class="job-name"><span>🏗️</span> build</div>
+            <div class="job-meta">20 min · Docker image + ECR · SBOM + provenance · GHA cache</div>
+          </div>
+          <div class="connector"></div>
+          <div class="job-card" onclick="detail('scan-sign')">
+            <div class="job-name"><span>🛡️</span> scan-sign</div>
+            <div class="job-meta">15 min · Trivy CVE block · SARIF · Cosign sign</div>
+          </div>
+          <div class="connector"></div>
+          <div class="job-card" onclick="detail('deploy-staging')">
+            <div class="job-name"><span>🚀</span> deploy-staging</div>
+            <div class="job-meta">30 min · Helm + Argo Rollouts canary · Cosign verify</div>
+          </div>
+          <div class="connector"></div>
+          <div class="job-card" onclick="detail('dast-staging')">
+            <div class="job-name"><span>🕷️</span> dast-staging</div>
+            <div class="job-meta">20 min · OWASP ZAP baseline scan</div>
+          </div>
+          <div class="connector"></div>
+          <div class="job-card" onclick="detail('promote')">
+            <div class="job-name"><span>⏸️</span> promote <span class="badge badge-manual">Manual Approval</span></div>
+            <div class="job-meta">60 min window · GitHub Environment gate · production env</div>
+          </div>
+          <div class="connector"></div>
+          <div class="job-card" onclick="detail('deploy-prod')">
+            <div class="job-name"><span>🎯</span> deploy-prod</div>
+            <div class="job-meta">45 min · Exact same digest · Argo Rollouts canary 15m</div>
+          </div>
+          <div class="connector" style="background:linear-gradient(to bottom,var(--warn),transparent);"></div>
+          <div class="job-card" onclick="detail('rollback-prod')" style="border-color:#30363d;">
+            <div class="job-name"><span>↩️</span> rollback-prod <span class="badge badge-fail">on failure</span></div>
+            <div class="job-meta">20 min · argo rollouts undo · auto-triggered</div>
+          </div>
+        </div>
+      </div>
+      <!-- detail panel -->
+      <div class="detail-panel" id="detail-panel">
+        <p class="placeholder">👆 Click any job card to see its steps, tools, and details here.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- JOBS TAB -->
+  <div id="tab-jobs" class="section">
+    <h1>Jobs Reference</h1>
+    <p class="subtitle">All jobs defined in <code>secopspipeline.yaml</code> with triggers and timeouts.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Job</th>
+          <th>Trigger</th>
+          <th>Timeout</th>
+          <th>Needs</th>
+          <th>Purpose</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>0</td>
+          <td><code>dependency-review</code></td>
+          <td>PR only</td>
+          <td>—</td>
+          <td>—</td>
+          <td>Blocks merge on HIGH/CRITICAL vulnerable dependencies</td>
+        </tr>
+        <tr>
+          <td>1</td>
+          <td><code>code-quality</code></td>
+          <td>push</td>
+          <td>20 min</td>
+          <td>—</td>
+          <td>Gitleaks + CodeQL + Semgrep + Super-Linter</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><code>build</code></td>
+          <td>push</td>
+          <td>20 min</td>
+          <td><code>code-quality</code></td>
+          <td>Build &amp; push Docker image to ECR with SBOM and provenance</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><code>scan-sign</code></td>
+          <td>push</td>
+          <td>15 min</td>
+          <td><code>build</code></td>
+          <td>Trivy CVE scan, SARIF upload, Cosign sign</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td><code>deploy-staging</code></td>
+          <td>push</td>
+          <td>30 min</td>
+          <td><code>scan-sign</code></td>
+          <td>Helm + Argo Rollouts canary to staging EKS</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td><code>dast-staging</code></td>
+          <td>push</td>
+          <td>20 min</td>
+          <td><code>deploy-staging</code></td>
+          <td>OWASP ZAP baseline against live staging URL</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td><code>promote</code></td>
+          <td>push</td>
+          <td>60 min</td>
+          <td><code>dast-staging</code></td>
+          <td>Manual approval gate on <code>production</code> environment</td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td><code>deploy-prod</code></td>
+          <td>push</td>
+          <td>45 min</td>
+          <td><code>promote</code>, <code>scan-sign</code></td>
+          <td>Deploy exact same digest to production EKS</td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td><code>rollback-prod</code></td>
+          <td>on failure</td>
+          <td>20 min</td>
+          <td><code>deploy-prod</code></td>
+          <td>Auto-rollback via <code>argo rollouts undo</code></td>
+        </tr>
+      </tbody>
+    </table>
+    <h2>Trigger Conditions</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Event</th>
+          <th>Branches / Patterns</th>
+          <th>Jobs Fired</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>push</td>
+          <td><code>main</code></td>
+          <td>code-quality → build → scan-sign → deploy-staging → dast-staging → promote → deploy-prod</td>
+        </tr>
+        <tr>
+          <td>push</td>
+          <td><code>v*.*.*</code> tags</td>
+          <td>Same as push to main</td>
+        </tr>
+        <tr>
+          <td>pull_request</td>
+          <td>targeting <code>main</code></td>
+          <td>dependency-review only</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SECURITY TAB -->
+  <div id="tab-security" class="section">
+    <h1>Security Controls Map</h1>
+    <p class="subtitle">Every control, the tool that enforces it, and whether it blocks the pipeline.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Control</th>
+          <th>Tool</th>
+          <th>Stage</th>
+          <th>Blocks?</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Secrets in git history</td>
+          <td>Gitleaks</td>
+          <td><code>code-quality</code></td>
+          <td class="yes">✅ Yes</td>
+        </tr>
+        <tr>
+          <td>SAST (source-level)</td>
+          <td>CodeQL</td>
+          <td><code>code-quality</code></td>
+          <td class="yes">✅ Yes</td>
+        </tr>
+        <tr>
+          <td>SAST (OWASP Top-10)</td>
+          <td>Semgrep</td>
+          <td><code>code-quality</code></td>
+          <td class="yes">✅ Yes</td>
+        </tr>
+        <tr>
+          <td>Code linting (50+ langs)</td>
+          <td>Super-Linter</td>
+          <td><code>code-quality</code></td>
+          <td class="yes">✅ Yes</td>
+        </tr>
+        <tr>
+          <td>SCA (dependency vulns)</td>
+          <td>dependency-review-action</td>
+          <td><code>dependency-review</code></td>
+          <td class="yes">✅ Yes (PRs)</td>
+        </tr>
+        <tr>
+          <td>Container CVE scan</td>
+          <td>Trivy</td>
+          <td><code>scan-sign</code></td>
+          <td class="yes">✅ Yes (HIGH/CRIT)</td>
+        </tr>
+        <tr>
+          <td>CVE visibility / reporting</td>
+          <td>Trivy SARIF → GitHub Security tab</td>
+          <td><code>scan-sign</code></td>
+          <td class="info">➖ Report only</td>
+        </tr>
+        <tr>
+          <td>Supply chain signing</td>
+          <td>Cosign (Sigstore OIDC)</td>
+          <td><code>scan-sign</code></td>
+          <td class="yes">✅ Yes (sign)</td>
+        </tr>
+        <tr>
+          <td>Deploy-time verification</td>
+          <td>Cosign verify</td>
+          <td><code>deploy-staging</code>, <code>deploy-prod</code></td>
+          <td class="yes">✅ Yes</td>
+        </tr>
+        <tr>
+          <td>SBOM &amp; provenance</td>
+          <td>docker/build-push-action</td>
+          <td><code>build</code></td>
+          <td class="info">➖ Attestation</td>
+        </tr>
+        <tr>
+          <td>DAST (runtime attacks)</td>
+          <td>OWASP ZAP</td>
+          <td><code>dast-staging</code></td>
+          <td class="yes">✅ Yes</td>
+        </tr>
+        <tr>
+          <td>Manual promotion gate</td>
+          <td>GitHub Environment approval</td>
+          <td><code>promote</code></td>
+          <td class="yes">✅ Yes</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- DESIGN TAB -->
+  <div id="tab-design" class="section">
+    <h1>Key Design Decisions</h1>
+    <p class="subtitle">Architectural choices that make this pipeline supply-chain safe and operationally robust.</p>
+    <div class="card-grid">
+      <div class="card">
+        <h3>1. Build Once, Deploy Everywhere (Digest Pinning)</h3>
+        <p>The image is built <strong>once</strong> in <code>build</code> and tagged by <code>github.sha</code>. All
+          subsequent jobs reference the immutable <code>sha256:…</code> digest — never a mutable tag. This guarantees
+          staging and production receive byte-for-byte identical images.</p>
+      </div>
+      <div class="card">
+        <h3>2. OIDC — No Long-Lived Credentials</h3>
+        <p>AWS credentials are federated via GitHub Actions OIDC (<code>id-token: write</code>). No
+          <code>AWS_ACCESS_KEY_ID</code> or <code>AWS_SECRET_ACCESS_KEY</code> secrets are stored anywhere. Each job
+          assumes a least-privilege IAM role scoped to its action (ECR push, EKS staging, EKS prod).</p>
+      </div>
+      <div class="card">
+        <h3>3. Cosign Verification at Deploy Time</h3>
+        <p>Even if ECR were compromised post-sign, <code>cosign verify</code> at deploy time rejects unsigned or
+          tampered images. Verification uses Sigstore's public Fulcio/Rekor transparency log.</p>
+      </div>
+      <div class="card">
+        <h3>4. Canary-First Progressive Delivery</h3>
+        <p>Both staging and production use <strong>Argo Rollouts</strong> with a canary strategy. Traffic shifts
+          incrementally. If the rollout health check fails, the <code>rollback-prod</code> job issues
+          <code>argo rollouts undo</code> automatically.</p>
+      </div>
+      <div class="card">
+        <h3>5. Concurrency Protection</h3>
+        <p><code>cancel-in-progress: true</code> ensures only one run per ref is active at a time. A fast follow-up push
+          cancels the previous run rather than queuing a stale deployment.</p>
+      </div>
+      <div class="card">
+        <h3>6. Language-Agnostic by Design</h3>
+        <p>CodeQL auto-detects the language. Semgrep rules apply universally. The only app-specific step is
+          unit/integration testing — add it in <code>code-quality</code> for Python (<code>pytest</code>), Node
+          (<code>npm test</code>), Go (<code>go test</code>), or Java (<code>mvn test</code>).</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIG TAB -->
+  <div id="tab-config" class="section">
+    <h1>Required Configuration</h1>
+    <p class="subtitle">Secrets, IAM roles, and GitHub environments needed before running this pipeline.</p>
+    <div class="config-grid">
+      <div class="config-card">
+        <h3>🔑 Secrets</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Secret</th>
+              <th>Used In</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>AWS_ACCOUNT_ID</code></td>
+              <td>All <code>configure-aws-credentials</code> steps</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="config-card">
+        <h3>🎭 IAM Roles (OIDC trust)</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Role</th>
+              <th>Job</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>github-actions-ecr</code></td>
+              <td><code>build</code>, <code>scan-sign</code></td>
+            </tr>
+            <tr>
+              <td><code>github-actions-eks-staging</code></td>
+              <td><code>deploy-staging</code></td>
+            </tr>
+            <tr>
+              <td><code>github-actions-eks-prod</code></td>
+              <td><code>deploy-prod</code>, <code>rollback-prod</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="config-card">
+        <h3>🌍 GitHub Environments</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Environment</th>
+              <th>Protection Rule</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>staging</code></td>
+              <td>None (auto-deploy)</td>
+            </tr>
+            <tr>
+              <td><code>production</code></td>
+              <td>Required reviewers (manual)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="config-card">
+        <h3>🎯 Update Before Deploy</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Location</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>DAST target URL</td>
+              <td><code>dast-staging</code> → <code>target:</code></td>
+            </tr>
+            <tr>
+              <td>EKS cluster name (staging)</td>
+              <td><code>deploy-staging</code> step</td>
+            </tr>
+            <tr>
+              <td>EKS cluster name (prod)</td>
+              <td><code>deploy-prod</code> step</td>
+            </tr>
+            <tr>
+              <td><code>IMAGE_NAME</code></td>
+              <td>top-level <code>env:</code></td>
+            </tr>
+            <tr>
+              <td><code>AWS_REGION</code></td>
+              <td>top-level <code>env:</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div
+      style="margin-top:1.5rem;padding:1rem 1.4rem;background:var(--surface);border:1px solid var(--yellow);border-radius:10px;font-size:.84rem;color:var(--muted);line-height:1.7;">
+      <strong style="color:var(--yellow);">💡 Tip:</strong> Store the DAST target as a GitHub Environment variable
+      (<code>vars.STAGING_URL</code>) instead of hardcoding it in the YAML to avoid manual edits on every deploy.
+    </div>
+    <div
+      style="margin-top:1rem;padding:1rem 1.4rem;background:var(--surface);border:1px solid var(--border);border-radius:10px;font-size:.84rem;color:var(--muted);line-height:1.7;">
+      <strong style="color:var(--accent);">🔧 setup-tools.yml</strong> &nbsp;Place this reusable workflow under
+      <code>.github/workflows/setup-tools.yml</code>. It installs <strong>Cosign</strong>, <strong>kubectl</strong>,
+      <strong>Helm</strong>, and <strong>Argo Rollouts CLI</strong> and is called via
+      <code>uses: ./.github/workflows/setup-tools.yml</code> in deploy jobs.
+    </div>
+  </div>
+
+  <!-- CODE TAB -->
+  <div id="tab-code" class="section">
+    <h1>YAML Source</h1>
+    <p class="subtitle">Raw workflow files — copy and place in <code>.github/workflows/</code>.</p>
+    <div class="file-tabs">
+      <button class="file-tab active" onclick="showFile('main')">secopspipeline.yaml</button>
+      <button class="file-tab" onclick="showFile('tools')">setup-tools.yml</button>
+    </div>
+    <div id="file-main" class="copy-wrap">
+      <button class="copy-btn" onclick="copyCode('main-pre')">Copy</button>
+      <pre id="main-pre">name: DevSecOps Pipeline v3 (Progressive + Promotion)
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ "v*.*.*" ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  id-token: write
+  contents: read
+  security-events: write
+  pull-requests: read
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
+  IMAGE_NAME: my-app
+
+jobs:
+
+  # ─── 0. DEPENDENCY REVIEW (PRs only) ───────────────────────────────────────
+  dependency-review:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+
+  # ─── 1. CODE QUALITY GATE ───────────────────────────────────────────────────
+  code-quality:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    timeout-minutes: 20
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: auto
+      - uses: github/codeql-action/autobuild@v3
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: codeql-source
+      - uses: returntocorp/semgrep-action@v1
+        with:
+          config: >
+            p/owasp-top-ten p/secrets p/ci
+      - uses: super-linter/super-linter@v7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEFAULT_BRANCH: main
+          VALIDATE_ALL_CODEBASE: false
+
+  # ─── 2. BUILD ONCE ─────────────────────────────────────────────────────────
+  build:
+    runs-on: ubuntu-latest
+    needs: code-quality
+    if: github.event_name == 'push'
+    timeout-minutes: 20
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-ecr
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: aws-actions/amazon-ecr-login@v2
+      - name: Build and Push Image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          provenance: true
+          sbom: true
+          tags: ${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ─── 3. SECURITY SCAN + SIGN ────────────────────────────────────────────────
+  scan-sign:
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 15
+    outputs:
+      image_uri: ${{ steps.uri.outputs.image_uri }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: sigstore/cosign-installer@v3
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-ecr
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: aws-actions/amazon-ecr-login@v2
+      - uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: ${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+      - uses: aquasecurity/trivy-action@0.24.0
+        if: always()
+        with:
+          image-ref: ${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          format: sarif
+          output: trivy-results.sarif
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy-container
+      - name: Compute Image URI (digest-based)
+        id: uri
+        run: |
+          echo "image_uri=${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}@${{ needs.build.outputs.digest }}" >> $GITHUB_OUTPUT
+      - name: Sign Image
+        run: cosign sign --yes ${{ steps.uri.outputs.image_uri }}
+
+  # ─── 4. DEPLOY TO STAGING (CANARY) ─────────────────────────────────────────
+  deploy-staging:
+    runs-on: ubuntu-latest
+    needs: scan-sign
+    timeout-minutes: 30
+    environment:
+      name: staging
+      url: https://staging.my-app.example.com
+    steps:
+      - uses: actions/checkout@v4
+      - uses: sigstore/cosign-installer@v3
+      - uses: azure/setup-kubectl@v4
+      - uses: azure/setup-helm@v4
+      - name: Install Argo Rollouts CLI
+        run: |
+          curl -LO https://github.com/argoproj/argo-rollouts/releases/latest/download/kubectl-argo-rollouts-linux-amd64
+          chmod +x kubectl-argo-rollouts-linux-amd64
+          sudo mv kubectl-argo-rollouts-linux-amd64 /usr/local/bin/kubectl-argo-rollouts
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-eks-staging
+          aws-region: ${{ env.AWS_REGION }}
+      - run: aws eks update-kubeconfig --name my-eks-staging
+      - name: Verify Image Signature
+        run: |
+          cosign verify \
+            --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
+            ${{ needs.scan-sign.outputs.image_uri }}
+      - name: Deploy via Helm (Argo Rollout)
+        run: |
+          helm upgrade --install my-app ./helm/my-app \
+            --namespace staging --create-namespace \
+            --set image.digest=${{ needs.build.outputs.digest }}
+      - name: Monitor Canary Rollout
+        run: kubectl argo rollouts status my-app -n staging --timeout 10m
+
+  # ─── 5. DAST — STAGING ──────────────────────────────────────────────────────
+  dast-staging:
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    timeout-minutes: 20
+    steps:
+      - uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: https://staging.my-app.example.com   # ← update this
+          fail_action: true
+          issue_title: "ZAP Baseline Scan — Staging"
+
+  # ─── 6. PROMOTION GATE (MANUAL APPROVAL) ────────────────────────────────────
+  promote:
+    runs-on: ubuntu-latest
+    needs: dast-staging
+    timeout-minutes: 60
+    environment:
+      name: production
+    steps:
+      - run: echo "Approved for production deployment"
+
+  # ─── 7. DEPLOY TO PRODUCTION (CANARY) ───────────────────────────────────────
+  deploy-prod:
+    runs-on: ubuntu-latest
+    needs: [ promote, scan-sign ]
+    timeout-minutes: 45
+    environment:
+      name: production
+      url: https://my-app.example.com
+    steps:
+      - uses: actions/checkout@v4
+      - uses: sigstore/cosign-installer@v3
+      - uses: azure/setup-kubectl@v4
+      - uses: azure/setup-helm@v4
+      - name: Install Argo Rollouts CLI
+        run: |
+          curl -LO https://github.com/argoproj/argo-rollouts/releases/latest/download/kubectl-argo-rollouts-linux-amd64
+          chmod +x kubectl-argo-rollouts-linux-amd64
+          sudo mv kubectl-argo-rollouts-linux-amd64 /usr/local/bin/kubectl-argo-rollouts
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-eks-prod
+          aws-region: ${{ env.AWS_REGION }}
+      - run: aws eks update-kubeconfig --name my-eks-prod
+      - name: Verify Image Signature
+        run: |
+          cosign verify \
+            --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
+            ${{ needs.scan-sign.outputs.image_uri }}
+      - name: Deploy via Helm (same digest)
+        run: |
+          helm upgrade --install my-app ./helm/my-app \
+            --namespace production --create-namespace \
+            --set image.digest=${{ needs.build.outputs.digest }}
+      - name: Monitor Canary Rollout
+        run: kubectl argo rollouts status my-app -n production --timeout 15m
+
+  # ─── 8. ROLLBACK ON PRODUCTION FAILURE ──────────────────────────────────────
+  rollback-prod:
+    runs-on: ubuntu-latest
+    needs: deploy-prod
+    if: failure()
+    timeout-minutes: 20
+    environment:
+      name: production
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-eks-prod
+          aws-region: ${{ env.AWS_REGION }}
+      - run: aws eks update-kubeconfig --name my-eks-prod
+      - name: Install Argo Rollouts CLI
+        run: |
+          curl -LO https://github.com/argoproj/argo-rollouts/releases/latest/download/kubectl-argo-rollouts-linux-amd64
+          chmod +x kubectl-argo-rollouts-linux-amd64
+          sudo mv kubectl-argo-rollouts-linux-amd64 /usr/local/bin/kubectl-argo-rollouts
+      - name: Rollback Argo Rollout
+        run: |
+          kubectl argo rollouts undo my-app -n production
+          kubectl argo rollouts status my-app -n production --timeout 10m</pre>
+    </div>
+    <div id="file-tools" class="copy-wrap" style="display:none;">
+      <button class="copy-btn" onclick="copyCode('tools-pre')">Copy</button>
+      <pre id="tools-pre"># setup-tools.yml
+# Reusable workflow: installs the common deploy toolchain
+# (Cosign, kubectl, Helm, Argo Rollouts CLI)
+#
+# Place in .github/workflows/setup-tools.yml
+# Call with: uses: ./.github/workflows/setup-tools.yml
+
+name: Setup Deploy Tools (Reusable)
+
+on:
+  workflow_call:
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Install Argo Rollouts CLI
+        run: |
+          curl -LO https://github.com/argoproj/argo-rollouts/releases/latest/download/kubectl-argo-rollouts-linux-amd64
+          chmod +x kubectl-argo-rollouts-linux-amd64
+          sudo mv kubectl-argo-rollouts-linux-amd64 /usr/local/bin/kubectl-argo-rollouts</pre>
+    </div>
+  </div>
+
+  <script>
+    const JOBS = {
+      'dep-review': {
+        name: 'dependency-review', emoji: '🔍', trigger: 'PR only', timeout: '—',
+        tags: [{ t: 'dependency-review-action@v4', c: '' }],
+        desc: 'Scans the PR for newly introduced dependencies that have known vulnerabilities.',
+        steps: ['Checkout repository', 'Run dependency-review-action@v4 configured to fail-on-severity: high', 'Blocks PR from being merged if High or Critical vulnerabilities are introduced in package manifests (like package.json, requirements.txt, go.mod, etc.)']
+      },
+      'code-quality': {
+        name: 'code-quality', emoji: '🔒', trigger: 'push', timeout: '20 min',
+        tags: [{ t: 'Gitleaks', c: 'warn' }, { t: 'CodeQL', c: '' }, { t: 'Semgrep', c: '' }, { t: 'Super-Linter', c: '' }],
+        desc: 'The primary Static Application Security Testing (SAST) and linting gate. It is entirely language-agnostic.',
+        steps: ['Checkout with full git history (fetch-depth: 0) to allow deep scanning', 'Gitleaks: Scans the entire git history for hardcoded secrets (API keys, passwords)', 'CodeQL: GitHub native SAST tool. Auto-detects language, builds code, and analyzes for vulnerabilities', 'Semgrep: Runs another layer of SAST, configured with OWASP Top 10 rules, secret detection, and CI checks', 'Super-Linter: Lints the codebase across 50+ languages to enforce coding standards', 'Write step summary']
+      },
+      'build': {
+        name: 'build', emoji: '🏗️', trigger: 'push (needs code-quality)', timeout: '20 min',
+        tags: [{ t: 'Docker BuildKit', c: 'green' }, { t: 'ECR', c: '' }, { t: 'SBOM', c: '' }, { t: 'GHA Cache', c: '' }],
+        desc: 'Builds the Docker container image, attaches attestations, and pushes it to AWS ECR.',
+        steps: ['Checkout', 'Setup Docker Buildx for advanced caching', 'Authenticates securely to AWS using OIDC (role-to-assume)', 'Login to ECR', 'Build & push image uniquely tagged with the commit SHA (github.sha)', 'Creates a Software Bill of Materials (SBOM) and build provenance attestations automatically', 'Use GHA layer cache for speed', 'Output: image digest sha256:... This immutable digest is used by all subsequent stages to guarantee that the exact same byte-for-byte image is deployed everywhere.']
+      },
+      'scan-sign': {
+        name: 'scan-sign', emoji: '🛡️', trigger: 'push (needs build)', timeout: '15 min',
+        tags: [{ t: 'Trivy', c: 'warn' }, { t: 'SARIF', c: '' }, { t: 'Cosign', c: 'green' }],
+        desc: 'Scans the built container for OS and library CVEs, and cryptographically signs it natively via OIDC.',
+        steps: ['Install Cosign (Sigstore)', 'Configure AWS credentials → ECR login', 'Trivy Blocking Scan: Scans the image in ECR. If it finds HIGH or CRITICAL vulnerabilities, the pipeline exits with code 1 and fails outright', 'Trivy SARIF Upload: Runs a second scan to generate a SARIF report, uploaded to populate the native GitHub Security tab', 'Compute digest-pinned image URI', 'Cosign Image Signing: Uses Sigstore Cosign to natively sign the image digest without requiring long-lived cryptographic keys (Keyless signing via OIDC)', 'Output: image_uri (digest-based)']
+      },
+      'deploy-staging': {
+        name: 'deploy-staging', emoji: '🚀', trigger: 'push (needs scan-sign)', timeout: '30 min',
+        tags: [{ t: 'Helm', c: 'green' }, { t: 'Argo Rollouts', c: '' }, { t: 'Cosign verify', c: 'green' }, { t: 'staging env', c: '' }],
+        desc: 'Deploys the signed image to the Staging EKS cluster using a Canary strategy.',
+        steps: ['Install toolchain: Cosign + kubectl + Helm + Argo CLI', 'Configure AWS credentials → EKS staging role via OIDC', 'Update kubeconfig for my-eks-staging', 'Cosign Verify: Cryptographically verifies the image signature. If signature is missing/tampered, deployment halts', 'Helm Deploy: Upgrades/Installs the application using Helm, explicitly injecting the immutable image digest from the build step', 'Argo Rollouts: Waits for Argo Rollouts to complete its Canary strategy traffic shifting (timeout 10m)']
+      },
+      'dast-staging': {
+        name: 'dast-staging', emoji: '🕷️', trigger: 'push (needs deploy-staging)', timeout: '20 min',
+        tags: [{ t: 'OWASP ZAP', c: 'warn' }],
+        desc: 'Runs Dynamic Application Security Testing (DAST) on the running application.',
+        steps: ['OWASP ZAP Baseline Scan against live staging URL (https://staging.my-app.example.com)', 'fail_action: true — pipeline fails before it can reach Production if vulnerabilities are dynamically found', 'Creates GitHub issue: "ZAP Baseline Scan — Staging"']
+      },
+      'promote': {
+        name: 'promote', emoji: '⏸️', trigger: 'push (needs dast-staging)', timeout: '60 min window',
+        tags: [{ t: 'Manual Approval', c: 'yellow' }, { t: 'production env', c: 'yellow' }],
+        desc: 'Acts as a manual approval gate before production deployment.',
+        steps: ['Gated on dast-staging passing', 'GitHub Environment "production" required reviewers must approve', 'GitHub pauses the pipeline and waits for an authorized human to click "Approve" (timeout 60m)', 'On approval: triggers deploy-prod', 'On timeout / rejection: pipeline stops']
+      },
+      'deploy-prod': {
+        name: 'deploy-prod', emoji: '🎯', trigger: 'push (needs promote + scan-sign)', timeout: '45 min',
+        tags: [{ t: 'Helm', c: 'green' }, { t: 'Argo Rollouts', c: '' }, { t: 'Cosign verify', c: 'green' }, { t: 'production env', c: 'yellow' }],
+        desc: 'Deploys to Production using the exact same mechanisms and image digest as Staging.',
+        steps: ['Install toolchain: Cosign + kubectl + Helm + Argo CLI', 'Configure AWS credentials → EKS prod role via OIDC', 'Update kubeconfig for my-eks-prod', 'Cosign Verify: Cryptographically verifies the signature once again', 'Helm Deploy: Deploys the EXACT SAME image digest that was tested in staging, ensuring zero configuration drift', 'Argo Rollouts: Watches for up to 15m to progressively shift canary traffic', 'On success: production live']
+      },
+      'rollback-prod': {
+        name: 'rollback-prod', emoji: '↩️', trigger: 'if: failure() after deploy-prod', timeout: '20 min',
+        tags: [{ t: 'Argo Rollouts', c: '' }, { t: 'Auto-triggered', c: 'warn' }],
+        desc: 'Automated rollback system to instantly prevent downtime if production deployment fails.',
+        steps: ['ONLY runs if deploy-prod fails (e.g. health checks fail during traffic shifting)', 'Configure AWS credentials → EKS prod role', 'Update kubeconfig for my-eks-prod', 'Install Argo Rollouts CLI', 'kubectl argo rollouts undo my-app -n production (instantly reverts traffic back to previous stable version)', 'Monitor rollback status --timeout 10m', 'Writes rollback summary to GitHub Step Summary']
+      }
+    };
+
+    function detail(id) {
+      document.querySelectorAll('.job-card').forEach(c => c.classList.remove('active-card'));
+      event.currentTarget.classList.add('active-card');
+      const j = JOBS[id];
+      const panel = document.getElementById('detail-panel');
+      const tagsHtml = j.tags.map(t => `<span class="tool-tag ${t.c}">${t.t}</span>`).join(' ');
+      const stepsHtml = j.steps.map(s => `<li>${s}</li>`).join('');
+      const descHtml = j.desc ? `<div style="font-size: .88rem; color: var(--text); margin-bottom: 1.2rem; line-height: 1.5; border-left: 3px solid var(--accent); padding-left: .8rem; background: var(--surface2); padding: .8rem; border-radius: 4px;">${j.desc}</div>` : '';
+      panel.innerHTML = `
+    <h3>${j.emoji} ${j.name}</h3>
+    <div class="dp-meta">
+      <span>Trigger: ${j.trigger}</span>
+      <span>Timeout: ${j.timeout}</span>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1rem;">${tagsHtml}</div>
+    ${descHtml}
+    <ul class="dp-steps">${stepsHtml}</ul>`;
+    }
+
+    function showTab(name) {
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('tab-' + name).classList.add('active');
+      event.currentTarget.classList.add('active');
+    }
+
+    function showFile(name) {
+      document.getElementById('file-main').style.display = name === 'main' ? 'block' : 'none';
+      document.getElementById('file-tools').style.display = name === 'tools' ? 'block' : 'none';
+      document.querySelectorAll('.file-tab').forEach(b => b.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+    }
+
+    function copyCode(id) {
+      const el = document.getElementById(id);
+      navigator.clipboard.writeText(el.innerText).then(() => {
+        const btn = el.parentElement.querySelector('.copy-btn');
+        btn.textContent = 'Copied!'; btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    }
+  </script>
+</body>
+
+</html>
