@@ -263,6 +263,12 @@
     .theme-sec .tag-primary  { background: rgba(88,166,255,.12); border: 1px solid rgba(88,166,255,.25); color: #58a6ff; }
     .theme-sec .tag-secondary{ background: rgba(63,185,80,.1);  border: 1px solid rgba(63,185,80,.2);   color: #3fb950; }
 
+    /* Kubernetes Networking */
+    .theme-cyan .card-strip   { background: linear-gradient(90deg, var(--accent-cyan), var(--accent-blue)); }
+    .theme-cyan .card-glow    { background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(34,211,238,.08) 0%, transparent 70%); }
+    .theme-cyan .tag-primary  { background: rgba(34,211,238,.12); border: 1px solid rgba(34,211,238,.25); color: var(--accent-cyan); }
+    .theme-cyan .tag-secondary{ background: rgba(79,142,247,.1);  border: 1px solid rgba(79,142,247,.2);  color: var(--accent-blue); }
+
     /* ── Footer ──────────────────────────────────────────────── */
     footer {
       border-top: 1px solid var(--border);
@@ -415,7 +421,32 @@
         </div>
       </a>
 
-      <!-- ④ VPC Flow — Coming Soon -->
+      <!-- ⑤ Kubernetes Networking — LIVE -->
+      <a class="viz-card theme-cyan" href="./k8s-networking.html" id="card-k8s">
+        <div class="card-glow"></div>
+        <div class="card-strip"></div>
+        <div class="card-body">
+          <div class="card-tags">
+            <span class="tag tag-primary">Kubernetes</span>
+            <span class="tag tag-secondary">CNI</span>
+            <span class="tag tag-secondary">DNS</span>
+          </div>
+          <div class="card-icon">☸️</div>
+          <div class="card-title">Kubernetes Networking</div>
+          <div class="card-desc">
+            From IP ranges and veth pairs to VXLAN encapsulation, kube-proxy, CoreDNS, and Ingress — 12-tab interactive deep dive into how k8s networking actually works.
+          </div>
+          <div class="card-footer">
+            <div class="card-meta">
+              <span class="meta-item">🔍 12 Topics</span>
+              <span class="meta-item">☸️ CNI / DNS / Ingress</span>
+            </div>
+            <span class="card-arrow">→</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- ⑥ VPC Flow — Coming Soon -->
       <div class="viz-card theme-purp coming-soon">
         <span class="soon-badge">COMING SOON</span>
         <div class="card-strip"></div>
