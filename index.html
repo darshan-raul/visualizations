@@ -269,6 +269,12 @@
     .theme-cyan .tag-primary  { background: rgba(34,211,238,.12); border: 1px solid rgba(34,211,238,.25); color: var(--accent-cyan); }
     .theme-cyan .tag-secondary{ background: rgba(79,142,247,.1);  border: 1px solid rgba(79,142,247,.2);  color: var(--accent-blue); }
 
+    /* Docker Multi-Arch */
+    .theme-docker .card-strip   { background: linear-gradient(90deg, #4d9fff, #a78bfa); }
+    .theme-docker .card-glow    { background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(79,142,247,.08) 0%, transparent 70%); }
+    .theme-docker .tag-primary  { background: rgba(79,142,247,.12); border: 1px solid rgba(79,142,247,.25); color: var(--accent-blue); }
+    .theme-docker .tag-secondary{ background: rgba(167,139,250,.1); border: 1px solid rgba(167,139,250,.2);  color: var(--accent-purp); }
+
     /* ── Footer ──────────────────────────────────────────────── */
     footer {
       border-top: 1px solid var(--border);
@@ -446,7 +452,32 @@
         </div>
       </a>
 
-      <!-- ⑥ VPC Flow — Coming Soon -->
+      <!-- ⑥ Docker Multi-Arch — LIVE -->
+      <a class="viz-card theme-docker" href="./docker-multiarch.html" id="card-docker">
+        <div class="card-glow"></div>
+        <div class="card-strip"></div>
+        <div class="card-body">
+          <div class="card-tags">
+            <span class="tag tag-primary">Docker</span>
+            <span class="tag tag-secondary">Buildx</span>
+            <span class="tag tag-secondary">Manifest Lists</span>
+          </div>
+          <div class="card-icon">🐳</div>
+          <div class="card-title">Docker Multi-Architecture</div>
+          <div class="card-desc">
+            From CPU architectures to manifest lists — how Docker builds, pushes, and resolves images across amd64, arm64, arm/v7, and s390x. Includes interactive manifest inspector.
+          </div>
+          <div class="card-footer">
+            <div class="card-meta">
+              <span class="meta-item">🔍 10 Tabs</span>
+              <span class="meta-item">🐳 Buildx / Manifest</span>
+            </div>
+            <span class="card-arrow">→</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- ⑦ VPC Flow — Coming Soon -->
       <div class="viz-card theme-purp coming-soon">
         <span class="soon-badge">COMING SOON</span>
         <div class="card-strip"></div>

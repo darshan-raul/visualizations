@@ -1,0 +1,1497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Docker Multi-Architecture Images — Deep Dive</title>
+  <meta name="description" content="Interactive visualization of Docker multi-architecture images, manifest lists, and buildx workflow.">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:          #0a0d14;
+      --surface:     #111520;
+      --surface2:    #161b28;
+      --border:      rgba(255,255,255,.07);
+      --accent:      #4f8ef7;
+      --accent-cyan: #22d3ee;
+      --accent-green:#34d399;
+      --accent-amber:#fbbf24;
+      --accent-red:  #f87171;
+      --accent-purp: #a78bfa;
+      --text:        #f0f4ff;
+      --text-muted:  #8b9ab5;
+      --text-dim:    #4a5568;
+      --mono:        'JetBrains Mono', monospace;
+      --sans:        'Inter', sans-serif;
+      --radius:      14px;
+      --shadow:      0 8px 40px rgba(0,0,0,.55);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.7;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: -1;
+      background:
+        radial-gradient(ellipse 80% 50% at 10% 0%,   rgba(79,142,247,.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 90% 10%,  rgba(34,211,238,.08) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 60% at 50% 100%, rgba(167,139,250,.06) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .back-btn {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 1000;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      background: rgba(14,19,32,0.75);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 100px;
+      color: #8b9ab5;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: color .2s, border-color .2s, transform .2s, box-shadow .2s;
+      box-shadow: 0 4px 24px rgba(0,0,0,.4);
+    }
+    .back-btn:hover {
+      color: #eef2ff;
+      border-color: rgba(79,142,247,.4);
+      transform: translateX(-3px);
+      box-shadow: 0 4px 32px rgba(79,142,247,.15);
+    }
+    .back-btn .arrow { font-size: 16px; transition: transform .2s; }
+    .back-btn:hover .arrow { transform: translateX(-2px); }
+
+    header {
+      position: relative;
+      z-index: 10;
+      padding: 52px 48px 0;
+      border-bottom: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(79,142,247,.12);
+      border: 1px solid rgba(79,142,247,.3);
+      border-radius: 100px;
+      padding: 6px 16px;
+      font-size: 12px; font-weight: 600; letter-spacing: .06em;
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+    .badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
+
+    header h1 {
+      font-family: 'Inter', sans-serif;
+      font-size: clamp(28px, 5vw, 48px);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -.02em;
+      background: linear-gradient(130deg, #f0f4ff 30%, var(--accent-cyan) 80%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 14px;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 16px;
+      max-width: 600px;
+      margin: 0 auto 28px;
+      line-height: 1.6;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+      border-bottom: 1px solid var(--border);
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+
+    .tab-btn {
+      flex-shrink: 0;
+      background: none;
+      border: none;
+      border-top: 2px solid transparent;
+      color: var(--text-muted);
+      font-family: var(--sans);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 14px 18px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+      position: relative;
+    }
+
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active {
+      color: var(--accent);
+      border-top-color: var(--accent);
+      background: rgba(79,142,247,0.06);
+    }
+
+    .tab-btn .tab-num {
+      font-family: var(--mono);
+      font-size: 10px;
+      opacity: 0.5;
+      margin-right: 6px;
+    }
+
+    .content {
+      position: relative;
+      z-index: 5;
+      padding: 48px;
+      max-width: 1100px;
+    }
+
+    .panel { display: none; animation: fadeIn 0.3s ease; }
+    .panel.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .concept-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .concept-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      border-top: 3px solid var(--accent);
+    }
+    .concept-card.cyan  { border-top-color: var(--accent-cyan); }
+    .concept-card.green { border-top-color: var(--accent-green); }
+    .concept-card.amber { border-top-color: var(--accent-amber); }
+    .concept-card.red   { border-top-color: var(--accent-red); }
+    .concept-card.purp  { border-top-color: var(--accent-purp); }
+
+    .concept-card h3 {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: var(--text);
+    }
+
+    .concept-card p {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .section-label {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin: 32px 0 16px;
+    }
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .code-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.6;
+      overflow-x: auto;
+      margin: 16px 0;
+    }
+
+    .code-block .comment { color: var(--text-dim); }
+    .code-block .keyword { color: var(--accent-purp); }
+    .code-block .string  { color: var(--accent-green); }
+    .code-block .number  { color: var(--accent-amber); }
+    .code-block .type    { color: var(--accent-cyan); }
+
+    .warn-box {
+      background: rgba(248,113,113,.08);
+      border: 1px solid rgba(248,113,113,.2);
+      border-left: 3px solid var(--accent-red);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin: 16px 0;
+    }
+
+    .warn-box h4 {
+      color: var(--accent-red);
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .warn-box p {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .ok-box {
+      background: rgba(52,211,153,.08);
+      border: 1px solid rgba(52,211,153,.2);
+      border-left: 3px solid var(--accent-green);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin: 16px 0;
+    }
+
+    .ok-box h4 {
+      color: var(--accent-green);
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .ok-box p {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .compare-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 13px;
+    }
+
+    .compare-table th {
+      text-align: left;
+      padding: 12px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      font-weight: 600;
+      color: var(--text-muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    .compare-table td {
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+
+    .compare-table tr:hover td {
+      background: rgba(79,142,247,.03);
+    }
+
+    .flow-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 16px 0;
+    }
+
+    .flow-step {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .flow-step:last-child { border-bottom: none; }
+
+    .flow-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: var(--bg);
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .flow-content h4 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .flow-content p {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .platform-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+      margin: 16px 0;
+    }
+
+    .platform-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .platform-card .arch {
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--accent-cyan);
+      margin-bottom: 8px;
+    }
+
+    .platform-card .alias {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+
+    .platform-card .example {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin: 16px 0;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .card h4 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--text);
+    }
+
+    .card ul {
+      list-style: none;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .card li {
+      padding: 6px 0;
+      padding-left: 16px;
+      position: relative;
+    }
+
+    .card li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 12px;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    footer {
+      text-align: center;
+      padding: 48px 48px 64px;
+      border-top: 1px solid var(--border);
+      margin-top: 48px;
+    }
+
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+
+    h2 {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 32px 0 16px;
+      color: var(--text);
+    }
+
+    h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 24px 0 12px;
+      color: var(--text);
+    }
+
+    p {
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .manifest-inspector {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 24px 0;
+    }
+
+    .inspector-input {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .inspector-input input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+    }
+
+    .inspector-input input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .inspector-input button {
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .2s;
+    }
+
+    .inspector-input button:hover {
+      opacity: 0.85;
+    }
+
+    .inspector-result {
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      color: var(--text-muted);
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .tag-primary {
+      background: rgba(79,142,247,.15);
+      color: var(--accent);
+    }
+
+    .tag-secondary {
+      background: rgba(34,211,238,.15);
+      color: var(--accent-cyan);
+    }
+  </style>
+</head>
+<body>
+
+<a class="back-btn" href="./index.html">
+  <span class="arrow">←</span> All Visualizations
+</a>
+
+<header>
+  <div class="badge">
+    <span class="dot"></span>
+    DevOps / Docker
+  </div>
+  <h1>Docker Multi-Architecture Images</h1>
+  <p>From CPU architectures to manifest lists — how Docker builds, pushes, and resolves images across platforms.</p>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="showTab(0)"><span class="tab-num">00</span> Why Multi-Arch?</button>
+  <button class="tab-btn" onclick="showTab(1)"><span class="tab-num">01</span> CPU Architectures</button>
+  <button class="tab-btn" onclick="showTab(2)"><span class="tab-num">02</span> OS & Base Images</button>
+  <button class="tab-btn" onclick="showTab(3)"><span class="tab-num">03</span> Image Anatomy</button>
+  <button class="tab-btn" onclick="showTab(4)"><span class="tab-num">04</span> Manifest List</button>
+  <button class="tab-btn" onclick="showTab(5)"><span class="tab-num">05</span> Registry Resolution</button>
+  <button class="tab-btn" onclick="showTab(6)"><span class="tab-num">06</span> Buildx</button>
+  <button class="tab-btn" onclick="showTab(7)"><span class="tab-num">07</span> Push & Pull Flow</button>
+  <button class="tab-btn" onclick="showTab(8)"><span class="tab-num">08</span> Windows Containers</button>
+  <button class="tab-btn" onclick="showTab(9)"><span class="tab-num">09</span> Real-World Examples</button>
+</div>
+
+<div class="content">
+  <div class="panel active" id="panel-0">
+
+    <div class="section-label">The Problem</div>
+
+    <div class="concept-grid">
+      <div class="concept-card">
+        <h3>The Silicon Shift</h3>
+        <p>In November 2020, Apple shipped the M1 Mac — first mass-market ARM64 laptops. Within months, millions of developers had ARM hardware that couldn't run traditional x86_64 Docker images.</p>
+      </div>
+      <div class="concept-card cyan">
+        <h3>Cloud ARM Adoption</h3>
+        <p>AWS Graviton2/3 instances offer 20–40% better price-performance than equivalent x86 instances. Your `python:3.12` image now needs an ARM64 variant to run on Graviton.</p>
+      </div>
+    </div>
+
+    <div class="warn-box">
+      <h4>Classic Error: No Matching Manifest</h4>
+      <p>When Docker pulls an image, it asks the registry for a manifest list. If your Apple Silicon Mac (linux/arm64) requests an image that only has linux/amd64 built, Docker fails with:</p>
+      <p style="font-family: var(--mono); color: var(--accent-red); margin-top: 8px;">ERROR: no matching manifest for linux/arm64/v8 in the manifest list</p>
+    </div>
+
+    <div class="section-label">The Solution</div>
+
+    <div class="ok-box">
+      <h4>One Tag, Multiple Platforms</h4>
+      <p>Multi-architecture images solve this. A single tag like `nginx:latest` returns a manifest list pointing to platform-specific variants. Docker automatically pulls the correct one for your hardware.</p>
+    </div>
+
+    <h3>Supported Platforms</h3>
+
+    <div class="platform-grid">
+      <div class="platform-card">
+        <div class="arch">linux/amd64</div>
+        <div class="alias">x86_64</div>
+        <div class="example">Intel Macs, Intel EC2, AMD EPYC servers</div>
+      </div>
+      <div class="platform-card">
+        <div class="arch">linux/arm64</div>
+        <div class="alias">aarch64</div>
+        <div class="example">Apple Silicon, AWS Graviton2/3</div>
+      </div>
+      <div class="platform-card">
+        <div class="arch">linux/arm/v7</div>
+        <div class="alias">armhf</div>
+        <div class="example">Raspberry Pi 3/4</div>
+      </div>
+      <div class="platform-card">
+        <div class="arch">linux/s390x</div>
+        <div class="alias">s390x</div>
+        <div class="example">IBM Z mainframes</div>
+      </div>
+      <div class="platform-card">
+        <div class="arch">windows/amd64</div>
+        <div class="alias">win32-x86_64</div>
+        <div class="example">Windows Server, Windows containers</div>
+      </div>
+    </div>
+
+    <h3>The Developer Experience Goal</h3>
+
+    <p>`docker run nginx:latest` should work identically whether you're on an Intel Mac, Apple Silicon Mac, Raspberry Pi, or x86_64 EC2. The image tag is the same. The container behavior is the same. Only the underlying binary differs.</p>
+
+    <p>This is what containerization promised: write once, run anywhere. Multi-arch images deliver on that promise for CPU architecture.</p>
+
+  </div>
+
+  <div class="panel" id="panel-1">
+
+    <div class="section-label">Part 1</div>
+    <h2>CPU Architectures Explained</h2>
+    <p>An Instruction Set Architecture (ISA) defines the contract between hardware and software — registers, data types, memory model, system calls, and calling conventions.</p>
+
+    <h3>x86_64 (AMD64)</h3>
+    <div class="concept-card">
+      <p>Created by AMD in 2003 as a 64-bit extension to Intel's x86. Dominant in desktops, laptops, and servers. Complex CISC design with hundreds of instructions and variable-length encoding (1–15 bytes per instruction).</p>
+      <p style="margin-top: 10px;">Powers most cloud workloads with high single-threaded performance. Compiled code runs natively on any Intel or AMD 64-bit CPU.</p>
+    </div>
+
+    <h3>ARM64 (AArch64)</h3>
+    <div class="concept-card cyan">
+      <p>64-bit ARM architecture (ARMv8-A onwards). Designed for power efficiency — more performance per watt than x86. Powers Apple Silicon (M1/M2/M3), AWS Graviton2/3, mobile devices, and embedded systems.</p>
+      <p style="margin-top: 10px;">Simpler RISC design with fixed-length 4-byte instructions. Every instruction is exactly 32 bits, making decoding simpler and pipelines more efficient.</p>
+    </div>
+
+    <h3>ARMv7 (armhf)</h3>
+    <div class="concept-card green">
+      <p>32-bit ARM architecture common in IoT and Raspberry Pi 2/3/4. Docker supports `linux/arm/v7` as a third-tier platform. Many official images ship an armhf variant for the Raspberry Pi community.</p>
+    </div>
+
+    <h3>IBM s390x</h3>
+    <div class="concept-card purp">
+      <p>IBM Z mainframe architecture used by IBM zSeries mainframes. Less common but fully supported by official images like `python`, `node`, and `golang`. Big-endian by default.</p>
+    </div>
+
+    <div class="section-label">Register Models</div>
+
+    <div class="two-col">
+      <div class="card">
+        <h4>x86_64 Registers</h4>
+        <ul>
+          <li>General purpose: rax, rbx, rcx, rdx, rsi, rdi, rbp, rsp, r8–r15</li>
+          <li>64-bit wide (8 bytes each)</li>
+          <li>rax is the "accumulator" — used for return values and many instructions</li>
+          <li>Complex instruction encoding due to legacy 8086 backwards compatibility</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>ARM64 Registers</h4>
+        <ul>
+          <li>31 general purpose: x0–x30 (64-bit) with w0–w30 as 32-bit views</li>
+          <li>x30 is the link register (holds return address)</li>
+          <li>No dedicated accumulator — all registers are symmetric</li>
+          <li>Much simpler register model than x86</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Endianness</h3>
+
+    <p>Both x86_64 and ARM64 typically operate in little-endian mode for desktop/server workloads (IBM s390x is the exception — big-endian). This means multi-byte values are stored least-significant byte first.</p>
+
+    <h3>Cross-Compilation Toolchains</h3>
+
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>Target</th>
+          <th>Cross-Compiler</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>ARM64 (on x86_64)</td>
+          <td><code>gcc-aarch64-linux-gnu</code></td>
+          <td>GNU toolchain for ARM64</td>
+        </tr>
+        <tr>
+          <td>ARM64 (on x86_64)</td>
+          <td><code>clang --target=aarch64-linux-gnu</code></td>
+          <td>LLVM/Clang</td>
+        </tr>
+        <tr>
+          <td>ARMv7 (on x86_64)</td>
+          <td><code>gcc-arm-linux-gnueabihf</code></td>
+          <td>ARM hard-float</td>
+        </tr>
+        <tr>
+          <td>s390x (on x86_64)</td>
+          <td><code>gcc-s390x-linux-gnu</code></td>
+          <td>IBM Z</td>
+        </tr>
+        <tr>
+          <td>x86_64 (on ARM64)</td>
+          <td><code>gcc-x86_64-linux-gnu</code></td>
+          <td>Reverse cross-compile</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>Docker buildx uses these automatically when native toolchains are available. When they're not, it falls back to QEMU emulation.</p>
+
+  </div>
+
+  <div class="panel" id="panel-2">
+
+    <div class="section-label">Part 2</div>
+    <h2>Operating Systems & Base Images</h2>
+    <p>Linux base images contain binaries compiled for a specific architecture. The same tag (`alpine:latest`) on ARM64 is a different image binary than on x86 — they share the tag but have different manifest entries pointing to different layer blobs.</p>
+
+    <h3>Linux Distributions</h3>
+
+    <div class="concept-grid">
+      <div class="concept-card green">
+        <h3>Alpine</h3>
+        <p>Minimal (5 MB), musl libc, BusyBox. Designed for containers. Best for truly minimal workloads.</p>
+      </div>
+      <div class="concept-card">
+        <h3>Debian</h3>
+        <p>Full-featured, larger (~120 MB+), glibc. Most official images use Debian as a base.</p>
+      </div>
+      <div class="concept-card cyan">
+        <h3>Ubuntu</h3>
+        <p>Debian-based with familiar tooling. Good balance of size and compatibility.</p>
+      </div>
+      <div class="concept-card purp">
+        <h3>Distroless</h3>
+        <p>Google minimal images — no shell, just runtime. Best for security-sensitive deployments.</p>
+      </div>
+      <div class="concept-card amber">
+        <h3>Scratch</h3>
+        <p>Empty image, no OS at all. Only for statically linked binaries that need nothing extra.</p>
+      </div>
+    </div>
+
+    <h3>libc Differences: glibc vs musl</h3>
+
+    <div class="warn-box">
+      <h4>Alpine Uses musl, Not glibc</h4>
+      <p>Alpine Linux uses musl libc instead of glibc. Some binaries compiled on Debian/Ubuntu (glibc) won't run on Alpine without recompilation. The Go toolchain produces statically linked binaries by default, which is why Go-based images work everywhere.</p>
+    </div>
+
+    <p>Python and Node official images ship with statically linked binaries that work on both glibc and musl systems. The pip install process downloads the correct wheel for your architecture from PyPI.</p>
+
+    <h3>Windows Base Images</h3>
+
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>Image</th>
+          <th>Size (compressed)</th>
+          <th>Use Case</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>mcr.microsoft.com/windows/servercore</code></td>
+          <td>~5 GB</td>
+          <td>Full .NET Framework, legacy apps, MSI installers</td>
+        </tr>
+        <tr>
+          <td><code>mcr.microsoft.com/windows/nanoserver</code></td>
+          <td>~350 MB</td>
+          <td>Cloud-native .NET apps, microservices, .NET Core/5+</td>
+        </tr>
+        <tr>
+          <td><code>mcr.microsoft.com/windows</code></td>
+          <td>Full Windows</td>
+          <td>Windows with desktop experience (rarely used in containers)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="warn-box">
+      <h4>Windows Images Are Huge</h4>
+      <p>Windows base images are gigabytes vs megabytes for Linux. A Windows Server Core image is ~5 GB compressed. Plan for longer pull times and larger storage in CI/CD pipelines.</p>
+    </div>
+
+    <h3>Windows Versions in Tags</h3>
+
+    <div class="concept-grid">
+      <div class="concept-card">
+        <h3>ltsc2022</h3>
+        <p>Windows Server 2022 Long-Term Servicing Channel. Current recommended version.</p>
+      </div>
+      <div class="concept-card amber">
+        <h3>2004</h3>
+        <p>Windows Server 2004 (older, rarely used now). Kept for compatibility with older systems.</p>
+      </div>
+    </div>
+
+    <p>Windows base images are platform-specific. Cannot run Windows containers on Linux hosts and vice versa.</p>
+
+  </div>
+
+  <div class="panel" id="panel-3">
+
+    <div class="section-label">Part 3</div>
+    <h2>Single-Arch Image Anatomy</h2>
+    <p>A Docker image is a collection of read-only layers plus a JSON manifest and runtime configuration.</p>
+
+    <h3>Image Directory Structure</h3>
+
+    <div class="code-block">
+docker-image/
+├── manifest.json         ← describes image for a specific platform
+├── config.json           ← environment, entrypoint, cmd, volumes, etc.
+└── layerN.tar            ← filesystem diffs, each layer is a tar+gzip
+    </div>
+
+    <h3>Manifest JSON (per-platform)</h3>
+
+    <div class="code-block">
+{
+  <span class="string">"schemaVersion"</span>: <span class="number">2</span>,
+  <span class="string">"mediaType"</span>: <span class="string">"application/vnd.docker.distribution.manifest.v2+json"</span>,
+  <span class="string">"config"</span>: {
+    <span class="string">"mediaType"</span>: <span class="string">"application/vnd.docker.container.image.v1+json"</span>,
+    <span class="string">"size"</span>: <span class="number">7023</span>,
+    <span class="string">"digest"</span>: <span class="string">"sha256:abc123..."</span>
+  },
+  <span class="string">"layers"</span>: [
+    {
+      <span class="string">"mediaType"</span>: <span class="string">"application/vnd.docker.image.rootfs.diff.tar.gzip"</span>,
+      <span class="string">"size"</span>: <span class="number">45123456</span>,
+      <span class="string">"digest"</span>: <span class="string">"sha256:def456..."</span>
+    }
+  ]
+}
+    </div>
+
+    <h3>Config JSON Contents</h3>
+
+    <div class="code-block">
+{
+  <span class="string">"architecture"</span>: <span class="string">"arm64"</span>,
+  <span class="string">"os"</span>: <span class="string">"linux"</span>,
+  <span class="string">"config"</span>: {
+    <span class="string">"Env"</span>: [<span class="string">"PATH=/usr/local/bin:/usr/bin:/bin"</span>],
+    <span class="string">"Cmd"</span>: [<span class="string">"/bin/sh"</span>],
+    <span class="string">"WorkingDir"</span>: <span class="string">""</span>,
+    <span class="string">"ExposedPorts"</span>: { <span class="string">"80/tcp"</span>: {} },
+    <span class="string">"Entrypoint"</span>: [<span class="string">"nginx"</span>],
+    <span class="string">"Labels"</span>: { <span class="string">"maintainer"</span>: <span class="string">"NGINX Docker Maintainers"</span> }
+  },
+  <span class="string">"rootfs"</span>: {
+    <span class="string">"type"</span>: <span class="string">"layers"</span>,
+    <span class="string">"diff_ids"</span>: [<span class="string">"sha256:abc..."</span>, <span class="string">"sha256:def..."</span>]
+  },
+  <span class="string">"history"</span>: [
+    {<span class="string">"created_by"</span>: <span class="string">"/bin/sh -c #(nop) CMD [\"nginx\"]"</span>}
+  ]
+}
+    </div>
+
+    <h3>Layer DAG (Directed Acyclic Graph)</h3>
+
+    <div class="flow-container">
+      <div class="flow-step">
+        <div class="flow-num">0</div>
+        <div class="flow-content">
+          <h4>FROM python:3.12</h4>
+          <p>Base image layer — typically the largest layer (Python runtime ~100 MB)</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">1</div>
+        <div class="flow-content">
+          <h4>COPY requirements.txt /</h4>
+          <p>Adds requirements file — tiny layer</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">2</div>
+        <div class="flow-content">
+          <h4>RUN pip install</h4>
+          <p>Installs dependencies — small layer with pip packages</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">3</div>
+        <div class="flow-content">
+          <h4>COPY app /app</h4>
+          <p>Adds your application code — most specific layer</p>
+        </div>
+      </div>
+    </div>
+
+    <h3>Content-Addressable Storage</h3>
+
+    <div class="ok-box">
+      <h4>Layers Are Content-Addressable</h4>
+      <p>Each object in the registry is addressed by its SHA256 digest. Two images sharing the same base layers only store those layers once in the registry. This enables deduplication, integrity verification, and parallel pulls.</p>
+    </div>
+
+    <p>Alpine's base layer might be shared across 10,000 images in a registry. This dramatically reduces storage costs and pull bandwidth.</p>
+
+  </div>
+
+  <div class="panel" id="panel-4">
+
+    <div class="section-label">Part 4</div>
+    <h2>The Manifest List (Multi-Arch Manifest)</h2>
+    <p>The manifest list is the top-level "index" that points to multiple platform-specific manifests. It allows a single tag (`nginx:latest`) to work across all architectures. Added to Docker distribution spec v2.2 in 2016.</p>
+
+    <h3>Manifest List Structure</h3>
+
+    <div class="code-block">
+{
+  <span class="string">"schemaVersion"</span>: <span class="number">2</span>,
+  <span class="string">"mediaType"</span>: <span class="string">"application/vnd.docker.distribution.manifest.list.v2+json"</span>,
+  <span class="string">"manifests"</span>: [
+    {
+      <span class="string">"mediaType"</span>: <span class="string">"application/vnd.docker.distribution.manifest.v2+json"</span>,
+      <span class="string">"size"</span>: <span class="number">7143</span>,
+      <span class="string">"digest"</span>: <span class="string">"sha256:aaa111..."</span>,
+      <span class="string">"platform"</span>: {
+        <span class="string">"architecture"</span>: <span class="string">"amd64"</span>,
+        <span class="string">"os"</span>: <span class="string">"linux"</span>,
+        <span class="string">"os.version"</span>: <span class="string">"5.10.0"</span>
+      }
+    },
+    {
+      <span class="string">"mediaType"</span>: <span class="string">"application/vnd.docker.distribution.manifest.v2+json"</span>,
+      <span class="string">"size"</span>: <span class="number">7143</span>,
+      <span class="string">"digest"</span>: <span class="string">"sha256:bbb222..."</span>,
+      <span class="string">"platform"</span>: {
+        <span class="string">"architecture"</span>: <span class="string">"arm64"</span>,
+        <span class="string">"os"</span>: <span class="string">"linux"</span>,
+        <span class="string">"variant"</span>: <span class="string">"v8"</span>
+      }
+    }
+  ]
+}
+    </div>
+
+    <h3>How the Client Chooses a Variant</h3>
+
+    <div class="flow-container">
+      <div class="flow-step">
+        <div class="flow-num">1</div>
+        <div class="flow-content">
+          <h4>docker pull nginx:latest</h4>
+          <p>Client calls the registry requesting the tag</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">2</div>
+        <div class="flow-content">
+          <h4>Registry returns manifest list</h4>
+          <p>The manifest list contains all platform-specific manifests</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">3</div>
+        <div class="flow-content">
+          <h4>Client reads os/arch from kernel</h4>
+          <p>Uses `uname -m` and `uname -s` to determine native platform</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">4</div>
+        <div class="flow-content">
+          <h4>Client finds matching platform entry</h4>
+          <p>Searches manifest list for matching architecture and OS</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">5</div>
+        <div class="flow-content">
+          <h4>Client fetches that specific manifest</h4>
+          <p>Downloads the manifest for its platform (e.g., sha256:aaa111...)</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">6</div>
+        <div class="flow-content">
+          <h4>Client downloads the layers</h4>
+          <p>Fetches all layer blobs referenced by that manifest</p>
+        </div>
+      </div>
+    </div>
+
+    <h3>Why Not Just One Image Per Tag?</h3>
+
+    <div class="warn-box">
+      <h4>Without Manifest Lists</h4>
+      <p>One tag would equal one platform only. Users would need `nginx:amd64` and `nginx:arm64` separate tags. CI/CD would need conditional logic to select the right tag per architecture.</p>
+    </div>
+
+    <p>Docker Hub automatically builds multi-arch images via manifest lists. The single tag works everywhere because the client does the platform selection automatically.</p>
+
+    <h3>OCI Image Index</h3>
+
+    <p>Docker originally defined Manifest V2 Schema 2. This was later contributed to the OCI project as the OCI Image Index specification. The OCI version uses <code>application/vnd.oci.image.index.v1+json</code> media type. Modern registries support both.</p>
+
+  </div>
+
+  <div class="panel" id="panel-5">
+
+    <div class="section-label">Part 5</div>
+    <h2>Registry Variant Resolution</h2>
+    <p>When you pull an image, the registry sends the manifest list and your Docker client selects the matching platform entry.</p>
+
+    <h3>How Docker Hub Builds Multi-Arch Images</h3>
+
+    <div class="flow-container">
+      <div class="flow-step">
+        <div class="flow-num">1</div>
+        <div class="flow-content">
+          <h4>GitHub webhook triggers Docker Hub</h4>
+          <p>On every git push, GitHub notifies Docker Hub</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">2</div>
+        <div class="flow-content">
+          <h4>Docker Hub clones the repo</h4>
+          <p>Builds proceed for each defined build rule</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">3</div>
+        <div class="flow-content">
+          <h4>Parallel platform builds</h4>
+          <p>Each platform builds in a separate VM or QEMU container</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">4</div>
+        <div class="flow-content">
+          <h4>Manifest list generated</h4>
+          <p>After all platforms build, a manifest list is created and pushed along with all manifests</p>
+        </div>
+      </div>
+    </div>
+
+    <h3>GitHub Actions with Buildx</h3>
+
+    <div class="code-block">
+<span class="comment"># .github/workflows/docker.yml</span>
+<span class="keyword">- uses:</span> docker/setup-buildx-action@v3
+<span class="keyword">- uses:</span> docker/build-push-action@v5
+  <span class="keyword">with:</span>
+    platforms: linux/amd64,linux/arm64
+    push: <span class="keyword">true</span>
+    tags: myrepo/myimage:latest
+    </div>
+
+    <p>Builds run in parallel on Docker's build servers. Buildx orchestrates them and merges manifests into a manifest list.</p>
+
+    <h3>AWS ECR Variant Resolution</h3>
+
+    <div class="concept-card cyan">
+      <p>ECR supports multi-arch manifests natively. <code>aws ecr batch-get-image</code> returns all platform variants. <code>docker pull</code> from ECR uses the same manifest list resolution as Docker Hub.</p>
+      <p style="margin-top: 10px;">ECR also supports WCI (Windows Container Image) variant support for Windows containers.</p>
+    </div>
+
+    <h3>What Happens on Mismatched Architectures</h3>
+
+    <div class="warn-box">
+      <h4>No Matching Manifest Error</h4>
+      <p>If no matching platform exists in the manifest list, Docker errors with: "no manifest for linux/arm64 in manifest list".</p>
+      <p style="margin-top: 8px;">Solution: rebuild the image with <code>--platform</code> support, or find an alternative multi-arch image.</p>
+    </div>
+
+  </div>
+
+  <div class="panel" id="panel-6">
+
+    <div class="section-label">Part 6</div>
+    <h2>Buildx — Building for Multiple Platforms</h2>
+    <p>Buildx is Docker's advanced build frontend built on BuildKit. It supports multi-platform builds, build caching, parallel builds, and remote builders.</p>
+
+    <h3>Creating a Multi-Platform Builder</h3>
+
+    <div class="code-block">
+<span class="comment"># Create a builder with multi-platform support</span>
+docker buildx create --name mybuilder --use
+docker buildx inspect mybuilder --bootstrap
+    </div>
+
+    <h3>The --platform Flag</h3>
+
+    <div class="code-block">
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  --tag myrepo/myimage:latest \
+  --push \
+  .
+    </div>
+
+    <p>Builds for both platforms in parallel. Uses QEMU emulation by default on native hosts. Native cross-compilation when a native toolchain is available.</p>
+
+    <h3>QEMU User-Mode Emulation</h3>
+
+    <div class="concept-card green">
+      <p><code>qemu-user-static</code> provides linux-user emulation for foreign architectures. Transparent to the build process — the build container doesn't know it's being emulated.</p>
+      <p style="margin-top: 10px;">Slow compared to native cross-compilation but requires no special setup. Works by registering binfmt_misc handlers on the host.</p>
+    </div>
+
+    <h3>Docker Bake (HCL Definition Files)</h3>
+
+    <div class="code-block">
+<span class="comment"># bake-definition.hcl</span>
+<span class="keyword">variable</span> <span class="string">"TAG"</span> { <span class="keyword">default</span> = <span class="string">"myrepo/app:latest"</span> }
+
+<span class="keyword">group</span> <span class="string">"default"</span> {
+  targets = [<span class="string">"image.amd64"</span>, <span class="string">"image.arm64"</span>]
+}
+
+<span class="keyword">target</span> <span class="string">"image.amd64"</span> {
+  platforms = [<span class="string">"linux/amd64"</span>]
+  tags = [var.TAG]
+}
+
+<span class="keyword">target</span> <span class="string">"image.arm64"</span> {
+  platforms = [<span class="string">"linux/arm64"</span>]
+  tags = [var.TAG]
+}
+
+<span class="keyword">target</span> <span class="string">"image.all"</span> {
+  platforms = [<span class="string">"linux/amd64"</span>, <span class="string">"linux/arm64"</span>, <span class="string">"linux/arm/v7"</span>]
+  tags = [var.TAG]
+}
+    </div>
+
+    <div class="code-block">
+docker buildx bake -f bake-definition.hcl --push
+    </div>
+
+    <h3>Build Secrets & SSH Forwarding</h3>
+
+    <div class="concept-card purp">
+      <p>BuildKit allows secure secret injection during build. Secrets never appear in final image layers.</p>
+    </div>
+
+    <div class="code-block">
+<span class="comment"># Inject secrets during build</span>
+docker buildx build --secret id=aws,env=AWS_SECRETS
+    </div>
+
+    <h3>Build Caching</h3>
+
+    <div class="code-block">
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  --cache-from=type=registry,ref=myrepo/app:buildcache \
+  --cache-to=type=registry,ref=myrepo/app:buildcache,mode=max \
+  --push \
+  .
+    </div>
+
+    <p><code>mode=max</code> pushes all layers (not just final). Next build pulls cached layers for much faster incremental builds.</p>
+
+  </div>
+
+  <div class="panel" id="panel-7">
+
+    <div class="section-label">Part 7</div>
+    <h2>Cross-Platform Push & Pull Flow</h2>
+
+    <h3>Full Build & Push Lifecycle</h3>
+
+    <div class="flow-container">
+      <div class="flow-step">
+        <div class="flow-num">1</div>
+        <div class="flow-content">
+          <h4>Developer runs: docker buildx bake --push</h4>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">2</div>
+        <div class="flow-content">
+          <h4>BuildKit spawns build container per platform</h4>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">3</div>
+        <div class="flow-content">
+          <h4>Each platform builds in parallel</h4>
+          <p>[linux/amd64 builder] → manifest M1<br>
+             [linux/arm64 builder via QEMU] → manifest M2<br>
+             [linux/arm/v7 builder via QEMU] → manifest M3</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">4</div>
+        <div class="flow-content">
+          <h4>Buildx generates Manifest List ML</h4>
+          <p>ML = [M1(amd64), M2(arm64), M3(arm/v7)]</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">5</div>
+        <div class="flow-content">
+          <h4>All objects pushed to registry in parallel</h4>
+          <p>blobs/, manifests/, manifest-list/</p>
+        </div>
+      </div>
+    </div>
+
+    <h3>Registry Structure After Push</h3>
+
+    <div class="code-block">
+registry/
+├── blobs/
+│   └── (layer tar files, shared across manifests where possible)
+├── manifests/
+│   ├── sha256:M1 (single-arch manifest for amd64)
+│   ├── sha256:M2 (single-arch manifest for arm64)
+│   └── sha256:M3 (single-arch manifest for arm/v7)
+└── manifest-list/
+    └── sha256:ML (the manifest list, root of tag)
+    </div>
+
+    <p>Tag <code>myrepo/app:latest</code> → points to sha256:ML (manifest list digest)</p>
+
+    <h3>Pull Flow (Client-Side Resolution)</h3>
+
+    <div class="flow-container">
+      <div class="flow-step">
+        <div class="flow-num">1</div>
+        <div class="flow-content">
+          <h4>docker pull myrepo/app:latest</h4>
+          <p>Docker client fetches manifest list for sha256:ML</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">2</div>
+        <div class="flow-content">
+          <h4>Client reads os/arch from kernel</h4>
+          <p>Uses `uname -s`, `uname -m` to determine native platform</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">3</div>
+        <div class="flow-content">
+          <h4>Client searches manifest list for matching platform</h4>
+          <p>Found: sha256:M2 (arm64) for Apple Silicon</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">4</div>
+        <div class="flow-content">
+          <h4>Docker fetches manifest M2 (arm64-specific)</h4>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">5</div>
+        <div class="flow-content">
+          <h4>Docker fetches layers referenced by M2</h4>
+          <p>Note: shared base layers downloaded once</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">6</div>
+        <div class="flow-content">
+          <h4>Image ready to run</h4>
+        </div>
+      </div>
+    </div>
+
+    <h3>Layer Sharing Optimization</h3>
+
+    <div class="ok-box">
+      <h4>Shared Base Layers</h4>
+      <p>If all platform images share the same base layer (e.g., alpine:3.19), that blob is stored once in the registry. On pull, the base layer is downloaded once regardless of architecture. Subsequent pulls of any variant reuse that cached layer.</p>
+    </div>
+
+    <div class="warn-box">
+      <h4>Cross-Architecture Layer Sharing Caveats</h4>
+      <p>Base image layers differ in actual bytes (x86 glibc vs ARM musl). The same logical layer may compile to different files. Shared digests only when content is identical — which for base images, it usually isn't.</p>
+    </div>
+
+  </div>
+
+  <div class="panel" id="panel-8">
+
+    <div class="section-label">Part 8</div>
+    <h2>Windows Containers</h2>
+    <p>Windows containers run on Windows hosts only. Cannot run on Linux hosts and vice versa.</p>
+
+    <h3>Windows Container Basics</h3>
+
+    <div class="concept-grid">
+      <div class="concept-card">
+        <h3>Nano Server</h3>
+        <p>Minimal Windows Server for cloud-native scenarios. No GUI, no cmd.exe, minimal PowerShell. .NET Core only (not .NET Framework). ~350 MB compressed.</p>
+      </div>
+      <div class="concept-card amber">
+        <h3>Server Core</h3>
+        <p>Full Windows Server with GUI tools and all traditional server roles. Full cmd.exe, PowerShell with all modules. .NET Framework 4.x supported. MSI installers work. ~5 GB compressed.</p>
+      </div>
+    </div>
+
+    <h3>Windows Container Isolation Modes</h3>
+
+    <div class="two-col">
+      <div class="card">
+        <h4>Process Isolation</h4>
+        <ul>
+          <li>Container shares the host's Windows Server kernel (default)</li>
+          <li>More efficient — similar to Linux containers</li>
+          <li>Required for Windows Server containers</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>Hyper-V Isolation</h4>
+        <ul>
+          <li>Container runs inside a lightweight Hyper-V VM</li>
+          <li>Stronger tenant isolation</li>
+          <li>Required for untrusted workloads</li>
+          <li>Azure Container Instances use by default</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Windows Version Compatibility</h3>
+
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>Host Version</th>
+          <th>Can Run</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Windows Server 2022</td>
+          <td>Windows Server 2022, 2019, 2004 containers</td>
+        </tr>
+        <tr>
+          <td>Windows Server 2019</td>
+          <td>Windows Server 2019, 1809 containers</td>
+        </tr>
+        <tr>
+          <td>Windows 10 Pro/Enterprise 1909+</td>
+          <td>Windows 10 or Windows Server containers</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="warn-box">
+      <h4>Version Strictness</h4>
+      <p>Cannot run a newer Windows image on an older host — version mismatch error. The manifest list for Windows images includes entries for multiple Windows versions, and Docker selects the most compatible one.</p>
+    </div>
+
+    <h3>Building Windows Containers with Buildx</h3>
+
+    <div class="code-block">
+docker buildx build \
+  --platform windows/amd64 \
+  --tag myrepo/win-app:latest \
+  --push \
+  --file Dockerfile.windows .
+    </div>
+
+    <p>Requires Windows host with container support. Buildx can use QEMU on Linux to cross-compile Windows images, but native Windows builds are more reliable.</p>
+
+  </div>
+
+  <div class="panel" id="panel-9">
+
+    <div class="section-label">Part 9</div>
+    <h2>Real-World Examples & Manifest Inspector</h2>
+
+    <h3>nginx Official Image</h3>
+
+    <div class="code-block">
+docker manifest inspect nginx:latest
+    </div>
+
+    <p>Typical platforms: linux/amd64, linux/arm64, linux/arm/v7. All share the same NGINX binary compiled per platform. Same config defaults, same entrypoint — only binaries differ.</p>
+
+    <h3>python Official Image</h3>
+
+    <div class="code-block">
+docker manifest inspect python:3.12
+    </div>
+
+    <p>Typical platforms: linux/amd64, linux/arm64, linux/arm/v7, linux/s390x. Python interpreter compiled per platform. Many standard library layers are identical across platforms — different Python interpreter binary per platform.</p>
+
+    <h3>Microsoft .NET Image</h3>
+
+    <div class="code-block">
+docker manifest inspect mcr.microsoft.com/dotnet/runtime:8.0
+    </div>
+
+    <p>Typical platforms: linux/amd64, linux/arm64, linux/arm/v7, windows/amd64. Runtime images ship for both Linux and Windows. Windows version for .NET Framework 4.8 apps; Linux version for .NET Core/5+.</p>
+
+    <h3>Interactive Manifest Inspector</h3>
+
+    <div class="manifest-inspector">
+      <p style="margin-bottom: 16px; color: var(--text-muted);">Paste any public image reference to inspect its manifest list.</p>
+      <div class="inspector-input">
+        <input type="text" id="imageInput" placeholder="e.g., nginx:latest, python:3.12, mcr.microsoft.com/dotnet/runtime:8.0" value="nginx:latest">
+        <button onclick="inspectManifest()">Inspect</button>
+      </div>
+      <div class="inspector-result" id="inspectorResult">Click "Inspect" to fetch the manifest list for the image above.</div>
+    </div>
+
+    <h3>Size Differences Across Architectures</h3>
+
+    <p>For most images, layer sizes are nearly identical across architectures. The largest layer is typically the language runtime (Python interpreter, Node.js, JVM) — typically within 5–10% of each other in compressed size.</p>
+
+    <p>Windows images can be dramatically different in size because:</p>
+    <ul style="color: var(--text-muted); padding-left: 20px; margin-top: 12px;">
+      <li>Windows Server Core is ~5 GB compressed vs Alpine at ~3 MB</li>
+      <li>Different Windows cumulative update patches create different layer content</li>
+      <li>Different base Windows versions have different feature sets</li>
+    </ul>
+
+    <div class="ok-box">
+      <h4>Cached Layer Analysis</h4>
+      <p>When you run <code>docker history &lt;image&gt;</code>, you see each layer and its size. Layers marked <code>&lt;missing&gt;</code> are layers that exist in the remote image but haven't been downloaded locally.</p>
+      <p style="margin-top: 8px;"><code>docker images --digests</code> shows the full content-addressable digest per image, letting you verify you're running exactly the bits you think you are.</p>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  <p>See also: <a href="https://docs.docker.com/build/building/multi-platform/">Docker Multi-Platform Build Docs</a></p>
+</footer>
+
+<script>
+  function showTab(n) {
+    const panels = document.querySelectorAll('.panel');
+    const buttons = document.querySelectorAll('.tab-btn');
+    panels.forEach((p, i) => {
+      p.classList.toggle('active', i === n);
+    });
+    buttons.forEach((b, i) => {
+      b.classList.toggle('active', i === n);
+    });
+  }
+
+  async function inspectManifest() {
+    const image = document.getElementById('imageInput').value.trim();
+    const result = document.getElementById('inspectorResult');
+    if (!image) {
+      result.textContent = 'Please enter an image reference.';
+      return;
+    }
+    result.textContent = 'Fetching manifest list...\n';
+    try {
+      const response = await fetch('https://registry.hub.docker.com/v2/library/' + image.replace('/', '_') + '/manifests/latest', {
+        headers: {
+          'Accept': 'application/vnd.docker.distribution.manifest.list.v2+json'
+        }
+      });
+      const data = await response.json();
+      result.textContent = JSON.stringify(data, null, 2);
+    } catch (e) {
+      result.textContent = 'Error: ' + e.message + '\n\nNote: Docker Hub API may require authentication for some images. Try a different image or use `docker manifest inspect ' + image + '` locally.';
+    }
+  }
+</script>
+
+</body>
+</html>
