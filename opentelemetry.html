@@ -1,0 +1,1724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenTelemetry — Interactive Visualization</title>
+  <meta name="description" content="Interactive visualization of OpenTelemetry: signals, Collector pipeline, context propagation, and Kubernetes deployment.">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:          #0a0d14;
+      --surface:     #111520;
+      --surface2:    #161b28;
+      --border:      rgba(255,255,255,.07);
+      --accent:      #4f8ef7;
+      --accent-cyan: #22d3ee;
+      --accent-green:#34d399;
+      --accent-amber:#fbbf24;
+      --accent-red:  #f87171;
+      --accent-purp: #a78bfa;
+      --text:        #f0f4ff;
+      --text-muted:  #8b9ab5;
+      --text-dim:    #4a5568;
+      --mono:        'JetBrains Mono', monospace;
+      --sans:        'Inter', sans-serif;
+      --radius:      14px;
+      --shadow:      0 8px 40px rgba(0,0,0,.55);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.7;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: -1;
+      background:
+        radial-gradient(ellipse 80% 50% at 10% 0%,   rgba(79,142,247,.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 90% 10%,  rgba(34,211,238,.08) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 60% at 50% 100%, rgba(167,139,250,.06) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .back-btn {
+      position: fixed;
+      top: 20px; left: 20px; z-index: 1000;
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 18px;
+      background: rgba(14,19,32,0.75);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 100px;
+      color: #8b9ab5;
+      font-size: 13px; font-weight: 600;
+      text-decoration: none;
+      transition: color .2s, border-color .2s, transform .2s, box-shadow .2s;
+      box-shadow: 0 4px 24px rgba(0,0,0,.4);
+    }
+    .back-btn:hover {
+      color: #eef2ff;
+      border-color: rgba(79,142,247,.4);
+      transform: translateX(-3px);
+      box-shadow: 0 4px 32px rgba(79,142,247,.15);
+    }
+    .back-btn .arrow { font-size: 16px; transition: transform .2s; }
+    .back-btn:hover .arrow { transform: translateX(-2px); }
+
+    header {
+      text-align: center;
+      padding: 80px 24px 48px;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 14px;
+      background: rgba(79,142,247,.15);
+      border: 1px solid rgba(79,142,247,.3);
+      border-radius: 100px;
+      color: var(--accent);
+      font-size: 12px; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      line-height: 1.15;
+      background: linear-gradient(135deg, #eef2ff 0%, #8b9ab5 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 16px;
+    }
+    .subtitle {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.8;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 4px;
+      padding: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      max-width: 900px;
+      margin: 0 auto 32px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+
+    .tab-btn {
+      flex-shrink: 0;
+      display: flex; align-items: center; gap: 6px;
+      padding: 10px 18px;
+      background: transparent;
+      border: none;
+      border-radius: 10px;
+      color: var(--text-muted);
+      font-family: var(--sans);
+      font-size: 13px; font-weight: 600;
+      cursor: pointer;
+      transition: background .2s, color .2s;
+      white-space: nowrap;
+    }
+    .tab-btn:hover { background: var(--surface2); color: var(--text); }
+    .tab-btn.active {
+      background: var(--accent);
+      color: #fff;
+    }
+    .tab-btn .tab-num {
+      font-family: var(--mono);
+      font-size: 11px;
+      opacity: .6;
+    }
+
+    .content { max-width: 900px; margin: 0 auto; padding: 0 24px 80px; }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .section-label {
+      display: flex; align-items: center; gap: 12px;
+      font-size: 11px; font-weight: 700; letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin: 40px 0 20px;
+    }
+    .section-label::after {
+      content: ''; flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    h2 {
+      font-size: 1.6rem; font-weight: 700;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+    h3 { font-size: 1.15rem; font-weight: 600; color: var(--text); margin: 28px 0 10px; }
+    h4 { font-size: 1rem; font-weight: 600; color: var(--text-muted); margin: 20px 0 8px; }
+
+    p { color: var(--text-muted); margin-bottom: 14px; }
+
+    .concept-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+      margin: 20px 0;
+    }
+
+    .concept-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .concept-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    .concept-card.blue::before { background: var(--accent); }
+    .concept-card.cyan::before { background: var(--accent-cyan); }
+    .concept-card.green::before { background: var(--accent-green); }
+    .concept-card.amber::before { background: var(--accent-amber); }
+    .concept-card.red::before { background: var(--accent-red); }
+    .concept-card.purp::before { background: var(--accent-purp); }
+
+    .concept-card .card-title {
+      font-size: 1rem; font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .concept-card .card-body {
+      font-size: .875rem;
+      color: var(--text-muted);
+      line-height: 1.65;
+    }
+    .concept-card code {
+      font-family: var(--mono);
+      font-size: .8rem;
+      background: var(--surface2);
+      padding: 1px 5px;
+      border-radius: 4px;
+      color: var(--accent-cyan);
+    }
+
+    .code-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin: 16px 0;
+      overflow-x: auto;
+    }
+    .code-block pre {
+      font-family: var(--mono);
+      font-size: .85rem;
+      color: #c9d1d9;
+      line-height: 1.7;
+      white-space: pre;
+    }
+    .code-block .c { color: #484f58; }
+    .code-block .k { color: #ff7b72; }
+    .code-block .s { color: #a5d6ff; }
+    .code-block .n { color: #79c0ff; }
+    .code-block .cm { color: #7ee787; }
+    .code-block .p { color: #d2a8ff; }
+    .code-block .nb { color: #ffa657; }
+    .code-block .m { color: #79c0ff; }
+
+    .ok-box {
+      background: rgba(52,211,153,.08);
+      border: 1px solid rgba(52,211,153,.25);
+      border-left: 4px solid var(--accent-green);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin: 16px 0;
+      font-size: .9rem;
+      color: var(--text-muted);
+    }
+    .warn-box {
+      background: rgba(248,113,113,.08);
+      border: 1px solid rgba(248,113,113,.25);
+      border-left: 4px solid var(--accent-red);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin: 16px 0;
+      font-size: .9rem;
+      color: var(--text-muted);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: .875rem;
+    }
+    th {
+      text-align: left;
+      padding: 12px 16px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: .75rem;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    td {
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+    tr:hover td { background: rgba(255,255,255,.02); }
+
+    .flow-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      margin: 20px 0;
+    }
+    .flow-row {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      flex-wrap: wrap;
+    }
+    .flow-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 20px;
+      text-align: center;
+      flex: 1;
+      min-width: 120px;
+    }
+    .flow-box.accent { border-color: rgba(79,142,247,.4); background: rgba(79,142,247,.08); }
+    .flow-box.cyan { border-color: rgba(34,211,238,.4); background: rgba(34,211,238,.08); }
+    .flow-box.green { border-color: rgba(52,211,153,.4); background: rgba(52,211,153,.08); }
+    .flow-box.amber { border-color: rgba(251,191,36,.4); background: rgba(251,191,36,.08); }
+    .flow-box.red { border-color: rgba(248,113,113,.4); background: rgba(248,113,113,.08); }
+    .flow-box .flow-label { font-size: .8rem; font-weight: 700; color: var(--text); }
+    .flow-box .flow-sub { font-size: .72rem; color: var(--text-muted); margin-top: 3px; }
+    .flow-arrow {
+      font-size: 1.4rem;
+      color: var(--text-dim);
+      padding: 0 8px;
+      flex-shrink: 0;
+    }
+    .flow-arrow-down {
+      text-align: center;
+      font-size: 1.4rem;
+      color: var(--text-dim);
+      padding: 8px 0;
+    }
+
+    .trace-diagram {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 28px;
+      margin: 20px 0;
+      font-family: var(--mono);
+      font-size: .82rem;
+      line-height: 1.8;
+      color: var(--text-muted);
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    .signal-tabs {
+      display: flex;
+      gap: 4px;
+      margin: 20px 0 16px;
+    }
+    .signal-tab {
+      padding: 8px 20px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-muted);
+      font-size: .85rem; font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .signal-tab:hover { color: var(--text); }
+    .signal-tab.active {
+      background: rgba(79,142,247,.15);
+      border-color: rgba(79,142,247,.4);
+      color: var(--accent);
+    }
+
+    .prop-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0 12px;
+    }
+    .prop-badge {
+      font-family: var(--mono);
+      font-size: .75rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      background: rgba(167,139,250,.15);
+      border: 1px solid rgba(167,139,250,.3);
+      border-radius: 6px;
+      color: var(--accent-purp);
+    }
+    .prop-badge.cyan {
+      background: rgba(34,211,238,.12);
+      border-color: rgba(34,211,238,.3);
+      color: var(--accent-cyan);
+    }
+
+    .compare-table { margin: 16px 0; }
+    .compare-table td:first-child {
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    footer {
+      text-align: center;
+      padding: 40px 24px;
+      border-top: 1px solid var(--border);
+      color: var(--text-dim);
+      font-size: .85rem;
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<a class="back-btn" href="./index.html">
+  <span class="arrow">&#8592;</span> All Visualizations
+</a>
+
+<header>
+  <div class="badge">&#9673; Observability</div>
+  <h1>OpenTelemetry (OTel)</h1>
+  <p class="subtitle">Unified telemetry for cloud-native: traces, metrics, and logs under one vendor-neutral standard. Route to any backend — Jaeger, Prometheus, SigNoz, Datadog, Tempo.</p>
+</header>
+
+<!-- Tab Navigation -->
+<div class="tabs" id="tab-nav">
+  <button class="tab-btn active" onclick="showTab(0)"><span class="tab-num">00</span> Overview</button>
+  <button class="tab-btn" onclick="showTab(1)"><span class="tab-num">01</span> Signals</button>
+  <button class="tab-btn" onclick="showTab(2)"><span class="tab-num">02</span> Collector</button>
+  <button class="tab-btn" onclick="showTab(3)"><span class="tab-num">03</span> Context Propagation</button>
+  <button class="tab-btn" onclick="showTab(4)"><span class="tab-num">04</span> Traces 101</button>
+  <button class="tab-btn" onclick="showTab(5)"><span class="tab-num">05</span> Metrics 101</button>
+  <button class="tab-btn" onclick="showTab(6)"><span class="tab-num">06</span> Logs 101</button>
+  <button class="tab-btn" onclick="showTab(7)"><span class="tab-num">07</span> Kubernetes</button>
+</div>
+
+<div class="content">
+
+<!-- ========== TAB 00: Overview ========== -->
+<div class="panel active" id="panel-0">
+
+  <div class="section-label">History</div>
+
+  <div class="concept-grid">
+    <div class="concept-card blue">
+      <div class="card-title">OpenCensus (Google, 2017)</div>
+      <div class="card-body">Metrics and tracing with vendor-neutral data collection. First to unify signals under one project.</div>
+    </div>
+    <div class="concept-card cyan">
+      <div class="card-title">OpenTracing (CNCF, 2016)</div>
+      <div class="card-body">Distributed tracing API. No data collection mandate — pure API spec that anyone could implement.</div>
+    </div>
+    <div class="concept-card purp">
+      <div class="card-title">OpenTelemetry (2019)</div>
+      <div class="card-body">CNCF merged both projects. Absorbed best ideas into single unified API + SDK. Now CNCF's 2nd largest project after Kubernetes.</div>
+    </div>
+  </div>
+
+  <div class="section-label">Why OpenTelemetry?</div>
+
+  <div class="flow-container">
+    <div style="font-size:.85rem; color:var(--text-muted); margin-bottom:16px; font-weight:600;">Before OTel — Vendor Lock-in</div>
+    <div class="flow-row" style="flex-wrap:wrap; gap:8px;">
+      <div class="flow-box" style="min-width:130px;">
+        <div class="flow-label">Your App</div>
+      </div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-box red" style="min-width:130px;">
+        <div class="flow-label">Jaeger Agent</div>
+        <div class="flow-sub">traces only</div>
+      </div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-box" style="min-width:130px;">
+        <div class="flow-label">Jaeger Backend</div>
+      </div>
+    </div>
+    <div style="height:12px"></div>
+    <div class="flow-row" style="flex-wrap:wrap; gap:8px;">
+      <div class="flow-box" style="min-width:130px;">
+        <div class="flow-label">Your App</div>
+      </div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-box amber" style="min-width:130px;">
+        <div class="flow-label">StatsD Exporter</div>
+        <div class="flow-sub">metrics only</div>
+      </div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-box" style="min-width:130px;">
+        <div class="flow-label">Prometheus</div>
+      </div>
+    </div>
+    <div style="height:12px"></div>
+    <div class="flow-row" style="flex-wrap:wrap; gap:8px;">
+      <div class="flow-box" style="min-width:130px;">
+        <div class="flow-label">Your App</div>
+      </div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-box purp" style="min-width:130px;">
+        <div class="flow-label">Custom Logging</div>
+        <div class="flow-sub">ELK only</div>
+      </div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-box" style="min-width:130px;">
+        <div class="flow-label">Elasticsearch</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ok-box">
+    <strong>After OTel:</strong> Instrument once. Route to <em>any</em> backend by changing Collector config — not your application code.
+  </div>
+
+  <div class="flow-container">
+    <div style="font-size:.85rem; color:var(--text-muted); margin-bottom:16px; font-weight:600;">The Unified Model</div>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+      <div class="flow-box" style="max-width:280px; width:100%;">
+        <div class="flow-label">Application Code</div>
+        <div class="flow-sub">Auto-instrumentation + Manual API</div>
+      </div>
+      <div class="flow-arrow-down">&#8595;</div>
+      <div class="flow-box accent" style="max-width:280px; width:100%;">
+        <div class="flow-label">OTel SDK</div>
+        <div class="flow-sub">API implementation + sampling + resource attributes</div>
+      </div>
+      <div class="flow-arrow-down">&#8595;</div>
+      <div class="flow-box cyan" style="max-width:280px; width:100%;">
+        <div class="flow-label">OTel Collector</div>
+        <div class="flow-sub">Receives, processes, exports telemetry</div>
+      </div>
+      <div class="flow-arrow-down">&#8595;</div>
+      <div class="flow-box green" style="max-width:280px; width:100%;">
+        <div class="flow-label">Any Backend</div>
+        <div class="flow-sub">Jaeger · Prometheus · SigNoz · Datadog · Tempo · Loki</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-label">Core Goals</div>
+
+  <div class="concept-grid">
+    <div class="concept-card blue">
+      <div class="card-title">Vendor Neutrality</div>
+      <div class="card-body">Own your telemetry data. Route to any backend by swapping Collector config.</div>
+    </div>
+    <div class="concept-card cyan">
+      <div class="card-title">Unified Signals</div>
+      <div class="card-body">Single model for traces, metrics, and logs. Same concepts across all three.</div>
+    </div>
+    <div class="concept-card green">
+      <div class="card-title">Auto-Instrumentation</div>
+      <div class="card-body">Zero-code / low-code observability. Agents attach to libraries automatically.</div>
+    </div>
+    <div class="concept-card amber">
+      <div class="card-title">Cross-Cutting</div>
+      <div class="card-body">Context propagation, resource attributes, and semantic conventions unify all signals.</div>
+    </div>
+    <div class="concept-card purp">
+      <div class="card-title">Polyglot Support</div>
+      <div class="card-body">First-class SDKs: Go, Python, Java, JavaScript, .NET, Rust, C++, PHP, Ruby.</div>
+    </div>
+    <div class="concept-card red">
+      <div class="card-title">Open Specification</div>
+      <div class="card-body">OTel spec is vendor-neutral. Every implementation follows the same behavior.</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ========== TAB 01: Signals ========== -->
+<div class="panel" id="panel-1">
+
+  <div class="section-label">Three Signals</div>
+
+  <p>OpenTelemetry defines three <strong style="color:var(--text)">signals</strong> — fundamental telemetry types. All three share the same context propagation model and can be correlated.</p>
+
+  <div class="concept-grid">
+    <div class="concept-card blue">
+      <div class="card-title">Traces</div>
+      <div class="card-body">Directed acyclic graph (DAG) of spans. Captures the causal chain of operations across services. The primary observability primitive.</div>
+    </div>
+    <div class="concept-card green">
+      <div class="card-title">Metrics</div>
+      <div class="card-body">Point-in-time observations of measurements. Sampled separately from traces. Designed for alerting and dashboards.</div>
+    </div>
+    <div class="concept-card amber">
+      <div class="card-title">Logs</div>
+      <div class="card-body">High-fidelity timestamped records. OTel LogRecords can carry trace_id/span_id for correlation back to traces.</div>
+    </div>
+  </div>
+
+  <div class="section-label">Signal Relationships</div>
+
+  <div class="trace-diagram">Trace (signal)
+  └── Span (signal-specific data structure)
+        ├── Links to other spans (causal graph edges)
+        └── Contains events (logs within a trace)
+
+Metric (signal)
+  └── DataPoints (per-instrument type: counter, histogram, gauge)
+
+Log (signal)
+  └── LogRecord (timestamped, attributed, severity-rated)
+        └── Can carry trace_id + span_id → links to trace</div>
+
+  <div class="section-label">Trace Model</div>
+
+  <div class="trace-diagram">Trace ID: abc123 (16 bytes, globally unique)
+│
+├── Root Span: "POST /orders"           ← order-service
+│     │ Span ID: span-1
+│     │
+│     ├── Child Span: "validate"       ← order-service
+│     │     │ Span ID: span-2
+│     │     └── (work)
+│     │
+│     └── Child Span: "POST /invoice"   ← order-service
+│           │ Span ID: span-3
+│           │ (calls invoice-service)
+│           │
+│           └── [ propagation: traceparent header ]
+│                 │
+│                 └── Linked Span: "generate_invoice"  ← invoice-service
+│                       │ Span ID: span-4
+│                       │ (linked from a DIFFERENT trace context on wire)</div>
+
+  <div class="section-label">Span Model</div>
+
+  <table>
+    <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+    <tr><td><code>name</code></td><td>string</td><td>Human-readable operation name</td></tr>
+    <tr><td><code>trace_id</code></td><td>16-byte ID</td><td>Globally unique trace identifier</td></tr>
+    <tr><td><code>span_id</code></td><td>8-byte ID</td><td>Unique span within the trace</td></tr>
+    <tr><td><code>parent_span_id</code></td><td>8-byte ID</td><td>Parent span ID (empty for root)</td></tr>
+    <tr><td><code>start_time</code> / <code>end_time</code></td><td>Timestamp</td><td>Wall-clock start and end</td></tr>
+    <tr><td><code>kind</code></td><td>SpanKind</td><td><code>server</code>, <code>client</code>, <code>producer</code>, <code>consumer</code>, <code>internal</code></td></tr>
+    <tr><td><code>status</code></td><td>Status</td><td><code>unset</code>, <code>ok</code>, <code>error</code></td></tr>
+    <tr><td><code>attributes</code></td><td>Map[string, Value]</td><td>Key-value pairs describing the span</td></tr>
+    <tr><td><code>events</code></td><td>[]SpanEvent</td><td>Timestamped log messages during the span</td></tr>
+    <tr><td><code>links</code></td><td>[]SpanLink</td><td>Links to other spans (potentially from other traces)</td></tr>
+  </table>
+
+  <div class="section-label">SpanKind</div>
+
+  <table>
+    <tr><th>Kind</th><th>Meaning</th><th>Visual</th></tr>
+    <tr><td><code>server</code></td><td>Incoming request handler</td><td><code>&#8592;&#8212;&#8212;</code> arrow in</td></tr>
+    <tr><td><code>client</code></td><td>Outgoing request to a dependency</td><td><code>&#8212;&#8212;&#8594;</code> arrow out</td></tr>
+    <tr><td><code>producer</code></td><td>Message sent to queue (no immediate response)</td><td><code>&#8212;&#8212;&#8599;</code> arrow to queue</td></tr>
+    <tr><td><code>consumer</code></td><td>Message received from queue</td><td><code>&#8600;&#8212;&#8212;</code> arrow from queue</td></tr>
+    <tr><td><code>internal</code></td><td>Internal operation (default)</td><td>no arrow</td></tr>
+  </table>
+
+  <div class="section-label">Metrics Instruments</div>
+
+  <table>
+    <tr><th>Instrument</th><th>Sync/Async</th><th>Use</th></tr>
+    <tr><td><strong>Counter</strong></td><td>Sync</td><td>Additive values (requests served, bytes sent)</td></tr>
+    <tr><td><strong>UpDownCounter</strong></td><td>Sync</td><td>Non-additive (active connections, queue depth)</td></tr>
+    <tr><td><strong>Histogram</strong></td><td>Sync</td><td>Distribution of values (request latencies, payload sizes)</td></tr>
+    <tr><td><strong>ObservableCounter</strong></td><td>Async (callback)</td><td>System metrics from APIs (CPU usage)</td></tr>
+    <tr><td><strong>ObservableUpDownCounter</strong></td><td>Async</td><td>Gauge-like additive metrics</td></tr>
+    <tr><td><strong>ObservableGauge</strong></td><td>Async</td><td>Point-in-time values (temperature, queue depth)</td></tr>
+  </table>
+
+  <div class="section-label">Log Model</div>
+
+  <table>
+    <tr><th>Field</th><th>Description</th></tr>
+    <tr><td><code>timestamp</code></td><td>When the event occurred</td></tr>
+    <tr><td><code>severity</code></td><td>Log level: TRACE(5), DEBUG(10), INFO(20), WARN(30), ERROR(40)</td></tr>
+    <tr><td><code>body</code></td><td>Log message</td></tr>
+    <tr><td><code>resource</code></td><td>Attributes of the emitting entity (service.name, etc.)</td></tr>
+    <tr><td><code>attributes</code></td><td>Structured key-value pairs</td></tr>
+    <tr><td><code>trace_id</code>, <code>span_id</code></td><td>If emitted within a traced context (correlation key)</td></tr>
+  </table>
+
+  <div class="ok-box">
+    <strong>Signal Correlation:</strong> Trace context flows into all three signals. A span event carries trace_id. A metric exemplar carries trace_id + span_id. A LogRecord can carry trace_id + span_id. Click any → navigate all.
+  </div>
+
+</div>
+
+<!-- ========== TAB 02: Collector ========== -->
+<div class="panel" id="panel-2">
+
+  <div class="section-label">Collector Architecture</div>
+
+  <p>The OTel Collector is a <strong style="color:var(--text)">vendor-neutral proxy</strong> that receives, processes, and exports telemetry. It sits between your application and observability backends.</p>
+
+  <div class="flow-container">
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; text-align:center;">
+      <div>
+        <div class="flow-box accent" style="margin-bottom:12px;">
+          <div class="flow-label">Receivers</div>
+          <div class="flow-sub">Ingest telemetry from apps</div>
+        </div>
+        <div style="font-size:.75rem; color:var(--text-dim);">OTLP · Jaeger · Zipkin<br>Prometheus · Kafka · filelog</div>
+      </div>
+      <div style="display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px;">
+        <div style="font-size:1.4rem; color:var(--accent);">&#8594;</div>
+        <div class="flow-box purp" style="margin-bottom:12px;">
+          <div class="flow-label">Processors</div>
+          <div class="flow-sub">Modify / filter / sample</div>
+        </div>
+        <div style="font-size:.75rem; color:var(--text-dim);">batch · memory_limiter · transform<br>filter · tail_sampling · k8sattributes</div>
+      </div>
+      <div style="display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px;">
+        <div style="font-size:1.4rem; color:var(--accent);">&#8594;</div>
+        <div class="flow-box green" style="margin-bottom:12px;">
+          <div class="flow-label">Exporters</div>
+          <div class="flow-sub">Send to backends</div>
+        </div>
+        <div style="font-size:.75rem; color:var(--text-dim);">OTLP · Jaeger · Prometheus<br>Loki · Datadog · AWS X-Ray</div>
+      </div>
+    </div>
+    <div style="margin-top:16px; display:flex; gap:20px; justify-content:center; flex-wrap:wrap;">
+      <div class="flow-box" style="flex:0 1 auto;">
+        <div class="flow-label">Extensions</div>
+        <div class="flow-sub">zpages · health_check · pprof</div>
+      </div>
+      <div class="flow-box" style="flex:0 1 auto;">
+        <div class="flow-label">Connectors</div>
+        <div class="flow-sub">spanmetrics (traces → metrics)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-label">Receivers</div>
+
+  <table>
+    <tr><th>Receiver</th><th>Protocol</th><th>Signal</th></tr>
+    <tr><td><code>otlp</code></td><td>gRPC / HTTP</td><td>traces, metrics, logs</td></tr>
+    <tr><td><code>jaeger</code></td><td>Thrift / gRPC</td><td>traces</td></tr>
+    <tr><td><code>zipkin</code></td><td>HTTP</td><td>traces</td></tr>
+    <tr><td><code>prometheus</code></td><td>HTTP pull</td><td>metrics</td></tr>
+    <tr><td><code>prometheusremotewrite</code></td><td>HTTP remote write</td><td>metrics</td></tr>
+    <tr><td><code>hostmetrics</code></td><td>System calls</td><td>metrics</td></tr>
+    <tr><td><code>kafka</code></td><td>Kafka</td><td>traces, metrics, logs</td></tr>
+    <tr><td><code>filelog</code></td><td>File tail</td><td>logs</td></tr>
+    <tr><td><code>syslog</code></td><td>Syslog</td><td>logs</td></tr>
+  </table>
+
+  <div class="section-label">Processors</div>
+
+  <table>
+    <tr><th>Processor</th><th>Function</th></tr>
+    <tr><td><code>batch</code></td><td>Batches spans/metrics/logs to reduce export calls</td></tr>
+    <tr><td><code>memory_limiter</code></td><td>Rejects data when memory is high (OOM protection)</td></tr>
+    <tr><td><code>transform</code></td><td>Modify attributes using OTTL (OTel Transformation Language)</td></tr>
+    <tr><td><code>filter</code></td><td>Filter spans/metrics/logs by criteria</td></tr>
+    <tr><td><code>resource</code></td><td>Add/modify resource attributes</td></tr>
+    <tr><td><code>attributes</code></td><td>Add/modify span/log attributes</td></tr>
+    <tr><td><code>probabilistic_sampler</code></td><td>Sample X% of traces</td></tr>
+    <tr><td><code>tail_sampling</code></td><td>Sample based on policies (error, latency, SLO)</td></tr>
+    <tr><td><code>routing</code></td><td>Route to different exporters based on criteria</td></tr>
+    <tr><td><code>k8sattributes</code></td><td>Inject Kubernetes metadata (pod, namespace, etc.)</td></tr>
+  </table>
+
+  <div class="section-label">Exporters</div>
+
+  <table>
+    <tr><th>Exporter</th><th>Backend</th></tr>
+    <tr><td><code>otlp</code></td><td>Any OTel-native backend</td></tr>
+    <tr><td><code>otlphttp</code></td><td>Any backend via HTTP</td></tr>
+    <tr><td><code>jaeger</code></td><td>Jaeger</td></tr>
+    <tr><td><code>zipkin</code></td><td>Zipkin</td></tr>
+    <tr><td><code>prometheus</code></td><td>Prometheus (pull or remote_write)</td></tr>
+    <tr><td><code>loki</code></td><td>Grafana Loki (logs)</td></tr>
+    <tr><td><code>datadog</code></td><td>Datadog</td></tr>
+    <tr><td><code>awsxray</code></td><td>AWS X-Ray</td></tr>
+    <tr><td><code>awsemf</code></td><td>AWS CloudWatch EMF (metrics)</td></tr>
+    <tr><td><code>logging</code></td><td>Stdout (debug)</td></tr>
+  </table>
+
+  <div class="section-label">Minimal Config</div>
+
+  <div class="code-block"><pre>receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+  memory_limiter:
+    limit_mib: 512
+    check_interval: 1s
+
+exporters:
+  otlp:
+    endpoint: http://tempo:4317
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch, memory_limiter]
+      exporters: [otlp]
+    metrics:
+      receivers: [otlp]
+      processors: [batch, memory_limiter]
+      exporters: [otlp]
+    logs:
+      receivers: [otlp]
+      processors: [batch, memory_limiter]
+      exporters: [otlp]</pre></div>
+
+  <div class="section-label">Deployment Modes</div>
+
+  <div class="concept-grid">
+    <div class="concept-card blue">
+      <div class="card-title">Agent Mode</div>
+      <div class="card-body">Sidecar or DaemonSet on each node. Applications send to localhost. Reduces backend connections, adds local batching/compression.</div>
+    </div>
+    <div class="concept-card green">
+      <div class="card-title">Gateway Mode</div>
+      <div class="card-body">Single Collector Deployment as central aggregation point. Single choke point for routing, filtering, sampling.</div>
+    </div>
+    <div class="concept-card purp">
+      <div class="card-title">Standalone</div>
+      <div class="card-body">Single process doing everything. For small deployments and local development.</div>
+    </div>
+  </div>
+
+  <div class="flow-container">
+    <div style="font-size:.85rem; color:var(--text-muted); margin-bottom:14px; font-weight:600;">Agent + Gateway (Production)</div>
+    <div class="flow-row" style="flex-wrap:wrap; gap:8px; justify-content:center;">
+      <div class="flow-box" style="min-width:90px;"><div class="flow-label">App</div></div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-box accent" style="min-width:120px;">
+        <div class="flow-label">OTel Agent</div>
+        <div class="flow-sub">localhost:4317</div>
+      </div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-box cyan" style="min-width:130px;">
+        <div class="flow-label">OTel Gateway</div>
+        <div class="flow-sub">central cluster</div>
+      </div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-box green" style="min-width:120px;">
+        <div class="flow-label">Backend</div>
+        <div class="flow-sub">SigNoz/Tempo</div>
+      </div>
+    </div>
+    <div style="margin-top:16px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+      <div class="flow-box" style="min-width:90px;"><div class="flow-label">App</div></div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-box accent" style="min-width:120px;"><div class="flow-label">OTel Agent</div></div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-box cyan" style="min-width:130px;"><div class="flow-label">OTel Gateway</div></div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-box green" style="min-width:120px;"><div class="flow-label">Backend</div></div>
+    </div>
+    <div style="margin-top:8px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+      <div class="flow-box" style="min-width:90px;"><div class="flow-label">App</div></div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-box accent" style="min-width:120px;"><div class="flow-label">OTel Agent</div></div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-box cyan" style="min-width:130px;"><div class="flow-label">OTel Gateway</div></div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-box green" style="min-width:120px;"><div class="flow-label">Backend</div></div>
+    </div>
+  </div>
+
+  <div class="section-label">Tail Sampling Policies</div>
+
+  <div class="code-block"><pre>processors:
+  tail_sampling:
+    decision_wait: 10s
+    num_traces: 100000
+    expected_new_traces_per_sec: 100
+    policies:
+      - name: errors-policy
+        type: status_code
+        status_code: {status_codes: [ERROR]}
+      - name: slow-traces-policy
+        type: latency
+        latency: {threshold_ms: 1000}
+      - name: probabilistic-policy
+        type: probabilistic
+        probabilistic: {sampling_percentage: 10}
+      - name: latency-slo-policy
+        type: and
+        and: {and_policy_requirements:
+          - policy: latency
+            latency: {threshold_ms: 100}
+          - policy: status_code
+            status_code: {status_codes: [OK]}
+        }</pre></div>
+
+  <div class="section-label">Connectors (Beta)</div>
+
+  <div class="ok-box">
+    <strong>spanmetrics connector</strong> creates RED metrics (Request rate, Error rate, Duration) automatically from traces — no code changes needed.
+  </div>
+
+  <div class="code-block"><pre>connectors:
+  spanmetrics:
+    metrics_exporter: prometheus
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp, spanmetrics]
+    metrics:
+      receivers: [spanmetrics]
+      exporters: [prometheus]</pre></div>
+
+</div>
+
+<!-- ========== TAB 03: Context Propagation ========== -->
+<div class="panel" id="panel-3">
+
+  <div class="section-label">W3C Trace Context</div>
+
+  <p>Context propagation links spans across <strong style="color:var(--text)">process boundaries</strong> (network calls, message queues, async tasks) into a single end-to-end trace.</p>
+
+  <div class="section-label">traceparent Header</div>
+
+  <div class="code-block"><pre>traceparent: 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01
+             │  │                                │              │
+             │  trace_id (32 hex chars)         │   │    │
+             │                                   │   │    └── flags (2 hex chars)
+             │                                   │   └─────────── span_id (16 hex chars)
+             │                                   └────────────── version (2 hex chars)
+             └────────────────────────────────────────────────── version prefix</pre></div>
+
+  <table>
+    <tr><th>Field</th><th>Length</th><th>Description</th></tr>
+    <tr><td><code>version</code></td><td>2 hex</td><td>Protocol version (currently <code>00</code>)</td></tr>
+    <tr><td><code>trace_id</code></td><td>32 hex</td><td>16-byte global trace ID</td></tr>
+    <tr><td><code>parent_id</code> (span_id)</td><td>16 hex</td><td>8-byte span ID of the parent</td></tr>
+    <tr><td><code>flags</code></td><td>2 hex</td><td>Options (bit 0 = sampled: <code>01</code> = sampled, <code>00</code> = not)</td></tr>
+  </table>
+
+  <div class="section-label">tracestate Header</div>
+
+  <div class="code-block"><pre>tracestate: congo=t61rcWkgMzE,rojo=00f067aa0ba902b7</pre></div>
+
+  <p>Format: <code>key=value,key=value</code> (max 32 pairs, 256 chars total). Carries vendor-specific or cross-cutting metadata. Optional — <code>traceparent</code> is mandatory.</p>
+
+  <div class="section-label">Propagators</div>
+
+  <p>The Propagators API injects context into outgoing carriers (HTTP headers, message metadata) and extracts from incoming carriers.</p>
+
+  <table>
+    <tr><th>Propagator</th><th>traceparent</th><th>tracestate</th><th>Baggage</th><th>Notes</th></tr>
+    <tr><td><code>TraceContext</code></td><td>W3C standard</td><td>W3C standard</td><td>No</td><td>Default</td></tr>
+    <tr><td><code>Baggage</code></td><td>No</td><td>No</td><td>W3C standard</td><td>Must be combined with TraceContext</td></tr>
+    <tr><td><code>W3C</code></td><td>W3C standard</td><td>W3C standard</td><td>No</td><td>Alias for TraceContext</td></tr>
+    <tr><td><code>B3</code></td><td>B3 single header</td><td>N/A</td><td>Via <code>bkvr</code></td><td>Legacy Zipkin format</td></tr>
+    <tr><td><code>AWS X-Ray</code></td><td>AWS format</td><td>N/A</td><td>No</td><td>AWS-specific</td></tr>
+    <tr><td><code>Jaeger</code></td><td>Jaeger headers</td><td>N/A</td><td>No</td><td>Legacy Jaeger format</td></tr>
+  </table>
+
+  <div class="section-label">Go: Setting Propagators</div>
+
+  <div class="code-block"><pre><span class="k">import</span> <span class="s">"go.opentelemetry.io/otel/propagation"</span>
+
+<span class="c">// Register a composite propagator (trace context + baggage)</span>
+otel.SetTextMapPropagator(propagation.NewCompositePropagator(
+    propagation.TraceContext{},   <span class="c">// W3C Trace Context</span>
+    propagation.Baggage{},         <span class="c">// W3C Baggage</span>
+))</pre></div>
+
+  <div class="section-label">Python: Setting Propagators</div>
+
+  <div class="code-block"><pre><span class="k">from</span> opentelemetry <span class="k">import</span> propagate
+<span class="k">from</span> opentelemetry.propagate <span class="k">import</span> set_global_textmap
+<span class="k">from</span> opentelemetry.sdk.trace.propagation.tracecontext <span class="k">import</span> TraceContextPropagator
+
+set_global_textmap(TraceContextPropagator())</pre></div>
+
+  <div class="section-label">Inject and Extract (Go)</div>
+
+  <div class="code-block"><pre><span class="c">// Inject: extract context from span and inject into HTTP headers</span>
+<span class="k">func</span> makeHTTPRequest(ctx context.Context, url string) (*http.Response, error) {
+    req, _ := http.NewRequest(<span class="s">"GET"</span>, url, nil)
+    propagator := propagation.TraceContext{}
+    propagator.Inject(ctx, req.Header, propagation.HeaderCarrier(req.Header))
+    <span class="k">return</span> http.DefaultClient.Do(req)
+}
+
+<span class="c">// Extract: extract trace context from incoming HTTP headers</span>
+<span class="k">func</span> handleHTTPRequest(w http.ResponseWriter, r *http.Request) {
+    propagator := propagation.TraceContext{}
+    ctx := propagator.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
+    ctx, span := tracer.Start(ctx, <span class="s">"handler"</span>)
+    <span class="k">defer</span> span.End()
+}</pre></div>
+
+  <div class="section-label">Baggage</div>
+
+  <p>Baggage is <strong style="color:var(--text)">key-value metadata</strong> propagated alongside trace context. Unlike span attributes (scoped to a single span), baggage flows through the <em>entire trace</em> and across all services.</p>
+
+  <div class="concept-grid">
+    <div class="concept-card amber">
+      <div class="card-title">Tenant ID</div>
+      <div class="card-body">Propagate tenant context across all services for multi-tenant correlation.</div>
+    </div>
+    <div class="concept-card blue">
+      <div class="card-title">Feature Flags</div>
+      <div class="card-body">Carry experiment/flag state through the trace without explicit passing.</div>
+    </div>
+    <div class="concept-card cyan">
+      <div class="card-title">Build Info</div>
+      <div class="card-body">Git SHA, CI pipeline ID — attached to every span automatically.</div>
+    </div>
+    <div class="concept-card purp">
+      <div class="card-title">Customer ID</div>
+      <div class="card-body">Correlate logs across services using customer context from trace entry.</div>
+    </div>
+  </div>
+
+  <div class="warn-box">
+    <strong>Baggage Limitations:</strong> No cardinality limit — high-cardinality values bloat tracestate. No encryption — baggage is in HTTP headers, treat as non-sensitive. Not all proxies forward tracestate — check your ingress.
+  </div>
+
+  <div class="section-label">Baggage Format (W3C)</div>
+
+  <div class="code-block"><pre><span class="c">// Via tracestate (preferred — forwarded by more proxies)</span>
+tracestate: otel.baggagegage="key1=value1,key2=value2"
+
+<span class="c">// Or via dedicated header (less common)</span>
+baggage: key1=value1, key2=value2</pre></div>
+
+  <div class="section-label">Baggage: Go</div>
+
+  <div class="code-block"><pre><span class="k">import</span> <span class="s">"go.opentelemetry.io/otel/baggage"</span>
+
+<span class="c">// Add baggage</span>
+b, _ := baggage.NewMember(<span class="s">"tenant.id"</span>, <span class="s">"acme-corp"</span>)
+m, _ := baggage.NewMember(<span class="s">"user.role"</span>, <span class="s">"admin"</span>)
+bag, _ := baggage.New(b, m)
+ctx := baggage.ContextWithBaggage(ctx, bag)
+
+<span class="c">// Read baggage anywhere in the trace</span>
+baggage := baggage.FromContext(ctx)
+<span class="k">if</span> val, ok := baggage.Member(<span class="s">"tenant.id"</span>); ok {
+    span.SetAttributes(attribute.String(<span class="s">"tenant.id"</span>, val))
+}</pre></div>
+
+  <div class="section-label">Context in Message Queues</div>
+
+  <div class="code-block"><pre><span class="c"># Publishing: inject trace context into message headers</span>
+<span class="k">from</span> opentelemetry.propagate <span class="k">import</span> inject
+headers = {}
+inject(headers)  <span class="c"># injects traceparent + baggage into headers</span>
+producer.send(<span class="s">"my-topic"</span>, value=data, headers=headers)
+
+<span class="c"># Consuming: extract context from message and create linked span</span>
+<span class="k">from</span> opentelemetry.propagate <span class="k">import</span> extract
+ctx = extract(message.headers)
+<span class="k">with</span> tracer.start_as_current_span(<span class="s">"process-message"</span>, context=ctx) <span class="k">as</span> span:
+    <span class="c"># span is linked to the producer span</span>
+    <span class="k">pass</span></pre></div>
+
+  <div class="section-label">Sampling Flag</div>
+
+  <div class="flow-container">
+    <div class="flow-row" style="flex-wrap:wrap; gap:8px; justify-content:center;">
+      <div class="flow-box" style="min-width:200px;">
+        <div class="flow-label">traceparent: 00-...-...-01</div>
+        <div class="flow-sub">sampled flag set — record this trace</div>
+      </div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-box green" style="min-width:160px;">
+        <div class="flow-label">Full Telemetry</div>
+        <div class="flow-sub">all spans exported</div>
+      </div>
+    </div>
+    <div style="margin-top:16px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+      <div class="flow-box" style="min-width:200px;">
+        <div class="flow-label">traceparent: 00-...-...-00</div>
+        <div class="flow-sub">not sampled — trace ID still propagates</div>
+      </div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-box purp" style="min-width:160px;">
+        <div class="flow-label">Phantom Trace</div>
+        <div class="flow-sub">root span only (useful for counting)</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ========== TAB 04: Traces 101 ========== -->
+<div class="panel" id="panel-4">
+
+  <div class="section-label">Core Constructs</div>
+
+  <div class="concept-grid">
+    <div class="concept-card blue">
+      <div class="card-title">TracerProvider</div>
+      <div class="card-body">Top-level factory that creates Tracer instances. Holds sampler, span processor, and resource attributes. Created once at application startup.</div>
+    </div>
+    <div class="concept-card cyan">
+      <div class="card-title">Tracer</div>
+      <div class="card-body">Creates spans. Scoped to a library or module. Use service name as tracer name. One tracer per logical component.</div>
+    </div>
+    <div class="concept-card green">
+      <div class="card-title">Span</div>
+      <div class="card-body">The fundamental unit — a named, timed operation with trace_id, span_id, parent_span_id, start/end time, kind, status, attributes, events, and links.</div>
+    </div>
+    <div class="concept-card amber">
+      <div class="card-title">SpanContext</div>
+      <div class="card-body">Minimal data to link a span across process boundaries: trace_id (16 bytes), span_id (8 bytes), trace_flags (1 byte with sampled bit), tracestate, is_remote flag.</div>
+    </div>
+  </div>
+
+  <div class="section-label">Span Lifecycle</div>
+
+  <div class="flow-container">
+    <div class="flow-row" style="flex-wrap:wrap; gap:8px; justify-content:center; align-items:stretch;">
+      <div class="flow-box accent" style="min-width:150px;">
+        <div class="flow-label">Start Span</div>
+        <div class="flow-sub">trace_id assigned<br>span_id assigned<br>parent_span_id set<br>start_time set</div>
+      </div>
+      <div class="flow-arrow" style="font-size:2rem; color:var(--accent);">&#10132;</div>
+      <div class="flow-box" style="min-width:150px;">
+        <div class="flow-label">Work</div>
+        <div class="flow-sub">attributes set<br>events added<br>child spans created</div>
+      </div>
+      <div class="flow-arrow" style="font-size:2rem; color:var(--accent);">&#10132;</div>
+      <div class="flow-box purp" style="min-width:150px;">
+        <div class="flow-label">End Span</div>
+        <div class="flow-sub">end_time set<br>span recorded<br>batched → exported</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-label">Go: Manual Tracing</div>
+
+  <div class="code-block"><pre><span class="c">// 1. Create TracerProvider (once at startup)</span>
+tp := trace.NewTracerProvider(
+    trace.WithResource(resource.New(ctx,
+        resource.WithAttributes(
+            attribute.String(<span class="s">"service.name"</span>, <span class="s">"order-service"</span>),
+        ),
+    )),
+    trace.WithSampler(trace.AlwaysSample()),
+)
+
+<span class="c">// 2. Register globally</span>
+otel.SetTracerProvider(tp)
+
+<span class="c">// 3. Get a Tracer</span>
+tracer := tp.Tracer(<span class="s">"order-service"</span>)
+
+<span class="c">// 4. Start a span</span>
+ctx, span := tracer.Start(ctx, <span class="s">"handleOrders"</span>)
+<span class="k">defer</span> span.End()
+
+<span class="c">// 5. Add attributes (metadata)</span>
+span.SetAttributes(
+    attribute.String(<span class="s">"order.id"</span>, orderID),
+    attribute.Float64(<span class="s">"order.amount"</span>, amount),
+    attribute.String(<span class="s">"http.method"</span>, <span class="s">"POST"</span>),
+)
+
+<span class="c">// 6. Add an event (a log point in time)</span>
+span.AddEvent(<span class="s">"order validated"</span>)
+span.AddEvent(<span class="s">"invoice response received"</span>, trace.WithAttributes(
+    attribute.Int(<span class="s">"http.status_code"</span>, 201),
+))
+
+<span class="c">// 7. Mark error if needed</span>
+span.SetStatus(codes.Error, <span class="s">"failed to call invoice service"</span>)</pre></div>
+
+  <div class="section-label">Python: Manual Tracing</div>
+
+  <div class="code-block"><pre><span class="k">from</span> opentelemetry <span class="k">import</span> trace
+<span class="k">from</span> opentelemetry.trace <span class="k">import</span> Status, StatusCode
+
+<span class="c"># 1. Get the global tracer</span>
+tracer = trace.get_tracer(<span class="s">"invoice-service"</span>)
+
+<span class="c"># 2. Start a span (context manager auto-ends)</span>
+<span class="k">with</span> tracer.start_as_current_span(<span class="s">"generate_invoice"</span>) <span class="k">as</span> span:
+    span.set_attribute(<span class="s">"invoice.order_id"</span>, str(order_id))
+    span.set_attribute(<span class="s">"invoice.amount"</span>, amount)
+    span.add_event(<span class="s">"invoice generation started"</span>)
+
+    invoice = generate_invoice(order_id, amount)
+
+    span.set_status(Status(StatusCode.OK))
+    <span class="c"># or: span.set_status(Status(StatusCode.ERROR, "reason"))</span></pre></div>
+
+  <div class="section-label">Key Patterns</div>
+
+  <div class="concept-grid">
+    <div class="concept-card blue">
+      <div class="card-title">Pattern 1: Context Passing</div>
+      <div class="card-body">The <code>ctx</code> carries the current trace context. Start a span with it — children automatically link as children.</div>
+    </div>
+    <div class="concept-card green">
+      <div class="card-title">Pattern 2: HTTP Client Span</div>
+      <div class="card-body">Inject trace context into outgoing HTTP request via <code>otelhttp.NewClient()</code>. Child span automatically links to parent.</div>
+    </div>
+    <div class="concept-card purp">
+      <div class="card-title">Pattern 3: Cross-Service Parent-Child</div>
+      <div class="card-body">Propagator extracts traceparent from incoming HTTP headers. Child span uses extracted context as parent.</div>
+    </div>
+    <div class="concept-card cyan">
+      <div class="card-title">Pattern 4: Auto-Instrumentation</div>
+      <div class="card-body">Wrap HTTP handlers with <code>otelhttp.NewHandler()</code>. All routes automatically create spans with HTTP attributes.</div>
+    </div>
+    <div class="concept-card amber">
+      <div class="card-title">Pattern 5: Error Marking</div>
+      <div class="card-body">Always set <code>span.SetStatus(codes.Error, "reason")</code> and <code>attribute.Bool("error", true)</code> on error spans.</div>
+    </div>
+  </div>
+
+  <div class="section-label">Sampling</div>
+
+  <table>
+    <tr><th>Sampler</th><th>Behavior</th></tr>
+    <tr><td><code>AlwaysOn</code></td><td>Every span recorded (dev)</td></tr>
+    <tr><td><code>AlwaysOff</code></td><td>No spans recorded (perf testing)</td></tr>
+    <tr><td><code>TraceIdRatio</code></td><td>Sample X% of root spans; all children follow</td></tr>
+    <tr><td><code>ParentBased</code></td><td>Child follows parent's sampling decision</td></tr>
+  </table>
+
+  <div class="code-block"><pre><span class="c">// 10% of traces; if parent was sampled → sample everything</span>
+sampler := trace.ParentBased(
+    trace.TraceIDRatioBased(<span class="m">0.1</span>),
+)</pre></div>
+
+  <div class="section-label">SpanStatus</div>
+
+  <table>
+    <tr><th>Status</th><th>Code</th><th>When to use</th></tr>
+    <tr><td><code>Unset</code></td><td><code>0</code></td><td>Default — no status set. Treated as Ok. Backends typically don't display.</td></tr>
+    <tr><td><code>Ok</code></td><td><code>1</code></td><td>Span completed successfully. Set explicitly when you want guaranteed visibility.</td></tr>
+    <tr><td><code>Error</code></td><td><code>2</code></td><td>Span ended in failure. Surfaces in error-focused views.</td></tr>
+  </table>
+
+  <div class="ok-box">
+    Set <code>Ok</code> explicitly only when you need guaranteed status display in backends that filter by status. Otherwise <code>Unset</code> is fine. Always set <code>Error</code> on failures.
+  </div>
+
+</div>
+
+<!-- ========== TAB 05: Metrics 101 ========== -->
+<div class="panel" id="panel-5">
+
+  <div class="section-label">Instruments Overview</div>
+
+  <p>OTel defines <strong style="color:var(--text)">6 instruments</strong> in 3 categories. Sync instruments: your code calls <code>.Add()</code> or <code>.Record()</code> directly. Async instruments: OTel SDK calls your callback periodically.</p>
+
+  <div class="concept-grid">
+    <div class="concept-card blue">
+      <div class="card-title">Counter</div>
+      <div class="card-body">Monotonic — only increments. Use for requests_total, bytes_sent. Always use positive values.</div>
+    </div>
+    <div class="concept-card cyan">
+      <div class="card-title">UpDownCounter</div>
+      <div class="card-body">Non-monotonic — goes up AND down. Use for active_connections, queue_size.</div>
+    </div>
+    <div class="concept-card green">
+      <div class="card-title">Histogram</div>
+      <div class="card-body">Distribution of values. Buckets into predefined boundaries. Use for request_duration_ms, payload_size_bytes.</div>
+    </div>
+    <div class="concept-card purp">
+      <div class="card-title">ObservableCounter</div>
+      <div class="card-body">Async version of Counter. OTel SDK calls your callback periodically. Use for system metrics from APIs.</div>
+    </div>
+    <div class="concept-card amber">
+      <div class="card-title">ObservableUpDownCounter</div>
+      <div class="card-body">Async version of UpDownCounter. Use for pulled metrics like memory_used_bytes.</div>
+    </div>
+    <div class="concept-card red">
+      <div class="card-title">ObservableGauge</div>
+      <div class="card-body">Point-in-time value. Use for temperature, queue_depth, disk_usage.</div>
+    </div>
+  </div>
+
+  <div class="section-label">Counter: Go</div>
+
+  <div class="code-block"><pre><span class="c">// Create at startup</span>
+counter, err := meter.Int64Counter(
+    <span class="s">"http_requests_total"</span>,
+    metric.WithDescription(<span class="s">"Total HTTP requests received"</span>),
+    metric.WithUnit(<span class="s">"requests"</span>),
+)
+
+<span class="c">// Record — always Add() with a positive value for counters</span>
+counter.Add(ctx, <span class="m">1</span>,
+    metric.WithAttributes(
+        attribute.String(<span class="s">"method"</span>, <span class="s">"GET"</span>),
+        attribute.String(<span class="s">"path"</span>, <span class="s">"/orders"</span>),
+        attribute.String(<span class="s">"status"</span>, <span class="s">"200"</span>),
+    ),
+)</pre></div>
+
+  <div class="section-label">Histogram: Go</div>
+
+  <div class="code-block"><pre><span class="c">// Create at startup</span>
+histogram, err := meter.Float64Histogram(
+    <span class="s">"order_processing_duration_ms"</span>,
+    metric.WithDescription(<span class="s">"Order processing time in milliseconds"</span>),
+    metric.WithUnit(<span class="s">"ms"</span>),
+    metric.WithExplicitBucketBoundaries(
+        <span class="m">5.0</span>, <span class="m">10.0</span>, <span class="m">25.0</span>, <span class="m">50.0</span>, <span class="m">100.0</span>, <span class="m">250.0</span>,
+        <span class="m">500.0</span>, <span class="m">1000.0</span>, <span class="m">2500.0</span>, <span class="m">5000.0</span>, <span class="m">10000.0</span>,
+    ),
+)
+
+<span class="c">// Record a measurement</span>
+histogram.Record(ctx, <span class="m">127.5</span>,
+    metric.WithAttributes(
+        attribute.String(<span class="s">"method"</span>, <span class="s">"POST"</span>),
+        attribute.String(<span class="s">"path"</span>, <span class="s">"/orders"</span>),
+    ),
+)</pre></div>
+
+  <div class="section-label">Observable Gauge: Go</div>
+
+  <div class="code-block"><pre><span class="k">var</span> currentQueueSize int64
+
+_, err := meter.Int64ObservableGauge(
+    <span class="s">"queue_size"</span>,
+    metric.WithDescription(<span class="s">"Current number of items in queue"</span>),
+    metric.WithCallback(<span class="k">func</span>(_ context.Context, o metric.Int64Observer) error {
+        o.Observe(currentQueueSize)
+        <span class="k">return</span> nil
+    }),
+)</pre></div>
+
+  <div class="section-label">Histogram: Python</div>
+
+  <div class="code-block"><pre><span class="c"># Create at startup</span>
+duration_histogram = meter.create_histogram(
+    name=<span class="s">"order_processing_duration_ms"</span>,
+    description=<span class="s">"Order processing time in milliseconds"</span>,
+    unit=<span class="s">"ms"</span>,
+)
+
+<span class="c"># Record</span>
+duration_histogram.record(<span class="m">127.5</span>, {<span class="s">"method"</span>: <span class="s">"POST"</span>, <span class="s">"path"</span>: <span class="s">"/orders"</span>})</pre></div>
+
+  <div class="section-label">Attributes (Labels)</div>
+
+  <p>Attributes classify metric recordings. Every unique combination creates a new time series.</p>
+
+  <div class="warn-box">
+    <strong>Cardinality Warning:</strong> <code>attribute.String("request_id", unique_id)</code> creates a new time series for every request. Keep attribute values low cardinality (≤ 100 unique values).
+  </div>
+
+  <div class="code-block"><pre><span class="c"># Good — low cardinality</span>
+counter.add(<span class="m">1</span>, {<span class="s">"customer_tier"</span>: <span class="s">"premium"</span>})
+
+<span class="c"># Bad — high cardinality (one time series per unique value)</span>
+counter.add(<span class="m">1</span>, {<span class="s">"request_id"</span>: <span class="s">"req-abc-123"</span>})</pre></div>
+
+  <div class="section-label">Temporality</div>
+
+  <table>
+    <tr><th>Temporality</th><th>What it means</th><th>Use case</th></tr>
+    <tr><td><strong>Cumulative</strong> (default)</td><td>Each export contains all values since app start</td><td>General use</td></tr>
+    <tr><td><strong>Delta</strong></td><td>Each export is only the delta since last export</td><td>Prometheus remote write (reduces cardinality)</td></tr>
+  </table>
+
+  <div class="section-label">Exemplars</div>
+
+  <p>Exemplars are <strong style="color:var(--text)">trace references embedded in histogram buckets</strong>: actual <code>trace_id</code> and <code>span_id</code> attached to a bucket recording. Enable drill-down from metric → trace.</p>
+
+  <div class="flow-container">
+    <div class="flow-row" style="flex-wrap:wrap; gap:8px; justify-content:center; align-items:center;">
+      <div class="flow-box" style="min-width:200px;">
+        <div class="flow-label">order_processing_duration_ms</div>
+        <div class="flow-sub">p95 = 450ms</div>
+      </div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-box cyan" style="min-width:200px;">
+        <div class="flow-label">Exemplar</div>
+        <div class="flow-sub">trace_id=abc123<br>span_id=def456<br>value=447ms</div>
+      </div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-box green" style="min-width:150px;">
+        <div class="flow-label">Click in SigNoz</div>
+        <div class="flow-sub">Jump to that trace</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ok-box">
+    Exemplars are automatic when your <code>.Record()</code> call runs inside an active trace context. Enable exemplars in your SDK config.
+  </div>
+
+  <div class="section-label">Full Setup: Go Metrics</div>
+
+  <div class="code-block"><pre><span class="k">func</span> initMeter(ctx context.Context) (func(), error) {
+    exporter, err := otlpmetricgrpc.New(ctx)
+    <span class="k">if</span> err != nil {
+        <span class="k">return</span> nil, err
+    }
+
+    res, err := resource.New(ctx,
+        resource.WithAttributes(
+            attribute.String(<span class="s">"service.name"</span>, <span class="s">"order-service"</span>),
+        ),
+    )
+
+    reader := metric.NewPeriodicBatchReader(exporter,
+        metric.WithInterval(<span class="m">10</span> * time.Second),
+    )
+
+    mp := metric.NewMeterProvider(
+        metric.WithResource(res),
+        metric.WithReader(reader),
+    )
+
+    otel.SetMeterProvider(mp)
+    <span class="k">return</span> func() { mp.Shutdown(ctx) }, nil
+}</pre></div>
+
+</div>
+
+<!-- ========== TAB 06: Logs 101 ========== -->
+<div class="panel" id="panel-6">
+
+  <div class="section-label">LogRecord Model</div>
+
+  <p>Logs in OTel are <strong style="color:var(--text)">first-class signals</strong>. A LogRecord carries timestamp, severity, body, resource, attributes, and optionally trace_id + span_id for correlation.</p>
+
+  <div class="concept-grid">
+    <div class="concept-card blue">
+      <div class="card-title">LogRecord Fields</div>
+      <div class="card-body"><code>timestamp</code>, <code>severity</code> (TRACE/DEBUG/INFO/WARN/ERROR), <code>body</code>, <code>resource</code>, <code>attributes</code>, <code>trace_id</code>, <code>span_id</code></div>
+    </div>
+    <div class="concept-card green">
+      <div class="card-title">Trace Correlation</div>
+      <div class="card-body">LogRecords emitted within a traced context carry trace_id and span_id. Enables log → trace drill-down.</div>
+    </div>
+    <div class="concept-card purp">
+      <div class="card-title">Severity Levels</div>
+      <div class="card-body">5 levels: TRACE (5), DEBUG (10), INFO (20), WARN (30), ERROR (40). Numeric for ordering.</div>
+    </div>
+    <div class="concept-card amber">
+      <div class="card-title">Bridge Patterns</div>
+      <div class="card-body">OTel bridges existing log libraries (log4j, stdlib, zap) via SDK log handlers. Existing logs flow into OTel pipeline.</div>
+    </div>
+  </div>
+
+  <div class="section-label">Signal Relationships: Log + Trace</div>
+
+  <div class="flow-container">
+    <div class="flow-row" style="flex-wrap:wrap; gap:8px; justify-content:center; align-items:center;">
+      <div class="flow-box accent" style="min-width:140px;">
+        <div class="flow-label">Span</div>
+        <div class="flow-sub">span_id=abc</div>
+      </div>
+      <div class="flow-arrow" style="font-size:1.4rem;">&#8592;&#8212;&#8212;&#8594;</div>
+      <div class="flow-box cyan" style="min-width:200px;">
+        <div class="flow-label">trace context propagated</div>
+        <div class="flow-sub">via W3C traceparent header</div>
+      </div>
+      <div class="flow-arrow" style="font-size:1.4rem;">&#8592;&#8212;&#8212;&#8594;</div>
+      <div class="flow-box purp" style="min-width:140px;">
+        <div class="flow-label">LogRecord</div>
+        <div class="flow-sub">span_id=abc</div>
+      </div>
+    </div>
+    <div style="margin-top:14px; text-align:center; font-size:.85rem; color:var(--text-muted);">
+      Same trace_id flows through both — click log → navigate to trace
+    </div>
+  </div>
+
+  <div class="section-label">Python: Emit Log (within trace)</div>
+
+  <div class="code-block"><pre><span class="k">from</span> opentelemetry <span class="k">import</span> trace
+
+tracer = trace.get_tracer(__name__)
+
+<span class="k">with</span> tracer.start_as_current_span(<span class="s">"process-order"</span>) <span class="k">as</span> span:
+    <span class="c"># Log within this span — trace_id/span_id auto-attached</span>
+    span.add_event(<span class="s">"log"</span>, attributes={
+        <span class="s">"message"</span>: <span class="s">"order processing started"</span>,
+        <span class="s">"order_id"</span>: order_id,
+    })
+    <span class="c"># Span events are logs within a trace context</span>
+    <span class="c"># Use span.add_event() for in-trace logging</span></pre></div>
+
+  <div class="section-label">Python: Log Bridge (stdlib → OTel)</div>
+
+  <div class="code-block"><pre><span class="k">import</span> logging
+<span class="k">from</span> opentelemetry.sdk._logs <span class="k">import</span> LoggingHandler
+
+<span class="c"># Bridge Python stdlib logging → OTel SDK</span>
+otel_handler = LoggingHandler()
+logging.root.addHandler(otel_handler)
+
+<span class="c"># All logging.info(), logging.error() calls now flow through OTel</span>
+logging.info(<span class="s">"payment processed"</span>, extra={<span class="s">"order_id"</span>: <span class="s">"12345"</span>})
+<span class="c"># These carry trace_id/span_id when called within a traced context</span></pre></div>
+
+  <div class="section-label">Go: LogRecord via Logger</div>
+
+  <div class="code-block"><pre><span class="k">import</span> <span class="s">"go.opentelemetry.io/otel/log"</span>
+
+<span class="c">// Create a logger (once at startup)</span>
+logger := mp.Logger(<span class="s">"order-service"</span>)
+
+<span class="c">// Emit a log record within a trace context</span>
+logger.Info(ctx, <span class="s">"order processed"</span>,
+    log.WithAttributes(
+        attribute.String(<span class="s">"order.id"</span>, orderID),
+        attribute.String(<span class="s">"status"</span>, <span class="s">"completed"</span>),
+    ),
+)
+<span class="c">// ctx carries trace context — log record gets trace_id + span_id auto</span></pre></div>
+
+  <div class="section-label">Severity Mapping</div>
+
+  <table>
+    <tr><th>OTel Severity</th><th>Numeric</th><th>Typical Mapping</th></tr>
+    <tr><td><code>TRACE</code></td><td>5</td><td>Most verbose — stack traces, full debug dumps</td></tr>
+    <tr><td><code>DEBUG</code></td><td>10</td><td>Debug info, variable dumps</td></tr>
+    <tr><td><code>INFO</code></td><td>20</td><td>Normal operations, state transitions</td></tr>
+    <tr><td><code>WARN</code></td><td>30</td><td>Unexpected but handled (retries, fallbacks)</td></tr>
+    <tr><td><code>ERROR</code></td><td>40</td><td>Failures requiring attention</td></tr>
+  </table>
+
+  <div class="warn-box">
+    <strong>Logs without trace context:</strong> A LogRecord without trace_id/span_id is a standalone log. Ingest it via the Collector <code>filelog</code> receiver and use resource attributes (service.name, etc.) for correlation.
+  </div>
+
+</div>
+
+<!-- ========== TAB 07: Kubernetes ========== -->
+<div class="panel" id="panel-7">
+
+  <div class="section-label">Agent vs Gateway Mode</div>
+
+  <div class="concept-grid">
+    <div class="concept-card blue">
+      <div class="card-title">Agent Mode (DaemonSet)</div>
+      <div class="card-body">One Agent pod per node. Applications send to localhost. Agent does local batching, enrichment, and ships to Gateway. Reduces backend connections from apps.</div>
+    </div>
+    <div class="concept-card cyan">
+      <div class="card-title">Gateway Mode (Deployment)</div>
+      <div class="card-body">Single or few Gateway pods. Agents forward to it. Gateway aggregates, tail-samples, and routes to backends. Central policy enforcement point.</div>
+    </div>
+  </div>
+
+  <div class="section-label">Architecture: Agent + Gateway</div>
+
+  <div class="flow-container">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;">
+      <div>
+        <div style="font-size:.8rem; font-weight:700; color:var(--text-muted); margin-bottom:12px; text-transform:uppercase; letter-spacing:.06em;">Node 1</div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <div class="flow-box" style="padding:12px 16px;">
+            <div class="flow-label" style="font-size:.85rem;">App Pod</div>
+          </div>
+          <div class="flow-arrow-down" style="padding:4px 0;">&#8595;</div>
+          <div class="flow-box accent" style="padding:12px 16px;">
+            <div class="flow-label" style="font-size:.85rem;">OTel Agent (DaemonSet)</div>
+            <div class="flow-sub">localhost:4317</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:.8rem; font-weight:700; color:var(--text-muted); margin-bottom:12px; text-transform:uppercase; letter-spacing:.06em;">Node 2</div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <div class="flow-box" style="padding:12px 16px;">
+            <div class="flow-label" style="font-size:.85rem;">App Pod</div>
+          </div>
+          <div class="flow-arrow-down" style="padding:4px 0;">&#8595;</div>
+          <div class="flow-box accent" style="padding:12px 16px;">
+            <div class="flow-label" style="font-size:.85rem;">OTel Agent (DaemonSet)</div>
+            <div class="flow-sub">localhost:4317</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:20px; display:flex; align-items:center; gap:8px; justify-content:center; flex-wrap:wrap;">
+      <div class="flow-arrow">&#8595;</div>
+      <div class="flow-box cyan" style="flex:0 0 auto;">
+        <div class="flow-label">OTel Gateway (Deployment)</div>
+        <div class="flow-sub">k8sattributes processor, tail sampling</div>
+      </div>
+      <div class="flow-arrow">&#8595;</div>
+      <div class="flow-box green" style="flex:0 0 auto;">
+        <div class="flow-label">Backend</div>
+        <div class="flow-sub">SigNoz / Tempo / Jaeger</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-label">Helm Install: Agent Mode</div>
+
+  <div class="code-block"><pre>helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+helm install otel-collector open-telemetry/opentelemetry-collector \
+  --set mode=daemonset \
+  --set config.receivers.otlp.protocols.grpc.endpoint=0.0.0.0:4317 \
+  --set config.receivers.otlp.protocols.http.endpoint=0.0.0.0:4318</pre></div>
+
+  <div class="section-label">Helm Install: Gateway Mode</div>
+
+  <div class="code-block"><pre>helm install otel-collector-gateway open-telemetry/opentelemetry-collector \
+  --set mode=deployment \
+  --set config.receivers.otlp.protocols.grpc.endpoint=0.0.0.0:4317 \
+  --set config.exporters.otlp.endpoint=http://tempo:4317</pre></div>
+
+  <div class="section-label">Auto-Instrumentation in K8s</div>
+
+  <p>Use the <strong style="color:var(--text)">OpenTelemetry Operator</strong> with the <code>Instrumentation</code> CR to auto-inject OTel SDK into pods without modifying application code.</p>
+
+  <div class="code-block"><pre><span class="c"># Install OpenTelemetry Operator</span>
+kubectl apply -f https://github.com/open-telemetry/opentelemetry-operator/releases/latest/download/opentelemetry-operator.yaml
+
+<span class="c"># Create Instrumentation resource (per namespace)</span>
+apiVersion: opentelemetry.io/v1alpha1
+kind: Instrumentation
+metadata:
+  name: my-instrumentation
+  namespace: default
+spec:
+  exporter:
+    endpoint: http://otel-collector:4317
+  propagators:
+    - tracecontext
+    - baggage
+  resource:
+    addK8sUID: true
+    addAttributes: true</pre></div>
+
+  <div class="code-block"><pre><span class="c"># Annotate pod to enable auto-instrumentation</span>
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    instrumentation.opentelemetry.io/inject-sdk: "true"
+    instrumentation.opentelemetry.io/inject-tracer: "opentelemetry-auto"
+spec:
+  containers:
+  - name: my-app
+    image: my-app:latest</pre></div>
+
+  <div class="section-label">K8s Attributes Processor</div>
+
+  <p>The <code>k8sattributes</code> processor automatically enriches spans with Kubernetes metadata.</p>
+
+  <div class="code-block"><pre>processors:
+  k8sattributes:
+    extract:
+      metadata:
+        - k8s.namespace.name
+        - k8s.deployment.name
+        - k8s.pod.name
+        - k8s.pod.uid
+        - k8s.pod.start_time
+        - k8s.container.name
+        - k8s.container.restart_count
+    filter:
+      node: <span class="s">".*worker.*"</span>   <span class="c"># Only pods on worker nodes</span></pre></div>
+
+  <div class="section-label">Resource Limits</div>
+
+  <div class="concept-grid">
+    <div class="concept-card amber">
+      <div class="card-title">Memory</div>
+      <div class="card-body">Set memory limits to match <code>memory_limiter</code> config. Target 512–1024Mi for agents, 1–2Gi for gateways under load.</div>
+    </div>
+    <div class="concept-card red">
+      <div class="card-title">CPU</div>
+      <div class="card-body">OTel Agent: 250–500m CPU. Gateway: 1–2 CPU. Enable <code>ballast</code> extension only if not using GOMEMLIMIT env var (Collector v0.91+).</div>
+    </div>
+    <div class="concept-card blue">
+      <div class="card-title">Network</div>
+      <div class="card-body">Agents expose ports 4317 (gRPC), 4318 (HTTP). Gateway needs egress for OTLP to backend. Ensure NetworkPolicy allows.</div>
+    </div>
+    <div class="concept-card green">
+      <div class="card-title">GOMEMLIMIT</div>
+      <div class="card-body">Collector v0.91+ recommends GOMEMLIMIT instead of ballast. Set <code>env:</code> with <code>GOMEMLIMIT: 400MiB</code>.</div>
+    </div>
+  </div>
+
+  <div class="ok-box">
+    <strong>Production checklist:</strong> memory_limiter processor on all pipelines, batch processor for export efficiency, k8sattributes for pod metadata enrichment, and tail_sampling at the gateway for cost control.
+  </div>
+
+</div>
+
+</div><!-- /content -->
+
+<footer>
+  <p>Based on <a href="https://opentelemetry.io/docs/" target="_blank">OpenTelemetry Documentation</a></p>
+  <p style="margin-top:8px;">Signals · Collector · Context Propagation · Traces · Metrics · Logs · Kubernetes</p>
+</footer>
+
+<script>
+  function showTab(n) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('panel-' + n).classList.add('active');
+    document.querySelectorAll('.tab-btn')[n].classList.add('active');
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight') {
+      const btns = document.querySelectorAll('.tab-btn');
+      const active = document.querySelector('.tab-btn.active');
+      const idx = Array.from(btns).indexOf(active);
+      if (idx < btns.length - 1) showTab(idx + 1);
+    }
+    if (e.key === 'ArrowLeft') {
+      const btns = document.querySelectorAll('.tab-btn');
+      const active = document.querySelector('.tab-btn.active');
+      const idx = Array.from(btns).indexOf(active);
+      if (idx > 0) showTab(idx - 1);
+    }
+  });
+</script>
+
+</body>
+</html>
