@@ -15,6 +15,9 @@ No build system. No tests. Pure HTML/CSS/JS, deployed automatically on Vercel fr
 | ⚙️ | [GitHub Actions Cheatsheet](./github-actions-cheatsheet.html) | Workflows, triggers, secrets, matrix builds |
 | 🛡️ | [DevSecOps Pipeline](./secopspipeline.html) | Gitleaks, Trivy, Cosign, canary deploys |
 | ☸️ | [Kubernetes Networking](./k8s-networking.html) | CNI, veth, VXLAN, kube-proxy, CoreDNS, Ingress |
+| 🐳 | [Docker Multi-Architecture](./docker-multiarch.html) | Buildx, multi-arch manifests, CPU architectures |
+| 📊 | [OpenTelemetry](./opentelemetry.html) | Traces, metrics, logs, OTel collector pipeline |
+| 🌐 | [VPC Packet Flow](./vpc-flow.html) | Subnets, SG vs NACL, Peering, Transit Gateway, Cross-Region |
 
 ---
 

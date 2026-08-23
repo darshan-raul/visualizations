@@ -1,0 +1,1842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AWS VPC Packet Flow &amp; Architecture — Interactive Visualization</title>
+  <meta name="description" content="Deep dive interactive visualization of AWS VPC networking: packet lifecycles, Security Groups vs NACLs, Gateway vs Interface Endpoints, Cross-VPC Peering, Transit Gateway, Cross-Region routing, and live packet flow simulator.">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:           #080b12;
+      --surface:      #0e1320;
+      --surface2:     #131929;
+      --surface3:     #1a2238;
+      --border:       rgba(255,255,255,.07);
+      --border-hover: rgba(255,255,255,.15);
+      --accent:       #a78bfa;
+      --accent-blue:  #4f8ef7;
+      --accent-cyan:  #22d3ee;
+      --accent-green: #34d399;
+      --accent-amber: #fbbf24;
+      --accent-red:   #f87171;
+      --accent-rose:  #fb7185;
+      --text:         #f0f4ff;
+      --text-muted:   #8b9ab5;
+      --text-dim:     #4a5568;
+      --mono:         'JetBrains Mono', monospace;
+      --sans:         'Inter', sans-serif;
+      --radius:       14px;
+      --shadow:       0 8px 40px rgba(0,0,0,.55);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.7;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: -1;
+      background:
+        radial-gradient(ellipse 80% 50% at 15% 5%,   rgba(167,139,250,.12) 0%, transparent 60%),
+        radial-gradient(ellipse 65% 45% at 85% 15%,  rgba(79,142,247,.09) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 50% 95%,  rgba(34,211,238,.06) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 30% at 75% 65%,  rgba(52,211,153,.04) 0%, transparent 55%);
+      pointer-events: none;
+    }
+
+    /* ── Back Button ─────────────────────────────────────────── */
+    .back-btn {
+      position: fixed;
+      top: 20px; left: 20px; z-index: 1000;
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 18px;
+      background: rgba(14,19,32,0.78);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 100px;
+      color: #8b9ab5;
+      font-family: var(--sans);
+      font-size: 13px; font-weight: 600;
+      text-decoration: none;
+      transition: color .2s, border-color .2s, transform .2s, box-shadow .2s;
+      box-shadow: 0 4px 24px rgba(0,0,0,.4);
+    }
+    .back-btn:hover {
+      color: #eef2ff;
+      border-color: rgba(167,139,250,.4);
+      transform: translateX(-3px);
+      box-shadow: 0 4px 32px rgba(167,139,250,.2);
+    }
+    .back-btn .arrow { font-size: 16px; transition: transform .2s; }
+    .back-btn:hover .arrow { transform: translateX(-2px); }
+
+    /* ── Header ──────────────────────────────────────────────── */
+    header {
+      position: relative;
+      z-index: 10;
+      padding: 56px 24px 0;
+      text-align: center;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(167,139,250,.12);
+      border: 1px solid rgba(167,139,250,.3);
+      border-radius: 100px;
+      padding: 6px 16px;
+      font-size: 12px; font-weight: 700; letter-spacing: .08em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    .badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
+
+    h1 {
+      font-size: clamp(28px, 4.5vw, 46px);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -.02em;
+      background: linear-gradient(130deg, #f0f4ff 20%, var(--accent) 60%, var(--accent-cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 14px;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 16px;
+      max-width: 680px;
+      margin: 0 auto 32px;
+      line-height: 1.7;
+    }
+
+    /* ── Tabs Navigation ─────────────────────────────────────── */
+    .tabs-wrapper {
+      position: sticky;
+      top: 0;
+      z-index: 900;
+      background: rgba(8,11,18,0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      margin-bottom: 36px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 6px;
+      max-width: 1140px;
+      margin: 0 auto;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding: 4px;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+
+    .tab-btn {
+      flex-shrink: 0;
+      display: flex; align-items: center; gap: 7px;
+      padding: 9px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-muted);
+      font-family: var(--sans);
+      font-size: 13px; font-weight: 600;
+      cursor: pointer;
+      transition: all .2s ease;
+      white-space: nowrap;
+    }
+    .tab-btn:hover {
+      background: var(--surface2);
+      color: var(--text);
+      border-color: var(--border-hover);
+    }
+    .tab-btn.active {
+      background: linear-gradient(135deg, rgba(167,139,250,.25), rgba(79,142,247,.2));
+      border-color: rgba(167,139,250,.5);
+      color: #fff;
+      box-shadow: 0 0 16px rgba(167,139,250,.2);
+    }
+    .tab-btn .tab-num {
+      font-family: var(--mono);
+      font-size: 11px;
+      opacity: .65;
+      color: var(--accent-cyan);
+    }
+
+    /* ── Content Container ───────────────────────────────────── */
+    .content {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+
+    .panel {
+      display: none;
+      animation: fadeIn .3s ease forwards;
+    }
+    .panel.active { display: block; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Reusable Component Styles ───────────────────────────── */
+    .section-title {
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #f0f4ff;
+    }
+    .section-subtitle {
+      color: var(--text-muted);
+      font-size: 15px;
+      margin-bottom: 28px;
+      line-height: 1.7;
+    }
+
+    .section-label {
+      display: flex; align-items: center; gap: 12px;
+      font-size: 11px; font-weight: 700; letter-spacing: .12em;
+      color: var(--accent-cyan); text-transform: uppercase; margin: 32px 0 18px;
+    }
+    .section-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+    .concept-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 18px;
+      margin-bottom: 28px;
+    }
+
+    .concept-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .concept-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 3px;
+      background: var(--accent);
+    }
+    .concept-card.blue::before   { background: var(--accent-blue); }
+    .concept-card.cyan::before   { background: var(--accent-cyan); }
+    .concept-card.green::before  { background: var(--accent-green); }
+    .concept-card.amber::before  { background: var(--accent-amber); }
+    .concept-card.rose::before   { background: var(--accent-rose); }
+    .concept-card.purp::before   { background: var(--accent); }
+
+    .card-head {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .card-tag {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; padding: 3px 9px; border-radius: 6px;
+      background: rgba(255,255,255,.05); color: var(--text-muted);
+    }
+    .card-title { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+    .card-text  { font-size: 13.5px; color: var(--text-muted); line-height: 1.65; flex: 1; }
+
+    /* ── Code Blocks ─────────────────────────────────────────── */
+    .code-block {
+      background: #06080e;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.65;
+      color: #cad8f0;
+      overflow-x: auto;
+      margin: 18px 0;
+    }
+    .code-block .kw  { color: #a78bfa; font-weight: 600; }
+    .code-block .fn  { color: #4f8ef7; }
+    .code-block .str { color: #34d399; }
+    .code-block .num { color: #fbbf24; }
+    .code-block .cmt { color: #5a6b87; font-style: italic; }
+    .code-block .hi  { color: #22d3ee; font-weight: 700; }
+
+    /* ── Warn & OK Boxes ─────────────────────────────────────── */
+    .warn-box, .ok-box, .info-box {
+      border-radius: 12px;
+      padding: 18px 20px;
+      margin: 20px 0;
+      font-size: 14px;
+      line-height: 1.65;
+      display: flex; gap: 14px;
+    }
+    .warn-box {
+      background: rgba(248,113,113,.08);
+      border: 1px solid rgba(248,113,113,.25);
+      border-left: 4px solid var(--accent-red);
+      color: #fca5a5;
+    }
+    .ok-box {
+      background: rgba(52,211,153,.08);
+      border: 1px solid rgba(52,211,153,.25);
+      border-left: 4px solid var(--accent-green);
+      color: #a7f3d0;
+    }
+    .info-box {
+      background: rgba(79,142,247,.08);
+      border: 1px solid rgba(79,142,247,.25);
+      border-left: 4px solid var(--accent-blue);
+      color: #bfdbfe;
+    }
+    .box-icon { font-size: 20px; flex-shrink: 0; }
+
+    /* ── Comparison Table ────────────────────────────────────── */
+    .table-container {
+      overflow-x: auto;
+      margin: 22px 0;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+    .compare-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+      text-align: left;
+    }
+    .compare-table th {
+      background: var(--surface2);
+      padding: 14px 18px;
+      font-weight: 700;
+      color: #f0f4ff;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    .compare-table td {
+      padding: 14px 18px;
+      border-bottom: 1px solid rgba(255,255,255,.04);
+      color: var(--text-muted);
+      vertical-align: top;
+    }
+    .compare-table tr:last-child td { border-bottom: none; }
+    .compare-table tr:hover td { background: rgba(255,255,255,.015); color: var(--text); }
+    .tag-pill {
+      display: inline-block; padding: 2px 8px; border-radius: 4px;
+      font-size: 11px; font-weight: 700; font-family: var(--mono);
+    }
+    .tag-stateful { background: rgba(167,139,250,.2); color: #c4b5fd; }
+    .tag-stateless { background: rgba(251,191,36,.2); color: #fde68a; }
+
+    /* ── Flow Diagrams / Step Flow ───────────────────────────── */
+    .flow-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin: 22px 0;
+    }
+    .flow-step-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      position: relative;
+    }
+    .flow-step-list::before {
+      content: '';
+      position: absolute;
+      top: 20px; bottom: 20px; left: 20px;
+      width: 2px;
+      background: rgba(255,255,255,.08);
+      z-index: 1;
+    }
+    .flow-step {
+      display: flex;
+      gap: 18px;
+      position: relative;
+      z-index: 2;
+    }
+    .step-num-badge {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: var(--surface2);
+      border: 2px solid var(--accent);
+      color: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 14px; font-family: var(--mono);
+      flex-shrink: 0;
+    }
+    .step-content {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      flex: 1;
+    }
+    .step-title { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+    .step-desc  { font-size: 13.5px; color: var(--text-muted); line-height: 1.6; }
+
+    /* ── Simulator Playground Styles (Tab 08) ────────────────── */
+    .sim-panel {
+      background: var(--surface);
+      border: 1px solid rgba(167,139,250,.3);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: 0 12px 48px rgba(0,0,0,.6);
+      margin-bottom: 32px;
+    }
+    .sim-header {
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+    .sim-title-group { display: flex; align-items: center; gap: 10px; }
+    .sim-status-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--accent-green); box-shadow: 0 0 12px var(--accent-green);
+    }
+    .sim-controls {
+      display: flex; gap: 8px; align-items: center;
+    }
+    .sim-btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-family: var(--sans);
+      font-size: 12px; font-weight: 700;
+      cursor: pointer;
+      transition: all .2s;
+      border: 1px solid var(--border);
+      background: var(--surface3);
+      color: var(--text);
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .sim-btn:hover { background: rgba(255,255,255,.1); border-color: var(--border-hover); }
+    .sim-btn.primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-blue));
+      border: none; color: #fff;
+    }
+    .sim-btn.primary:hover { opacity: .9; transform: translateY(-1px); }
+
+    .sim-body { padding: 24px; }
+
+    /* Preset selector pills */
+    .preset-pills {
+      display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;
+    }
+    .preset-pill {
+      padding: 8px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 12px; font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .preset-pill:hover { color: #fff; border-color: rgba(255,255,255,.2); }
+    .preset-pill.active {
+      background: rgba(167,139,250,.15);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* Configuration Toggles Area */
+    .config-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+    .config-item { display: flex; flex-direction: column; gap: 6px; }
+    .config-label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: .06em; }
+    .config-select {
+      background: #06080e;
+      border: 1px solid var(--border);
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-family: var(--mono);
+      font-size: 12px;
+      outline: none;
+    }
+    .config-select:focus { border-color: var(--accent); }
+
+    /* Visual Hop Pipeline */
+    .pipeline-visual {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 24px 12px;
+      background: #06080e;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow-x: auto;
+      margin-bottom: 24px;
+    }
+    .pipe-node {
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      min-width: 100px; text-align: center;
+      transition: transform .3s;
+    }
+    .node-icon-box {
+      width: 48px; height: 48px; border-radius: 12px;
+      background: var(--surface2);
+      border: 2px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      transition: all .3s;
+      position: relative;
+    }
+    .pipe-node.active .node-icon-box {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 20px var(--accent-cyan);
+      transform: scale(1.12);
+      background: rgba(34,211,238,.2);
+    }
+    .pipe-node.passed .node-icon-box {
+      border-color: var(--accent-green);
+      background: rgba(52,211,153,.15);
+    }
+    .pipe-node.failed .node-icon-box {
+      border-color: var(--accent-red);
+      background: rgba(248,113,113,.2);
+      box-shadow: 0 0 20px var(--accent-red);
+    }
+    .node-label { font-size: 11px; font-weight: 700; color: var(--text-muted); max-width: 110px; line-height: 1.3; }
+    .pipe-arrow {
+      color: var(--text-dim); font-size: 16px; flex-shrink: 0; font-weight: 900;
+      transition: color .3s;
+    }
+    .pipe-arrow.active { color: var(--accent-cyan); }
+
+    /* Live Header Inspector & State Console */
+    .inspector-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 800px) { .inspector-grid { grid-template-columns: 1fr; } }
+
+    .inspector-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .inspector-title {
+      font-size: 12px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--accent); margin-bottom: 12px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .header-table {
+      width: 100%; font-family: var(--mono); font-size: 12px; border-collapse: collapse;
+    }
+    .header-table td { padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,.04); }
+    .header-table td:first-child { color: var(--text-muted); width: 40%; }
+    .header-table td:last-child  { color: #fff; font-weight: 600; }
+
+    .log-box {
+      background: #06080e;
+      border: 1px solid rgba(255,255,255,.05);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: var(--mono);
+      font-size: 12px;
+      height: 160px;
+      overflow-y: auto;
+      line-height: 1.6;
+      color: #94a3b8;
+    }
+    .log-entry { margin-bottom: 6px; }
+    .log-entry.info { color: #38bdf8; }
+    .log-entry.ok   { color: #34d399; }
+    .log-entry.err  { color: #f87171; font-weight: 700; }
+
+    /* ── Diagnostic Drop Matrix (Tab 09) ─────────────────────── */
+    .matrix-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 16px;
+      transition: border-color .2s;
+    }
+    .matrix-card:hover { border-color: var(--border-hover); }
+    .matrix-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .matrix-title { font-size: 16px; font-weight: 700; color: #fff; }
+    .matrix-cause { font-size: 13.5px; color: #f87171; margin-bottom: 8px; font-weight: 600; }
+    .matrix-solution {
+      font-size: 13.5px; color: #a7f3d0; background: rgba(52,211,153,.07);
+      border: 1px solid rgba(52,211,153,.2); border-radius: 8px; padding: 10px 14px;
+      margin-top: 10px;
+    }
+
+    /* ── Footer ──────────────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 36px 0;
+      margin-top: 60px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 650px) {
+      .tabs-wrapper { padding: 8px 12px; }
+      header { padding: 44px 16px 0; }
+      .content { padding: 0 16px 60px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Fixed Back Button -->
+<a href="index.html" class="back-btn" title="Back to All Visualizations">
+  <span class="arrow">←</span> All Visualizations
+</a>
+
+<!-- Header -->
+<header>
+  <div class="badge">
+    <span class="dot"></span> AWS Networking Deep Dive
+  </div>
+  <h1>VPC Packet Flow &amp; Architecture</h1>
+  <p>
+    An interactive masterclass into AWS VPC routing internals — from single-subnet kernel interfaces, stateful Security Groups vs stateless NACLs, to Cross-VPC Peering, Transit Gateway route domains, and Inter-Region global backbones.
+  </p>
+</header>
+
+<!-- Sticky Tab Navigation -->
+<div class="tabs-wrapper">
+  <nav class="tabs" id="tabList" role="tablist">
+    <button class="tab-btn active" onclick="showTab(0)"><span class="tab-num">00</span> Fundamentals</button>
+    <button class="tab-btn" onclick="showTab(1)"><span class="tab-num">01</span> Ingress &amp; Egress</button>
+    <button class="tab-btn" onclick="showTab(2)"><span class="tab-num">02</span> SG vs NACL</button>
+    <button class="tab-btn" onclick="showTab(3)"><span class="tab-num">03</span> VPC Endpoints</button>
+    <button class="tab-btn" onclick="showTab(4)"><span class="tab-num">04</span> Cross-VPC Peering</button>
+    <button class="tab-btn" onclick="showTab(5)"><span class="tab-num">05</span> Transit Gateway</button>
+    <button class="tab-btn" onclick="showTab(6)"><span class="tab-num">06</span> Cross-Region</button>
+    <button class="tab-btn" onclick="showTab(7)"><span class="tab-num">07</span> Hybrid &amp; Direct Connect</button>
+    <button class="tab-btn" onclick="showTab(8)" style="border-color: rgba(34,211,238,.4);"><span class="tab-num">08</span> ⚡ Interactive Simulator</button>
+    <button class="tab-btn" onclick="showTab(9)"><span class="tab-num">09</span> Drop Diagnostics</button>
+  </nav>
+</div>
+
+<!-- Main Content Area -->
+<main class="content">
+
+  <!-- ================================================================= -->
+  <!-- TAB 00: FUNDAMENTALS & SUBSTRATE -->
+  <!-- ================================================================= -->
+  <div class="panel active" id="panel-0">
+    <div class="section-title">🌐 The VPC Substrate &amp; Core Primitives</div>
+    <div class="section-subtitle">
+      How the AWS Nitro System and Mapping Service abstract physical Clos spine-leaf data centers into logical software-defined overlays.
+    </div>
+
+    <div class="concept-grid">
+      <div class="concept-card purp">
+        <div class="card-head">
+          <span class="card-tag">Nitro Hypervisor</span>
+          <span style="font-size:18px">⚡</span>
+        </div>
+        <div class="card-title">Virtual Network Substrate</div>
+        <div class="card-text">
+          VPCs do not use VLANs. The <strong>AWS Nitro System</strong> intercepts every packet from the guest OS at the PCIe level, encapsulating it into a Geneve/VXLAN overlay tunnel across the physical Clos fabric.
+        </div>
+      </div>
+
+      <div class="concept-card blue">
+        <div class="card-head">
+          <span class="card-tag">Directory Service</span>
+          <span style="font-size:18px">🗺️</span>
+        </div>
+        <div class="card-title">AWS Mapping Service</div>
+        <div class="card-text">
+          A hyper-scaled distributed directory that translates logical <code>(VPC-ID, 10.0.1.5)</code> pairs into physical hypervisor rack coordinates and underlay IPs in sub-microsecond latency.
+        </div>
+      </div>
+
+      <div class="concept-card cyan">
+        <div class="card-head">
+          <span class="card-tag">Interface</span>
+          <span style="font-size:18px">🔌</span>
+        </div>
+        <div class="card-title">Elastic Network Interfaces (ENI)</div>
+        <div class="card-text">
+          Virtual network cards bound to an EC2 instance. Holds primary private IPv4, secondary IPs, IPv6 addresses, MAC address, and references Security Groups evaluated in hardware.
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">The 5 Reserved IP Addresses in Every Subnet</div>
+    <p style="color:var(--text-muted);margin-bottom:14px;font-size:14px;">
+      For any subnet CIDR block (e.g. <code>10.0.1.0/24</code> with 256 addresses), AWS reserves the first 4 and the last 1 address, leaving <strong>251 usable IPs</strong>:
+    </p>
+
+    <div class="table-container">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>IP Offset</th>
+            <th>Sample IP</th>
+            <th>Name / Role</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>.0</code></td>
+            <td><code>10.0.1.0</code></td>
+            <td><strong style="color:#fff">Network Address</strong></td>
+            <td>Base address of the subnet CIDR. Cannot be assigned to any interface.</td>
+          </tr>
+          <tr>
+            <td><code>.1</code></td>
+            <td><code>10.0.1.1</code></td>
+            <td><strong style="color:var(--accent-cyan)">VPC Router (Default Gateway)</strong></td>
+            <td>Virtual gateway interface handling all subnet egress and longest-prefix route table matching.</td>
+          </tr>
+          <tr>
+            <td><code>.2</code></td>
+            <td><code>10.0.1.2</code></td>
+            <td><strong style="color:var(--accent-green)">Amazon Route 53 Resolver</strong></td>
+            <td>Amazon Provided DNS (Base IP + 2). Resolves internal VPC private DNS and external domains.</td>
+          </tr>
+          <tr>
+            <td><code>.3</code></td>
+            <td><code>10.0.1.3</code></td>
+            <td><strong style="color:var(--accent-amber)">AWS Reserved</strong></td>
+            <td>Reserved by AWS for future internal infrastructure functionality.</td>
+          </tr>
+          <tr>
+            <td><code>.255</code></td>
+            <td><code>10.0.1.255</code></td>
+            <td><strong style="color:var(--accent-rose)">Broadcast Address</strong></td>
+            <td>Standard IPv4 broadcast. Broadcast traffic is not supported or transmitted in AWS VPCs.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="info-box">
+      <div class="box-icon">💡</div>
+      <div>
+        <strong>AZ Mapping Insight:</strong> Availability Zone names like <code>us-east-1a</code> are randomly mapped across different AWS accounts to avoid resource hot-spotting. To ensure two accounts are in the same physical facility, compare the immutable <strong>AZ ID</strong> (e.g., <code>use1-az1</code>).
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- TAB 01: INGRESS & EGRESS -->
+  <!-- ================================================================= -->
+  <div class="panel" id="panel-1">
+    <div class="section-title">🚪 Subnet Ingress &amp; Egress (IGW, NAT GW &amp; EIGW)</div>
+    <div class="section-subtitle">
+      How public and private traffic enters and exits VPC subnets without single points of failure.
+    </div>
+
+    <div class="concept-grid">
+      <div class="concept-card blue">
+        <div class="card-head">
+          <span class="card-tag">Stateless 1:1 NAT</span>
+          <span style="font-size:18px">🌍</span>
+        </div>
+        <div class="card-title">Internet Gateway (IGW)</div>
+        <div class="card-text">
+          A horizontally scaled software component. The EC2 instance's OS interface (<code>eth0</code>) never knows its public IPv4. The IGW statelessly translates between private IP (<code>10.0.1.5</code>) and Public/Elastic IP (<code>54.210.10.5</code>).
+        </div>
+      </div>
+
+      <div class="concept-card amber">
+        <div class="card-head">
+          <span class="card-tag">Stateful SNAT</span>
+          <span style="font-size:18px">🔄</span>
+        </div>
+        <div class="card-title">NAT Gateway (NAT GW)</div>
+        <div class="card-text">
+          Deploys in a public subnet to allow private instances outbound internet access while blocking inbound connection attempts. Performs Source NAT (SNAT) and manages ephemeral port pool allocations (<code>1024-65535</code>).
+        </div>
+      </div>
+
+      <div class="concept-card cyan">
+        <div class="card-head">
+          <span class="card-tag">IPv6 Egress</span>
+          <span style="font-size:18px">🛡️</span>
+        </div>
+        <div class="card-title">Egress-Only IGW (EIGW)</div>
+        <div class="card-text">
+          IPv6 uses globally unique addresses without private RFC 1918 NAT. EIGW provides stateful firewalling: outbound IPv6 traffic is tracked and allowed, but unsolicited inbound internet connections are blocked.
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">Public vs Private Subnet Architecture Flow</div>
+
+    <div class="flow-container">
+      <div class="flow-step-list">
+        <div class="flow-step">
+          <div class="step-num-badge">1</div>
+          <div class="step-content">
+            <div class="step-title">Public Subnet Ingress / Egress via IGW</div>
+            <div class="step-desc">
+              Subnet route table has <code>0.0.0.0/0 ➔ igw-xxxx</code>. Inbound traffic from internet arrives at IGW, gets 1:1 NAT translated to the private IP, and passes through Subnet NACL and Instance Security Group directly.
+            </div>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="step-num-badge">2</div>
+          <div class="step-content">
+            <div class="step-title">Private Subnet Outbound Request via NAT Gateway</div>
+            <div class="step-desc">
+              Private EC2 (<code>10.0.2.15:48920</code>) sends request to an external API (<code>140.82.121.4:443</code>). The private route table routes <code>0.0.0.0/0 ➔ nat-0abc123</code>.
+            </div>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="step-num-badge">3</div>
+          <div class="step-content">
+            <div class="step-title">NAT Gateway SNAT &amp; Port Translation</div>
+            <div class="step-desc">
+              NAT Gateway in public subnet receives packet, rewrites Source IP:Port to <code>52.86.14.99:21045</code>, records translation in its state table, and forwards out through the IGW.
+            </div>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="step-num-badge">4</div>
+          <div class="step-content">
+            <div class="step-title">Return Response Processing</div>
+            <div class="step-desc">
+              External API responds to <code>52.86.14.99:21045</code>. IGW delivers to NAT GW, which matches the state table entry, rewrites destination back to <code>10.0.2.15:48920</code>, and sends it to the private subnet.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="warn-box">
+      <div class="box-icon">⚠️</div>
+      <div>
+        <strong>NAT Gateway Scale Limit:</strong> A single NAT Gateway Elastic IP supports up to <strong>55,000 concurrent connections</strong> to a single destination endpoint. High concurrency to a single API can trigger <code>ErrorPortAllocation</code> drops. Fix by attaching secondary EIPs.
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- TAB 02: SG VS NACL -->
+  <!-- ================================================================= -->
+  <div class="panel" id="panel-2">
+    <div class="section-title">🛡️ Stateful Security Groups vs Stateless Network ACLs</div>
+    <div class="section-subtitle">
+      Why Security Groups automatically permit return traffic while Network ACLs require explicit ephemeral return port rules.
+    </div>
+
+    <div class="concept-grid">
+      <div class="concept-card purp">
+        <div class="card-head">
+          <span class="card-tag">Stateful Firewall</span>
+          <span style="font-size:18px">🔒</span>
+        </div>
+        <div class="card-title">Security Group (ENI Level)</div>
+        <div class="card-text">
+          Operates at the virtual interface in the Nitro hypervisor. When an inbound packet matches an ALLOW rule, Nitro enters a 5-tuple in the <code>conntrack</code> table. The response packet is <strong>automatically allowed out</strong> regardless of outbound rules!
+        </div>
+      </div>
+
+      <div class="concept-card amber">
+        <div class="card-head">
+          <span class="card-tag">Stateless Firewall</span>
+          <span style="font-size:18px">🧱</span>
+        </div>
+        <div class="card-title">Network ACL (Subnet Boundary)</div>
+        <div class="card-text">
+          Operates at the subnet perimeter. Evaluates rules in ascending numerical order (Rule 100 before 200). <strong>No connection tracking</strong>: every packet (inbound and outbound) must have an explicit matching ALLOW rule.
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">Side-by-Side Deep Comparison</div>
+
+    <div class="table-container">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>Dimension</th>
+            <th>Security Group (SG)</th>
+            <th>Network ACL (NACL)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Operates At</strong></td>
+            <td>Instance / ENI Level (Hypervisor)</td>
+            <td>Subnet Boundary</td>
+          </tr>
+          <tr>
+            <td><strong>Statefulness</strong></td>
+            <td><span class="tag-pill tag-stateful">Stateful</span> (Return traffic auto-tracked)</td>
+            <td><span class="tag-pill tag-stateless">Stateless</span> (Return traffic requires explicit rule)</td>
+          </tr>
+          <tr>
+            <td><strong>Rule Types</strong></td>
+            <td><strong>ALLOW only</strong> (Implicit default deny)</td>
+            <td><strong>ALLOW and DENY</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Rule Evaluation</strong></td>
+            <td>All rules evaluated together</td>
+            <td>Evaluated in <strong>numerical order</strong> (first match wins)</td>
+          </tr>
+          <tr>
+            <td><strong>Dynamic References</strong></td>
+            <td>Can reference other <code>sg-xxxx</code> IDs</td>
+            <td>IP CIDR blocks only</td>
+          </tr>
+          <tr>
+            <td><strong>Default Inbound</strong></td>
+            <td>Deny all incoming traffic</td>
+            <td>Allow all incoming (Default NACL) / Deny all (Custom NACL)</td>
+          </tr>
+          <tr>
+            <td><strong>Default Outbound</strong></td>
+            <td>Allow all outgoing traffic</td>
+            <td>Allow all outgoing (Default NACL) / Deny all (Custom NACL)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="warn-box">
+      <div class="box-icon">🚨</div>
+      <div>
+        <strong>The Ephemeral Port Trap:</strong> When a browser (e.g. at port 52140) requests your web server on port 443, the server sends response packets back to destination port 52140. If your Subnet NACL Outbound does not allow <code>TCP 1024-65535</code>, the response will be silently dropped by rule <code>*</code>, causing client timeouts!
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- TAB 03: VPC ENDPOINTS -->
+  <!-- ================================================================= -->
+  <div class="panel" id="panel-3">
+    <div class="section-title">🔗 VPC Endpoints: Gateway vs Interface PrivateLink</div>
+    <div class="section-subtitle">
+      Connect privately to AWS services (S3, DynamoDB, Secrets Manager) without leaving the AWS network fabric.
+    </div>
+
+    <div class="concept-grid">
+      <div class="concept-card green">
+        <div class="card-head">
+          <span class="card-tag">Route Prefix List</span>
+          <span style="font-size:18px">🚪</span>
+        </div>
+        <div class="card-title">Gateway Endpoints (S3 &amp; DynamoDB)</div>
+        <div class="card-text">
+          Injects managed prefix lists (e.g., <code>pl-63a5400a</code>) into Subnet Route Tables. <strong>100% Free</strong> (no hourly charge, no GB fee). Same-region only; cannot be reached over VPN or Direct Connect.
+        </div>
+      </div>
+
+      <div class="concept-card blue">
+        <div class="card-head">
+          <span class="card-tag">PrivateLink ENI</span>
+          <span style="font-size:18px">🔌</span>
+        </div>
+        <div class="card-title">Interface Endpoints (AWS PrivateLink)</div>
+        <div class="card-text">
+          Provisions dedicated ENIs with private IPs (<code>10.0.1.20</code>) in your subnets. Accessible over <strong>VPC Peering, Transit Gateway, and Direct Connect</strong>. Private DNS automatically redirects service URLs.
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">Architecture &amp; Routing Comparison</div>
+
+    <div class="table-container">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Gateway Endpoint</th>
+            <th>Interface Endpoint (PrivateLink)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Supported Services</strong></td>
+            <td><strong>Amazon S3 &amp; DynamoDB only</strong></td>
+            <td>150+ AWS services, SaaS apps, custom NLB services</td>
+          </tr>
+          <tr>
+            <td><strong>Mechanism</strong></td>
+            <td>Prefix List entry in Subnet Route Table</td>
+            <td>Elastic Network Interface (ENI) with private IP</td>
+          </tr>
+          <tr>
+            <td><strong>Hourly Cost</strong></td>
+            <td><strong style="color:var(--accent-green)">FREE ($0.00/hr)</strong></td>
+            <td>~$0.01/hr per AZ</td>
+          </tr>
+          <tr>
+            <td><strong>Data Processing Fee</strong></td>
+            <td><strong style="color:var(--accent-green)">FREE ($0.00/GB)</strong></td>
+            <td>~$0.01/GB data processed</td>
+          </tr>
+          <tr>
+            <td><strong>On-Premises Access</strong></td>
+            <td>❌ No (Cannot route via DX or VPN)</td>
+            <td><strong style="color:var(--accent-green)">✅ Yes</strong> (Fully routable over DX/VPN/TGW)</td>
+          </tr>
+          <tr>
+            <td><strong>Security Controls</strong></td>
+            <td>Endpoint IAM Policy</td>
+            <td>Endpoint IAM Policy + Security Groups on the ENI</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- TAB 04: CROSS-VPC PEERING -->
+  <!-- ================================================================= -->
+  <div class="panel" id="panel-4">
+    <div class="section-title">🤝 Cross-VPC Peering &amp; Non-Transitive Routing</div>
+    <div class="section-subtitle">
+      Point-to-point direct connectivity over AWS backbone, and the non-transitive edge routing rule.
+    </div>
+
+    <div class="concept-grid">
+      <div class="concept-card purp">
+        <div class="card-head">
+          <span class="card-tag">Line-Rate Backbone</span>
+          <span style="font-size:18px">⚡</span>
+        </div>
+        <div class="card-title">VPC Peering (pcx-xxxx)</div>
+        <div class="card-text">
+          Direct connection between two VPCs. No single point of failure and no bandwidth bottleneck (operates at EC2 line rate). Same-region peering allows referencing remote Security Group IDs.
+        </div>
+      </div>
+
+      <div class="concept-card rose">
+        <div class="card-head">
+          <span class="card-tag">Critical Constraint</span>
+          <span style="font-size:18px">🚫</span>
+        </div>
+        <div class="card-title">Non-Transitive Routing</div>
+        <div class="card-text">
+          If VPC A is peered with VPC B, and VPC B is peered with VPC C, <strong>VPC A cannot reach VPC C through VPC B</strong>. AWS blocks edge-to-edge hop routing through intermediate VPCs.
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">Full Mesh Complexity Formula</div>
+    <div class="code-block">
+      <span class="cmt"># Number of peering connections required for N VPCs</span>
+      <span class="kw">Connections</span> = (N * (N - 1)) / 2
+
+      <span class="cmt"># For 10 VPCs in full mesh:</span>
+      <span class="num">(10 * 9) / 2</span> = <span class="hi">45 peering connections</span> &amp; <span class="hi">90 route table updates</span>
+    </div>
+
+    <div class="warn-box">
+      <div class="box-icon">⚠️</div>
+      <div>
+        <strong>CIDR Overlap Rule:</strong> VPC Peering strictly requires <strong>non-overlapping IPv4/IPv6 CIDR blocks</strong>. If VPC A (<code>10.0.0.0/16</code>) and VPC B (<code>10.0.0.0/16</code>) share IP space, peering cannot be established.
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- TAB 05: TRANSIT GATEWAY -->
+  <!-- ================================================================= -->
+  <div class="panel" id="panel-5">
+    <div class="section-title">🎛️ AWS Transit Gateway (TGW) Hub-and-Spoke</div>
+    <div class="section-subtitle">
+      Centralized cloud router scaling multi-VPC architectures with route domains and security inspection.
+    </div>
+
+    <div class="concept-grid">
+      <div class="concept-card cyan">
+        <div class="card-head">
+          <span class="card-tag">Centralized Hub</span>
+          <span style="font-size:18px">☸️</span>
+        </div>
+        <div class="card-title">Hub-and-Spoke Architecture</div>
+        <div class="card-text">
+          Replaces complex $N \times (N-1)/2$ peering meshes with a single central router. Scale from 45 peerings down to 10 TGW attachments.
+        </div>
+      </div>
+
+      <div class="concept-card amber">
+        <div class="card-head">
+          <span class="card-tag">Network Segmentation</span>
+          <span style="font-size:18px">🔀</span>
+        </div>
+        <div class="card-title">Route Domains (Association vs Propagation)</div>
+        <div class="card-text">
+          Maintain separate TGW Route Tables (Prod, Dev, Shared Services). Association controls where a VPC looks up routes; propagation controls which tables receive its CIDR.
+        </div>
+      </div>
+
+      <div class="concept-card rose">
+        <div class="card-head">
+          <span class="card-tag">Firewall Symmetry</span>
+          <span style="font-size:18px">🛡️</span>
+        </div>
+        <div class="card-title">TGW Appliance Mode</div>
+        <div class="card-text">
+          Guarantees that stateful firewall clusters in an inspection VPC receive both forward and reverse packets in the same AZ, preventing dropped connections from asymmetric routing.
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">Transit Gateway Route Domain Isolation Example</div>
+    <div class="code-block">
+      <span class="cmt"># Production VPC Attachment</span>
+      <span class="kw">Association</span>:   TGW-Route-Table-Prod
+      <span class="kw">Propagations</span>:  TGW-Route-Table-Prod, TGW-Route-Table-Shared
+      <span class="cmt"># Result: Prod can reach Shared, but CANNOT reach Dev</span>
+
+      <span class="cmt"># Development VPC Attachment</span>
+      <span class="kw">Association</span>:   TGW-Route-Table-Dev
+      <span class="kw">Propagations</span>:  TGW-Route-Table-Dev, TGW-Route-Table-Shared
+      <span class="cmt"># Result: Dev can reach Shared, but CANNOT reach Prod</span>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- TAB 06: CROSS-REGION & CLOUD WAN -->
+  <!-- ================================================================= -->
+  <div class="panel" id="panel-6">
+    <div class="section-title">🌍 Cross-Region Peering &amp; AWS Cloud WAN</div>
+    <div class="section-subtitle">
+      Global inter-region backbones, encryption at line rate, MTU limits, and automated policy networks.
+    </div>
+
+    <div class="concept-grid">
+      <div class="concept-card purp">
+        <div class="card-head">
+          <span class="card-tag">AWS Global Backbone</span>
+          <span style="font-size:18px">🌐</span>
+        </div>
+        <div class="card-title">Inter-Region VPC &amp; TGW Peering</div>
+        <div class="card-text">
+          Connect VPCs across regions (e.g. <code>us-east-1</code> to <code>eu-west-1</code>). Traffic never traverses public internet; encrypted at the physical layer with AES-256 MACsec.
+        </div>
+      </div>
+
+      <div class="concept-card rose">
+        <div class="card-head">
+          <span class="card-tag">MTU Constraint</span>
+          <span style="font-size:18px">📦</span>
+        </div>
+        <div class="card-title">The MTU 1500 Limit</div>
+        <div class="card-text">
+          Intra-region VPC supports Jumbo Frames (9001 bytes MTU). However, <strong>Inter-Region Peering strictly enforces MTU 1500</strong>. Packets > 1500 bytes with DF bit set are dropped.
+        </div>
+      </div>
+
+      <div class="concept-card blue">
+        <div class="card-head">
+          <span class="card-tag">Global Orchestrator</span>
+          <span style="font-size:18px">🛰️</span>
+        </div>
+        <div class="card-title">AWS Cloud WAN</div>
+        <div class="card-text">
+          Declarative global network defined by a single JSON policy (<code>core-network-policy.json</code>). Automates multi-region segment routing across global Core Network Edges (CNE).
+        </div>
+      </div>
+    </div>
+
+    <div class="info-box">
+      <div class="box-icon">💰</div>
+      <div>
+        <strong>Cross-Region Data Transfer Pricing:</strong> Intra-AZ traffic is free; cross-AZ traffic is ~$0.01/GB; <strong>cross-region egress is ~$0.02/GB</strong>. Plan multi-region caching and read replicas accordingly.
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- TAB 07: HYBRID CONNECTIVITY -->
+  <!-- ================================================================= -->
+  <div class="panel" id="panel-7">
+    <div class="section-title">🏢 Hybrid Connectivity: Direct Connect, DXGW &amp; VPN</div>
+    <div class="section-subtitle">
+      Bridging enterprise on-premises data centers with AWS cloud infrastructure.
+    </div>
+
+    <div class="concept-grid">
+      <div class="concept-card cyan">
+        <div class="card-head">
+          <span class="card-tag">Dedicated Fiber</span>
+          <span style="font-size:18px">⚡</span>
+        </div>
+        <div class="card-title">AWS Direct Connect (DX)</div>
+        <div class="card-text">
+          Dedicated physical port (1G / 10G / 100G) in a colocation facility. Private VIF connects to single VPC Virtual Private Gateway; Transit VIF connects to Transit Gateway.
+        </div>
+      </div>
+
+      <div class="concept-card purp">
+        <div class="card-head">
+          <span class="card-tag">Global Router</span>
+          <span style="font-size:18px">🌍</span>
+        </div>
+        <div class="card-title">Direct Connect Gateway (DXGW)</div>
+        <div class="card-text">
+          A global routing abstraction. A single on-premises Direct Connect link attached to a DXGW can access VPCs and Transit Gateways across <strong>any AWS region in the world</strong>.
+        </div>
+      </div>
+
+      <div class="concept-card amber">
+        <div class="card-head">
+          <span class="card-tag">IPsec Over Internet</span>
+          <span style="font-size:18px">🔒</span>
+        </div>
+        <div class="card-title">AWS Site-to-Site VPN</div>
+        <div class="card-text">
+          Provisions 2 redundant IPsec tunnels per connection (1.25 Gbps per tunnel limit). Use BGP Equal-Cost Multi-Path (ECMP) to aggregate bandwidth across multiple tunnels up to ~5 Gbps.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- TAB 08: INTERACTIVE PACKET SIMULATOR (PLAYGROUND) -->
+  <!-- ================================================================= -->
+  <div class="panel" id="panel-8">
+    <div class="section-title">⚡ Interactive Packet Flow Simulator</div>
+    <div class="section-subtitle">
+      Step through live packet traversals across subnets, NAT gateways, Security Groups, NACLs, VPC peering, and cross-region backbones.
+    </div>
+
+    <!-- Simulator Shell -->
+    <div class="sim-panel">
+      <!-- Sim Top Bar -->
+      <div class="sim-header">
+        <div class="sim-title-group">
+          <div class="sim-status-dot" id="simStatusDot"></div>
+          <strong style="font-size:15px;color:#fff" id="simStatusText">Ready to Simulate</strong>
+        </div>
+        <div class="sim-controls">
+          <button class="sim-btn" onclick="resetSim()">⏮ Reset</button>
+          <button class="sim-btn" onclick="prevHop()">◀ Prev Hop</button>
+          <button class="sim-btn primary" id="playBtn" onclick="togglePlay()">▶ Play Auto</button>
+          <button class="sim-btn primary" onclick="nextHop()">Next Hop ▶</button>
+        </div>
+      </div>
+
+      <div class="sim-body">
+        <!-- Preset Scenario Selector -->
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;letter-spacing:.06em;">
+          Select Architectural Scenario:
+        </div>
+        <div class="preset-pills">
+          <div class="preset-pill active" onclick="loadPreset(0)">1. Internet ➔ Public EC2 (Inbound HTTPS)</div>
+          <div class="preset-pill" onclick="loadPreset(1)">2. Private EC2 ➔ Internet (Outbound NAT GW)</div>
+          <div class="preset-pill" onclick="loadPreset(2)">3. Private EC2 ➔ S3 (Gateway Endpoint)</div>
+          <div class="preset-pill" onclick="loadPreset(3)">4. Cross-VPC (App ➔ DB via Peering)</div>
+          <div class="preset-pill" onclick="loadPreset(4)">5. Cross-Region (us-east-1 ➔ eu-west-1 TGW)</div>
+          <div class="preset-pill" onclick="loadPreset(5)">6. Cross-Account PrivateLink (SaaS)</div>
+        </div>
+
+        <!-- Interactive Rule Configuration -->
+        <div class="config-grid">
+          <div class="config-item">
+            <label class="config-label">Security Group Inbound</label>
+            <select class="config-select" id="cfgSgIn" onchange="updateSimConfig()">
+              <option value="allow" selected>ALLOW (Port 443 / Target)</option>
+              <option value="deny">DENY (Port Not In Rules)</option>
+            </select>
+          </div>
+
+          <div class="config-item">
+            <label class="config-label">Security Group Outbound</label>
+            <select class="config-select" id="cfgSgOut" onchange="updateSimConfig()">
+              <option value="allow" selected>ALLOW (Default All Out)</option>
+              <option value="deny">DENY (Stateful Conntrack Test)</option>
+            </select>
+          </div>
+
+          <div class="config-item">
+            <label class="config-label">Subnet NACL Inbound</label>
+            <select class="config-select" id="cfgNaclIn" onchange="updateSimConfig()">
+              <option value="allow" selected>ALLOW (Rule 100 Port 443)</option>
+              <option value="deny">DENY (Rule 100 Explicit Deny)</option>
+            </select>
+          </div>
+
+          <div class="config-item">
+            <label class="config-label">NACL Outbound (Ephemeral)</label>
+            <select class="config-select" id="cfgNaclOut" onchange="updateSimConfig()">
+              <option value="allow" selected>ALLOW (Ports 1024-65535)</option>
+              <option value="deny">DENY (Missing Ephemeral Rule!)</option>
+            </select>
+          </div>
+
+          <div class="config-item">
+            <label class="config-label">Route Table Target</label>
+            <select class="config-select" id="cfgRoute" onchange="updateSimConfig()">
+              <option value="valid" selected>VALID (Route Entry Exists)</option>
+              <option value="missing">MISSING / BLACKHOLE</option>
+            </select>
+          </div>
+
+          <div class="config-item">
+            <label class="config-label">Inter-Region MTU Size</label>
+            <select class="config-select" id="cfgMtu" onchange="updateSimConfig()">
+              <option value="1500" selected>MTU 1500 (Standard)</option>
+              <option value="9001">MTU 9001 (Jumbo Frame)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Animated Visual Hop Pipeline -->
+        <div class="pipeline-visual" id="pipelineContainer">
+          <!-- Dynamically populated via JS -->
+        </div>
+
+        <!-- Live Inspector & Execution Log -->
+        <div class="inspector-grid">
+          <!-- Header Inspector -->
+          <div class="inspector-card">
+            <div class="inspector-title">
+              <span>📋 Packet Header Inspector</span>
+              <span class="tag-pill" id="inspDirection" style="background:rgba(34,211,238,.2);color:#38bdf8">FORWARD PATH</span>
+            </div>
+            <table class="header-table">
+              <tr><td>Source IP:Port</td><td id="hdrSrc">198.51.100.4 : 52140</td></tr>
+              <tr><td>Destination IP:Port</td><td id="hdrDst">54.210.10.5 : 443</td></tr>
+              <tr><td>Protocol</td><td id="hdrProto">TCP (SYN)</td></tr>
+              <tr><td>Translation State</td><td id="hdrNat">None</td></tr>
+              <tr><td>Conntrack State</td><td id="hdrConntrack">NEW</td></tr>
+              <tr><td>Hop Status</td><td id="hdrDecision" style="color:var(--accent-cyan)">Initialized</td></tr>
+            </table>
+          </div>
+
+          <!-- Diagnostic Log Stream -->
+          <div class="inspector-card">
+            <div class="inspector-title">
+              <span>📜 Real-Time Kernel / Substrate Log</span>
+              <span id="logHopCount" style="color:var(--text-muted)">Hop 0 / 6</span>
+            </div>
+            <div class="log-box" id="simLogBox">
+              <div class="log-entry info">[INIT] Scenario selected. Click 'Next Hop' or 'Play' to begin packet transmission.</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- TAB 09: DROP DIAGNOSTICS -->
+  <!-- ================================================================= -->
+  <div class="panel" id="panel-9">
+    <div class="section-title">🔍 Troubleshooting &amp; Packet Drop Matrix</div>
+    <div class="section-subtitle">
+      The top 8 silent network failure modes in AWS VPCs and their exact architectural remediations.
+    </div>
+
+    <!-- Matrix Card 1 -->
+    <div class="matrix-card">
+      <div class="matrix-header">
+        <div class="matrix-title">1. Stateless NACL Ephemeral Return Drop</div>
+        <span class="tag-pill" style="background:rgba(248,113,113,.2);color:#fca5a5">NACL DROP</span>
+      </div>
+      <div class="matrix-cause">Cause: Inbound NACL allows port 443, but Outbound NACL lacks rule allowing return traffic to ephemeral ports <code>1024-65535</code>.</div>
+      <div style="font-size:13.5px;color:var(--text-muted)">
+        <strong>Symptom:</strong> Outbound connection from client hangs. TCP SYN reaches EC2 instance, but TCP SYN-ACK is dropped at subnet perimeter.
+      </div>
+      <div class="matrix-solution">
+        <strong>Fix:</strong> Add Outbound NACL Rule: <code>Rule 120 | TCP | Ports 1024-65535 | Allow | 0.0.0.0/0</code>.
+      </div>
+    </div>
+
+    <!-- Matrix Card 2 -->
+    <div class="matrix-card">
+      <div class="matrix-header">
+        <div class="matrix-title">2. Asymmetric Route in VPC Peering</div>
+        <span class="tag-pill" style="background:rgba(251,191,36,.2);color:#fde68a">ROUTE DROP</span>
+      </div>
+      <div class="matrix-cause">Cause: VPC A has route pointing to <code>pcx-123</code>, but VPC B route table has no reverse route for VPC A CIDR.</div>
+      <div style="font-size:13.5px;color:var(--text-muted)">
+        <strong>Symptom:</strong> Request arrives at destination EC2, but response packet is routed to VPC B default gateway (IGW/NAT) and blackholed.
+      </div>
+      <div class="matrix-solution">
+        <strong>Fix:</strong> Add reverse static route in VPC B: <code>10.0.0.0/16 ➔ pcx-123</code>.
+      </div>
+    </div>
+
+    <!-- Matrix Card 3 -->
+    <div class="matrix-card">
+      <div class="matrix-header">
+        <div class="matrix-title">3. NAT Gateway Placed in Private Subnet</div>
+        <span class="tag-pill" style="background:rgba(248,113,113,.2);color:#fca5a5">CONFIG TRAP</span>
+      </div>
+      <div class="matrix-cause">Cause: NAT Gateway deployed into a subnet whose route table does NOT have a route to an Internet Gateway (<code>0.0.0.0/0 ➔ igw-xxxx</code>).</div>
+      <div style="font-size:13.5px;color:var(--text-muted)">
+        <strong>Symptom:</strong> Private instances route to NAT GW successfully, but NAT GW cannot forward traffic to the internet.
+      </div>
+      <div class="matrix-solution">
+        <strong>Fix:</strong> Always deploy NAT Gateways in a <strong>Public Subnet</strong> with route table <code>0.0.0.0/0 ➔ igw-xxxx</code>.
+      </div>
+    </div>
+
+    <!-- Matrix Card 4 -->
+    <div class="matrix-card">
+      <div class="matrix-header">
+        <div class="matrix-title">4. Cross-Region Security Group Reference</div>
+        <span class="tag-pill" style="background:rgba(248,113,113,.2);color:#fca5a5">VALIDATION ERROR</span>
+      </div>
+      <div class="matrix-cause">Cause: Attempting to reference <code>sg-xxxx</code> across Inter-Region VPC Peering.</div>
+      <div style="font-size:13.5px;color:var(--text-muted)">
+        <strong>Symptom:</strong> AWS API rejects rule or security group rule fails to evaluate. SG referencing only works intra-region.
+      </div>
+      <div class="matrix-solution">
+        <strong>Fix:</strong> Use explicit IP CIDR blocks (e.g. <code>10.1.0.0/16</code>) in Security Group rules for cross-region peering.
+      </div>
+    </div>
+
+    <!-- Matrix Card 5 -->
+    <div class="matrix-card">
+      <div class="matrix-header">
+        <div class="matrix-title">5. Inter-Region Jumbo Frame MTU Blackhole</div>
+        <span class="tag-pill" style="background:rgba(251,191,36,.2);color:#fde68a">MTU DROP</span>
+      </div>
+      <div class="matrix-cause">Cause: EC2 instances configured for MTU 9001 sending jumbo frames across Inter-Region Peering (enforces MTU 1500).</div>
+      <div style="font-size:13.5px;color:var(--text-muted)">
+        <strong>Symptom:</strong> Small ICMP <code>ping</code> packets work, but large HTTPS payloads or file transfers stall indefinitely.
+      </div>
+      <div class="matrix-solution">
+        <strong>Fix:</strong> Set interface MTU to 1500 or ensure ICMP Type 3 Code 4 (Fragmentation Needed) is allowed in NACLs for PMTUD.
+      </div>
+    </div>
+
+    <!-- Matrix Card 6 -->
+    <div class="matrix-card">
+      <div class="matrix-header">
+        <div class="matrix-title">6. Asymmetric Firewall Drop in TGW Inspection VPC</div>
+        <span class="tag-pill" style="background:rgba(248,113,113,.2);color:#fca5a5">TGW ASYMMETRY</span>
+      </div>
+      <div class="matrix-cause">Cause: Inter-VPC traffic routed through firewall cluster without TGW Appliance Mode enabled.</div>
+      <div style="font-size:13.5px;color:var(--text-muted)">
+        <strong>Symptom:</strong> Forward packet hits Firewall AZ-a; return packet hits Firewall AZ-b. Firewall AZ-b drops return packet as unknown TCP state.
+      </div>
+      <div class="matrix-solution">
+        <strong>Fix:</strong> Enable Appliance Mode: <code>aws ec2 modify-transit-gateway-vpc-attachment --options ApplianceModeSupport=enable</code>.
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<!-- Footer -->
+<footer>
+  <div style="max-width:1100px;margin:0 auto;padding:0 24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+    <span>Built with curiosity 🔍 &nbsp;·&nbsp; AWS VPC Networking Visualized</span>
+    <span>Reference documentation: <a href="vpc-flow-deep-dive.md">vpc-flow-deep-dive.md</a></span>
+  </div>
+</footer>
+
+<!-- Interactive Scripts -->
+<script>
+  // ── Tab Switching ──────────────────────────────────────────
+  function showTab(index) {
+    const panels = document.querySelectorAll('.panel');
+    const btns = document.querySelectorAll('.tab-btn');
+    
+    panels.forEach((p, i) => {
+      p.classList.toggle('active', i === index);
+    });
+    btns.forEach((b, i) => {
+      b.classList.toggle('active', i === index);
+    });
+    
+    // Scroll active tab button into view smoothly
+    btns[index].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }
+
+  // ── Simulator Data & Engine ────────────────────────────────
+  const PRESETS = [
+    {
+      id: 0,
+      title: "Internet ➔ Public EC2 (Inbound HTTPS)",
+      src: "198.51.100.4 : 52140",
+      dst: "54.210.10.5 : 443",
+      privateDst: "10.0.1.5 : 443",
+      proto: "TCP (SYN)",
+      hops: [
+        { id: "client", name: "Internet Client", icon: "💻", type: "origin" },
+        { id: "igw", name: "Internet Gateway (IGW)", icon: "🌍", type: "gateway" },
+        { id: "nacl_in", name: "Subnet NACL (Inbound)", icon: "🧱", type: "nacl" },
+        { id: "sg_in", name: "Security Group (Inbound)", icon: "🔒", type: "sg" },
+        { id: "ec2", name: "Target EC2 (App)", icon: "🖥️", type: "target" },
+        { id: "sg_out", name: "SG (Return Conntrack)", icon: "🔒", type: "sg_ret" },
+        { id: "nacl_out", name: "Subnet NACL (Ephemeral)", icon: "🧱", type: "nacl_ret" },
+        { id: "igw_ret", name: "IGW 1:1 NAT Return", icon: "🌍", type: "gateway_ret" },
+        { id: "client_ret", name: "Client (Handshake OK)", icon: "💻", type: "complete" }
+      ]
+    },
+    {
+      id: 1,
+      title: "Private EC2 ➔ Internet (Outbound NAT GW)",
+      src: "10.0.2.15 : 48920",
+      dst: "140.82.121.4 : 443",
+      proto: "TCP (SYN)",
+      hops: [
+        { id: "ec2_src", name: "Private EC2", icon: "🖥️", type: "origin" },
+        { id: "rt_priv", name: "Private Route Table", icon: "🗺️", type: "route" },
+        { id: "nat_gw", name: "NAT Gateway (SNAT)", icon: "🔄", type: "nat" },
+        { id: "igw", name: "Internet Gateway", icon: "🌍", type: "gateway" },
+        { id: "internet", name: "External API Target", icon: "🌐", type: "target" },
+        { id: "nat_ret", name: "NAT GW State Lookup", icon: "🔄", type: "nat_ret" },
+        { id: "ec2_ret", name: "Private EC2 (Recv OK)", icon: "🖥️", type: "complete" }
+      ]
+    },
+    {
+      id: 2,
+      title: "Private EC2 ➔ S3 (Gateway Endpoint)",
+      src: "10.0.2.15 : 39120",
+      dst: "S3 Prefix (52.216.x.x) : 443",
+      proto: "HTTPS (GetObject)",
+      hops: [
+        { id: "ec2_src", name: "Private EC2", icon: "🖥️", type: "origin" },
+        { id: "rt_pl", name: "Route Table Prefix List", icon: "🗺️", type: "route" },
+        { id: "gw_ep", name: "S3 Gateway Endpoint", icon: "🚪", type: "endpoint" },
+        { id: "s3_fabric", name: "AWS S3 Internal Fabric", icon: "🪣", type: "target" },
+        { id: "gw_ret", name: "Direct Fabric Return", icon: "⚡", type: "complete" }
+      ]
+    },
+    {
+      id: 3,
+      title: "Cross-VPC (App ➔ DB via Peering)",
+      src: "10.0.1.5 (VPC App)",
+      dst: "10.1.2.10 (VPC DB) : 5432",
+      proto: "TCP (PostgreSQL)",
+      hops: [
+        { id: "app_ec2", name: "App EC2 (VPC A)", icon: "🖥️", type: "origin" },
+        { id: "rt_vpc_a", name: "VPC A Route Table", icon: "🗺️", type: "route" },
+        { id: "pcx", name: "Peering (pcx-123)", icon: "🤝", type: "peering" },
+        { id: "nacl_b", name: "VPC B Subnet NACL", icon: "🧱", type: "nacl" },
+        { id: "sg_b", name: "VPC B Database SG", icon: "🔒", type: "sg" },
+        { id: "db_ec2", name: "PostgreSQL DB", icon: "🗄️", type: "target" },
+        { id: "rt_vpc_b", name: "VPC B Reverse Route", icon: "🗺️", type: "route_ret" },
+        { id: "app_ret", name: "App Connection OK", icon: "⚡", type: "complete" }
+      ]
+    },
+    {
+      id: 4,
+      title: "Cross-Region (us-east-1 ➔ eu-west-1 TGW)",
+      src: "10.0.1.10 (us-east-1)",
+      dst: "10.2.1.20 (eu-west-1) : 443",
+      proto: "TCP (API Call)",
+      hops: [
+        { id: "us_ec2", name: "EC2 in us-east-1", icon: "🖥️", type: "origin" },
+        { id: "tgw_us", name: "TGW (us-east-1)", icon: "☸️", type: "tgw" },
+        { id: "backbone", name: "AWS Global Backbone (AES-256)", icon: "🌐", type: "backbone" },
+        { id: "tgw_eu", name: "TGW (eu-west-1)", icon: "☸️", type: "tgw" },
+        { id: "eu_ec2", name: "EC2 in eu-west-1", icon: "🖥️", type: "target" },
+        { id: "eu_ret", name: "Reverse Backbone Return", icon: "🌐", type: "complete" }
+      ]
+    },
+    {
+      id: 5,
+      title: "Cross-Account PrivateLink (SaaS)",
+      src: "10.0.1.5 (Consumer)",
+      dst: "10.0.1.50 (Endpoint ENI)",
+      proto: "TCP (HTTPS)",
+      hops: [
+        { id: "consumer", name: "Consumer App", icon: "🖥️", type: "origin" },
+        { id: "vpce_eni", name: "PrivateLink ENI", icon: "🔌", type: "endpoint" },
+        { id: "hyperplane", name: "Hyperplane Bus", icon: "⚡", type: "hyperplane" },
+        { id: "provider_nlb", name: "Provider NLB", icon: "⚖️", type: "nlb" },
+        { id: "saas_app", name: "SaaS Service Target", icon: "☁️", type: "complete" }
+      ]
+    }
+  ];
+
+  let currentPreset = 0;
+  let currentHop = 0;
+  let isPlaying = false;
+  let playInterval = null;
+
+  function loadPreset(idx) {
+    currentPreset = idx;
+    currentHop = 0;
+    stopPlay();
+
+    document.querySelectorAll('.preset-pill').forEach((p, i) => {
+      p.classList.toggle('active', i === idx);
+    });
+
+    renderPipeline();
+    updateInspector();
+    logMessage(`[PRESET] Loaded: "${PRESETS[idx].title}"`, 'info');
+  }
+
+  function renderPipeline() {
+    const preset = PRESETS[currentPreset];
+    const container = document.getElementById('pipelineContainer');
+    container.innerHTML = '';
+
+    preset.hops.forEach((hop, i) => {
+      // Node
+      const node = document.createElement('div');
+      node.className = `pipe-node ${i === currentHop ? 'active' : ''} ${i < currentHop ? 'passed' : ''}`;
+      node.id = `node-${i}`;
+      node.innerHTML = `
+        <div class="node-icon-box" id="node-box-${i}">${hop.icon}</div>
+        <div class="node-label">${hop.name}</div>
+      `;
+      container.appendChild(node);
+
+      // Connecting arrow
+      if (i < preset.hops.length - 1) {
+        const arrow = document.createElement('div');
+        arrow.className = `pipe-arrow ${i < currentHop ? 'active' : ''}`;
+        arrow.id = `arrow-${i}`;
+        arrow.innerHTML = '➔';
+        container.appendChild(arrow);
+      }
+    });
+  }
+
+  function updatePipelineUI(statusClass = 'active') {
+    const preset = PRESETS[currentPreset];
+    preset.hops.forEach((hop, i) => {
+      const node = document.getElementById(`node-${i}`);
+      const arrow = document.getElementById(`arrow-${i}`);
+      if (!node) return;
+
+      node.className = 'pipe-node';
+      if (i < currentHop) node.classList.add('passed');
+      if (i === currentHop) node.classList.add(statusClass);
+
+      if (arrow) {
+        arrow.className = `pipe-arrow ${i < currentHop ? 'active' : ''}`;
+      }
+    });
+  }
+
+  function nextHop() {
+    const preset = PRESETS[currentPreset];
+    if (currentHop >= preset.hops.length - 1) {
+      stopPlay();
+      return;
+    }
+
+    const nextIdx = currentHop + 1;
+    const nextHopObj = preset.hops[nextIdx];
+    const cfg = getSimConfig();
+
+    // Check for simulated failure conditions at next hop
+    let failReason = null;
+
+    // Check SG Inbound
+    if (nextHopObj.type === 'sg' && cfg.sgIn === 'deny') {
+      failReason = "DROPPED by Security Group (No matching inbound Allow rule)";
+    }
+    // Check NACL Inbound
+    else if (nextHopObj.type === 'nacl' && cfg.naclIn === 'deny') {
+      failReason = "DROPPED by Subnet NACL Inbound Rule 100 (Explicit Deny)";
+    }
+    // Check Route Table
+    else if ((nextHopObj.type === 'route' || nextHopObj.type === 'route_ret') && cfg.route === 'missing') {
+      failReason = "DROPPED by VPC Router (No route to destination / Route Blackhole)";
+    }
+    // Check Ephemeral NACL Outbound
+    else if (nextHopObj.type === 'nacl_ret' && cfg.naclOut === 'deny') {
+      failReason = "DROPPED by Subnet NACL Outbound (Missing ephemeral port rule 1024-65535!)";
+    }
+    // Check MTU across inter-region backbone
+    else if (nextHopObj.type === 'backbone' && cfg.mtu === '9001') {
+      failReason = "DROPPED on Inter-Region Backbone (MTU 9001 exceeds maximum 1500 MTU limit)";
+    }
+
+    if (failReason) {
+      currentHop = nextIdx;
+      updatePipelineUI('failed');
+      stopPlay();
+      document.getElementById('simStatusDot').style.background = 'var(--accent-red)';
+      document.getElementById('simStatusDot').style.boxShadow = '0 0 12px var(--accent-red)';
+      document.getElementById('simStatusText').innerText = "Packet Dropped!";
+      document.getElementById('simStatusText').style.color = "var(--accent-red)";
+      document.getElementById('hdrDecision').innerText = failReason;
+      document.getElementById('hdrDecision').style.color = "var(--accent-red)";
+      logMessage(`[DROP @ ${nextHopObj.name}] ${failReason}`, 'err');
+      return;
+    }
+
+    // Success transition
+    currentHop = nextIdx;
+    updatePipelineUI('active');
+    updateInspector();
+
+    if (currentHop === preset.hops.length - 1) {
+      document.getElementById('simStatusDot').style.background = 'var(--accent-green)';
+      document.getElementById('simStatusDot').style.boxShadow = '0 0 12px var(--accent-green)';
+      document.getElementById('simStatusText').innerText = "Flow Completed Successfully!";
+      document.getElementById('simStatusText').style.color = "var(--accent-green)";
+      logMessage(`[SUCCESS] Packet reached destination: ${nextHopObj.name}`, 'ok');
+      stopPlay();
+    } else {
+      logMessage(`[HOP ${currentHop}] Passed ${nextHopObj.name}`, 'info');
+    }
+  }
+
+  function prevHop() {
+    if (currentHop > 0) {
+      currentHop--;
+      updatePipelineUI('active');
+      updateInspector();
+      logMessage(`[REWIND] Back to hop ${currentHop}`, 'info');
+    }
+  }
+
+  function resetSim() {
+    currentHop = 0;
+    stopPlay();
+    document.getElementById('simStatusDot').style.background = 'var(--accent-green)';
+    document.getElementById('simStatusDot').style.boxShadow = '0 0 12px var(--accent-green)';
+    document.getElementById('simStatusText').innerText = "Ready to Simulate";
+    document.getElementById('simStatusText').style.color = "#fff";
+    renderPipeline();
+    updateInspector();
+    logMessage(`[RESET] Simulator reset to initial state.`, 'info');
+  }
+
+  function togglePlay() {
+    if (isPlaying) {
+      stopPlay();
+    } else {
+      const preset = PRESETS[currentPreset];
+      if (currentHop >= preset.hops.length - 1) currentHop = 0;
+      isPlaying = true;
+      document.getElementById('playBtn').innerText = "⏸ Pause";
+      playInterval = setInterval(() => {
+        nextHop();
+      }, 1400);
+    }
+  }
+
+  function stopPlay() {
+    isPlaying = false;
+    if (playInterval) clearInterval(playInterval);
+    document.getElementById('playBtn').innerText = "▶ Play Auto";
+  }
+
+  function getSimConfig() {
+    return {
+      sgIn: document.getElementById('cfgSgIn').value,
+      sgOut: document.getElementById('cfgSgOut').value,
+      naclIn: document.getElementById('cfgNaclIn').value,
+      naclOut: document.getElementById('cfgNaclOut').value,
+      route: document.getElementById('cfgRoute').value,
+      mtu: document.getElementById('cfgMtu').value
+    };
+  }
+
+  function updateSimConfig() {
+    logMessage(`[CONFIG] Rule options updated.`, 'info');
+  }
+
+  function updateInspector() {
+    const preset = PRESETS[currentPreset];
+    const hop = preset.hops[currentHop];
+    const cfg = getSimConfig();
+
+    document.getElementById('logHopCount').innerText = `Hop ${currentHop} / ${preset.hops.length - 1}`;
+    document.getElementById('hdrSrc').innerText = preset.src;
+    document.getElementById('hdrDst').innerText = preset.dst;
+    document.getElementById('hdrProto').innerText = preset.proto;
+
+    const isReturn = hop.type.includes('ret') || hop.type === 'complete';
+    const dirTag = document.getElementById('inspDirection');
+    if (isReturn) {
+      dirTag.innerText = "RETURN PATH";
+      dirTag.style.background = "rgba(167,139,250,.2)";
+      dirTag.style.color = "#c4b5fd";
+    } else {
+      dirTag.innerText = "FORWARD PATH";
+      dirTag.style.background = "rgba(34,211,238,.2)";
+      dirTag.style.color = "#38bdf8";
+    }
+
+    // NAT State
+    if (hop.id === 'igw' || hop.id === 'igw_ret') {
+      document.getElementById('hdrNat').innerText = "1:1 NAT (Public ↔ 10.0.1.5)";
+    } else if (hop.id === 'nat_gw' || hop.id === 'nat_ret') {
+      document.getElementById('hdrNat').innerText = "SNAT (52.86.14.99:21045)";
+    } else {
+      document.getElementById('hdrNat').innerText = "None (Direct Private IP)";
+    }
+
+    // Conntrack State
+    if (hop.type === 'sg') {
+      document.getElementById('hdrConntrack').innerText = "TRACKED_NEW (Entry Created in Nitro)";
+    } else if (hop.type === 'sg_ret') {
+      document.getElementById('hdrConntrack').innerText = "ESTABLISHED (Stateful SG Bypass OK)";
+    } else {
+      document.getElementById('hdrConntrack').innerText = currentHop > 0 ? "IN_FLIGHT" : "INIT";
+    }
+
+    document.getElementById('hdrDecision').innerText = `Processing @ ${hop.name}`;
+    document.getElementById('hdrDecision').style.color = "var(--accent-cyan)";
+  }
+
+  function logMessage(msg, type = 'info') {
+    const box = document.getElementById('simLogBox');
+    const entry = document.createElement('div');
+    entry.className = `log-entry ${type}`;
+    entry.innerText = msg;
+    box.appendChild(entry);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  // Initialize on load
+  document.addEventListener('DOMContentLoaded', () => {
+    loadPreset(0);
+  });
+</script>
+
+</body>
+</html>
