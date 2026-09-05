@@ -1,0 +1,137 @@
+---
+import type { PacketScenario } from './vpc/scenarios';
+import '../styles/packet-flow.css';
+interface Props { scenarios: PacketScenario[] }
+const { scenarios } = Astro.props;
+---
+<div class="packet-explorer" data-packet-explorer>
+  <div class="packet-picker" hidden>
+    <span id="packet-picker-label">Choose a path</span>
+    <div class="packet-options" role="group" aria-labelledby="packet-picker-label">
+      {scenarios.map((scenario, index) => (
+        <button
+          type="button"
+          aria-pressed={index === 0 ? 'true' : 'false'}
+          data-scenario-option={scenario.id}
+        >
+          <small>{String(index + 1).padStart(2, '0')}</small>
+          <strong>{scenario.title}</strong>
+          <span>{scenario.path.join(' → ')}</span>
+        </button>
+      ))}
+    </div>
+  </div>
+  {scenarios.map((scenario) => (
+    <section class="packet-scenario" data-scenario={scenario.id} aria-labelledby={`flow-${scenario.id}`}>
+      <header><span class="content-kicker">Packet journey</span><h3 id={`flow-${scenario.id}`}>{scenario.title}</h3><p>{scenario.setup}</p></header>
+      <ol class="packet-topology" aria-label="Logical path; replies travel back toward the source">
+        {scenario.path.map((node) => <li data-path-node={node}><span>{node}</span></li>)}
+      </ol>
+      <p class="packet-key">Solid connectors show the logical path. Highlighted node = current step. Request and reply remain in the trace below.</p>
+      <div class="packet-controls" hidden>
+        <label for={`fault-${scenario.id}`}>Try a failure</label>
+        <select id={`fault-${scenario.id}`} data-fault-select>
+          <option value="-1">All required configuration is present</option>
+          {scenario.steps.map((step, index) => step.failure && <option value={index}>{step.direction}: {step.node} — step {index + 1}</option>)}
+        </select>
+        <div class="packet-buttons">
+          <button type="button" data-reset>Reset</button>
+          <button type="button" data-back>← Back</button>
+          <button type="button" data-play>Play</button>
+          <button type="button" data-next>Next step →</button>
+        </div>
+        <p class="packet-status" data-flow-status role="status" aria-atomic="true"></p>
+      </div>
+      <ol class="packet-trace" aria-label="Accumulated packet trace">
+        {scenario.steps.map((step, index) => (
+          <li data-step={index} data-node={step.node} data-direction={step.direction}>
+            <span class="packet-step-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+            <div class="packet-step-body">
+              <div class="packet-step-heading"><span class:list={['packet-direction', { reply: step.direction === 'Reply' }]}>{step.direction}</span><h4>{step.node}</h4><strong class="packet-failed-label" hidden>Stopped here</strong></div>
+              <div class="packet-addresses"><span><small>Source</small><code>{step.source}</code></span><b aria-hidden="true">→</b><span><small>Destination</small><code>{step.destination}</code></span></div>
+              <p data-pass>{step.explanation}</p>
+              {step.failure && <p data-failure hidden>{step.failure}</p>}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
+  ))}
+</div>
+<script>
+  for (const explorer of document.querySelectorAll<HTMLElement>('[data-packet-explorer]')) {
+    const options = [...explorer.querySelectorAll<HTMLButtonElement>('[data-scenario-option]')];
+    const sections = [...explorer.querySelectorAll<HTMLElement>('[data-scenario]')];
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let timer: ReturnType<typeof setInterval> | undefined;
+    let section = sections[0];
+    let position = 0;
+    const query = <T extends HTMLElement>(selector: string) => section.querySelector<T>(selector)!;
+    const steps = () => [...section.querySelectorAll<HTMLElement>('[data-step]')];
+    const fault = () => Number(query<HTMLSelectElement>('[data-fault-select]').value);
+
+    function pause() {
+      if (timer !== undefined) clearInterval(timer);
+      timer = undefined;
+      for (const button of explorer.querySelectorAll<HTMLButtonElement>('[data-play]')) button.textContent = 'Play';
+    }
+    function render() {
+      const rows = steps();
+      const failed = position === fault();
+      rows.forEach((row, index) => {
+        const wasHidden = row.hidden;
+        row.hidden = index > position;
+        row.classList.toggle('arriving', wasHidden && !row.hidden);
+        row.classList.toggle('current', index === position);
+        row.classList.toggle('failed', index === fault() && index <= position);
+        const isFailure = index === fault();
+        row.querySelector<HTMLElement>('[data-pass]')!.hidden = isFailure;
+        const failure = row.querySelector<HTMLElement>('[data-failure]');
+        if (failure) failure.hidden = !isFailure;
+        row.querySelector<HTMLElement>('.packet-failed-label')!.hidden = !isFailure;
+      });
+      section.querySelectorAll<HTMLElement>('[data-path-node]').forEach((node) => {
+        const active = node.dataset.pathNode === rows[position].dataset.node;
+        node.classList.toggle('active', active);
+        node.classList.toggle('failed', active && failed);
+      });
+      query<HTMLButtonElement>('[data-back]').disabled = position === 0;
+      const finished = position === rows.length - 1 || failed;
+      query<HTMLButtonElement>('[data-next]').disabled = finished;
+      query<HTMLButtonElement>('[data-play]').disabled = finished || motion.matches;
+      query('[data-flow-status]').textContent = failed
+        ? `Stopped at step ${position + 1}: ${rows[position].dataset.node}. Earlier steps remain visible. Change the failure setting to replay.`
+        : finished ? 'Reply reached the client. Explore a failure or reset to replay.'
+        : `Step ${position + 1} of ${rows.length} · ${rows[position].dataset.direction} · ${rows[position].dataset.node}`;
+      if (finished) pause();
+    }
+    function advance() { if (position < steps().length - 1 && position !== fault()) { position++; render(); } }
+    sections.forEach((candidate) => {
+      candidate.querySelector('[data-next]')!.addEventListener('click', () => { pause(); advance(); });
+      candidate.querySelector('[data-back]')!.addEventListener('click', () => { pause(); position = Math.max(0, position - 1); render(); });
+      candidate.querySelector('[data-reset]')!.addEventListener('click', () => { pause(); position = 0; render(); });
+      candidate.querySelector('[data-fault-select]')!.addEventListener('change', () => { pause(); position = 0; render(); });
+      candidate.querySelector('[data-play]')!.addEventListener('click', () => {
+        if (timer !== undefined) { pause(); return; }
+        if (motion.matches) return;
+        query('[data-play]').textContent = 'Pause';
+        timer = setInterval(advance, 1800);
+      });
+      candidate.querySelector<HTMLElement>('.packet-controls')!.hidden = false;
+    });
+    options.forEach((option) => option.addEventListener('click', () => {
+      pause();
+      section = sections.find((candidate) => candidate.dataset.scenario === option.dataset.scenarioOption)!;
+      options.forEach((candidate) => candidate.setAttribute('aria-pressed', String(candidate === option)));
+      sections.forEach((candidate) => { candidate.hidden = candidate !== section; });
+      position = 0;
+      render();
+    }));
+    motion.addEventListener('change', () => { pause(); render(); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+    window.addEventListener('pagehide', pause);
+    sections.forEach((candidate) => { candidate.hidden = candidate !== section; });
+    explorer.querySelector<HTMLElement>('.packet-picker')!.hidden = false;
+    render();
+  }
+</script>

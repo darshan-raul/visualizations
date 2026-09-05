@@ -1,0 +1,171 @@
+---
+const days = [
+  {
+    day: 1,
+    title: 'The full baseline',
+    summary: 'With no earlier snapshot to reuse, the first snapshot captures every block that contains data.',
+    map: ['A1', 'B1', 'C1', 'D1', 'E1', 'F1'],
+    additions: ['A1', 'B1', 'C1', 'D1', 'E1', 'F1'],
+    note: 'Six blocks stored · complete state represented by six blocks',
+  },
+  {
+    day: 2,
+    title: 'The first delta',
+    summary: 'C and E changed. The new snapshot stores C2 and E2, while its complete restore state reuses four Day 1 blocks.',
+    map: ['A1', 'B1', 'C2', 'D1', 'E2', 'F1'],
+    additions: ['C2', 'E2'],
+    note: 'Two new blocks stored · A1, B1, D1, and F1 still referenced',
+  },
+  {
+    day: 3,
+    title: 'Another block changes',
+    summary: 'B changes to B3. The Day 3 restore point combines that new block with blocks already stored on Days 1 and 2.',
+    map: ['A1', 'B3', 'C2', 'D1', 'E2', 'F1'],
+    additions: ['B3'],
+    note: 'One new block stored · B1 remains necessary for the Day 2 restore point',
+  },
+  {
+    day: 4,
+    title: 'The lineage grows',
+    summary: 'C changes again. C4 is added, while C2 remains necessary for earlier active restore points.',
+    map: ['A1', 'B3', 'C4', 'D1', 'E2', 'F1'],
+    additions: ['C4'],
+    note: 'One new block stored · older referenced versions are not discarded',
+  },
+  {
+    day: 5,
+    title: 'Only the delta is added',
+    summary: 'E5 is the only new block. The snapshot still represents all six positions in the volume.',
+    map: ['A1', 'B3', 'C4', 'D1', 'E5', 'F1'],
+    additions: ['E5'],
+    note: 'One new block stored · complete restore state remains available',
+  },
+  {
+    day: 6,
+    title: 'References span the window',
+    summary: 'F changes to F6. F1 stays because Days 2–5 still need it, even though the latest state no longer does.',
+    map: ['A1', 'B3', 'C4', 'D1', 'E5', 'F6'],
+    additions: ['F6'],
+    note: 'One new block stored · active older restore points keep their dependencies',
+  },
+  {
+    day: 7,
+    title: 'The retention window is full',
+    summary: 'D changes to D7. Seven restore days now coexist, assembled from the stored block versions they require.',
+    map: ['A1', 'B3', 'C4', 'D7', 'E5', 'F6'],
+    additions: ['D7'],
+    note: 'Day 1 is now the oldest restore point and will expire when Day 8 arrives',
+  },
+  {
+    day: 8,
+    title: 'The window rolls forward',
+    summary: 'D changes again and D8 is stored. Day 1 expires, so its blocks are checked against every restore point that remains active.',
+    map: ['A1', 'B3', 'C4', 'D8', 'E5', 'F6'],
+    additions: ['D8'],
+    note: 'Days 2–8 remain restorable · only unreferenced Day 1 data can go',
+  },
+];
+
+// Derive dependencies from the same history used to render each snapshot.
+const retained = new Set(days.slice(1).flatMap((day) => day.map));
+---
+
+<figure class="delta-model" aria-labelledby="delta-model-title" data-delta-explainer>
+  <figcaption>
+    <span>Interactive conceptual EBS block model</span>
+    <h3 id="delta-model-title">Watch eight snapshots share their blocks</h3>
+    <p>Each step adds a complete snapshot row. Solid cells store a new block version; dashed cells reference one already stored above. A1 means block A as captured on Day 1.</p>
+  </figcaption>
+  <div class="delta-tabs" aria-label="Choose a snapshot day" role="group" hidden>
+    {days.map(({ day }) => (
+      <button type="button" aria-pressed={day === 1} data-delta-tab={day}>
+        Day {day}<small>{day === 1 ? 'full' : day === 8 ? 'expiry' : 'delta'}</small>
+      </button>
+    ))}
+  </div>
+  <div class="lineage-copy" aria-live="polite" aria-atomic="true">
+    {days.map((day) => (
+      <p data-day-copy={day.day}><strong>Day {day.day}: {day.title}.</strong> {day.summary}</p>
+    ))}
+  </div>
+  <div class="lineage-scroll" tabindex="0" role="region" aria-label="Snapshot block grid; scroll horizontally on narrow screens">
+    <table class="lineage-grid">
+      <caption>Snapshot history. Dashed vertical lines connect reused versions; each reference also names the day that stored it.</caption>
+      <thead><tr><th scope="col">Snapshot</th>{['A', 'B', 'C', 'D', 'E', 'F'].map((letter) => <th scope="col">Block {letter}</th>)}</tr></thead>
+      <tbody>
+        {days.map((day) => (
+          <tr data-snapshot-day={day.day}>
+            <th scope="row">Day {day.day}<small data-row-status>{day.day === 1 ? 'Full baseline' : '+' + day.additions.length + ' new'}</small></th>
+            {day.map.map((block) => {
+              const isNew = day.additions.includes(block);
+              const origin = days.find((candidate) => candidate.additions.includes(block))!.day;
+              const survives = retained.has(block);
+              return (
+                <td>
+                  <div class:list={['lineage-cell', isNew ? 'stored' : 'reference']}
+                    data-original={day.day === 1 ? (survives ? 'keep' : 'remove') : undefined}>
+                    <strong>{block}</strong>
+                    <small class="normal-label">{isNew ? 'Stored here' : '↑ Day ' + origin}</small>
+                    {day.day === 1 && <small class="expiry-label">{survives ? 'KEEP' : 'REMOVE'}</small>}
+                  </div>
+                </td>
+              );
+            })}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+  <p class="lineage-legend">Solid = newly stored data · Dashed = reference, no new copy · Lines = shared block version</p>
+  <div class="lineage-cleanup" data-cleanup>
+    <strong>Day 1 expires. Only C1 and E1 lose their last reference.</strong>
+    <p>The original row now marks A1, B1, D1 and F1 as KEEP. Follow their columns down to see which remaining snapshots use them.</p>
+    <p><strong>Look at B1:</strong> Day 3 replaced it with B3, but Day 2 still needs B1. That single reference is enough to keep B1 when Day 1 expires.</p>
+    <p>C1 and E1 were replaced on Day 2, so none of Days 2–8 needs those versions. The crossed-out cells record what was removed; they are no longer retained data.</p>
+  </div>
+  <div class="lineage-navigation" hidden>
+    <button type="button" data-previous>← Previous day</button>
+    <span data-progress aria-live="polite">Day 1 of 8</span>
+    <button type="button" data-next>Next day →</button>
+  </div>
+</figure>
+
+<script>
+  for (const explainer of document.querySelectorAll<HTMLElement>('[data-delta-explainer]')) {
+    const buttons = [...explainer.querySelectorAll<HTMLButtonElement>('[data-delta-tab]')];
+    const rows = [...explainer.querySelectorAll<HTMLElement>('[data-snapshot-day]')];
+    const copies = [...explainer.querySelectorAll<HTMLElement>('[data-day-copy]')];
+    const cleanup = explainer.querySelector<HTMLElement>('[data-cleanup]')!;
+    const previous = explainer.querySelector<HTMLButtonElement>('[data-previous]')!;
+    const next = explainer.querySelector<HTMLButtonElement>('[data-next]')!;
+    const progress = explainer.querySelector<HTMLElement>('[data-progress]')!;
+    const firstStatus = rows[0].querySelector<HTMLElement>('[data-row-status]')!;
+    let selected = 1;
+
+    function selectDay(day: number) {
+      selected = Math.max(1, Math.min(8, day));
+      explainer.classList.toggle('at-expiry', selected === 8);
+      buttons.forEach((button) => button.setAttribute('aria-pressed', String(Number(button.dataset.deltaTab) === selected)));
+      rows.forEach((row) => {
+        const number = Number(row.dataset.snapshotDay);
+        const wasHidden = row.hidden;
+        row.hidden = number > selected;
+        row.classList.toggle('just-added', wasHidden && !row.hidden);
+        row.classList.toggle('current', number === selected);
+      });
+      copies.forEach((copy) => { copy.hidden = Number(copy.dataset.dayCopy) !== selected; });
+      cleanup.hidden = selected !== 8;
+      firstStatus.textContent = selected === 8 ? 'Expired restore point' : 'Full baseline';
+      previous.disabled = selected === 1;
+      next.disabled = selected === 8;
+      progress.textContent = 'Day ' + selected + ' of 8';
+    }
+    buttons.forEach((button) => button.addEventListener('click', () => selectDay(Number(button.dataset.deltaTab))));
+    previous.addEventListener('click', () => selectDay(selected - 1));
+    next.addEventListener('click', () => selectDay(selected + 1));
+    selectDay(1);
+    explainer.querySelector<HTMLElement>('.delta-tabs')!.hidden = false;
+    explainer.querySelector<HTMLElement>('.lineage-navigation')!.hidden = false;
+    explainer.classList.add('enhanced');
+  }
+</script>

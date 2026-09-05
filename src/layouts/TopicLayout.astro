@@ -34,7 +34,7 @@ const formatter = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short
         <nav aria-label="On this page">
           <span>On this page</span>
           <ol>
-            {sections.map((section: any, index: number) => <li><a href={`#${section.id}`}><small>0{index + 1}</small>{section.label}</a></li>)}
+            {sections.map((section: any, index: number) => <li><a href={`#${section.id}`}><small>{String(index + 1).padStart(2, '0')}</small>{section.label}</a></li>)}
           </ol>
         </nav>
       </aside>

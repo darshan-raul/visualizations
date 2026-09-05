@@ -46,12 +46,12 @@ The production build is written to `dist/`. Pagefind indexes both generated Astr
 
 ## Migration status
 
-Stage 1 established the shared shell, design system, metadata, collection pages, catalogue, filters, and search while preserving all public routes. RDS Backup Retention is now the first fully rebuilt explainer.
+Stage 1 established the shared shell, design system, metadata, collection pages, catalogue, filters, and search while preserving all public routes. RDS Backup Retention and VPC Packet Flow are rebuilt in Astro/MDX. VPC Packet Flow includes six cumulative request/reply traces, selectable failure cases, and manual or timed playback.
 
 The first editorial rebuilds are:
 
 1. ~~RDS Backup Retention~~ — rebuilt
-2. VPC Packet Flow — next
+2. ~~VPC Packet Flow~~ — rebuilt
 
 Existing pages must be technically revalidated during migration rather than mechanically wrapped in the new shell.
 

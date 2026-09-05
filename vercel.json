@@ -4,6 +4,7 @@
   "outputDirectory": "dist",
   "cleanUrls": true,
   "trailingSlash": false,
+  "redirects": [{ "source": "/vpc-flow.html", "destination": "/vpc-flow", "permanent": true }],
   "headers": [
     {
       "source": "/(.*)",

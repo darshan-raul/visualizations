@@ -28,9 +28,16 @@ sources:
     url: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_WorkingWithAutomatedBackups.Retaining.html
   - label: Deleting a DB instance
     url: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_DeleteInstance.html
+  - label: Amazon RDS DB instance storage
+    url: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_Storage.html
+  - label: How Amazon EBS snapshots work
+    url: https://docs.aws.amazon.com/ebs/latest/userguide/how_snapshots_work.html
+  - label: Deleting an incremental EBS snapshot
+    url: https://docs.aws.amazon.com/ebs/latest/userguide/ebs-deleting-snapshot.html
 ---
 
 import RetentionWindow from '../../components/rds/RetentionWindow.astro';
+import IncrementalSnapshotModel from '../../components/rds/IncrementalSnapshotModel.astro';
 
 ## The mental model
 
@@ -64,9 +71,17 @@ It is tempting to picture retention as seven independent, permanent copies when 
   </div>
 </div>
 
-The first automated snapshot of a DB instance contains the data for the full database. AWS documents subsequent snapshots of the same database as incremental: they save data changed since the most recent snapshot. That does **not** mean you must preserve or manage an exposed chain yourself. RDS owns the backup set and exposes restore points, not its internal storage graph. [AWS snapshot behavior ↗](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_WorkingWithAutomatedBackups.html)
-
 For DB instances, RDS uploads transaction logs to Amazon S3 every five minutes. The **latest restorable time** therefore trails the present; it should be read from RDS rather than calculated locally. A point-in-time restore does not rewind the running database in place—it creates another DB instance. [AWS point-in-time restore ↗](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_PIT.html)
+
+## How the EBS delta snapshot works
+
+RDS DB instances use Amazon EBS volumes for database and log storage. The first automated snapshot contains the data for the full database; subsequent snapshots are incremental and save only data changed since the most recent snapshot. At the EBS layer, that means changed or new blocks are stored again while unchanged blocks already present in the snapshot lineage are referenced. Each snapshot still represents a complete restorable volume state. [RDS storage ↗](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_Storage.html) [RDS snapshot behavior ↗](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_WorkingWithAutomatedBackups.html) [EBS block behavior ↗](https://docs.aws.amazon.com/ebs/latest/userguide/how_snapshots_work.html)
+
+<IncrementalSnapshotModel />
+
+When an earlier EBS snapshot is deleted, only data referenced exclusively by that snapshot is removed. Older blocks that a later snapshot still needs are preserved and associated with the later snapshot, so deleting the base does not break newer restore points. This is why an expiring snapshot does **not** imply that all blocks first captured with it disappear. [EBS snapshot deletion ↗](https://docs.aws.amazon.com/ebs/latest/userguide/ebs-deleting-snapshot.html)
+
+> **Boundary of the model:** AWS documents both RDS incrementality and EBS block-reference behavior, but RDS does not expose its managed backup graph or cleanup schedule. The diagram explains the storage semantics; it is not a literal view of an internal RDS chain that you can inspect or manage.
 
 ## Four things that sound similar
 

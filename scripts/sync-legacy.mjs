@@ -8,10 +8,9 @@ const legacyPages = [
   'oauth2-explainer.html',
   'opentelemetry.html',
   'secopspipeline.html',
-  'vpc-flow.html',
 ];
 
-const migratedPages = ['rds-backup-retention.html'];
+const migratedPages = ['rds-backup-retention.html', 'vpc-flow.html'];
 
 const root = process.cwd();
 const publicDirectory = join(root, 'public');

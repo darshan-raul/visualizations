@@ -219,6 +219,10 @@ Every major section must have a stable fragment or route. Section changes should
 
 Interactivity is optional and must have a teaching purpose. Use it when changing state, stepping through time, comparing scenarios, or inspecting a flow teaches something that a static diagram cannot.
 
+Interactive animation is explicitly allowed when motion materially clarifies sequence, causality, data movement, state transitions, or changes over time. A visualization may use animation, direct manipulation, playback, or step-by-step controls when those are the clearest way to teach the mechanism; it does not need to remain static merely because the surrounding page is a scrolling document.
+
+Animated explanations must remain understandable and operable without precise timing. Provide pause, replay, or manual step controls when the sequence would otherwise be difficult to inspect, and honor reduced-motion preferences by replacing nonessential movement with immediate state changes or an equivalent static presentation.
+
 Do not add decorative controls merely to make a page feel interactive.
 
 ## Visual system

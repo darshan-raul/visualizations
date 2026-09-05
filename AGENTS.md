@@ -78,6 +78,6 @@ Cards, collection pages, filters, and search metadata are generated from the top
 The first editorial rebuilds are:
 
 1. RDS Backup Retention — rebuilt in Astro/MDX
-2. VPC Packet Flow — next
+2. VPC Packet Flow — rebuilt in Astro/MDX with cumulative packet traces
 
 The remaining six legacy pages may be migrated individually after those proving pages refine the system.

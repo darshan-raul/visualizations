@@ -1,0 +1,9 @@
+---
+import { getEntry, render } from 'astro:content';
+import TopicLayout from '../layouts/TopicLayout.astro';
+const topic = await getEntry('topics', 'vpc-flow');
+if (!topic) throw new Error('VPC Packet Flow content is missing');
+const { Content, headings } = await render(topic);
+const sections = headings.filter(({ depth }) => depth === 2).map(({ slug, text }) => ({ id: slug, label: text }));
+---
+<TopicLayout topic={topic} sections={sections}><Content /></TopicLayout>
