@@ -1,0 +1,161 @@
+---
+title: Kubernetes DNS
+summary: Trace a lookup from Pod resolver configuration through CoreDNS, Service and EndpointSlice records, caches, upstream forwarding, and systematic failure diagnosis.
+slug: kubernetes-dns
+collection: kubernetes
+tags: [Networking, DNS, Troubleshooting, Service Discovery]
+technologies: [Kubernetes, CoreDNS, NodeLocal DNSCache]
+format: deep-dive
+difficulty: intermediate
+published: 2026-09-05
+reviewed: 2026-09-05
+versionScope: Kubernetes v1.35+; cluster domain, resolver implementation, and DNS add-ons may vary
+legacyPath: /kubernetes-dns
+featured: false
+state: reviewed
+related: [k8s-networking, kubernetes-services, pod-networking-cni]
+sources:
+  - label: DNS for Services and Pods
+    url: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/
+  - label: Debugging DNS resolution
+    url: https://kubernetes.io/docs/tasks/administer-cluster/dns-debugging-resolution/
+  - label: NodeLocal DNSCache
+    url: https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/
+  - label: Kubernetes Services
+    url: https://kubernetes.io/docs/concepts/services-networking/service/
+  - label: EndpointSlices
+    url: https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/
+  - label: CoreDNS kubernetes plugin
+    url: https://coredns.io/plugins/kubernetes/
+  - label: StatefulSet stable network identity
+    url: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/
+---
+
+import DnsResolutionMap from '../../components/k8s/DnsResolutionMap.astro';
+import MechanismFlow from '../../components/MechanismFlow.astro';
+import ReferenceTable from '../../components/ReferenceTable.astro';
+
+## The mental model
+
+Kubernetes DNS is a discovery pipeline. Kubelet writes resolver policy into each Pod, the application resolver turns a name into one or more queries, cluster DNS answers from Kubernetes state or forwards upstream, and caches decide how long the answer survives. Only after that does networking attempt a connection. [DNS specification ↗](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/)
+
+<DnsResolutionMap />
+
+> **Naming boundary:** `cluster.local` is a common example, not a universal constant. Use the cluster's configured domain and inspect the Pod's actual resolver configuration.
+
+## Resolver configuration inside a Pod
+
+With the usual `ClusterFirst` policy, a Pod's `/etc/resolv.conf` points at the cluster DNS Service and includes search suffixes for its namespace, all Services, and the cluster domain. A typical shape is:
+
+```text
+nameserver 10.96.0.10
+search team-a.svc.cluster.local svc.cluster.local cluster.local
+options ndots:5
+```
+
+These values are examples. Kubelet configuration, Node resolver state, operating system, runtime, and `dnsPolicy` determine the real file.
+
+<ReferenceTable caption="Pod DNS policies" headers={['Policy', 'Resolver basis', 'Use with care']} rows={[
+  ['ClusterFirst', 'Cluster DNS for cluster names; other names forwarded upstream', 'The default when dnsPolicy is omitted.'],
+  ['Default', 'Inherits the Node resolver configuration', 'The name means inheritance; it is not Kubernetes default behavior.'],
+  ['ClusterFirstWithHostNet', 'Cluster-first behavior for hostNetwork Pods', 'Set explicitly when host-networked workloads need cluster discovery.'],
+  ['None', 'Ignores Kubernetes-generated resolver settings', 'Requires explicit dnsConfig nameservers and related settings.'],
+]} />
+
+`dnsConfig` can add nameservers, search domains, and resolver options. Excessive search lists, incompatible Node resolvers, and platform limits can still alter or reject the final configuration.
+
+## Search paths and ndots
+
+A resolver does not necessarily send the literal string passed by the application. With `ndots:5`, a name containing fewer than five dots is commonly tried with search suffixes before or alongside an absolute lookup, depending on resolver behavior. That makes `api`, `api.team-a`, and `api.example.com` operationally different query inputs.
+
+<MechanismFlow label="How the short name api can become a cluster DNS query" steps={[
+  { title: 'Application requests api', detail: 'The name has no trailing dot and few dots.' },
+  { title: 'Resolver applies search', detail: 'The Pod namespace suffix is a candidate.', tone: 'purple' },
+  { title: 'Query api.team-a.svc…', detail: 'Cluster DNS evaluates the expanded name.' },
+  { title: 'Return Service answer', detail: 'The application receives addresses and TTLs.', tone: 'green' },
+]} />
+
+Search expansion can multiply DNS queries and latency for external-looking names. A trailing dot makes a name absolute for conventional resolvers. Measure actual queries before changing `ndots`; application libraries do not all use the system resolver in the same way.
+
+## Normal Service records
+
+A normal Service receives an A record for IPv4 and/or an AAAA record for IPv6 at a name shaped like `<service>.<namespace>.svc.<cluster-domain>`. The answer is the Service ClusterIP for that family. DNS does not choose a backend Pod; the Service data plane does that when the client connects to the returned VIP. [Service DNS records ↗](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/)
+
+Named Service ports can create SRV records. An SRV lookup expresses service, protocol, port, and target information, but applications must explicitly perform and understand SRV discovery.
+
+`ExternalName` is different: DNS returns a CNAME derived from `spec.externalName`; Kubernetes creates no proxying or backend health checking. TLS hostnames and HTTP `Host` headers still reflect what the client uses, which can make a valid alias fail at the application layer.
+
+## Headless Services and Pod identity
+
+A headless Service sets `clusterIP: None`. DNS returns addresses for eligible endpoints instead of a Service VIP. The client or its library now owns endpoint selection, caching, retry, and reaction to backend changes.
+
+StatefulSets commonly pair a headless Service with stable Pod identity. A Pod can receive a name shaped like `<pod>.<service>.<namespace>.svc.<cluster-domain>` when its hostname/subdomain and governing Service align. Stable DNS identity does not mean a stable Pod IP; a recreated Pod can keep its ordinal name while receiving new addresses. [StatefulSet identity ↗](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/)
+
+`publishNotReadyAddresses` can publish endpoints before readiness for peer discovery. It deliberately changes normal safety semantics and can direct clients toward processes that are not ready to serve ordinary traffic.
+
+<ReferenceTable caption="What common Kubernetes DNS answers mean" headers={['Object or query', 'Typical answer', 'Who chooses the backend']} rows={[
+  ['Normal ClusterIP Service', 'Service IPv4/IPv6 address', 'Service proxy or replacement data plane'],
+  ['Headless Service', 'Eligible endpoint addresses', 'Client resolver or application library'],
+  ['ExternalName Service', 'CNAME to configured external name', 'External DNS and downstream network'],
+  ['Named Service port SRV', 'Priority, weight, port, and target records', 'SRV-aware client'],
+  ['Stateful Pod identity', 'Pod address behind stable DNS name', 'Client connects to that named Pod'],
+]} />
+
+## How CoreDNS learns Kubernetes names
+
+CoreDNS is the common cluster DNS implementation and runs as Pods behind a Service named `kube-dns` for compatibility. Its `kubernetes` plugin watches Services, namespaces, Pods where configured, and EndpointSlices, then serves authoritative records for configured cluster zones. The `forward` plugin commonly sends other names toward upstream resolvers. [CoreDNS kubernetes plugin ↗](https://coredns.io/plugins/kubernetes/)
+
+This creates two separate dependencies: the CoreDNS Pods must be reachable through their Service path, and CoreDNS must have API connectivity plus RBAC permission to observe the objects used to build records.
+
+Corefile order matters because CoreDNS is a plugin chain. Caching, rewrites, forwarding, loop detection, health, readiness, metrics, and logging behavior depend on the deployed configuration. Managed platforms may restrict or generate that configuration.
+
+## Caching and stale answers
+
+Answers can be cached in the application, language runtime, operating-system resolver, Node-local cache, CoreDNS, and upstream resolver. Positive and negative answers have separate TTL behavior. A corrected Service can therefore continue returning an old address or `NXDOMAIN` to some clients until the relevant cache expires.
+
+Compare a failing application's lookup with a known diagnostic tool from the same Pod namespace and Node. A difference can indicate application-level caching or a custom resolver rather than CoreDNS itself.
+
+Long-lived connections are not DNS cache entries. Once an application opens a connection, changing DNS does not move that connection to a new address.
+
+## NodeLocal DNSCache
+
+NodeLocal DNSCache runs a caching agent on each Node. Pods can query the local agent, which handles cache hits and forwards cluster-name misses toward CoreDNS. This can reduce cross-node DNS traffic, bypass some Service DNAT and UDP conntrack pressure, enable TCP upstream connections, and expose per-Node DNS metrics. [NodeLocal DNSCache ↗](https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/)
+
+<MechanismFlow label="NodeLocal DNSCache changes the query path" steps={[
+  { title: 'Pod sends DNS query', detail: 'The configured local address is reachable on the Node.' },
+  { title: 'Node cache checks TTL', detail: 'Positive and negative cache entries may answer immediately.', tone: 'purple' },
+  { title: 'Miss goes upstream', detail: 'Cluster names reach CoreDNS; other names follow forwarding policy.' },
+  { title: 'Answer returns and caches', detail: 'Node-local metrics expose local latency and errors.', tone: 'green' },
+]} />
+
+NodeLocal DNSCache adds another component to debug. A failure isolated to one Node can be a local agent, local listener, or Node-specific network problem even when central CoreDNS is healthy.
+
+## DNS and NetworkPolicy
+
+A default-deny egress policy also denies DNS unless a policy allows the actual cluster DNS path. Selecting `kube-system` Pods by assumed labels can be brittle, while allowing only a ClusterIP may interact with when the policy engine evaluates pre- or post-translation addresses. Follow the installed implementation's documented semantics and test from selected workloads.
+
+DNS over UDP 53 is common, but TCP 53 is also required for valid DNS behavior such as larger responses and retries. Encrypted DNS used directly by applications can bypass cluster DNS policy entirely.
+
+## Diagnose resolution failures
+
+<div class="command-stack">
+  <div><span>01</span><p>Capture the exact name, record type, response code, latency, and resolver library. “DNS failed” is not enough to distinguish timeout, NXDOMAIN, SERVFAIL, or a wrong answer.</p></div>
+  <div><span>02</span><p>Inspect <code>/etc/resolv.conf</code> in the failing Pod. Verify nameserver, search domains, ndots, hostNetwork, dnsPolicy, and dnsConfig.</p></div>
+  <div><span>03</span><p>Query the short name, namespace-qualified name, and full absolute name. A full name working while a short name fails points toward search configuration or namespace assumptions.</p></div>
+  <div><span>04</span><p>Inspect <code>kubectl -n kube-system get svc kube-dns</code> and its EndpointSlices. The compatibility Service name can still front CoreDNS Pods.</p></div>
+  <div><span>05</span><p>Check CoreDNS readiness, logs, metrics, Corefile, API connectivity, and RBAC for Services, namespaces, Pods, and EndpointSlices.</p></div>
+  <div><span>06</span><p>Query the configured nameserver directly, then test upstream names separately. Cluster names working while external names fail points toward forwarding or upstream DNS.</p></div>
+  <div><span>07</span><p>Compare Nodes. With NodeLocal DNSCache, inspect the local agent and metrics on the failing Node before restarting central CoreDNS.</p></div>
+  <div><span>08</span><p>Account for caches and TTLs. Test from a fresh process or Pod before concluding that a configuration correction did not work.</p></div>
+</div>
+
+## Misconceptions and implications
+
+<div class="misconception-grid">
+  <article><span>Misconception</span><h3>“CoreDNS balances a normal Service across Pods.”</h3><p>It normally returns the Service VIP. The Service data plane selects an endpoint.</p></article>
+  <article><span>Misconception</span><h3>“cluster.local is fixed.”</h3><p>It is a common default. The cluster domain is configurable.</p></article>
+  <article><span>Misconception</span><h3>“A successful lookup proves the app is reachable.”</h3><p>Discovery can succeed while Service routing, policy, or the application fails.</p></article>
+  <article><span>Misconception</span><h3>“One nslookup reproduces every client.”</h3><p>Language runtimes and applications can use different resolver libraries, caches, search handling, or encrypted DNS.</p></article>
+</div>
+
+Monitor DNS request rate, response codes, latency, cache hit behavior, upstream failures, CoreDNS saturation, and Node-local skew. Pair those signals with application connection errors so a name-resolution incident is not confused with a downstream timeout.

@@ -1,0 +1,33 @@
+<figure class="k8s-system-map" aria-labelledby="k8s-map-title">
+  <figcaption>
+    <span>System map</span>
+    <h3 id="k8s-map-title">One request crosses several independently reconciled layers</h3>
+    <p>The API objects describe intent. Controllers and node agents turn that intent into a data path.</p>
+  </figcaption>
+
+  <div class="control-plane-map">
+    <span class="plane-label">Desired state</span>
+    <div><strong>Service</strong><small>stable frontend + selector</small></div>
+    <i aria-hidden="true">⇢</i>
+    <div><strong>EndpointSlice</strong><small>ready backend addresses</small></div>
+    <i aria-hidden="true">⇢</i>
+    <div><strong>Service proxy</strong><small>programmed node data plane</small></div>
+  </div>
+
+  <div class="data-plane-map">
+    <span class="plane-label">Packet path</span>
+    <div class="map-node client"><strong>Client Pod</strong><small>10.244.1.7</small></div>
+    <i aria-hidden="true">→</i>
+    <div class="map-node dns"><strong>DNS name</strong><small>api.team.svc</small></div>
+    <i aria-hidden="true">→</i>
+    <div class="map-node service"><strong>Service VIP</strong><small>virtual frontend</small></div>
+    <i aria-hidden="true">→</i>
+    <div class="map-node pod"><strong>Backend Pod</strong><small>10.244.3.12</small></div>
+  </div>
+
+  <div class="map-boundaries">
+    <span><i class="desired"></i> dashed = reconciliation or lookup</span>
+    <span><i class="traffic"></i> solid = traffic</span>
+    <span>The exact forwarding mechanism belongs to the cluster implementation.</span>
+  </div>
+</figure>

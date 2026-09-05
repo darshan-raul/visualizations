@@ -1,0 +1,153 @@
+---
+title: Kubernetes Services and Traffic Distribution
+summary: Trace how Services, EndpointSlices, proxy modes, connection state, locality, and external traffic policies turn stable frontends into changing backend paths.
+slug: kubernetes-services
+collection: kubernetes
+tags: [Networking, Load Balancing, Troubleshooting]
+technologies: [Kubernetes, kube-proxy, EndpointSlice]
+format: deep-dive
+difficulty: advanced
+published: 2026-09-05
+reviewed: 2026-09-05
+versionScope: Kubernetes v1.35+; Linux proxy examples with Windows and replacement data planes called out separately
+legacyPath: /kubernetes-services
+featured: false
+state: reviewed
+related: [k8s-networking, pod-networking-cni, kubernetes-dns]
+sources:
+  - label: Kubernetes Service concepts
+    url: https://kubernetes.io/docs/concepts/services-networking/service/
+  - label: EndpointSlices
+    url: https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/
+  - label: Virtual IPs and Service proxies
+    url: https://kubernetes.io/docs/reference/networking/virtual-ips/
+  - label: Service internal traffic policy
+    url: https://kubernetes.io/docs/concepts/services-networking/service-traffic-policy/
+  - label: Topology-aware routing
+    url: https://kubernetes.io/docs/concepts/services-networking/topology-aware-routing/
+  - label: Service source IP behavior
+    url: https://kubernetes.io/docs/tutorials/services/source-ip/
+  - label: Pod and endpoint termination
+    url: https://kubernetes.io/docs/tutorials/services/pods-and-endpoint-termination-flow/
+  - label: Debug Services
+    url: https://kubernetes.io/docs/tasks/debug/debug-application/debug-service/
+---
+
+import ServiceStateMap from '../../components/k8s/ServiceStateMap.astro';
+import MechanismFlow from '../../components/MechanismFlow.astro';
+import ReferenceTable from '../../components/ReferenceTable.astro';
+
+## The mental model
+
+A Service is a stable frontend plus a policy for reaching a logical backend set. The Service object does not contain a live list of Pod addresses, and the ClusterIP is not a load-balancer process. Controllers publish backend state in EndpointSlices; a Service proxy implementation turns that state into packet forwarding. [Service concepts ↗](https://kubernetes.io/docs/concepts/services-networking/service/)
+
+<ServiceStateMap />
+
+> **Data-plane boundary:** This page uses destination translation to explain the common kube-proxy path. A replacement implementation can realize equivalent Service behavior differently. First identify the implementation, then inspect its rules.
+
+## From selector to EndpointSlice
+
+For a Service with a selector, the control plane finds matching Pods and creates EndpointSlices. Selection establishes membership, while endpoint conditions describe whether an address is ready, serving, or terminating. A Service without a selector needs endpoints supplied separately or may represent an `ExternalName`. [EndpointSlices ↗](https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/)
+
+<MechanismFlow label="Control-plane reconciliation for a selector-based Service" steps={[
+  { title: 'Labels match', detail: 'The Service selector identifies candidate Pods.', tone: 'purple' },
+  { title: 'Ports resolve', detail: 'A numeric or named targetPort maps the Service port to each backend.' },
+  { title: 'EndpointSlices update', detail: 'Addresses, ports, conditions, Node, zone, and hints are published.' },
+  { title: 'Consumers reconcile', detail: 'Service proxies and DNS observe the new desired backend state.', tone: 'green' },
+]} />
+
+The deprecated `Endpoints` API truncates large backend sets and cannot represent newer information such as dual-stack and traffic distribution. Modern clients should list every EndpointSlice carrying the `kubernetes.io/service-name` label; one slice is not necessarily the complete backend set.
+
+## Ports are three different contracts
+
+<ReferenceTable caption="Ports in a Service path" headers={['Field', 'Owned by', 'Meaning']} rows={[
+  ['port', 'Service', 'The port clients use on the Service frontend.'],
+  ['targetPort', 'Service-to-backend mapping', 'The port used at the selected endpoint; it can be numeric or a named Pod port.'],
+  ['nodePort', 'Node-facing Service exposure', 'A port allocated or selected on eligible Node addresses for NodePort-style traffic.'],
+]} />
+
+A healthy Pod listening on `8080` does not help a Service whose `targetPort` resolves to `8081`. Named ports allow different Pods to expose the same logical name at different numeric ports, which can require separate EndpointSlices because ports apply to the whole slice.
+
+## ClusterIP interception
+
+The control plane allocates a ClusterIP from the Service address range unless the Service is headless. In a common Linux kube-proxy path, rules match the frontend address and port, choose an endpoint, and destination-NAT the packet to the endpoint address and target port. Connection tracking keeps subsequent packets in that connection consistent with the translation. [Virtual IPs ↗](https://kubernetes.io/docs/reference/networking/virtual-ips/)
+
+<ReferenceTable caption="Service proxy modes and boundaries" headers={['Implementation', 'How it programs forwarding', 'What to remember']} rows={[
+  ['kube-proxy iptables', 'Netfilter chains and DNAT rules', 'Common and mature; rule synchronization grows with Service and endpoint count.'],
+  ['kube-proxy nftables', 'nftables maps and rules', 'Designed for better update and lookup behavior; NodePort and firewall defaults differ.'],
+  ['kube-proxy IPVS', 'IPVS virtual servers plus iptables integration', 'Deprecated from Kubernetes v1.35 and not a good choice for new deployments.'],
+  ['Windows kernelspace', 'Windows filtering and virtual-switch APIs', 'Linux commands and packet hooks do not apply.'],
+  ['Proxy replacement', 'CNI/provider-specific data plane', 'May use eBPF or cloud networking and expose no kube-proxy rules at all.'],
+]} />
+
+“Random backend” describes default selection for new connections in some proxy modes, not round-robin HTTP requests. Keep-alive, HTTP/2, gRPC, WebSockets, QUIC, application pooling, and conntrack can send many requests through one long-lived backend connection.
+
+## Readiness and termination
+
+Endpoint readiness normally follows Pod readiness. A terminating endpoint has `terminating: true`; for compatibility its `ready` condition becomes false, while `serving` can still indicate that it is capable of responding. Proxies normally avoid terminating endpoints for new traffic but can use serving-and-terminating endpoints when every available endpoint is terminating. [Termination flow ↗](https://kubernetes.io/docs/tutorials/services/pods-and-endpoint-termination-flow/)
+
+This is convergence, not an atomic switch. The Pod, EndpointSlice controller, proxies on many Nodes, external load balancers, and application clients observe changes at different times. Graceful shutdown needs readiness changes, endpoint propagation, connection draining, termination grace, and application behavior to agree.
+
+`publishNotReadyAddresses: true` changes discovery semantics for workloads that need addresses before readiness, notably some peer-discovery systems. It should not be used to conceal an incorrect readiness probe.
+
+## Headless and selectorless Services
+
+A headless Service sets `clusterIP: None`. Kubernetes does not create a virtual-IP forwarding path; cluster DNS can return endpoint addresses directly. Client libraries then own address choice, retries, and reaction to DNS caching.
+
+A selectorless Service lets operators connect a Kubernetes name and frontend to manually managed EndpointSlices, including non-Pod destinations. Endpoint addresses cannot be another Service ClusterIP. Ownership labels, address types, ports, and endpoint readiness still matter.
+
+## NodePort and LoadBalancer
+
+`NodePort` extends the Service onto selected Node addresses. `LoadBalancer` asks an implementation controller to provision or configure external infrastructure and often builds on ClusterIP and NodePort semantics, though implementations can disable NodePort allocation or route directly to Pods. Do not infer cloud hops solely from the Service type.
+
+<MechanismFlow label="Conceptual external Service path" steps={[
+  { title: 'External address', detail: 'A provider or operator makes the frontend reachable.' },
+  { title: 'Eligible Node or Pod', detail: 'The load-balancer implementation chooses its registered target.', tone: 'purple' },
+  { title: 'Service policy', detail: 'Cluster or Local semantics constrain backend selection.' },
+  { title: 'Endpoint receives traffic', detail: 'The observed source address depends on the path and translation.', tone: 'green' },
+]} />
+
+The older `externalIPs` field does not allocate or advertise addresses; the operator must arrange for traffic to reach cluster Nodes. It is deprecated in Kubernetes v1.36, so prefer a load-balancer controller or Gateway API implementation for new designs.
+
+## Locality and traffic distribution
+
+`internalTrafficPolicy: Local` is a hard restriction: only node-local endpoints serve internal traffic. On a Node with no local endpoint, the Service behaves as empty. `externalTrafficPolicy: Local` similarly avoids cross-node forwarding for external paths and can preserve the client address, at the cost of possible imbalance or dropped traffic on Nodes without local endpoints. [Internal policy ↗](https://kubernetes.io/docs/concepts/services-networking/service-traffic-policy/) [Source IP ↗](https://kubernetes.io/docs/tutorials/services/source-ip/)
+
+`trafficDistribution` is a preference rather than the same hard constraint. Supported values can prefer same-zone or same-node endpoints, while implementations and safeguards can fall back when local topology lacks adequate endpoints. Topology-aware hints are published in EndpointSlices and consumed by compatible proxies. [Topology-aware routing ↗](https://kubernetes.io/docs/concepts/services-networking/topology-aware-routing/)
+
+Locality can reduce latency and cross-zone cost but concentrate traffic. Evaluate endpoint count per topology domain, autoscaling behavior, failure fallback, and actual request distribution.
+
+## Session affinity and connection state
+
+`sessionAffinity: ClientIP` asks the implementation to prefer the same backend for connections from one observed client address during the configured timeout. NAT can collapse many clients into one apparent address, and not every protocol's application session aligns with an IP-based affinity window.
+
+When an endpoint disappears, established conntrack entries or application connections can persist until closed or expired. Debug new connections separately from existing ones. A newly corrected Service can appear broken to one long-lived client while a fresh diagnostic Pod succeeds.
+
+## Source address behavior
+
+ClusterIP traffic through kube-proxy's iptables mode normally preserves the Pod client address. External paths can masquerade the source to keep return traffic symmetric through the receiving Node. `externalTrafficPolicy: Local` can preserve the external client address when the surrounding load balancer and network support the path, but it changes eligible endpoints and health-check behavior.
+
+Never write application allowlists or NetworkPolicies from the conceptual source address. Capture what the backend actually observes in the deployed implementation.
+
+## Scale and convergence
+
+EndpointSlices default to at most 100 endpoints each and prioritize limiting update fan-out over perfectly packing every slice. Every Node-level proxy watching them must reconcile changes. Large clusters should monitor API watch pressure, EndpointSlice update latency, proxy sync duration, rule count, conntrack capacity, and load-balancer controller convergence.
+
+Traffic distribution is not application health. Kubernetes readiness says an endpoint is eligible; it does not measure request latency, queue depth, or downstream saturation unless probes deliberately model them.
+
+## Troubleshoot a Service
+
+<div class="command-stack">
+  <div><span>01</span><p>Verify the application directly at Pod IP and <code>targetPort</code>. If this fails, stop debugging the Service frontend.</p></div>
+  <div><span>02</span><p>Inspect <code>kubectl get svc &lt;name&gt; -o yaml</code>: selector, address families, ports, traffic policies, affinity, and exposure type.</p></div>
+  <div><span>03</span><p>List every slice with <code>kubectl get endpointslice -l kubernetes.io/service-name=&lt;name&gt; -o yaml</code>. Check addresses, port names, ready, serving, and terminating.</p></div>
+  <div><span>04</span><p>Test ClusterIP and port from a Pod on the same Node as a backend, then from another Node. This separates local forwarding from cross-node routing.</p></div>
+  <div><span>05</span><p>Identify kube-proxy mode or replacement. Inspect only the matching rules, maps, metrics, logs, and conntrack state.</p></div>
+  <div><span>06</span><p>For external traffic, inspect controller status, registered targets, health checks, Node firewall rules, source translation, and return routing.</p></div>
+</div>
+
+## Practical implications
+
+Treat Service debugging as a state-reconciliation problem: desired frontend, published backends, programmed data plane, and observed connection state. Record all four. Changing selectors or restarting kube-proxy before locating the divergent layer destroys useful evidence.
+
+For new Linux clusters, evaluate nftables or the chosen proxy replacement against kernel support and implementation documentation; do not move to deprecated IPVS merely because an older comparison calls it the high-performance option.

@@ -38,6 +38,7 @@ sources:
 
 import RetentionWindow from '../../components/rds/RetentionWindow.astro';
 import IncrementalSnapshotModel from '../../components/rds/IncrementalSnapshotModel.astro';
+import MechanismFlow from '../../components/MechanismFlow.astro';
 
 ## The mental model
 
@@ -51,25 +52,15 @@ It is tempting to picture retention as seven independent, permanent copies when 
 
 ## What RDS keeps
 
-<div class="mechanism-flow" aria-label="A system snapshot and transaction logs combine to restore a new DB instance">
-  <div class="mechanism-source">
-    <span class="mechanism-index">01</span>
-    <strong>System snapshot</strong>
-    <small>Storage state captured during the backup window</small>
-  </div>
-  <span class="flow-plus" aria-hidden="true">+</span>
-  <div class="mechanism-source purple">
-    <span class="mechanism-index">02</span>
-    <strong>Transaction logs</strong>
-    <small>Uploaded to RDS about every five minutes</small>
-  </div>
-  <span class="flow-arrow" aria-hidden="true">→</span>
-  <div class="mechanism-source green">
-    <span class="mechanism-index">03</span>
-    <strong>New DB instance</strong>
-    <small>Restored to the selected available time</small>
-  </div>
-</div>
+<MechanismFlow
+  label="A system snapshot and transaction logs combine to restore a new DB instance"
+  connectors={['+', '→']}
+  steps={[
+    { title: 'System snapshot', detail: 'Storage state captured during the backup window' },
+    { title: 'Transaction logs', detail: 'Uploaded to RDS about every five minutes', tone: 'purple' },
+    { title: 'New DB instance', detail: 'Restored to the selected available time', tone: 'green' },
+  ]}
+/>
 
 For DB instances, RDS uploads transaction logs to Amazon S3 every five minutes. The **latest restorable time** therefore trails the present; it should be read from RDS rather than calculated locally. A point-in-time restore does not rewind the running database in place—it creates another DB instance. [AWS point-in-time restore ↗](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_PIT.html)
 

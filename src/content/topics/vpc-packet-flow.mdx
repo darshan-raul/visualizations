@@ -68,6 +68,7 @@ sources:
 
 import PacketFlowExplorer from '../../components/PacketFlowExplorer.astro';
 import ReferenceTable from '../../components/ReferenceTable.astro';
+import MechanismFlow from '../../components/MechanismFlow.astro';
 import { scenarios } from '../../components/vpc/scenarios';
 
 ## The mental model
@@ -76,13 +77,14 @@ A VPC connection works when **the destination can be reached, the traffic is per
 
 An elastic network interface (ENI) is a resource’s network interface. A subnet supplies its address range; a subnet route table tells the VPC’s implicit router where to direct traffic. The route with the longest matching destination prefix normally wins. A route to a gateway leaves the packet’s destination address intact unless a translation function changes it. [AWS routing ↗](https://docs.aws.amazon.com/vpc/latest/userguide/subnet-route-tables.html)
 
-<div class="mechanism-flow">
-  <div class="mechanism-source"><span class="mechanism-index">01</span><strong>Choose a path</strong><small>Destination address → matching route → target</small></div>
-  <span class="flow-arrow" aria-hidden="true">→</span>
-  <div class="mechanism-source purple"><span class="mechanism-index">02</span><strong>Permit the flow</strong><small>Security groups, subnet ACLs and the host</small></div>
-  <span class="flow-arrow" aria-hidden="true">→</span>
-  <div class="mechanism-source green"><span class="mechanism-index">03</span><strong>Return the reply</strong><small>Reverse routes, connection state and return ACLs</small></div>
-</div>
+<MechanismFlow
+  label="A successful VPC connection chooses a path, permits the flow, and returns the reply"
+  steps={[
+    { title: 'Choose a path', detail: 'Destination address → matching route → target' },
+    { title: 'Permit the flow', detail: 'Security groups, subnet ACLs and the host', tone: 'purple' },
+    { title: 'Return the reply', detail: 'Reverse routes, connection state and return ACLs', tone: 'green' },
+  ]}
+/>
 
 ## Follow a packet
 

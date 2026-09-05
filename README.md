@@ -38,6 +38,10 @@ The production build is written to `dist/`. Pagefind indexes both generated Astr
 | AWS | RDS Backup Retention | Visual Brief |
 | AWS | VPC Packet Flow | Flow Explorer |
 | Kubernetes | Kubernetes Networking | Deep Dive |
+| Kubernetes | Pod Networking and CNI | Deep Dive |
+| Kubernetes | Kubernetes Services and Traffic Distribution | Deep Dive |
+| Kubernetes | Kubernetes DNS | Deep Dive |
+| Kubernetes | Kubernetes Gateway API and Ingress | Deep Dive |
 | DevOps & SRE | OpenTelemetry | Deep Dive |
 | DevOps & SRE | GitHub Actions Cheatsheet | Operational Reference |
 | DevOps & SRE | DevSecOps Pipeline | Flow Explorer |
@@ -46,12 +50,17 @@ The production build is written to `dist/`. Pagefind indexes both generated Astr
 
 ## Migration status
 
-Stage 1 established the shared shell, design system, metadata, collection pages, catalogue, filters, and search while preserving all public routes. RDS Backup Retention and VPC Packet Flow are rebuilt in Astro/MDX. VPC Packet Flow includes six cumulative request/reply traces, selectable failure cases, and manual or timed playback.
+Stage 1 established the shared shell, design system, metadata, collection pages, catalogue, filters, and search while preserving all public routes. RDS Backup Retention and VPC Packet Flow are rebuilt in Astro/MDX. Kubernetes Networking is now an integrated system-map hub with focused companion explainers for CNI, Services, DNS, and Gateway API.
 
 The first editorial rebuilds are:
 
 1. ~~RDS Backup Retention~~ — rebuilt
 2. ~~VPC Packet Flow~~ — rebuilt
+3. ~~Kubernetes Networking~~ — rebuilt as the system-map hub
+4. ~~Pod Networking and CNI~~ — companion deep dive
+5. ~~Kubernetes Services and Traffic Distribution~~ — companion deep dive
+6. ~~Kubernetes DNS~~ — companion deep dive
+7. ~~Kubernetes Gateway API and Ingress~~ — companion deep dive
 
 Existing pages must be technically revalidated during migration rather than mechanically wrapped in the new shell.
 

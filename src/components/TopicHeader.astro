@@ -1,0 +1,38 @@
+---
+import { collections, formatLabels } from '../lib/catalog';
+
+const { topic } = Astro.props;
+const data = topic.data;
+const collection = collections[data.collection as keyof typeof collections];
+const formatter = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
+---
+
+<header class={`topic-hero collection-${data.collection}`}>
+  <nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/">Library</a><span aria-hidden="true">/</span><a href={`/${data.collection}`}>{collection.label}</a>
+  </nav>
+  <div class="topic-labels" aria-label="Visualization details">
+    <span>{collection.label}</span>
+    <span>{formatLabels[data.format as keyof typeof formatLabels]}</span>
+    <span>{data.difficulty}</span>
+  </div>
+  <h1>{data.title}</h1>
+  <p>{data.summary}</p>
+  <dl class="topic-taxonomy">
+    <div>
+      <dt>Topics</dt>
+      <dd>{data.tags.map((tag: string) => <a href={`/visualizations?tags=${encodeURIComponent(tag)}`}>{tag}</a>)}</dd>
+    </div>
+    {data.technologies.length > 0 && (
+      <div>
+        <dt>Technologies</dt>
+        <dd>{data.technologies.map((technology: string) => <a href={`/visualizations?technologies=${encodeURIComponent(technology)}`}>{technology}</a>)}</dd>
+      </div>
+    )}
+  </dl>
+  <div class="topic-meta">
+    <span>Published {formatter.format(data.published)}</span>
+    {data.reviewed && <span>Reviewed {formatter.format(data.reviewed)}</span>}
+    {data.versionScope && <span>{data.versionScope}</span>}
+  </div>
+</header>

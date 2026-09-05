@@ -1,0 +1,138 @@
+---
+title: Pod Networking and CNI
+summary: Follow a Pod sandbox from runtime creation through CNI attachment, IPAM, routes, cross-node forwarding, cleanup, and failure diagnosis.
+slug: pod-networking-cni
+collection: kubernetes
+tags: [Networking, Containers, Troubleshooting]
+technologies: [Kubernetes, CNI, Linux networking]
+format: deep-dive
+difficulty: advanced
+published: 2026-09-05
+reviewed: 2026-09-05
+versionScope: Kubernetes v1.35+; Linux terminology where stated; plugin-specific behavior is explicitly separated
+legacyPath: /pod-networking-cni
+featured: false
+state: reviewed
+related: [k8s-networking, kubernetes-services, kubernetes-dns]
+sources:
+  - label: Kubernetes network plugins
+    url: https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/network-plugins/
+  - label: Kubernetes network model
+    url: https://kubernetes.io/docs/concepts/services-networking/
+  - label: Cluster networking
+    url: https://kubernetes.io/docs/concepts/cluster-administration/networking/
+  - label: Pods and shared networking
+    url: https://kubernetes.io/docs/concepts/workloads/pods/
+  - label: CNI specification
+    url: https://www.cni.dev/docs/spec/
+  - label: IPv4 and IPv6 dual stack
+    url: https://kubernetes.io/docs/concepts/services-networking/dual-stack/
+  - label: Kubernetes networking add-ons
+    url: https://kubernetes.io/docs/concepts/cluster-administration/addons/
+---
+
+import CniLifecycleMap from '../../components/k8s/CniLifecycleMap.astro';
+import MechanismFlow from '../../components/MechanismFlow.astro';
+import ReferenceTable from '../../components/ReferenceTable.astro';
+
+## The mental model
+
+Kubernetes promises that a regular Pod receives a cluster-wide address and can communicate directly with other Pods, subject to intentional policy. It delegates the implementation to the node runtime and pod network. CNI is the transaction boundary between them—not the network topology itself. [Kubernetes network model ↗](https://kubernetes.io/docs/concepts/services-networking/) [CNI specification ↗](https://www.cni.dev/docs/spec/)
+
+<CniLifecycleMap />
+
+> **Implementation boundary:** A veth pair, Linux bridge, overlay tunnel, BGP route, cloud network interface, eBPF program, or Windows virtual switch may appear in a real cluster. None is universal. Always identify the installed network implementation before interpreting host state.
+
+## The Pod sandbox
+
+Every regular container in one Pod shares a network namespace or equivalent isolation domain. That shared boundary contains the Pod's interfaces, IP addresses, routes, loopback device, and port space. Containers communicate through `localhost` and cannot independently bind the same address and port. [Pod networking ↗](https://kubernetes.io/docs/concepts/workloads/pods/)
+
+The container runtime creates the sandbox before attaching it to networks. Some runtimes keep the namespace alive with an infrastructure container commonly called “pause,” but that container is not the API contract. A useful debugging question is “does the sandbox network state exist?” rather than “is pause doing the routing?”
+
+`hostNetwork: true` is a deliberate exception: the Pod shares the Node network namespace. `hostPort` asks the network implementation to map a Node port toward a Pod port and can constrain scheduling. `containerPort` is descriptive metadata; it does not expose anything by itself.
+
+## The CNI transaction
+
+CNI specifies configuration, invocation parameters, operations, result types, chaining, and delegation. The runtime invokes plugin executables with configuration on standard input and request-specific values such as `CNI_COMMAND`, `CNI_CONTAINERID`, `CNI_NETNS`, and `CNI_IFNAME`. A successful `ADD` reports interfaces, addresses, routes, and DNS information. [CNI execution protocol ↗](https://www.cni.dev/docs/spec/)
+
+<ReferenceTable caption="CNI lifecycle operations" headers={['Operation', 'Purpose', 'Failure implication']} rows={[
+  ['ADD', 'Attach a sandbox or modify its attachment', 'Pod sandbox creation normally fails or remains unready.'],
+  ['DEL', 'Undo attachment state and release resources', 'Leaked interfaces, routes, or IP reservations can affect later Pods.'],
+  ['CHECK', 'Compare existing state with the previous result', 'Can identify missing interfaces, routes, firewall state, or dependencies.'],
+  ['GC', 'Remove stale resources not associated with valid attachments', 'Complements cleanup but is not a substitute for DEL.'],
+  ['STATUS', 'Report whether a plugin can service new ADD requests', 'May reveal daemon failure or resource exhaustion.'],
+  ['VERSION', 'Negotiate supported specification versions', 'Runtime, config, and plugin compatibility must overlap.'],
+]} />
+
+Plugin lists execute in order during `ADD`; later plugins receive the prior result. Deletion runs the list in reverse. This is why failures in port mapping, bandwidth, policy, or another chained plugin can roll back an otherwise successful primary interface attachment.
+
+## IPAM and address ownership
+
+IP address management may be built into the network implementation or delegated to another CNI plugin. The allocation source can be a node-local range, a cluster datastore, DHCP, a cloud subnet, or another provider-specific pool. “Every Node gets a `/24`” is one design, not a Kubernetes rule.
+
+<MechanismFlow label="IPAM turns available address space into a Pod attachment" steps={[
+  { title: 'Select an address family', detail: 'IPv4, IPv6, or both must match cluster and plugin configuration.' },
+  { title: 'Reserve an address', detail: 'The IPAM implementation prevents concurrent reuse.', tone: 'purple' },
+  { title: 'Return routes and gateway', detail: 'The attachment result describes how the Pod leaves its namespace.' },
+  { title: 'Release on deletion', detail: 'DEL must return the allocation even if the namespace is already gone.', tone: 'green' },
+]} />
+
+Address exhaustion can be local to one Node, one zone, one cloud subnet, or the whole cluster. A cluster can therefore have free Pod CIDR space on paper while a particular Node cannot allocate another address. Inspect the allocator that actually owns the pool.
+
+Dual-stack requires compatible Nodes, pod networking, and control-plane configuration. A dual-stack Pod can receive one IPv4 and one IPv6 address, but application binding, policy, DNS answers, Services, and off-cluster routes must also support both families. [Dual-stack requirements ↗](https://kubernetes.io/docs/concepts/services-networking/dual-stack/)
+
+## Same-node forwarding
+
+On Linux, a common design connects the Pod namespace to the host using a veth pair. The host side may attach to a bridge, enter an L3 routing domain, or be managed by an eBPF data plane. Neighbor discovery, routes, and policy then determine how a packet reaches another local Pod.
+
+Do not assume a bridge owns an “ARP table.” Hosts and Pods maintain neighbor tables; a Layer 2 bridge learns MAC forwarding information. Confusing the two leads to debugging the wrong cache.
+
+Useful evidence includes the Pod's addresses and routes, the host peer interface, neighbor state, policy counters, and a packet capture on both sides of the namespace boundary. Interface names are implementation-specific and can disappear when the sandbox is recreated.
+
+## Cross-node forwarding
+
+The network implementation must make a destination Pod prefix reachable from the source Node. Three broad patterns recur:
+
+<ReferenceTable caption="Common cross-node strategies" headers={['Strategy', 'Outer path', 'Benefit', 'Tradeoff']} rows={[
+  ['Native routing', 'Network routes directly toward Pod prefixes', 'No tunnel header and clear routing semantics', 'Underlying network must learn and permit Pod routes.'],
+  ['Overlay', 'Original packet is encapsulated between Nodes', 'Decouples Pod addressing from the underlay', 'Header overhead reduces effective MTU and adds tunnel state.'],
+  ['Cloud-native addressing', 'Pod addresses integrate with provider networking', 'Uses familiar cloud routes and controls', 'Subnet capacity, interface quotas, and provider behavior become Pod constraints.'],
+  ['eBPF-oriented data plane', 'Programs forwarding at kernel hooks', 'Can combine routing, policy, and observability', 'Debugging uses implementation-specific maps and tools.'],
+]} />
+
+An overlay is not automatically required for cross-node communication, and CNI does not prescribe VXLAN. Determine the actual outer source/destination, encapsulation protocol, route ownership, and return path.
+
+## MTU and fragmentation
+
+Encapsulation consumes bytes. If the Pod interface MTU is copied from the Node interface without subtracting tunnel overhead, small requests can succeed while larger transfers stall. Path MTU discovery also depends on relevant ICMP or ICMPv6 messages reaching the sender.
+
+Compare the application payload path, Pod interface MTU, tunnel interface MTU, Node underlay MTU, and any cloud or VPN segment. Avoid hard-coding a universal overlay deduction: headers vary by IP family, encapsulation, encryption, and implementation.
+
+## Egress and masquerading
+
+The no-NAT Pod-to-Pod model does not mean Pod traffic is never translated. Off-cluster destinations often cannot route return traffic to Pod CIDRs, so an egress data plane may masquerade the Pod source as a Node, gateway, or other routable address. This affects logs, allowlists, policy, and return routing.
+
+Ask separately whether the destination is inside the pod network, another cluster, a private routed network, or the public internet. Each boundary may select a different route, NAT rule, gateway, or policy layer.
+
+## Policy is adjacent, not identical
+
+NetworkPolicy is a Kubernetes API generally enforced by the pod network implementation, but basic connectivity and policy enforcement are distinct capabilities. A plugin can provide Pod connectivity without implementing NetworkPolicy; the API objects then exist but have no effect. [Network plugin responsibilities ↗](https://kubernetes.io/docs/concepts/services-networking/)
+
+Policy programming can occur at veth hooks, host firewall tables, eBPF hooks, virtual switches, or provider controls. Inspecting only iptables is insufficient when the implementation uses another enforcement plane.
+
+## Diagnose sandbox failures
+
+<div class="command-stack">
+  <div><span>01</span><p>Read Pod events and container-runtime errors. Messages around sandbox creation and CNI ADD are more useful than repeated application restarts.</p></div>
+  <div><span>02</span><p>Confirm the network plugin agents are ready on the affected Node and inspect their logs, configuration, credentials, and datastore connectivity.</p></div>
+  <div><span>03</span><p>Compare a healthy Pod on the same Node, a healthy Pod on another Node, and the failing Pod. This separates node-local attachment from cluster-wide routing.</p></div>
+  <div><span>04</span><p>Inspect Pod and Node addresses, routes, interfaces, neighbor tables, policy state, and IPAM capacity using tools appropriate to the implementation.</p></div>
+  <div><span>05</span><p>Test same-node and cross-node Pod IPs in both directions. A one-way result usually points toward return routing, asymmetric policy, or translation.</p></div>
+  <div><span>06</span><p>For size-dependent failures, test progressively larger payloads and capture ICMP/ICMPv6 alongside tunnel traffic before changing MTUs.</p></div>
+</div>
+
+## Practical implications
+
+Choose a pod network based on required address scale, underlay integration, policy model, supported operating systems, encryption, observability, performance, and operational skill—not from a generic benchmark alone. Validate upgrade compatibility among Kubernetes, the runtime, CNI specification, plugin release, kernel, and managed-service constraints.
+
+Keep a cluster-specific runbook recording the real Pod CIDRs, IPAM owner, forwarding mode, encapsulation, MTU, egress translation, policy engine, kube-proxy replacement status, and diagnostic commands. That inventory turns “the network is broken” into a bounded investigation.

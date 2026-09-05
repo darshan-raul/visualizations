@@ -1,0 +1,50 @@
+---
+interface Step {
+  title: string;
+  detail: string;
+  tone?: 'default' | 'purple' | 'green' | 'amber' | 'red';
+}
+
+interface Props {
+  label: string;
+  steps: Step[];
+  connectors?: string[];
+}
+
+const { label, steps, connectors = steps.slice(1).map(() => '→') } = Astro.props;
+---
+
+<figure class="mechanism-flow" aria-label={label}>
+  <figcaption class="sr-only">{label}</figcaption>
+  <ol>
+    {steps.map((step: Step, index: number) => (
+      <>
+        <li class={`tone-${step.tone ?? 'default'}`}>
+          <span>{String(index + 1).padStart(2, '0')}</span>
+          <strong>{step.title}</strong>
+          <small>{step.detail}</small>
+        </li>
+        {index < steps.length - 1 && <span class="connector" aria-hidden="true">{connectors[index] ?? '→'}</span>}
+      </>
+    ))}
+  </ol>
+</figure>
+
+<style>
+  .mechanism-flow { margin: 30px 0; }
+  .mechanism-flow ol { display: flex; align-items: center; gap: 12px; margin: 0; padding: 0; list-style: none; }
+  .mechanism-flow li { display: grid; min-width: 0; min-height: 145px; flex: 1; align-content: center; gap: 6px; padding: 18px; border: 1px solid rgba(66,214,232,.24); border-radius: 10px; background: rgba(66,214,232,.045); }
+  .mechanism-flow li.tone-purple { border-color: rgba(183,154,255,.25); background: rgba(183,154,255,.045); }
+  .mechanism-flow li.tone-green { border-color: rgba(73,214,163,.25); background: rgba(73,214,163,.045); }
+  .mechanism-flow li.tone-amber { border-color: rgba(246,199,99,.25); background: rgba(246,199,99,.045); }
+  .mechanism-flow li.tone-red { border-color: rgba(251,126,133,.25); background: rgba(251,126,133,.045); }
+  .mechanism-flow li > span { color: var(--dim); font-family: var(--mono); font-size: .55rem; }
+  .mechanism-flow strong { font-size: .82rem; }
+  .mechanism-flow small { color: var(--muted); font-size: .67rem; line-height: 1.45; }
+  .connector { flex: 0 0 auto; color: var(--green); font-family: var(--mono); }
+  @media (max-width: 650px) {
+    .mechanism-flow ol { flex-direction: column; align-items: stretch; }
+    .mechanism-flow li { min-height: 120px; }
+    .connector { align-self: center; transform: rotate(90deg); }
+  }
+</style>

@@ -1,0 +1,7 @@
+<figure class="companion-map" aria-labelledby="service-map-title">
+  <figcaption><span>Reconciliation map</span><h3 id="service-map-title">A Service is one frontend fed by changing backend state</h3><p>The control plane publishes eligible destinations; every Service data plane reconciles that state locally or through its implementation.</p></figcaption>
+  <div class="lane purple"><span>API state</span><b>Service selector</b><i>→</i><b>EndpointSlices</b><i>→</i><b>ready / serving / terminating</b></div>
+  <div class="lane"><span>Programmed state</span><b>ClusterIP : port</b><i>→</i><b>selection rules</b><i>→</i><b>Pod IP : targetPort</b></div>
+  <div class="lane green"><span>Connection</span><b>Client packet</b><i>→</i><b>destination translated</b><i>→</i><b>chosen backend</b></div>
+  <div class="map-foot">Existing connections and newly selected connections can observe different backend sets.</div>
+</figure>

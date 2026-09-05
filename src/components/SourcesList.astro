@@ -1,0 +1,21 @@
+---
+const { sources } = Astro.props;
+---
+
+<section class="sources" id="sources">
+  <span class="content-kicker">Authoritative references</span>
+  <h2>Sources and documentation</h2>
+  <ul>
+    {sources.map((source: { label: string; url: string }) => (
+      <li><a href={source.url} target="_blank" rel="noopener noreferrer">{source.label}<span aria-hidden="true">↗</span></a></li>
+    ))}
+  </ul>
+</section>
+
+<style>
+  .sources { margin-top: 75px; border-top: 1px solid var(--border); padding-top: 70px; }
+  .sources h2 { margin: 0 0 20px; font-size: clamp(1.75rem, 4vw, 2.55rem); font-weight: 600; letter-spacing: -.04em; }
+  .sources ul { display: grid; gap: 7px; margin: 25px 0 0; padding: 0; list-style: none; }
+  .sources a { display: flex; justify-content: space-between; gap: 15px; padding: 13px 15px; border: 1px solid var(--border); border-radius: 7px; color: var(--muted); font-size: .75rem; text-decoration: none; }
+  .sources a:hover { border-color: rgba(66,214,232,.35); color: var(--text); }
+</style>

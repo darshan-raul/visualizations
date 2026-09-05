@@ -3,34 +3,51 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import CollectionNav from '../components/CollectionNav.astro';
 import LibraryExplorer from '../components/LibraryExplorer.astro';
+import { collections, formatLabels } from '../lib/catalog';
 
 const topics = await getCollection('topics');
 const sortedTopics = topics.sort((a, b) => Number(b.data.featured) - Number(a.data.featured) || a.data.title.localeCompare(b.data.title));
+const featuredTopics = sortedTopics.filter((topic) => topic.data.featured);
 ---
 
 <BaseLayout>
   <section class="hero shell">
     <div class="hero-copy">
       <span class="eyebrow"><i></i> Visual infrastructure reference</span>
-      <h1>The machinery behind<br /><span>modern infrastructure.</span></h1>
-      <p>Visual deep dives into cloud infrastructure. Trace the packets, policies, controllers, logs, and state changes that documentation leaves implicit.</p>
+      <h1>Complex infrastructure,<br /><span>made visually intuitive.</span></h1>
+      <p>A visual reference library for AWS, Kubernetes, DevOps, SRE, and the foundations beneath them. Explore each concept independently, from the mental model to the operational details.</p>
       <div class="hero-actions">
         <a class="primary-action" href="#library">Explore the library <span aria-hidden="true">↓</span></a>
         <span>{topics.length} visualizations · AWS and Kubernetes first</span>
       </div>
     </div>
-    <div class="hero-diagram" aria-label="A conceptual flow from request through infrastructure layers">
-      <div class="diagram-caption"><span>request.flow</span><span>live model</span></div>
-      <div class="diagram-stage">
-        <div class="flow-line" aria-hidden="true"></div>
-        <div class="diagram-node node-client"><small>01</small><strong>Request</strong><span>client → edge</span></div>
-        <div class="diagram-node node-control"><small>02</small><strong>Control plane</strong><span>policy · routing</span></div>
-        <div class="diagram-node node-runtime"><small>03</small><strong>Runtime</strong><span>compute · state</span></div>
-        <div class="packet packet-one" aria-hidden="true"></div>
-        <div class="packet packet-two" aria-hidden="true"></div>
+    <aside class="library-preview" aria-labelledby="library-preview-title">
+      <div class="preview-heading">
+        <div>
+          <span>Selected references</span>
+          <h2 id="library-preview-title">Inside the library</h2>
+        </div>
+        <span>{featuredTopics.length.toString().padStart(2, '0')} featured</span>
       </div>
-      <div class="diagram-legend"><span><i class="healthy"></i> healthy path</span><span><i class="control"></i> control activity</span></div>
-    </div>
+      <div class="preview-list">
+        {featuredTopics.map((topic, index) => {
+          const collection = collections[topic.data.collection as keyof typeof collections];
+          const format = formatLabels[topic.data.format as keyof typeof formatLabels];
+
+          return (
+            <a class={`preview-item collection-${topic.data.collection}`} href={topic.data.legacyPath}>
+              <span class="preview-index">{(index + 1).toString().padStart(2, '0')}</span>
+              <span class="preview-copy">
+                <strong>{topic.data.title}</strong>
+                <small>{collection.label} · {format}</small>
+              </span>
+              <span class="preview-arrow" aria-hidden="true">↗</span>
+            </a>
+          );
+        })}
+      </div>
+      <p class="preview-note">Independent explainers for the concept you need now—no prescribed path.</p>
+    </aside>
   </section>
 
   <CollectionNav />

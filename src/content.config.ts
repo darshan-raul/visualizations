@@ -19,6 +19,7 @@ const topics = defineCollection({
     legacyPath: z.string(),
     featured: z.boolean().default(false),
     state: z.enum(['legacy', 'draft', 'reviewed']).default('legacy'),
+    related: z.array(z.string()).optional(),
     sources: z.array(z.object({ label: z.string(), url: z.url() })).optional(),
   }),
 });

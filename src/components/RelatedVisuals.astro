@@ -1,0 +1,59 @@
+---
+import { collections, formatLabels } from '../lib/catalog';
+
+const { currentTopic, topics } = Astro.props;
+const current = currentTopic.data;
+const overrides: string[] | undefined = current.related;
+
+const overlap = (left: string[], right: string[]) => left.filter((item) => right.includes(item)).length;
+const candidates = topics.filter((topic: any) => topic.data.slug !== current.slug);
+const related = overrides
+  ? overrides.map((slug) => candidates.find((topic: any) => topic.data.slug === slug)).filter(Boolean)
+  : candidates
+      .map((topic: any) => ({
+        topic,
+        score:
+          (topic.data.collection === current.collection ? 4 : 0) +
+          overlap(topic.data.technologies, current.technologies) * 3 +
+          overlap(topic.data.tags, current.tags) * 2 +
+          (topic.data.format === current.format ? 1 : 0),
+      }))
+      .filter(({ score }: { score: number }) => score > 0)
+      .sort((a: any, b: any) => b.score - a.score || a.topic.data.title.localeCompare(b.topic.data.title))
+      .slice(0, 3)
+      .map(({ topic }: any) => topic);
+---
+
+{related.length > 0 && (
+  <section class="related-visuals" id="related-visuals" aria-labelledby="related-heading">
+    <span class="content-kicker">Keep exploring</span>
+    <h2 id="related-heading">Related Visuals</h2>
+    <div class="related-grid">
+      {related.map((topic: any) => {
+        const collection = collections[topic.data.collection as keyof typeof collections];
+        return (
+          <a class={`related-card collection-${topic.data.collection}`} href={topic.data.legacyPath}>
+            <span>{collection.label} · {formatLabels[topic.data.format as keyof typeof formatLabels]}</span>
+            <strong>{topic.data.title}</strong>
+            <p>{topic.data.summary}</p>
+            <small>Explore <i aria-hidden="true">→</i></small>
+          </a>
+        );
+      })}
+    </div>
+  </section>
+)}
+
+<style>
+  .related-visuals { margin-top: 75px; border-top: 1px solid var(--border); padding-top: 70px; }
+  .related-visuals h2 { margin: 10px 0 24px; font-size: clamp(1.75rem, 4vw, 2.55rem); font-weight: 600; letter-spacing: -.04em; }
+  .related-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .related-card { --collection-accent: var(--text); display: grid; min-width: 0; min-height: 205px; align-content: start; padding: 18px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-soft); text-decoration: none; transition: border-color .18s ease, transform .18s ease; }
+  .related-card:hover { border-color: color-mix(in srgb, var(--collection-accent) 45%, transparent); transform: translateY(-2px); }
+  .related-card > span { color: var(--collection-accent); font-family: var(--mono); font-size: .55rem; line-height: 1.45; text-transform: uppercase; }
+  .related-card strong { margin-top: 14px; font-size: .9rem; line-height: 1.3; }
+  .related-card p { margin: 8px 0 16px; color: var(--muted); font-size: .69rem; line-height: 1.55; }
+  .related-card small { margin-top: auto; color: var(--collection-accent); font-family: var(--mono); font-size: .62rem; }
+  .related-card i { font-style: normal; }
+  @media (max-width: 700px) { .related-grid { grid-template-columns: 1fr; } .related-card { min-height: 0; } }
+</style>

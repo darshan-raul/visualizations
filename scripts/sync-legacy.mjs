@@ -4,13 +4,12 @@ import { join } from 'node:path';
 const legacyPages = [
   'docker-multiarch.html',
   'github-actions-cheatsheet.html',
-  'k8s-networking.html',
   'oauth2-explainer.html',
   'opentelemetry.html',
   'secopspipeline.html',
 ];
 
-const migratedPages = ['rds-backup-retention.html', 'vpc-flow.html'];
+const migratedPages = ['rds-backup-retention.html', 'vpc-flow.html', 'k8s-networking.html'];
 
 const root = process.cwd();
 const publicDirectory = join(root, 'public');

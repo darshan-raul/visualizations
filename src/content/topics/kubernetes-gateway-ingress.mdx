@@ -1,0 +1,170 @@
+---
+title: Kubernetes Gateway API and Ingress
+summary: Understand who owns GatewayClass, Gateway, Routes, and backends; how attachment, TLS, status, and cross-namespace trust become an external traffic path.
+slug: kubernetes-gateway-ingress
+collection: kubernetes
+tags: [Networking, Security, Load Balancing, Troubleshooting]
+technologies: [Kubernetes, Gateway API, Ingress]
+format: deep-dive
+difficulty: advanced
+published: 2026-09-05
+reviewed: 2026-09-05
+versionScope: Gateway API Standard Channel concepts and Kubernetes v1.35+ Ingress behavior; implementation capabilities vary
+legacyPath: /kubernetes-gateway-ingress
+featured: false
+state: reviewed
+related: [k8s-networking, kubernetes-services, kubernetes-dns]
+sources:
+  - label: Gateway API introduction
+    url: https://gateway-api.sigs.k8s.io/docs/introduction/
+  - label: Gateway API overview
+    url: https://gateway-api.sigs.k8s.io/docs/concepts/api-overview/
+  - label: Gateway API security model
+    url: https://gateway-api.sigs.k8s.io/docs/concepts/security/
+  - label: Gateway resource
+    url: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
+  - label: HTTP routing guide
+    url: https://gateway-api.sigs.k8s.io/guides/http-routing/
+  - label: Cross-namespace routing
+    url: https://gateway-api.sigs.k8s.io/guides/multiple-ns/
+  - label: Gateway API troubleshooting and status
+    url: https://gateway-api.sigs.k8s.io/docs/concepts/troubleshooting/
+  - label: Kubernetes Ingress
+    url: https://kubernetes.io/docs/concepts/services-networking/ingress/
+  - label: Kubernetes Services
+    url: https://kubernetes.io/docs/concepts/services-networking/service/
+---
+
+import GatewayOwnershipMap from '../../components/k8s/GatewayOwnershipMap.astro';
+import MechanismFlow from '../../components/MechanismFlow.astro';
+import ReferenceTable from '../../components/ReferenceTable.astro';
+
+## The mental model
+
+Gateway API is a role-oriented configuration model for traffic infrastructure. `GatewayClass` selects an implementation, `Gateway` requests listeners and addresses, and protocol-specific Routes attach application matching rules to those listeners. Controllers reconcile the objects into proxies, cloud load balancers, routes, certificates, or other implementation-specific state. [Gateway API introduction ↗](https://gateway-api.sigs.k8s.io/docs/introduction/)
+
+<GatewayOwnershipMap />
+
+> **API versus appliance:** Gateway API is not itself an API gateway product or packet proxy. It is a Kubernetes API implemented by controllers. Creating resources without installing a compatible implementation produces no working data plane.
+
+## The resource ownership model
+
+<ReferenceTable caption="Gateway API separates responsibilities" headers={['Resource', 'Scope', 'Typical owner', 'Responsibility']} rows={[
+  ['GatewayClass', 'Cluster', 'Infrastructure provider', 'Names the controller and class-wide implementation parameters.'],
+  ['Gateway', 'Namespaced', 'Cluster operator', 'Requests addresses, listeners, protocols, TLS, and route attachment policy.'],
+  ['HTTPRoute / GRPCRoute', 'Namespaced', 'Application team', 'Matches requests and selects weighted or filtered backends.'],
+  ['ReferenceGrant', 'Namespaced with the referenced object', 'Resource owner', 'Permits supported cross-namespace references to that namespace.'],
+  ['Service', 'Namespaced', 'Application team', 'Supplies the backend abstraction and eligible endpoints.'],
+]} />
+
+The separation lets operators offer shared or dedicated entry infrastructure without giving every application team permission to alter listeners, certificates, or other teams' routes. Kubernetes RBAC controls who can create each resource; Gateway attachment rules add another trust boundary.
+
+## GatewayClass and controller acceptance
+
+A `GatewayClass` contains a domain-prefixed `controllerName`. An implementation watches matching classes and reports whether it accepts them. A cluster can offer classes such as public, private, regional, or provider-specific, but the names have no portable meaning unless the operator documents their parameters and behavior. [GatewayClass overview ↗](https://gateway-api.sigs.k8s.io/docs/concepts/api-overview/)
+
+<MechanismFlow label="From class selection to programmed entry point" steps={[
+  { title: 'Controller accepts class', detail: 'GatewayClass status identifies a responsible implementation.', tone: 'purple' },
+  { title: 'Gateway requests listeners', detail: 'Address, port, protocol, hostname, and TLS intent are declared.' },
+  { title: 'Routes attach', detail: 'Parent references and listener policy must agree.' },
+  { title: 'Controller programs data plane', detail: 'Programmed status reports whether infrastructure is ready.', tone: 'green' },
+]} />
+
+If no controller recognizes the class, debugging Route matches is premature. Start with GatewayClass `Accepted`, then Gateway `Accepted` and `Programmed`, then listener and Route conditions.
+
+## Listeners define the entry boundary
+
+A Gateway listener binds a port and protocol and can constrain hostname, TLS configuration, and which Routes may attach. Multiple listeners can share a Gateway while maintaining separate policies—for example, HTTP redirect and HTTPS termination, or public and internal hostnames where the implementation supports the addresses.
+
+`allowedRoutes` controls namespaces and Route kinds permitted to attach. Its default namespace behavior and explicit selectors matter. A Route that names the Gateway is not necessarily attached; the listener must also allow it.
+
+Listener hostname and Route hostname intersect. A Route for `shop.example.com` cannot become effective on a listener that only admits `api.example.com`. Wildcards and implementation conformance should be validated through status, not inferred from object creation.
+
+## Route attachment is a handshake
+
+Routes use `parentRefs` to request attachment to a Gateway or other supported parent. The controller writes status for each parent, including acceptance and resolution failures. This two-sided model prevents an application namespace from unilaterally taking over shared entry infrastructure.
+
+<ReferenceTable caption="Route conditions localize failures" headers={['Condition or reason', 'Question it answers', 'Likely investigation']} rows={[
+  ['Accepted', 'Did the parent accept this Route?', 'parentRefs, allowedRoutes, hostname intersection, Route kind'],
+  ['ResolvedRefs', 'Do backend and certificate references resolve and have permission?', 'Names, namespaces, ports, ReferenceGrant'],
+  ['Programmed', 'Was usable data-plane configuration produced?', 'Controller, provider API, address, listener, implementation health'],
+  ['Conflicted', 'Does this listener or Route conflict with another declaration?', 'Ports, protocols, hostnames, precedence, implementation rules'],
+]} />
+
+Do not treat `kubectl apply` success as traffic readiness. Admission validates object shape; controller status reports reconciliation.
+
+## HTTPRoute matching and precedence
+
+An `HTTPRoute` can match hostnames, paths, headers, query parameters, or methods and can apply filters such as redirects, rewrites, header modification, mirroring, or extension behavior. Support levels vary, so check the implementation's conformance report.
+
+More specific matching wins according to Gateway API precedence rules; ties have defined comparisons and ultimately deterministic conflict handling. Avoid relying on resource creation order. Keep routes non-overlapping where human operators would struggle to predict ownership.
+
+<MechanismFlow label="An HTTP request through Gateway API" steps={[
+  { title: 'Listener accepts connection', detail: 'Address, port, protocol, hostname, and TLS must fit.' },
+  { title: 'Attached Routes compete', detail: 'Host and rule matches select the most specific accepted route.', tone: 'purple' },
+  { title: 'Filters transform behavior', detail: 'Redirects, rewrites, headers, or mirroring may apply.' },
+  { title: 'BackendRef receives traffic', detail: 'Weight and backend health influence the selected destination.', tone: 'green' },
+]} />
+
+Weights express proportional intent across backends; they do not guarantee an exact sequence of individual requests. Connection reuse, implementation algorithms, health, and small sample sizes affect observations.
+
+## Backends and cross-namespace trust
+
+An HTTPRoute commonly targets a Service by name and port. A same-namespace reference is straightforward. Cross-namespace backend references require a `ReferenceGrant` in the backend namespace, so the owner of the referenced resource explicitly grants trust. [Gateway security model ↗](https://gateway-api.sigs.k8s.io/docs/concepts/security/)
+
+Route attachment across namespaces and backend references across namespaces are different relationships. `allowedRoutes` governs which Routes attach to a Gateway listener; `ReferenceGrant` governs supported references to resources in another namespace. Needing one does not imply that the other is satisfied.
+
+Grant the narrowest useful combination of source group, kind, namespace, and destination kind/name. Broad grants can turn a shared Gateway into a path for unintended cross-team access.
+
+## TLS termination and passthrough
+
+TLS behavior depends on the listener protocol and implementation. A terminating HTTPS listener references certificates and exposes HTTP semantics to attached HTTPRoutes. TLS passthrough keeps encryption to a downstream target and routes with information available before decryption, such as SNI, when supported by the relevant Route type.
+
+Certificate Secrets are namespaced. Cross-namespace certificate references require supported reference semantics and explicit grants. Validate hostname coverage, chain, expiry, key type, protocol negotiation, and which component actually terminates TLS.
+
+Backend TLS is a separate hop. Terminating client TLS at the Gateway does not imply that traffic to the backend is encrypted, and enabling backend TLS requires trust configuration appropriate to the implementation and API version.
+
+## Ingress compared with Gateway API
+
+Ingress is stable and widely implemented, but its API is frozen. Kubernetes recommends Gateway API for continued development. Ingress combines entry and routing concepts in a smaller model; implementation-specific annotations often supply features absent from the core API. [Kubernetes Ingress ↗](https://kubernetes.io/docs/concepts/services-networking/ingress/)
+
+<ReferenceTable caption="Ingress and Gateway API" headers={['Concern', 'Ingress', 'Gateway API']} rows={[
+  ['Infrastructure ownership', 'IngressClass plus controller conventions', 'GatewayClass and Gateway are explicit layers'],
+  ['Application routing', 'Ingress rules', 'Protocol-specific Route resources'],
+  ['Shared gateways', 'Possible but controller-dependent', 'First-class attachment and namespace policy'],
+  ['Advanced matching', 'Often annotations or custom resources', 'Portable core/extended filters with declared support'],
+  ['Evolution', 'Stable but frozen', 'Actively developed with conformance profiles'],
+]} />
+
+Migration is not a mechanical YAML conversion. Inventory annotations, TLS behavior, redirects, rewrites, timeouts, source IP, health checks, load-balancer attributes, default backends, and DNS automation. Run both paths with separate addresses or controlled DNS while comparing responses and telemetry.
+
+## The real packet path
+
+The API diagram does not dictate hops. One implementation may provision a cloud load balancer targeting Nodes, another may target Pod addresses, and another may run an in-cluster proxy behind a LoadBalancer Service. Some combine these layers.
+
+Map the deployed route explicitly: external DNS → advertised address → provider or on-prem load balancer → Node or Pod target → Gateway proxy → Service or endpoint → application. Record NAT, TLS termination, health checks, NetworkPolicy boundaries, and the return path at each transition.
+
+## Security boundaries
+
+Gateway exposure increases the importance of namespace trust, RBAC, certificate access, controller credentials, allowed Route kinds, backend grants, and status visibility. Route authors should not be able to reference arbitrary Secrets or Services merely because a shared Gateway exists.
+
+NetworkPolicy applies to Pod traffic where the installed implementation enforces it, but the source address visible at the backend can be a proxy Pod or Node rather than the original client. Layer 7 authorization belongs in the application, proxy, or an appropriate policy extension—not in standard NetworkPolicy.
+
+## Troubleshoot from status inward
+
+<div class="command-stack">
+  <div><span>01</span><p>Confirm the implementation and its supported Gateway API version, resources, features, and conformance profile.</p></div>
+  <div><span>02</span><p>Inspect <code>kubectl get gatewayclass -o yaml</code>. Verify controllerName and Accepted status before debugging a Gateway.</p></div>
+  <div><span>03</span><p>Inspect Gateway addresses, listeners, Accepted and Programmed conditions, certificate references, and controller events.</p></div>
+  <div><span>04</span><p>Inspect each Route parent's status. Resolve attachment, hostname, kind, ReferenceGrant, and backend-port errors before sending traffic.</p></div>
+  <div><span>05</span><p>Test the backend Service and endpoints from inside the cluster. A Gateway cannot repair an empty EndpointSlice or wrong targetPort.</p></div>
+  <div><span>06</span><p>Send a request directly to the Gateway address with the intended SNI and HTTP Host header. This separates external DNS from listener and route matching.</p></div>
+  <div><span>07</span><p>Inspect controller logs, provisioned infrastructure, health checks, firewall policy, proxy metrics/logs, TLS details, and backend response.</p></div>
+  <div><span>08</span><p>Trace the return path and source address. A successful forward route can still fail through asymmetric routing or security policy.</p></div>
+</div>
+
+## Practical implications
+
+Use status conditions as part of deployment readiness, not just troubleshooting. A rollout that creates Routes but ignores `Accepted`, `ResolvedRefs`, and `Programmed` can report success while serving no traffic.
+
+Document the boundary between portable Gateway API behavior and implementation extensions. Prefer standard fields where they meet the requirement; isolate provider-specific configuration so controller migrations do not require rediscovering hidden annotation behavior.

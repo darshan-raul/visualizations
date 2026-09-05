@@ -1,10 +1,10 @@
 ---
 import { getEntry, render } from 'astro:content';
 import TopicLayout from '../layouts/TopicLayout.astro';
-import '../styles/rds.css';
+import '../styles/k8s.css';
 
-const topic = await getEntry('topics', 'rds-backup-retention');
-if (!topic) throw new Error('RDS Backup Retention content is missing');
+const topic = await getEntry('topics', 'k8s-networking');
+if (!topic) throw new Error('Kubernetes Networking content is missing');
 const { Content, headings } = await render(topic);
 const sections = headings.filter(({ depth }) => depth === 2).map(({ slug, text }) => ({ id: slug, label: text }));
 ---

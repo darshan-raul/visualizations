@@ -1,53 +1,48 @@
-<div class="retention-lab" data-retention-lab>
-  <div class="lab-head">
-    <div><span>Interactive model</span><h3>A rolling recovery window</h3></div>
-    <fieldset>
-      <legend>Retention</legend>
-      <button type="button" data-days="1">1 day</button>
-      <button type="button" data-days="3">3 days</button>
-      <button type="button" data-days="7" aria-pressed="true">7 days</button>
-    </fieldset>
-  </div>
-  <div class="timeline-axis" aria-hidden="true"><span>Earlier</span><span>Illustrative “now”</span></div>
-  <div class="retention-days" role="img" aria-label="Eight days of backup activity with the selected rolling retention window">
-    {Array.from({ length: 8 }, (_, index) => (
-      <div class="retention-day" data-day={index + 1}>
-        <span class="day-label">Day {index + 1}</span>
-        <span class="snapshot-mark"><i></i> snapshot</span>
-        <span class="log-line" aria-hidden="true"></span>
-        <small>logs</small>
-      </div>
-    ))}
-  </div>
-  <div class="window-summary">
-    <div><span>Earliest conceptual point</span><strong data-earliest>Start of day 2</strong></div>
-    <div><span>Latest conceptual point</span><strong>Near “now”</strong></div>
-    <p data-window-copy>Days 2–8 form the seven-day recovery window. Day 1 has aged out.</p>
-  </div>
-</div>
+---
+const days = Array.from({ length: 9 }, (_, index) => index + 1);
+---
 
-<script>
-  for (const lab of document.querySelectorAll<HTMLElement>('[data-retention-lab]')) {
-    const buttons = [...lab.querySelectorAll<HTMLButtonElement>('[data-days]')];
-    const days = [...lab.querySelectorAll<HTMLElement>('[data-day]')];
-    const earliest = lab.querySelector<HTMLElement>('[data-earliest]');
-    const copy = lab.querySelector<HTMLElement>('[data-window-copy]');
+<figure class="rolling-window" aria-labelledby="rolling-window-title">
+  <figcaption>
+    <span>Static mental model · seven-day example</span>
+    <h3 id="rolling-window-title">The window moves forward with time</h3>
+    <p>Compare the same retention setting on two consecutive days. Green days are inside the available recovery window.</p>
+  </figcaption>
 
-    function update(retention: number) {
-      const firstIncluded = 9 - retention;
-      for (const day of days) {
-        const number = Number(day.dataset.day);
-        day.classList.toggle('expired', number < firstIncluded);
-        day.classList.toggle('included', number >= firstIncluded);
-      }
-      for (const button of buttons) button.setAttribute('aria-pressed', String(Number(button.dataset.days) === retention));
-      if (earliest) earliest.textContent = retention === 1 ? 'Start of day 8' : `Start of day ${firstIncluded}`;
-      if (copy) copy.textContent = retention === 1
-        ? 'Only day 8 remains in this simplified one-day recovery window.'
-        : `Days ${firstIncluded}–8 form the ${retention}-day recovery window. Earlier days have aged out.`;
-    }
+  <div class="window-comparison" role="img" aria-label="Today, days 2 through 8 are in the seven-day recovery window. One day later, days 3 through 9 are in the window. Day 2 leaves as day 9 enters.">
+    <div class="window-state">
+      <div class="state-heading"><span>Today</span><strong>Day 8 is “now”</strong></div>
+      <ol class="window-track">
+        {days.map((day) => (
+          <li class:list={{ outside: day === 1, available: day >= 2 && day <= 8, future: day === 9, start: day === 2, end: day === 8 }}>
+            <span>Day {day}</span>
+            <i aria-hidden="true"></i>
+            <small>{day === 1 ? 'aged out' : day === 9 ? 'not yet' : day === 8 ? 'latest' : 'available'}</small>
+          </li>
+        ))}
+      </ol>
+    </div>
 
-    for (const button of buttons) button.addEventListener('click', () => update(Number(button.dataset.days)));
-    update(7);
-  }
-</script>
+    <div class="window-shift" aria-hidden="true">
+      <span>Day 2 leaves</span><i>→</i><strong>the seven-day window shifts</strong><i>→</i><span>Day 9 enters</span>
+    </div>
+
+    <div class="window-state">
+      <div class="state-heading"><span>One day later</span><strong>Day 9 is “now”</strong></div>
+      <ol class="window-track">
+        {days.map((day) => (
+          <li class:list={{ outside: day <= 2, available: day >= 3, entering: day === 9, start: day === 3, end: day === 9 }}>
+            <span>Day {day}</span>
+            <i aria-hidden="true"></i>
+            <small>{day <= 2 ? day === 2 ? 'just left' : 'aged out' : day === 9 ? 'new latest' : 'available'}</small>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </div>
+
+  <div class="window-takeaway">
+    <strong>What changed?</strong>
+    <p>The retention setting stayed at seven days. The boundary moved: the oldest day left the window as a new day entered it.</p>
+  </div>
+</figure>

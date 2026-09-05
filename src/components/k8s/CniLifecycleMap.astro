@@ -1,0 +1,7 @@
+<figure class="companion-map" aria-labelledby="cni-map-title">
+  <figcaption><span>Lifecycle map</span><h3 id="cni-map-title">The runtime owns the CNI transaction</h3><p>Kubernetes desired state reaches the plugin through the node runtime; the plugin then changes host and sandbox networking.</p></figcaption>
+  <div class="lane"><span>Control plane</span><b>Pod scheduled</b><i>→</i><b>kubelet observes assignment</b></div>
+  <div class="lane purple"><span>Node runtime</span><b>Create sandbox</b><i>→</i><b>Invoke CNI ADD</b><i>→</i><b>Persist result</b></div>
+  <div class="lane green"><span>Network state</span><b>Interface + address</b><i>→</i><b>Routes / policy</b><i>→</i><b>Reachable Pod</b></div>
+  <div class="map-foot">Deletion reverses the transaction: runtime → CNI DEL → release attachments and IPAM state.</div>
+</figure>

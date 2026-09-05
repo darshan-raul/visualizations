@@ -1,0 +1,49 @@
+---
+const paths = [
+  {
+    name: 'Inside one Pod',
+    promise: 'Shared network namespace',
+    nodes: ['Container A', 'localhost', 'Container B'],
+    note: 'The containers share IP addresses and ports. They must coordinate port usage.',
+  },
+  {
+    name: 'Pod → Pod',
+    promise: 'Direct pod addresses',
+    nodes: ['Source Pod', 'Pod network', 'Destination Pod'],
+    note: 'Same-node and cross-node forwarding are implementation details: routing, switching, encapsulation, cloud interfaces, or eBPF may be involved.',
+  },
+  {
+    name: 'Pod → Service',
+    promise: 'Stable frontend, changing backends',
+    nodes: ['DNS / ClusterIP', 'Service data plane', 'Endpoint Pod'],
+    note: 'A service proxy selects an eligible EndpointSlice backend and normally rewrites the destination. DNS discovery and packet forwarding are separate steps.',
+  },
+  {
+    name: 'External → workload',
+    promise: 'Entry infrastructure plus routing policy',
+    nodes: ['External client', 'Load balancer / Gateway', 'Service → Pod'],
+    note: 'The controller implementation determines the real hops, source-address behavior, health checks, and where TLS terminates.',
+  },
+];
+---
+
+<figure class="traffic-paths" aria-labelledby="traffic-paths-title">
+  <figcaption>
+    <span>Path comparison</span>
+    <h3 id="traffic-paths-title">First identify which path is failing</h3>
+    <p>“Kubernetes networking” is not one path. Each path activates a different set of components.</p>
+  </figcaption>
+  <div class="path-list">
+    {paths.map((path, index) => (
+      <details open={index === 1}>
+        <summary><span>{String(index + 1).padStart(2, '0')}</span><strong>{path.name}</strong><small>{path.promise}</small></summary>
+        <div class="path-flow">
+          {path.nodes.map((node, nodeIndex) => (
+            <><b>{node}</b>{nodeIndex < path.nodes.length - 1 && <i aria-hidden="true">→</i>}</>
+          ))}
+        </div>
+        <p>{path.note}</p>
+      </details>
+    ))}
+  </div>
+</figure>
