@@ -1,0 +1,172 @@
+---
+title: RDS Backup Retention
+summary: See how system snapshots, transaction logs, and a rolling retention window combine to make point-in-time recovery possible.
+slug: rds-backup-retention
+collection: aws
+tags:
+  - Databases
+  - Backups
+  - Disaster Recovery
+technologies:
+  - Amazon RDS
+format: visual-brief
+difficulty: intermediate
+published: 2026-04-14
+reviewed: 2026-09-05
+versionScope: Amazon RDS DB instances; Aurora has separate backup behavior
+legacyPath: /rds-backup-retention
+featured: true
+state: reviewed
+sources:
+  - label: Introduction to RDS backups
+    url: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_WorkingWithAutomatedBackups.html
+  - label: Backup retention period
+    url: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_WorkingWithAutomatedBackups.BackupRetention.html
+  - label: Point-in-time restore
+    url: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_PIT.html
+  - label: Retaining automated backups
+    url: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_WorkingWithAutomatedBackups.Retaining.html
+  - label: Deleting a DB instance
+    url: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_DeleteInstance.html
+---
+
+import RetentionWindow from '../../components/rds/RetentionWindow.astro';
+
+## The mental model
+
+An RDS backup retention period is a **moving recovery window**. RDS creates automated storage snapshots during the configured backup window and uploads database transaction logs. Together, those backups let RDS restore a **new DB instance** to a point inside the available recovery window. [AWS backup model ↗](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_WorkingWithAutomatedBackups.html)
+
+It is tempting to picture retention as seven independent, permanent copies when the setting is seven days. That model creates the wrong intuition. Automated backups age out as the window advances; manual snapshots follow a different lifecycle.
+
+<RetentionWindow />
+
+> **Conceptual model:** The visualization groups activity into days to make the rolling window visible. Actual earliest and latest restorable times come from RDS, and the exact backup implementation remains service-managed.
+
+## What RDS keeps
+
+<div class="mechanism-flow" aria-label="A system snapshot and transaction logs combine to restore a new DB instance">
+  <div class="mechanism-source">
+    <span class="mechanism-index">01</span>
+    <strong>System snapshot</strong>
+    <small>Storage state captured during the backup window</small>
+  </div>
+  <span class="flow-plus" aria-hidden="true">+</span>
+  <div class="mechanism-source purple">
+    <span class="mechanism-index">02</span>
+    <strong>Transaction logs</strong>
+    <small>Uploaded to RDS about every five minutes</small>
+  </div>
+  <span class="flow-arrow" aria-hidden="true">→</span>
+  <div class="mechanism-source green">
+    <span class="mechanism-index">03</span>
+    <strong>New DB instance</strong>
+    <small>Restored to the selected available time</small>
+  </div>
+</div>
+
+The first automated snapshot of a DB instance contains the data for the full database. AWS documents subsequent snapshots of the same database as incremental: they save data changed since the most recent snapshot. That does **not** mean you must preserve or manage an exposed chain yourself. RDS owns the backup set and exposes restore points, not its internal storage graph. [AWS snapshot behavior ↗](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_WorkingWithAutomatedBackups.html)
+
+For DB instances, RDS uploads transaction logs to Amazon S3 every five minutes. The **latest restorable time** therefore trails the present; it should be read from RDS rather than calculated locally. A point-in-time restore does not rewind the running database in place—it creates another DB instance. [AWS point-in-time restore ↗](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_PIT.html)
+
+## Four things that sound similar
+
+<div class="backup-grid">
+  <article>
+    <span class="type-label automated">Automated</span>
+    <h3>Automated backup</h3>
+    <p>Service-managed system snapshots and transaction logs used for point-in-time recovery. They expire with the configured window.</p>
+  </article>
+  <article>
+    <span class="type-label manual">Manual</span>
+    <h3>Manual snapshot</h3>
+    <p>A snapshot you request. It remains until you explicitly delete it and is independent of automated-backup expiry.</p>
+  </article>
+  <article>
+    <span class="type-label final">At deletion</span>
+    <h3>Final snapshot</h3>
+    <p>An optional snapshot created while deleting an instance. Like other manual snapshots, it does not expire automatically.</p>
+  </article>
+  <article>
+    <span class="type-label retained">Retained set</span>
+    <h3>Retained automated backups</h3>
+    <p>System snapshots and logs kept after instance deletion. They continue expiring under the retention period that existed at deletion.</p>
+  </article>
+</div>
+
+## What expires—and what does not
+
+When an automated recovery point moves outside the retention window, RDS removes what is no longer required to offer that recovery range. The operational fact to rely on is the **earliest restorable time**, not the presence of a particular daily snapshot.
+
+<div class="compare-panel">
+  <div>
+    <span class="compare-kicker expires">Moves with time</span>
+    <h3>Automated recovery window</h3>
+    <ul>
+      <li>System-managed</li>
+      <li>Supports point-in-time recovery</li>
+      <li>Old recovery time leaves the window</li>
+      <li>Can be disabled with retention set to 0 for a DB instance</li>
+    </ul>
+  </div>
+  <div>
+    <span class="compare-kicker persists">Persists</span>
+    <h3>Manual or final snapshot</h3>
+    <ul>
+      <li>User-managed lifecycle</li>
+      <li>Restores to the snapshot state</li>
+      <li>Does not expire automatically</li>
+      <li>Can continue incurring backup storage charges</li>
+    </ul>
+  </div>
+</div>
+
+## Deleting the instance
+
+Deletion presents two independent backup choices. Treat them separately.
+
+<div class="decision-tree" aria-label="Backup choices when deleting an RDS DB instance">
+  <div class="decision-root">Delete DB instance</div>
+  <div class="decision-branch">
+    <article>
+      <span>Choice A</span>
+      <h3>Create a final snapshot?</h3>
+      <p><strong>Yes:</strong> a persistent snapshot remains until you delete it.</p>
+      <p><strong>No:</strong> no new final snapshot is created.</p>
+    </article>
+    <article>
+      <span>Choice B</span>
+      <h3>Retain automated backups?</h3>
+      <p><strong>Yes:</strong> the existing recovery set remains temporarily and continues aging out.</p>
+      <p><strong>No:</strong> same-Region automated backups are deleted with the instance.</p>
+    </article>
+  </div>
+</div>
+
+Manual snapshots that already exist are not deleted with the DB instance. A final snapshot is independent of retained automated backups, and AWS recommends taking one even when automated backups are retained because the retained set eventually expires. [AWS deletion behavior ↗](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_DeleteInstance.html)
+
+## Operational boundaries
+
+<div class="fact-stack">
+  <div><strong>1–35 days</strong><span>Configurable automated-backup retention for an RDS DB instance. Setting it to 0 disables automated backups.</span></div>
+  <div><strong>Every 5 minutes</strong><span>Documented transaction-log upload cadence for DB instances; this is not a promise that “now” is immediately restorable.</span></div>
+  <div><strong>New instance</strong><span>Snapshot and point-in-time restores create a new DB instance rather than mutating the source in place.</span></div>
+  <div><strong>Available state</strong><span>Automated backups occur while the DB instance is available, not in states such as <code>storage_full</code>.</span></div>
+</div>
+
+Time spent while an RDS DB instance is stopped is not counted toward its backup retention period. Multi-AZ DB clusters cannot set retention to 0, and retained automated backups after deletion have additional limitations. Aurora uses a different continuous-backup model and is outside this explainer’s scope.
+
+## Cost without false precision
+
+RDS backup storage in a Region includes automated backups and manual DB snapshots. Backup-storage allowances and charges depend on the running database storage and current RDS pricing. Retained automated backups and manual snapshots can incur charges after the source instance is deleted.
+
+The safe mental model is: **retention controls recoverability, not a fixed number of full billed copies**. Change rate, manual snapshots, retained backups, copies, Region, and whether the source database still exists all affect storage usage or billing. Use RDS billing metrics and the current pricing page for an actual cost decision.
+
+## Practical checklist
+
+<div class="checklist">
+  <div><span>01</span><p>Set retention from the recovery objective, not from a guess about snapshot count.</p></div>
+  <div><span>02</span><p>Monitor the earliest and latest restorable times that RDS reports.</p></div>
+  <div><span>03</span><p>Create a manual snapshot for a restore point that must outlive the rolling window.</p></div>
+  <div><span>04</span><p>Before deletion, decide independently whether you need a final snapshot and retained automated backups.</p></div>
+  <div><span>05</span><p>Test restoration into a new instance; backup existence alone does not prove recovery readiness.</p></div>
+</div>

@@ -3,7 +3,7 @@ import { glob } from 'astro/loaders';
 import { z } from 'astro/zod';
 
 const topics = defineCollection({
-  loader: glob({ pattern: '**/*.json', base: './src/content/topics' }),
+  loader: glob({ pattern: '**/*.{json,mdx}', base: './src/content/topics' }),
   schema: z.object({
     title: z.string(),
     summary: z.string(),
@@ -19,6 +19,7 @@ const topics = defineCollection({
     legacyPath: z.string(),
     featured: z.boolean().default(false),
     state: z.enum(['legacy', 'draft', 'reviewed']).default('legacy'),
+    sources: z.array(z.object({ label: z.string(), url: z.url() })).optional(),
   }),
 });
 

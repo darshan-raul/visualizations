@@ -17,7 +17,7 @@ The confirmed product and migration decisions live in [SITE-REBUILD-BRIEF.md](./
 
 Topic catalogue metadata lives in `src/content/topics/`. Shared layouts, components, and styling live under `src/`.
 
-The original standalone HTML explainers remain at the repository root during migration. `scripts/sync-legacy.mjs` copies them into `public/` before development and production builds so their existing URLs continue to work.
+The remaining standalone HTML explainers stay at the repository root during migration. `scripts/sync-legacy.mjs` copies them into `public/` before development and production builds so their existing URLs continue to work. Rebuilt explainers use canonical MDX content and Astro components under `src/`.
 
 ## Commands
 
@@ -46,12 +46,12 @@ The production build is written to `dist/`. Pagefind indexes both generated Astr
 
 ## Migration status
 
-Stage 1 establishes the shared shell, design system, metadata, collection pages, catalogue, filters, and search while preserving all legacy routes.
+Stage 1 established the shared shell, design system, metadata, collection pages, catalogue, filters, and search while preserving all public routes. RDS Backup Retention is now the first fully rebuilt explainer.
 
 The first editorial rebuilds are:
 
-1. RDS Backup Retention
-2. VPC Packet Flow
+1. ~~RDS Backup Retention~~ — rebuilt
+2. VPC Packet Flow — next
 
 Existing pages must be technically revalidated during migration rather than mechanically wrapped in the new shell.
 

@@ -1,0 +1,55 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import { collections, formatLabels } from '../lib/catalog';
+import '../styles/topic.css';
+
+const { topic, sections } = Astro.props;
+const data = topic.data;
+const collection = collections[data.collection as keyof typeof collections];
+const formatter = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
+---
+
+<BaseLayout title={data.title} description={data.summary}>
+  <div class="topic-shell shell">
+    <header class={`topic-hero collection-${data.collection}`}>
+      <nav class="breadcrumbs" aria-label="Breadcrumb">
+        <a href="/">Library</a><span aria-hidden="true">/</span><a href={`/${data.collection}`}>{collection.label}</a>
+      </nav>
+      <div class="topic-labels">
+        <span>{collection.label}</span>
+        <span>{formatLabels[data.format as keyof typeof formatLabels]}</span>
+        <span>{data.difficulty}</span>
+      </div>
+      <h1>{data.title}</h1>
+      <p>{data.summary}</p>
+      <div class="topic-meta">
+        <span>Published {formatter.format(data.published)}</span>
+        {data.reviewed && <span>Reviewed {formatter.format(data.reviewed)}</span>}
+        {data.versionScope && <span>{data.versionScope}</span>}
+      </div>
+    </header>
+
+    <div class="topic-layout">
+      <aside class="topic-aside">
+        <nav aria-label="On this page">
+          <span>On this page</span>
+          <ol>
+            {sections.map((section: any, index: number) => <li><a href={`#${section.id}`}><small>0{index + 1}</small>{section.label}</a></li>)}
+          </ol>
+        </nav>
+      </aside>
+      <article class="topic-content">
+        <slot />
+        {data.sources?.length > 0 && (
+          <section class="sources" id="sources">
+            <span class="content-kicker">Primary sources</span>
+            <h2>Read the AWS documentation</h2>
+            <ul>
+              {data.sources.map((source: any) => <li><a href={source.url} target="_blank" rel="noopener noreferrer">{source.label}<span aria-hidden="true">↗</span></a></li>)}
+            </ul>
+          </section>
+        )}
+      </article>
+    </div>
+  </div>
+</BaseLayout>
