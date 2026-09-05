@@ -1,0 +1,14 @@
+{
+  "title": "OpenTelemetry",
+  "summary": "Trace telemetry from application instrumentation through the collector pipeline to observability backends.",
+  "slug": "opentelemetry",
+  "collection": "devops-sre",
+  "tags": ["Observability", "Telemetry", "Troubleshooting"],
+  "technologies": ["OpenTelemetry"],
+  "format": "deep-dive",
+  "difficulty": "intermediate",
+  "published": "2026-06-01",
+  "legacyPath": "/opentelemetry",
+  "featured": true,
+  "state": "legacy"
+}

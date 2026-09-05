@@ -1,0 +1,14 @@
+{
+  "title": "VPC Packet Flow",
+  "summary": "Follow packets through subnets, route tables, gateways, security groups, NACLs, peering, and hybrid network paths.",
+  "slug": "vpc-flow",
+  "collection": "aws",
+  "tags": ["Networking", "Security", "Troubleshooting"],
+  "technologies": ["Amazon VPC", "Transit Gateway"],
+  "format": "flow-explorer",
+  "difficulty": "advanced",
+  "published": "2026-08-23",
+  "legacyPath": "/vpc-flow",
+  "featured": true,
+  "state": "legacy"
+}

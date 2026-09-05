@@ -1,0 +1,27 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import LibraryExplorer from '../components/LibraryExplorer.astro';
+import { collections, type CollectionSlug } from '../lib/catalog';
+
+export function getStaticPaths() {
+  return Object.keys(collections).map((collection) => ({ params: { collection } }));
+}
+
+const slug = Astro.params.collection as CollectionSlug;
+const collection = collections[slug];
+const topics = (await getCollection('topics', ({ data }) => data.collection === slug))
+  .sort((a, b) => a.data.title.localeCompare(b.data.title));
+---
+
+<BaseLayout title={collection.label} description={collection.description}>
+  <section class={`page-intro collection-intro collection-${slug} shell`}>
+    <span class="eyebrow"><i></i> {collection.eyebrow}</span>
+    <h1>{collection.label}</h1>
+    <p>{collection.description}</p>
+    <div class="intro-meta"><span>{topics.length} visualizations</span><span>Independent references</span></div>
+  </section>
+  <section class="catalogue-section shell">
+    <LibraryExplorer topics={topics} compact />
+  </section>
+</BaseLayout>

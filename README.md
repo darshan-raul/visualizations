@@ -1,40 +1,60 @@
-# Interactive Visualizations
+# Infra Illustrated
 
-Deep-dive, interactive explainers for devops and cloud concepts — how it actually works under the hood.
+**Visual deep dives into cloud infrastructure.**
 
-No build system. No tests. Pure HTML/CSS/JS, deployed automatically on Vercel from the main branch.
+Infra Illustrated is a static visual reference library focused on AWS, Kubernetes, DevOps, SRE, and the foundations beneath them. Topics are independent references rather than a course or prescribed learning path.
 
----
+The confirmed product and migration decisions live in [SITE-REBUILD-BRIEF.md](./SITE-REBUILD-BRIEF.md).
 
-## Available Visualizations
+## Current architecture
 
-| | Name | Topics |
-|---|------|--------|
-| 🗄️ | [RDS Backup Retention](./rds-backup-retention.html) | EBS snapshots, block reference counting, PITR |
-| 🔐 | [OAuth 2.0 & OIDC Flows](./oauth2-explainer.html) | Authorization Code, PKCE, JWT decoder |
-| ⚙️ | [GitHub Actions Cheatsheet](./github-actions-cheatsheet.html) | Workflows, triggers, secrets, matrix builds |
-| 🛡️ | [DevSecOps Pipeline](./secopspipeline.html) | Gitleaks, Trivy, Cosign, canary deploys |
-| ☸️ | [Kubernetes Networking](./k8s-networking.html) | CNI, veth, VXLAN, kube-proxy, CoreDNS, Ingress |
-| 🐳 | [Docker Multi-Architecture](./docker-multiarch.html) | Buildx, multi-arch manifests, CPU architectures |
-| 📊 | [OpenTelemetry](./opentelemetry.html) | Traces, metrics, logs, OTel collector pipeline |
-| 🌐 | [VPC Packet Flow](./vpc-flow.html) | Subnets, SG vs NACL, Peering, Transit Gateway, Cross-Region |
+- Astro with static output
+- TypeScript and validated content collections
+- MDX support for rebuilt explainers
+- Pagefind for generated full-text search
+- Static deployment on Vercel
+- No database, accounts, CMS, server API, or analytics
 
----
+Topic catalogue metadata lives in `src/content/topics/`. Shared layouts, components, and styling live under `src/`.
 
-## Adding a New Visualization
+The original standalone HTML explainers remain at the repository root during migration. `scripts/sync-legacy.mjs` copies them into `public/` before development and production builds so their existing URLs continue to work.
 
-Create a new HTML file and follow the [AGENTS.md](./AGENTS.md) guide for the established pattern — back button, tab navigation, design tokens, reusable CSS components.
+## Commands
 
-Add a card to `index.html` and assign a color theme (`.theme-blue`, `.theme-cyan`, `.theme-green`, `.theme-amber`, `.theme-purp`, etc.).
+```sh
+npm install
+npm run dev
+npm run check
+npm run build
+npm run preview
+```
 
----
+The production build is written to `dist/`. Pagefind indexes both generated Astro pages and the preserved legacy explainers after each build.
 
-## Development
+## Current visualizations
 
-No dev server needed. Open any HTML file directly in a browser to preview.
+| Collection | Visualization | Format |
+|---|---|---|
+| AWS | RDS Backup Retention | Visual Brief |
+| AWS | VPC Packet Flow | Flow Explorer |
+| Kubernetes | Kubernetes Networking | Deep Dive |
+| DevOps & SRE | OpenTelemetry | Deep Dive |
+| DevOps & SRE | GitHub Actions Cheatsheet | Operational Reference |
+| DevOps & SRE | DevSecOps Pipeline | Flow Explorer |
+| Foundations | Docker Multi-Architecture | Deep Dive |
+| Foundations | OAuth 2.0 & OIDC | Flow Explorer |
 
----
+## Migration status
 
-## Deploy
+Stage 1 establishes the shared shell, design system, metadata, collection pages, catalogue, filters, and search while preserving all legacy routes.
 
-Vercel auto-deploys from the main branch. Configure via `vercel.json`.
+The first editorial rebuilds are:
+
+1. RDS Backup Retention
+2. VPC Packet Flow
+
+Existing pages must be technically revalidated during migration rather than mechanically wrapped in the new shell.
+
+## Deployment
+
+Vercel builds the project with `npm run build` and serves `dist/`. Do not commit or push changes unless the user explicitly requests that specific operation.

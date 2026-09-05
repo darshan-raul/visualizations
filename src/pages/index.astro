@@ -1,0 +1,48 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import CollectionNav from '../components/CollectionNav.astro';
+import LibraryExplorer from '../components/LibraryExplorer.astro';
+
+const topics = await getCollection('topics');
+const sortedTopics = topics.sort((a, b) => Number(b.data.featured) - Number(a.data.featured) || a.data.title.localeCompare(b.data.title));
+---
+
+<BaseLayout>
+  <section class="hero shell">
+    <div class="hero-copy">
+      <span class="eyebrow"><i></i> Visual infrastructure reference</span>
+      <h1>The machinery behind<br /><span>modern infrastructure.</span></h1>
+      <p>Visual deep dives into cloud infrastructure. Trace the packets, policies, controllers, logs, and state changes that documentation leaves implicit.</p>
+      <div class="hero-actions">
+        <a class="primary-action" href="#library">Explore the library <span aria-hidden="true">↓</span></a>
+        <span>{topics.length} visualizations · AWS and Kubernetes first</span>
+      </div>
+    </div>
+    <div class="hero-diagram" aria-label="A conceptual flow from request through infrastructure layers">
+      <div class="diagram-caption"><span>request.flow</span><span>live model</span></div>
+      <div class="diagram-stage">
+        <div class="flow-line" aria-hidden="true"></div>
+        <div class="diagram-node node-client"><small>01</small><strong>Request</strong><span>client → edge</span></div>
+        <div class="diagram-node node-control"><small>02</small><strong>Control plane</strong><span>policy · routing</span></div>
+        <div class="diagram-node node-runtime"><small>03</small><strong>Runtime</strong><span>compute · state</span></div>
+        <div class="packet packet-one" aria-hidden="true"></div>
+        <div class="packet packet-two" aria-hidden="true"></div>
+      </div>
+      <div class="diagram-legend"><span><i class="healthy"></i> healthy path</span><span><i class="control"></i> control activity</span></div>
+    </div>
+  </section>
+
+  <CollectionNav />
+
+  <section class="catalogue-section shell" id="library">
+    <div class="section-heading catalogue-heading">
+      <div>
+        <span>Explore the library</span>
+        <h2>Find the layer you need.</h2>
+      </div>
+      <p>Each visual stands on its own. Search by mechanism, service, or the problem you are trying to understand.</p>
+    </div>
+    <LibraryExplorer topics={sortedTopics} />
+  </section>
+</BaseLayout>

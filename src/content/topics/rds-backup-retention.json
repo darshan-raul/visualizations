@@ -1,0 +1,14 @@
+{
+  "title": "RDS Backup Retention",
+  "summary": "See how automated backups, snapshots, transaction logs, and point-in-time recovery interact across a retention window.",
+  "slug": "rds-backup-retention",
+  "collection": "aws",
+  "tags": ["Databases", "Backups", "Disaster Recovery"],
+  "technologies": ["Amazon RDS"],
+  "format": "visual-brief",
+  "difficulty": "intermediate",
+  "published": "2026-04-14",
+  "legacyPath": "/rds-backup-retention",
+  "featured": true,
+  "state": "legacy"
+}

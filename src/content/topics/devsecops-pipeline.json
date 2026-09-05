@@ -1,0 +1,14 @@
+{
+  "title": "DevSecOps Pipeline",
+  "summary": "Explore where source, dependency, image, signing, policy, and deployment security checks fit in delivery pipelines.",
+  "slug": "secopspipeline",
+  "collection": "devops-sre",
+  "tags": ["CI/CD", "Security", "Supply Chain"],
+  "technologies": ["Gitleaks", "Trivy", "Cosign"],
+  "format": "flow-explorer",
+  "difficulty": "intermediate",
+  "published": "2026-04-24",
+  "legacyPath": "/secopspipeline",
+  "featured": false,
+  "state": "legacy"
+}

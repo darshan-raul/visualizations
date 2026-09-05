@@ -1,0 +1,14 @@
+{
+  "title": "OAuth 2.0 & OIDC",
+  "summary": "Walk through authorization flows, PKCE, tokens, identity claims, and the trust boundaries behind modern sign-in.",
+  "slug": "oauth2-explainer",
+  "collection": "foundations",
+  "tags": ["Identity", "Security", "Protocols"],
+  "technologies": ["OAuth 2.0", "OpenID Connect", "JWT"],
+  "format": "flow-explorer",
+  "difficulty": "intermediate",
+  "published": "2026-04-16",
+  "legacyPath": "/oauth2-explainer",
+  "featured": false,
+  "state": "legacy"
+}

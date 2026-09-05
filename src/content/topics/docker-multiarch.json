@@ -1,0 +1,14 @@
+{
+  "title": "Docker Multi-Architecture",
+  "summary": "Understand image indexes, platform manifests, emulation, native builders, and cross-platform container delivery.",
+  "slug": "docker-multiarch",
+  "collection": "foundations",
+  "tags": ["Containers", "Builds", "Architecture"],
+  "technologies": ["Docker", "Buildx", "OCI"],
+  "format": "deep-dive",
+  "difficulty": "intermediate",
+  "published": "2026-05-13",
+  "legacyPath": "/docker-multiarch",
+  "featured": false,
+  "state": "legacy"
+}

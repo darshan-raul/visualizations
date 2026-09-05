@@ -1,0 +1,38 @@
+---
+import { collections, formatLabels } from '../lib/catalog';
+
+const { topic } = Astro.props;
+const data = topic.data;
+const collection = collections[data.collection as keyof typeof collections];
+const searchText = [data.title, data.summary, collection.label, ...data.tags, ...data.technologies].join(' ').toLowerCase();
+---
+
+<article
+  class={`topic-card collection-${data.collection}`}
+  data-topic-card
+  data-collection={data.collection}
+  data-format={data.format}
+  data-tags={data.tags.join('|')}
+  data-technologies={data.technologies.join('|')}
+  data-search={searchText}
+  data-url={data.legacyPath}
+>
+  <a href={data.legacyPath} aria-label={`Open ${data.title}`}>
+    <div class="card-topline">
+      <span class="collection-label">{collection.label}</span>
+      <span class="format-label">{formatLabels[data.format as keyof typeof formatLabels]}</span>
+    </div>
+    <div class="card-glyph" aria-hidden="true">
+      <span></span><span></span><span></span>
+    </div>
+    <h3>{data.title}</h3>
+    <p>{data.summary}</p>
+    <ul class="tag-list" aria-label="Tags">
+      {data.tags.slice(0, 3).map((tag: string) => <li>{tag}</li>)}
+    </ul>
+    <div class="card-foot">
+      <span>{data.difficulty}</span>
+      <span class="open-label">Explore <span aria-hidden="true">→</span></span>
+    </div>
+  </a>
+</article>

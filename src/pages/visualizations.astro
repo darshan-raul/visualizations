@@ -1,0 +1,18 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import LibraryExplorer from '../components/LibraryExplorer.astro';
+
+const topics = (await getCollection('topics')).sort((a, b) => a.data.title.localeCompare(b.data.title));
+---
+
+<BaseLayout title="All visualizations" description="Browse every visual deep dive in Infra Illustrated.">
+  <section class="page-intro shell">
+    <span class="eyebrow"><i></i> Complete catalogue</span>
+    <h1>Every system,<br /><span>ready to inspect.</span></h1>
+    <p>Search the complete reference library or narrow it by collection, topic, technology, and format.</p>
+  </section>
+  <section class="catalogue-section shell">
+    <LibraryExplorer topics={topics} />
+  </section>
+</BaseLayout>

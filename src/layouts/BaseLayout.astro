@@ -1,0 +1,62 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = 'Infra Illustrated',
+  description = 'Visual deep dives into cloud infrastructure.',
+} = Astro.props;
+
+const pageTitle = title === 'Infra Illustrated' ? title : `${title} · Infra Illustrated`;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#090c13" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <title>{pageTitle}</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <div class="ambient" aria-hidden="true"></div>
+    <header class="site-header">
+      <div class="shell header-inner">
+        <a class="brand" href="/" aria-label="Infra Illustrated home">
+          <span class="brand-mark" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </span>
+          <span>Infra, <em>Illustrated.</em></span>
+        </a>
+        <nav aria-label="Primary navigation">
+          <a href="/visualizations">Explore</a>
+          <a href="/aws">AWS</a>
+          <a href="/kubernetes">Kubernetes</a>
+          <a href="/devops-sre">DevOps & SRE</a>
+          <a href="/foundations">Foundations</a>
+        </nav>
+      </div>
+    </header>
+    <main id="main-content">
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <div class="shell footer-inner">
+        <div>
+          <a class="brand footer-brand" href="/">Infra, <em>Illustrated.</em></a>
+          <p>Visual deep dives into cloud infrastructure.</p>
+        </div>
+        <a href="/visualizations">Browse all visuals <span aria-hidden="true">↗</span></a>
+      </div>
+    </footer>
+  </body>
+</html>

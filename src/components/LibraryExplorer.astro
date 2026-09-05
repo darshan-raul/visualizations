@@ -1,0 +1,155 @@
+---
+import TopicCard from './TopicCard.astro';
+import { collections, formatLabels } from '../lib/catalog';
+
+const { topics, compact = false } = Astro.props;
+const tags = [...new Set<string>(topics.flatMap((topic: any): string[] => topic.data.tags))].sort();
+const technologies = [...new Set<string>(topics.flatMap((topic: any): string[] => topic.data.technologies))].sort();
+---
+
+<section class:list={["library", { compact }]} data-library>
+  <div class="library-tools" aria-label="Filter visualizations">
+    <label class="search-field">
+      <span class="sr-only">Search visualizations</span>
+      <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m16.2 16.2 4 4"></path></svg>
+      <input type="search" placeholder="Search systems, services, or concepts…" autocomplete="off" data-search-input />
+      <kbd>/</kbd>
+    </label>
+    <div class="filter-row">
+      <label>
+        <span>Collection</span>
+        <select data-filter="collection">
+          <option value="">All collections</option>
+          {Object.entries(collections).map(([slug, item]) => <option value={slug}>{item.label}</option>)}
+        </select>
+      </label>
+      <label>
+        <span>Topic</span>
+        <select data-filter="tags">
+          <option value="">All topics</option>
+          {tags.map((tag) => <option value={tag}>{tag}</option>)}
+        </select>
+      </label>
+      <label>
+        <span>Technology</span>
+        <select data-filter="technologies">
+          <option value="">All technologies</option>
+          {technologies.map((technology) => <option value={technology}>{technology}</option>)}
+        </select>
+      </label>
+      <label>
+        <span>Format</span>
+        <select data-filter="format">
+          <option value="">All formats</option>
+          {Object.entries(formatLabels).map(([slug, label]) => <option value={slug}>{label}</option>)}
+        </select>
+      </label>
+      <button class="reset-button" type="button" data-reset hidden>Reset</button>
+    </div>
+    <div class="active-filters" data-active-filters aria-live="polite"></div>
+  </div>
+
+  <div class="results-head">
+    <p data-results-status aria-live="polite">{topics.length} visualizations</p>
+    <span>Independent references. No required order.</span>
+  </div>
+  <div class="topic-grid" data-topic-grid>
+    {topics.map((topic: any) => <TopicCard topic={topic} />)}
+  </div>
+  <div class="empty-state" data-empty-state hidden>
+    <span aria-hidden="true">⌁</span>
+    <h2>No matching visual yet</h2>
+    <p>Try a broader term or clear one of the filters.</p>
+  </div>
+</section>
+
+<script>
+  const libraries = document.querySelectorAll<HTMLElement>('[data-library]');
+
+  for (const library of libraries) {
+    const input = library.querySelector<HTMLInputElement>('[data-search-input]');
+    const selects = [...library.querySelectorAll<HTMLSelectElement>('[data-filter]')];
+    const cards = [...library.querySelectorAll<HTMLElement>('[data-topic-card]')];
+    const status = library.querySelector<HTMLElement>('[data-results-status]');
+    const empty = library.querySelector<HTMLElement>('[data-empty-state]');
+    const reset = library.querySelector<HTMLButtonElement>('[data-reset]');
+    const chips = library.querySelector<HTMLElement>('[data-active-filters]');
+    let pagefind: any = null;
+
+    const cleanUrl = (url: string) => url.replace(/\.html$/, '').replace(/\/$/, '') || '/';
+
+    async function pagefindMatches(query: string) {
+      if (!query) return null;
+      try {
+        if (!pagefind) {
+          const loadPagefind = new Function("return import('/pagefind/pagefind.js')");
+          pagefind = await loadPagefind();
+          await pagefind.init();
+        }
+        const result = await pagefind.search(query);
+        const data = await Promise.all(result.results.map((item: any) => item.data()));
+        return new Set(data.map((item: any) => cleanUrl(item.url)));
+      } catch {
+        return null;
+      }
+    }
+
+    async function applyFilters(updateUrl = true) {
+      if (!input || !status || !empty || !reset || !chips) return;
+      const query = input.value.trim().toLowerCase();
+      const selected = Object.fromEntries(selects.map((select) => [select.dataset.filter!, select.value]));
+      const indexedMatches = await pagefindMatches(query);
+      let visible = 0;
+
+      for (const card of cards) {
+        const urlMatches = indexedMatches?.has(cleanUrl(card.dataset.url || ''));
+        const localMatches = (card.dataset.search || '').includes(query);
+        const queryMatches = !query || (indexedMatches ? Boolean(urlMatches) : localMatches);
+        const collectionMatches = !selected.collection || card.dataset.collection === selected.collection;
+        const formatMatches = !selected.format || card.dataset.format === selected.format;
+        const tagMatches = !selected.tags || (card.dataset.tags || '').split('|').includes(selected.tags);
+        const technologyMatches = !selected.technologies || (card.dataset.technologies || '').split('|').includes(selected.technologies);
+        const show = Boolean(queryMatches && collectionMatches && formatMatches && tagMatches && technologyMatches);
+        card.hidden = !show;
+        if (show) visible += 1;
+      }
+
+      status.textContent = `${visible} visualization${visible === 1 ? '' : 's'}`;
+      empty.hidden = visible !== 0;
+      const active = [query, ...Object.values(selected)].filter(Boolean);
+      reset.hidden = active.length === 0;
+      chips.replaceChildren(...active.map((value) => {
+        const chip = document.createElement('span');
+        chip.textContent = value;
+        return chip;
+      }));
+
+      if (updateUrl) {
+        const params = new URLSearchParams();
+        if (query) params.set('q', query);
+        for (const [key, value] of Object.entries(selected)) if (value) params.set(key, value);
+        history.replaceState(null, '', `${location.pathname}${params.size ? `?${params}` : ''}`);
+      }
+    }
+
+    const params = new URLSearchParams(location.search);
+    if (input) input.value = params.get('q') || '';
+    for (const select of selects) select.value = params.get(select.dataset.filter || '') || '';
+    void applyFilters(false);
+
+    input?.addEventListener('input', () => void applyFilters());
+    for (const select of selects) select.addEventListener('change', () => void applyFilters());
+    reset?.addEventListener('click', () => {
+      if (input) input.value = '';
+      for (const select of selects) select.value = '';
+      void applyFilters();
+      input?.focus();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === '/' && document.activeElement?.tagName !== 'INPUT') {
+        event.preventDefault();
+        input?.focus();
+      }
+    });
+  }
+</script>

@@ -1,0 +1,14 @@
+{
+  "title": "GitHub Actions Cheatsheet",
+  "summary": "Search practical workflow syntax, triggers, expressions, matrices, artifacts, caching, secrets, and deployment patterns.",
+  "slug": "github-actions-cheatsheet",
+  "collection": "devops-sre",
+  "tags": ["CI/CD", "Automation", "Reference"],
+  "technologies": ["GitHub Actions"],
+  "format": "operational-reference",
+  "difficulty": "foundational",
+  "published": "2026-04-24",
+  "legacyPath": "/github-actions-cheatsheet",
+  "featured": false,
+  "state": "legacy"
+}
