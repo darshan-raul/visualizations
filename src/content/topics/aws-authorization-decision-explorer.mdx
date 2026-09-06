@@ -1,0 +1,120 @@
+---
+title: AWS IAM Authorization Decision Explorer
+summary: Inspect the request context and applicable identity, resource, session, boundary, and Organizations policies to see why AWS allows or denies an action.
+slug: aws-authorization-decision-explorer
+collection: aws
+tags: [Identity, Security, IAM, Troubleshooting]
+technologies: [AWS IAM, AWS Organizations, AWS STS]
+format: flow-explorer
+difficulty: advanced
+published: 2026-09-06
+reviewed: 2026-09-06
+versionScope: IAM policy evaluation including SCPs and RCPs; reviewed September 2026
+legacyPath: /aws-authorization-decision-explorer
+featured: true
+state: reviewed
+related: [aws-identity-credential-flows]
+sources:
+  - label: Policy evaluation logic
+    url: https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic.html
+  - label: How AWS evaluates requests to allow or deny access
+    url: https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic_policy-eval-denyallow.html
+  - label: Processing the request context and the PARC model
+    url: https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic_policy-eval-reqcontext.html
+  - label: Cross-account policy evaluation logic
+    url: https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic-cross-account.html
+  - label: Permissions boundaries for IAM entities
+    url: https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html
+  - label: Principal policy element and role session principals
+    url: https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_principal.html
+  - label: IAM AccessDenied troubleshooting
+    url: https://docs.aws.amazon.com/IAM/latest/UserGuide/troubleshoot_access-denied.html
+---
+
+import AuthorizationDecisionExplorer from '../../components/iam/AuthorizationDecisionExplorer.astro';
+import PrincipalGrantComparison from '../../components/iam/PrincipalGrantComparison.astro';
+import PolicyStatementMatch from '../../components/iam/PolicyStatementMatch.astro';
+import MechanismFlow from '../../components/MechanismFlow.astro';
+import ReferenceTable from '../../components/ReferenceTable.astro';
+
+## Start with the request
+
+Authorization is not a property attached to a person in isolation. An AWS enforcement point evaluates a particular **principal**, **action**, **resource**, and set of **conditions**. AWS calls this the PARC model. Network origin, organization membership, session tags, resource tags, time, MFA context, and service-specific values can all become part of the request context. [AWS request context ↗](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic_policy-eval-reqcontext.html)
+
+<MechanismFlow
+  label="AWS constructs the request context, finds applicable policies, checks denies and allows, then returns a decision"
+  steps={[
+    { title: 'Authenticate', detail: 'Resolve the credential to a principal and session context', tone: 'purple' },
+    { title: 'Build context', detail: 'Principal + action + resource + condition values' },
+    { title: 'Evaluate policies', detail: 'Only policy types applicable to this request participate', tone: 'purple' },
+    { title: 'Decide', detail: 'Explicit deny, sufficient allow, or implicit deny', tone: 'green' },
+  ]}
+/>
+
+The useful question is not “Does this user have admin?” It is: **Which policy statements apply to this request, and where does the required allow or an overriding deny come from?**
+
+## Explore six decisions
+
+Switch among representative requests. Each case identifies the relevant principal boundary and policy behavior. The rows are a teaching model of the documented relationships, not a trace of AWS’s private implementation order. Without JavaScript, all cases remain readable.
+
+<AuthorizationDecisionExplorer />
+
+## Three rules, then the exceptions
+
+The durable starting rules are:
+
+1. A request is implicitly denied unless the applicable policy model supplies the required allow.
+2. Any applicable explicit `Deny` wins over an `Allow`.
+3. Limiting policies—permissions boundaries, session policies, SCPs, and RCPs—do not independently grant permissions.
+
+Those rules are necessary but not enough. Identity- and resource-based permissions normally form a union within one account, while boundaries and Organizations policies act as limits. The exact result changes with account boundaries, service behavior, principal type, the principal named by a resource policy, and which Organizations policies apply. [Policy evaluation overview ↗](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic.html)
+
+> **Do not memorize one Venn diagram as the IAM algorithm.** Use a simple diagram to orient yourself, then identify the concrete request, accounts, principal type, and applicable policies.
+
+## What each policy layer does
+
+<ReferenceTable caption="Policy types answer different questions" headers={['Policy type', 'Attached to or managed at', 'Role in the decision']} rows={[
+  ['Identity-based policy', 'IAM user, group, or role', 'Grants actions to the attached identity; the principal is implicit.'],
+  ['Resource-based policy', 'A supported resource, including an IAM role trust policy', 'Names principals that may access the resource or assume the role.'],
+  ['Permissions boundary', 'IAM user or role', 'Sets the maximum permissions identity-based policies can grant; it grants nothing by itself.'],
+  ['Session policy', 'Passed when creating some temporary sessions', 'Narrows the permissions available from the role or federated identity.'],
+  ['Service control policy', 'Organization root, OU, or account', 'Limits principals in affected member accounts; it does not grant permissions.'],
+  ['Resource control policy', 'Organization root, OU, or account', 'Limits access to affected resources; it does not grant permissions.'],
+]} />
+
+Not every AWS resource supports a resource-based policy, and supported elements differ by service. IAM role trust policies and AWS KMS key policies have special requirements. Always verify the authorization model of the service receiving the request.
+
+## Same-account and cross-account
+
+For many same-account requests, an allow from either an identity-based policy or a resource-based policy can supply permission, provided no applicable explicit deny or limiting-policy rule blocks it. Cross-account access normally needs both sides: the trusted account authorizes its principal, and the trusting resource account authorizes that principal in a resource-based policy. [Cross-account evaluation ↗](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic-cross-account.html)
+
+Assuming a cross-account role is one example of this handshake. The caller’s identity policy permits `sts:AssumeRole` on the target role, while the target role’s trust policy accepts the caller. Afterward, service requests made with the new credentials are evaluated as requests by the target role session. Do not mix the authorization decision that **creates the session** with the later decision that **authorizes an S3, EC2, or other service action**.
+
+## The role-session principal edge case
+
+<PrincipalGrantComparison />
+
+When a same-account resource policy grants directly to an assumed-role **session ARN**, AWS grants to that session principal. An implicit deny in an identity policy, permissions boundary, or session policy does not limit that direct grant. An applicable explicit deny still wins. By contrast, a resource-policy grant to an IAM **role ARN** is limited by implicit denies in its permissions boundary or session policy. [Detailed allow/deny evaluation ↗](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic_policy-eval-denyallow.html)
+
+AWS therefore recommends role principals where possible. Conditions using `aws:PrincipalArn` can often express role-level restrictions, but evaluate them with the surrounding principal, effect, account boundary, and policy type. [Principal element guidance ↗](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_principal.html)
+
+## Conditions are part of the match
+
+<PolicyStatementMatch />
+
+Condition keys may describe the principal, organization, network path, source resource, tags, authentication state, or request parameters. Before broadening a denied policy, inspect the operator and whether its key exists in that request type.
+
+## Diagnose an AccessDenied
+
+Start with the failed request rather than reading every policy in the account.
+
+<ReferenceTable caption="A practical authorization investigation" headers={['Step', 'Question', 'Evidence']} rows={[
+  ['1. Resolve the principal', 'Which credentials actually signed the request?', 'aws sts get-caller-identity, workload credential source, CloudTrail principal and session ARN'],
+  ['2. Capture PARC', 'What action, resource and condition context did the service evaluate?', 'CloudTrail event, service error, Region, tags, source network and request parameters'],
+  ['3. Separate accounts', 'Where does the principal live, and who owns the resource?', 'Account IDs in principal and resource ARNs'],
+  ['4. Find the grant', 'Which identity or resource statement is expected to allow this exact request?', 'Policy action, resource, principal and conditions'],
+  ['5. Check limiters', 'Do the boundary, session policy, SCP, or RCP permit the request?', 'Applicable policies at the identity, session, account, OU and organization levels'],
+  ['6. Search explicit denies', 'Does any applicable statement deny this request?', 'Identity, resource, endpoint, key, Organizations, and service-specific policies'],
+]} />
+
+An error message can identify one reason for denial without enumerating every reason. Policy simulation and Access Analyzer can help, but neither replaces checking service-specific authorization behavior and the actual request context. Change the narrowest incorrect policy or context assumption; attaching a broader administrator policy will not overcome an explicit deny.

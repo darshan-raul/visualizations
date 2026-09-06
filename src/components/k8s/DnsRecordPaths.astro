@@ -1,0 +1,37 @@
+<figure class="dns-record-paths" aria-labelledby="dns-record-title">
+  <figcaption id="dns-record-title"><span class="content-kicker">Same query shape, different ownership</span><strong>The DNS answer decides who must choose a backend.</strong></figcaption>
+  <div class="dns-record-grid">
+    <article>
+      <header><b>Normal Service</b><code>api.team-a.svc…</code></header>
+      <div><span>DNS</span><i aria-hidden="true">→</i><span class="answer">ClusterIP</span><i aria-hidden="true">→</i><span>Service data plane chooses Pod</span></div>
+    </article>
+    <article>
+      <header><b>Headless Service</b><code>db.team-a.svc…</code></header>
+      <div><span>DNS</span><i aria-hidden="true">→</i><span class="answer">Pod IPs</span><i aria-hidden="true">→</i><span>Client chooses endpoint</span></div>
+    </article>
+    <article>
+      <header><b>ExternalName</b><code>payments.team-a.svc…</code></header>
+      <div><span>DNS</span><i aria-hidden="true">→</i><span class="answer">CNAME</span><i aria-hidden="true">→</i><span>External DNS resolves target</span></div>
+    </article>
+    <article>
+      <header><b>Stateful Pod</b><code>db-0.db.team-a.svc…</code></header>
+      <div><span>Stable name</span><i aria-hidden="true">→</i><span class="answer">Current Pod IP</span><i aria-hidden="true">→</i><span>Named Pod receives connection</span></div>
+    </article>
+  </div>
+</figure>
+
+<style>
+  .dns-record-paths { margin: 28px 0; }
+  figcaption { display: grid; gap: 7px; margin-bottom: 16px; }
+  figcaption strong { font-size: 1rem; }
+  .dns-record-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; }
+  article { padding: 15px; border: 1px solid var(--border); border-radius: 9px; background: rgba(255,255,255,.014); }
+  header { display: grid; gap: 4px; }
+  header b { font-size: .72rem; }
+  header code { overflow-wrap: anywhere; color: var(--dim); font-size: .55rem; }
+  article > div { display: grid; grid-template-columns: 1fr auto 1fr auto 1.4fr; align-items: center; gap: 6px; margin-top: 13px; }
+  article span { padding: 9px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); font-size: .57rem; text-align: center; }
+  article span.answer { border-color: rgba(183,154,255,.3); color: var(--purple); }
+  article i { color: var(--green); font-style: normal; }
+  @media (max-width: 650px) { .dns-record-grid { grid-template-columns: 1fr; } article > div { grid-template-columns: 1fr; } article i { justify-self: center; transform: rotate(90deg); } }
+</style>

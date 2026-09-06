@@ -32,6 +32,8 @@ sources:
 ---
 
 import DnsResolutionMap from '../../components/k8s/DnsResolutionMap.astro';
+import DnsRecordPaths from '../../components/k8s/DnsRecordPaths.astro';
+import DnsCacheLayers from '../../components/k8s/DnsCacheLayers.astro';
 import MechanismFlow from '../../components/MechanismFlow.astro';
 import ReferenceTable from '../../components/ReferenceTable.astro';
 
@@ -87,19 +89,13 @@ Named Service ports can create SRV records. An SRV lookup expresses service, pro
 
 ## Headless Services and Pod identity
 
+<DnsRecordPaths />
+
 A headless Service sets `clusterIP: None`. DNS returns addresses for eligible endpoints instead of a Service VIP. The client or its library now owns endpoint selection, caching, retry, and reaction to backend changes.
 
 StatefulSets commonly pair a headless Service with stable Pod identity. A Pod can receive a name shaped like `<pod>.<service>.<namespace>.svc.<cluster-domain>` when its hostname/subdomain and governing Service align. Stable DNS identity does not mean a stable Pod IP; a recreated Pod can keep its ordinal name while receiving new addresses. [StatefulSet identity ↗](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/)
 
 `publishNotReadyAddresses` can publish endpoints before readiness for peer discovery. It deliberately changes normal safety semantics and can direct clients toward processes that are not ready to serve ordinary traffic.
-
-<ReferenceTable caption="What common Kubernetes DNS answers mean" headers={['Object or query', 'Typical answer', 'Who chooses the backend']} rows={[
-  ['Normal ClusterIP Service', 'Service IPv4/IPv6 address', 'Service proxy or replacement data plane'],
-  ['Headless Service', 'Eligible endpoint addresses', 'Client resolver or application library'],
-  ['ExternalName Service', 'CNAME to configured external name', 'External DNS and downstream network'],
-  ['Named Service port SRV', 'Priority, weight, port, and target records', 'SRV-aware client'],
-  ['Stateful Pod identity', 'Pod address behind stable DNS name', 'Client connects to that named Pod'],
-]} />
 
 ## How CoreDNS learns Kubernetes names
 
@@ -111,11 +107,11 @@ Corefile order matters because CoreDNS is a plugin chain. Caching, rewrites, for
 
 ## Caching and stale answers
 
+<DnsCacheLayers />
+
 Answers can be cached in the application, language runtime, operating-system resolver, Node-local cache, CoreDNS, and upstream resolver. Positive and negative answers have separate TTL behavior. A corrected Service can therefore continue returning an old address or `NXDOMAIN` to some clients until the relevant cache expires.
 
 Compare a failing application's lookup with a known diagnostic tool from the same Pod namespace and Node. A difference can indicate application-level caching or a custom resolver rather than CoreDNS itself.
-
-Long-lived connections are not DNS cache entries. Once an application opens a connection, changing DNS does not move that connection to a new address.
 
 ## NodeLocal DNSCache
 

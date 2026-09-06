@@ -36,6 +36,8 @@ sources:
 ---
 
 import GatewayOwnershipMap from '../../components/k8s/GatewayOwnershipMap.astro';
+import GatewayAttachmentMap from '../../components/k8s/GatewayAttachmentMap.astro';
+import GatewayTlsPaths from '../../components/k8s/GatewayTlsPaths.astro';
 import MechanismFlow from '../../components/MechanismFlow.astro';
 import ReferenceTable from '../../components/ReferenceTable.astro';
 
@@ -84,6 +86,8 @@ Listener hostname and Route hostname intersect. A Route for `shop.example.com` c
 
 Routes use `parentRefs` to request attachment to a Gateway or other supported parent. The controller writes status for each parent, including acceptance and resolution failures. This two-sided model prevents an application namespace from unilaterally taking over shared entry infrastructure.
 
+<GatewayAttachmentMap />
+
 <ReferenceTable caption="Route conditions localize failures" headers={['Condition or reason', 'Question it answers', 'Likely investigation']} rows={[
   ['Accepted', 'Did the parent accept this Route?', 'parentRefs, allowedRoutes, hostname intersection, Route kind'],
   ['ResolvedRefs', 'Do backend and certificate references resolve and have permission?', 'Names, namespaces, ports, ReferenceGrant'],
@@ -118,11 +122,9 @@ Grant the narrowest useful combination of source group, kind, namespace, and des
 
 ## TLS termination and passthrough
 
-TLS behavior depends on the listener protocol and implementation. A terminating HTTPS listener references certificates and exposes HTTP semantics to attached HTTPRoutes. TLS passthrough keeps encryption to a downstream target and routes with information available before decryption, such as SNI, when supported by the relevant Route type.
+<GatewayTlsPaths />
 
 Certificate Secrets are namespaced. Cross-namespace certificate references require supported reference semantics and explicit grants. Validate hostname coverage, chain, expiry, key type, protocol negotiation, and which component actually terminates TLS.
-
-Backend TLS is a separate hop. Terminating client TLS at the Gateway does not imply that traffic to the backend is encrypted, and enabling backend TLS requires trust configuration appropriate to the implementation and API version.
 
 ## Ingress compared with Gateway API
 

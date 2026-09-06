@@ -1,0 +1,42 @@
+---
+import '../../styles/iam.css';
+---
+
+<figure class="role-action-comparison" aria-labelledby="role-action-title">
+  <figcaption id="role-action-title">
+    <span class="content-kicker">Same role, two different operations</span>
+    <strong>AssumeRole creates credentials. PassRole delegates a role to a service.</strong>
+  </figcaption>
+
+  <div class="role-action-grid">
+    <section class="assume-path" aria-labelledby="assume-path-title">
+      <header><small>STS API operation</small><h3 id="assume-path-title">sts:AssumeRole</h3></header>
+      <ol>
+        <li><span>01</span><div><strong>Caller</strong><small>Signs an AssumeRole request</small></div></li>
+        <li class="flow-arrow" aria-hidden="true">↓</li>
+        <li><span>02</span><div><strong>AWS STS</strong><small>Checks permission and role trust</small></div></li>
+        <li class="flow-arrow" aria-hidden="true">↓</li>
+        <li class="result"><span>03</span><div><strong>Role session + credentials</strong><small>Returned to the caller</small></div></li>
+      </ol>
+      <p><b>Who uses the role?</b> The caller uses the returned credentials.</p>
+    </section>
+
+    <section class="pass-path" aria-labelledby="pass-path-title">
+      <header><small>Permission checked by another API</small><h3 id="pass-path-title">iam:PassRole</h3></header>
+      <ol>
+        <li><span>01</span><div><strong>Deployer</strong><small>Calls CreateFunction(roleArn)</small></div></li>
+        <li class="flow-arrow" aria-hidden="true">↓</li>
+        <li><span>02</span><div><strong>Lambda</strong><small>Checks the caller may pass that role</small></div></li>
+        <li class="flow-arrow" aria-hidden="true">↓</li>
+        <li class="result"><span>03</span><div><strong>Lambda execution role</strong><small>The service assumes it later</small></div></li>
+      </ol>
+      <p><b>Who uses the role?</b> The AWS service—not the deployer.</p>
+    </section>
+  </div>
+
+  <div class="passrole-gates" aria-label="PassRole requirements">
+    <span><b>1</b> Caller can pass this role</span>
+    <span><b>2</b> Role trusts the service</span>
+    <span><b>3</b> Role and service share an account</span>
+  </div>
+</figure>

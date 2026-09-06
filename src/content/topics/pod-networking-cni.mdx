@@ -32,6 +32,7 @@ sources:
 ---
 
 import CniLifecycleMap from '../../components/k8s/CniLifecycleMap.astro';
+import CniPacketPaths from '../../components/k8s/CniPacketPaths.astro';
 import MechanismFlow from '../../components/MechanismFlow.astro';
 import ReferenceTable from '../../components/ReferenceTable.astro';
 
@@ -91,16 +92,11 @@ Useful evidence includes the Pod's addresses and routes, the host peer interface
 
 ## Cross-node forwarding
 
-The network implementation must make a destination Pod prefix reachable from the source Node. Three broad patterns recur:
+The network implementation must make a destination Pod prefix reachable from the source Node.
 
-<ReferenceTable caption="Common cross-node strategies" headers={['Strategy', 'Outer path', 'Benefit', 'Tradeoff']} rows={[
-  ['Native routing', 'Network routes directly toward Pod prefixes', 'No tunnel header and clear routing semantics', 'Underlying network must learn and permit Pod routes.'],
-  ['Overlay', 'Original packet is encapsulated between Nodes', 'Decouples Pod addressing from the underlay', 'Header overhead reduces effective MTU and adds tunnel state.'],
-  ['Cloud-native addressing', 'Pod addresses integrate with provider networking', 'Uses familiar cloud routes and controls', 'Subnet capacity, interface quotas, and provider behavior become Pod constraints.'],
-  ['eBPF-oriented data plane', 'Programs forwarding at kernel hooks', 'Can combine routing, policy, and observability', 'Debugging uses implementation-specific maps and tools.'],
-]} />
+<CniPacketPaths />
 
-An overlay is not automatically required for cross-node communication, and CNI does not prescribe VXLAN. Determine the actual outer source/destination, encapsulation protocol, route ownership, and return path.
+Determine the actual outer source/destination, encapsulation, route ownership, and return path; CNI itself prescribes none of them.
 
 ## MTU and fragmentation
 

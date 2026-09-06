@@ -1,0 +1,31 @@
+<figure class="dns-cache-layers" aria-labelledby="dns-cache-title">
+  <figcaption id="dns-cache-title"><span class="content-kicker">Why one client stays stale</span><strong>The first cache with a live entry can answer before CoreDNS sees the query.</strong></figcaption>
+  <div class="cache-stack">
+    <article><span>01</span><b>Application / runtime</b><small>May cache independently of the OS</small><em>HIT? stop</em></article>
+    <i aria-hidden="true">↓ miss</i>
+    <article><span>02</span><b>OS / local resolver</b><small>Behavior varies by image and runtime</small><em>HIT? stop</em></article>
+    <i aria-hidden="true">↓ miss</i>
+    <article><span>03</span><b>NodeLocal DNSCache</b><small>Optional and isolated per Node</small><em>HIT? stop</em></article>
+    <i aria-hidden="true">↓ miss</i>
+    <article><span>04</span><b>CoreDNS</b><small>Positive and negative TTLs</small><em>HIT? stop</em></article>
+    <i aria-hidden="true">↓ miss</i>
+    <article><span>05</span><b>Upstream resolver</b><small>Only for forwarded names</small><em>answer</em></article>
+  </div>
+  <div class="cache-change"><span>Service fixed now</span><i aria-hidden="true">≠</i><span>Every cached answer changes now</span></div>
+</figure>
+
+<style>
+  .dns-cache-layers { margin: 28px 0; padding: 24px; border: 1px solid var(--border); border-radius: 12px; background: rgba(255,255,255,.014); }
+  figcaption { display: grid; gap: 7px; margin-bottom: 18px; }
+  figcaption strong { font-size: 1rem; }
+  .cache-stack { display: flex; align-items: stretch; gap: 6px; }
+  .cache-stack article { display: grid; flex: 1; min-width: 0; gap: 5px; padding: 11px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); }
+  article span { color: var(--purple); font-family: var(--mono); font-size: .52rem; }
+  article b { font-size: .62rem; }
+  article small { color: var(--muted); font-size: .55rem; line-height: 1.4; }
+  article em { align-self: end; color: var(--green); font-family: var(--mono); font-size: .5rem; font-style: normal; text-transform: uppercase; }
+  .cache-stack > i { align-self: center; color: var(--dim); font-family: var(--mono); font-size: .48rem; font-style: normal; white-space: nowrap; }
+  .cache-change { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 14px; padding: 10px; border: 1px solid rgba(246,199,99,.22); border-radius: 7px; color: var(--muted); font-size: .62rem; }
+  .cache-change i { color: var(--amber); font-family: var(--mono); font-style: normal; }
+  @media (max-width: 720px) { .cache-stack { flex-direction: column; } .cache-stack > i { transform: none; } .cache-change { align-items: flex-start; flex-direction: column; gap: 5px; } }
+</style>

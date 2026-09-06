@@ -1,0 +1,41 @@
+<figure class="gateway-attachment-map" aria-labelledby="gateway-attachment-title">
+  <figcaption id="gateway-attachment-title"><span class="content-kicker">Two independent handshakes</span><strong>Attaching a Route and referencing its backend cross different trust boundaries.</strong></figcaption>
+  <div class="attachment-columns">
+    <section>
+      <header><small>Infrastructure namespace</small><b>Gateway listener</b></header>
+      <div class="rules"><span>allowedRoutes</span><span>Route kind</span><span>Hostname</span></div>
+      <i aria-hidden="true">accepts? ↔ requests?</i>
+      <header><small>Application namespace</small><b>HTTPRoute parentRefs</b></header>
+      <footer><strong>Attached</strong><span>Both sides and hostname intersection agree</span></footer>
+    </section>
+    <section class="backend-trust">
+      <header><small>Application namespace A</small><b>HTTPRoute backendRef</b></header>
+      <div class="rules"><span>Group</span><span>Kind</span><span>Name + port</span></div>
+      <i aria-hidden="true">references? ↔ grants?</i>
+      <header><small>Backend namespace B</small><b>ReferenceGrant</b></header>
+      <footer><strong>ResolvedRefs</strong><span>Backend owner explicitly permits the reference</span></footer>
+    </section>
+  </div>
+  <p><b>One does not imply the other.</b> `allowedRoutes` governs attachment to the listener; `ReferenceGrant` governs a supported cross-namespace object reference.</p>
+</figure>
+
+<style>
+  .gateway-attachment-map { margin: 28px 0; padding: 24px; border: 1px solid var(--border); border-radius: 12px; background: rgba(255,255,255,.014); }
+  figcaption { display: grid; gap: 7px; margin-bottom: 18px; }
+  figcaption strong { font-size: 1rem; }
+  .attachment-columns { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  section { display: grid; gap: 10px; padding: 17px; border: 1px solid rgba(183,154,255,.25); border-radius: 9px; background: rgba(183,154,255,.035); }
+  section.backend-trust { border-color: rgba(66,214,232,.25); background: rgba(66,214,232,.035); }
+  header { display: grid; gap: 4px; padding: 12px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); }
+  header small { color: var(--dim); font-family: var(--mono); font-size: .54rem; text-transform: uppercase; }
+  header b { font-size: .72rem; }
+  .rules { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; }
+  .rules span { padding: 5px 7px; border: 1px solid var(--border); border-radius: 4px; color: var(--muted); font-family: var(--mono); font-size: .52rem; }
+  section > i { color: var(--green); font-family: var(--mono); font-size: .58rem; font-style: normal; text-align: center; }
+  footer { display: grid; gap: 3px; padding-top: 3px; text-align: center; }
+  footer strong { color: var(--green); font-family: var(--mono); font-size: .63rem; }
+  footer span { color: var(--muted); font-size: .6rem; }
+  figure > p { margin: 15px 0 0; color: var(--muted); font-size: .68rem; line-height: 1.5; }
+  figure > p b { color: var(--text); }
+  @media (max-width: 650px) { .attachment-columns { grid-template-columns: 1fr; } }
+</style>

@@ -1,0 +1,32 @@
+---
+import '../../styles/iam.css';
+---
+
+<figure class="policy-statement-match" aria-labelledby="statement-match-title">
+  <figcaption id="statement-match-title"><span class="content-kicker">Does this statement apply?</span><strong>Every required match gate must pass before its Allow or Deny contributes.</strong></figcaption>
+  <ol>
+    <li><span>P</span><b>Principal</b><small>Is this caller in scope?</small></li><i aria-hidden="true">→</i>
+    <li><span>A</span><b>Action</b><small>Does the operation match?</small></li><i aria-hidden="true">→</i>
+    <li><span>R</span><b>Resource</b><small>Does the target match?</small></li><i aria-hidden="true">→</i>
+    <li><span>C</span><b>Condition</b><small>Do keys, values, and operators match?</small></li><i aria-hidden="true">→</i>
+    <li class="effect"><span>✓</span><b>Effect contributes</b><small>Allow or explicit Deny</small></li>
+  </ol>
+  <p><b>Missing key ≠ empty value.</b> Positive, negated, set, and <code>IfExists</code> operators can treat absence differently.</p>
+</figure>
+
+<style>
+  .policy-statement-match { margin: 28px 0; padding: 22px; border: 1px solid var(--border); border-radius: 12px; background: rgba(255,255,255,.014); }
+  figcaption { display: grid; gap: 7px; margin-bottom: 17px; }
+  figcaption strong { font-size: 1rem; }
+  ol { display: flex; align-items: center; gap: 6px; margin: 0; padding: 0; list-style: none; }
+  li { display: grid; flex: 1; gap: 4px; min-height: 105px; align-content: center; padding: 10px; border: 1px solid rgba(183,154,255,.23); border-radius: 7px; background: rgba(183,154,255,.035); }
+  li.effect { border-color: rgba(73,214,163,.28); background: rgba(73,214,163,.04); }
+  li span { color: var(--purple); font-family: var(--mono); font-size: .55rem; }
+  li.effect span { color: var(--green); }
+  li b { font-size: .64rem; }
+  li small { color: var(--muted); font-size: .54rem; line-height: 1.4; }
+  ol > i { color: var(--green); font-style: normal; }
+  figure > p { margin: 14px 0 0; color: var(--muted); font-size: .65rem; }
+  figure > p b { color: var(--amber); }
+  @media (max-width: 650px) { ol { flex-direction: column; align-items: stretch; } ol > i { align-self: center; transform: rotate(90deg); } li { min-height: 0; } }
+</style>

@@ -1,0 +1,9 @@
+---
+import { getEntry, render } from 'astro:content';
+import TopicLayout from '../layouts/TopicLayout.astro';
+const topic = await getEntry('topics', 'aws-authorization-decision-explorer');
+if (!topic) throw new Error('AWS IAM Authorization Decision Explorer content is missing');
+const { Content, headings } = await render(topic);
+const sections = headings.filter(({ depth }) => depth === 2).map(({ slug, text }) => ({ id: slug, label: text }));
+---
+<TopicLayout topic={topic} sections={sections}><Content /></TopicLayout>

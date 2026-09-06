@@ -1,0 +1,139 @@
+---
+import '../../styles/iam.css';
+
+const scenarios = [
+  {
+    id: 'same-account',
+    label: 'Same-account allow',
+    request: ['Role session: AppReader/alex', 's3:GetObject', 'arn:aws:s3:::reports/q3.pdf', 'Same account; TLS request'],
+    checks: [
+      ['Identity policy', 'allow', 'Allows s3:GetObject on reports/*'],
+      ['Resource policy', 'neutral', 'No applicable bucket-policy statement'],
+      ['Permissions boundary', 'allow', 'Allows the requested S3 read'],
+      ['Session policy', 'allow', 'Allows the requested S3 read'],
+      ['SCP / RCP', 'allow', 'No applicable restriction'],
+    ],
+    outcome: 'ALLOW',
+    explanation: 'The role permission supplies the allow, each limiting policy permits it, and no applicable explicit deny exists.',
+  },
+  {
+    id: 'explicit-deny',
+    label: 'Explicit deny wins',
+    request: ['Role session: AppReader/alex', 's3:GetObject', 'arn:aws:s3:::reports/private/payroll.pdf', 'Source VPC is not the approved VPC'],
+    checks: [
+      ['Identity policy', 'allow', 'Allows reads from reports/*'],
+      ['Bucket policy', 'deny', 'Explicitly denies requests outside the approved VPC'],
+      ['Permissions boundary', 'allow', 'Allows S3 reads'],
+      ['Session policy', 'allow', 'Allows S3 reads'],
+      ['SCP / RCP', 'allow', 'No additional restriction'],
+    ],
+    outcome: 'DENY',
+    explanation: 'One applicable explicit deny overrides every allow. An administrator-style identity policy does not bypass it.',
+  },
+  {
+    id: 'cross-account',
+    label: 'Cross-account resource',
+    request: ['Role in account A', 's3:GetObject', 'Bucket object in account B', 'Cross-account request'],
+    checks: [
+      ['Identity policy in A', 'allow', 'Allows the action on the account B object ARN'],
+      ['Bucket policy in B', 'allow', 'Allows the account A principal'],
+      ['SCP affecting A principal', 'allow', 'Permits the requested action'],
+      ['RCP affecting B resource', 'allow', 'Permits the requested action'],
+      ['Applicable explicit denies', 'neutral', 'None'],
+    ],
+    outcome: 'ALLOW',
+    explanation: 'Cross-account access requires permission from both sides: the trusted principal’s account and the resource-owning account.',
+  },
+  {
+    id: 'boundary',
+    label: 'Boundary clips an allow',
+    request: ['Role session: Developer/sam', 'iam:CreateRole', 'arn:aws:iam::111111111111:role/NewRole', 'Same account'],
+    checks: [
+      ['Identity policy', 'allow', 'Allows iam:CreateRole'],
+      ['Resource policy', 'neutral', 'No resource-based grant'],
+      ['Permissions boundary', 'blocked', 'Does not allow iam:CreateRole'],
+      ['Session policy', 'allow', 'No narrower restriction'],
+      ['SCP', 'allow', 'Permits IAM administration'],
+    ],
+    outcome: 'DENY',
+    explanation: 'A boundary does not grant access. It limits what the role’s identity policies can grant, so the missing boundary allow produces an implicit deny.',
+  },
+  {
+    id: 'session-principal',
+    label: 'Direct session grant',
+    request: ['Role session: BatchJob/run-482', 's3:GetObject', 'arn:aws:s3:::imports/job.csv', 'Same account; bucket policy names this session ARN'],
+    checks: [
+      ['Identity policy', 'neutral', 'No identity-based allow'],
+      ['Bucket policy', 'allow', 'Directly grants this assumed-role session ARN'],
+      ['Permissions boundary', 'blocked', 'Contains no allow for this read'],
+      ['Session policy', 'blocked', 'Contains no allow for this read'],
+      ['Applicable explicit denies', 'neutral', 'None'],
+    ],
+    outcome: 'ALLOW',
+    explanation: 'For a same-account direct grant to a role-session ARN, boundary and session-policy implicit denies do not limit that resource-policy grant. Any applicable explicit deny would still win.',
+  },
+  {
+    id: 'organization-deny',
+    label: 'Organization guardrail',
+    request: ['Role session: StorageAdmin/lee', 's3:DeleteBucket', 'arn:aws:s3:::archive', 'Member-account principal and resource'],
+    checks: [
+      ['Identity policy', 'allow', 'Allows s3:DeleteBucket'],
+      ['Bucket policy', 'allow', 'Allows the principal'],
+      ['Permissions boundary', 'allow', 'Allows S3 administration'],
+      ['SCP', 'deny', 'Explicitly denies bucket deletion for the principal account'],
+      ['RCP', 'allow', 'No additional resource restriction'],
+    ],
+    outcome: 'DENY',
+    explanation: 'The Organizations guardrail contributes an applicable explicit deny. Neither an identity policy nor a resource policy can override it.',
+  },
+];
+---
+
+<div class="authorization-explorer" data-authorization-explorer>
+  <div class="authorization-picker" hidden>
+    <label for="authorization-scenario">Test a request</label>
+    <select id="authorization-scenario" data-authorization-select>
+      {scenarios.map((scenario) => <option value={scenario.id}>{scenario.label}</option>)}
+    </select>
+  </div>
+
+  {scenarios.map((scenario, scenarioIndex) => (
+    <section class="authorization-scenario" data-authorization-scenario={scenario.id} aria-labelledby={`authorization-${scenario.id}`}>
+      <header>
+        <span class="content-kicker">Decision case {String(scenarioIndex + 1).padStart(2, '0')}</span>
+        <h3 id={`authorization-${scenario.id}`}>{scenario.label}</h3>
+      </header>
+      <div class="request-context" aria-label="Principal, action, resource, and context">
+        {['Principal', 'Action', 'Resource', 'Context'].map((label, index) => (
+          <div><small>{label}</small><strong>{scenario.request[index]}</strong></div>
+        ))}
+      </div>
+      <div class="policy-checks">
+        <span class="policy-rail" aria-hidden="true"></span>
+        {scenario.checks.map((check) => (
+          <article class={`check-${check[1]}`}>
+            <span aria-hidden="true">{check[1] === 'allow' ? '✓' : check[1] === 'deny' ? '×' : check[1] === 'blocked' ? '—' : '·'}</span>
+            <div><h4>{check[0]}</h4><p>{check[2]}</p></div>
+            <small>{check[1] === 'blocked' ? 'No allow' : check[1]}</small>
+          </article>
+        ))}
+      </div>
+      <div class:list={['authorization-outcome', scenario.outcome.toLowerCase()]}>
+        <small>Final decision</small><strong>{scenario.outcome}</strong><p>{scenario.explanation}</p>
+      </div>
+    </section>
+  ))}
+</div>
+
+<script>
+  for (const explorer of document.querySelectorAll<HTMLElement>('[data-authorization-explorer]')) {
+    const select = explorer.querySelector<HTMLSelectElement>('[data-authorization-select]')!;
+    const scenarios = [...explorer.querySelectorAll<HTMLElement>('[data-authorization-scenario]')];
+    function render() {
+      scenarios.forEach((scenario) => { scenario.hidden = scenario.dataset.authorizationScenario !== select.value; });
+    }
+    select.addEventListener('change', render);
+    explorer.querySelector<HTMLElement>('.authorization-picker')!.hidden = false;
+    render();
+  }
+</script>

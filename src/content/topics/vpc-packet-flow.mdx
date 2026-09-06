@@ -69,6 +69,8 @@ sources:
 import PacketFlowExplorer from '../../components/PacketFlowExplorer.astro';
 import ReferenceTable from '../../components/ReferenceTable.astro';
 import MechanismFlow from '../../components/MechanismFlow.astro';
+import EndpointTypePaths from '../../components/vpc/EndpointTypePaths.astro';
+import TransitGatewayRouteDomains from '../../components/vpc/TransitGatewayRouteDomains.astro';
 import { scenarios } from '../../components/vpc/scenarios';
 
 ## The mental model
@@ -142,9 +144,9 @@ ACL rules evaluate destination ports in each direction. For a private client ini
 
 ## Endpoints change the service path
 
-Gateway endpoints for S3 and DynamoDB select a route using an AWS-managed service prefix list. They require neither an internet gateway nor NAT, and do not use PrivateLink. The gateway endpoint is not an ENI with a security group. Route-table association is essential. [Gateway endpoints ↗](https://docs.aws.amazon.com/vpc/latest/privatelink/gateway-endpoints.html)
+<EndpointTypePaths />
 
-Interface endpoints create ENIs with private addresses in selected subnets. Their security groups control access. With appropriate private DNS configuration, the normal AWS service hostname resolves to those endpoint addresses. Inspect the actual DNS answer when a request unexpectedly takes a public path. [Interface endpoint DNS ↗](https://docs.aws.amazon.com/vpc/latest/privatelink/privatelink-access-aws-services.html)
+Gateway endpoint routing and interface endpoint DNS choose different paths. Inspect the route-table association or actual DNS answer before assuming private connectivity is active. [Gateway endpoints ↗](https://docs.aws.amazon.com/vpc/latest/privatelink/gateway-endpoints.html) [Interface endpoint DNS ↗](https://docs.aws.amazon.com/vpc/latest/privatelink/privatelink-access-aws-services.html)
 
 The PrivateLink scenario exposes a provider service through a Network Load Balancer (NLB). It does not connect entire VPC address spaces like peering. Provider permissions and acceptance, endpoint security groups, listeners, target health and application authorization solve different parts of delivery. The trace avoids inventing provider-side source addresses, which depend on the service configuration. [PrivateLink services ↗](https://docs.aws.amazon.com/vpc/latest/privatelink/privatelink-share-your-services.html)
 
@@ -154,11 +156,7 @@ Peering joins two non-overlapping VPC address spaces. Both participating subnet 
 
 A transit gateway (TGW) is a routing hub. A VPC subnet first selects its TGW attachment. Then the TGW uses the table **associated with the attachment on which traffic arrived** to select the next attachment. Association chooses the lookup table; propagation installs reachable prefixes into chosen tables. These are distinct configuration choices. [TGW routing ↗](https://docs.aws.amazon.com/vpc/latest/tgw/how-transit-gateways-work.html)
 
-<ReferenceTable caption="Same destination, different incoming route context" headers={['Packet arrives from', 'Lookup table', 'Required decision']} rows={[
-  ['App VPC attachment', 'Table associated with App', 'Database CIDR → Database attachment'],
-  ['Database VPC attachment', 'Table associated with Database', 'App CIDR → App attachment'],
-  ['Peering attachment', 'Table associated with peer', 'Local destination CIDR → local VPC attachment'],
-]} />
+<TransitGatewayRouteDomains />
 
 For TGW peering, configure static routes to the peering attachment in both directions. The explorer shows four TGW lookups across the round trip, so a missing return lookup is visible. Stateful inspection adds a symmetry requirement; appliance mode on the inspection VPC attachment helps preserve the flow’s path, but the surrounding routes still need to be correct. [TGW peering ↗](https://docs.aws.amazon.com/vpc/latest/tgw/tgw-peering.html) [Appliance mode ↗](https://docs.aws.amazon.com/vpc/latest/tgw/how-transit-gateways-work.html)
 

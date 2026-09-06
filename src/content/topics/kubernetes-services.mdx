@@ -34,6 +34,8 @@ sources:
 ---
 
 import ServiceStateMap from '../../components/k8s/ServiceStateMap.astro';
+import EndpointLifecycle from '../../components/k8s/EndpointLifecycle.astro';
+import TrafficPolicyPaths from '../../components/k8s/TrafficPolicyPaths.astro';
 import MechanismFlow from '../../components/MechanismFlow.astro';
 import ReferenceTable from '../../components/ReferenceTable.astro';
 
@@ -86,7 +88,7 @@ The control plane allocates a ClusterIP from the Service address range unless th
 
 Endpoint readiness normally follows Pod readiness. A terminating endpoint has `terminating: true`; for compatibility its `ready` condition becomes false, while `serving` can still indicate that it is capable of responding. Proxies normally avoid terminating endpoints for new traffic but can use serving-and-terminating endpoints when every available endpoint is terminating. [Termination flow ↗](https://kubernetes.io/docs/tutorials/services/pods-and-endpoint-termination-flow/)
 
-This is convergence, not an atomic switch. The Pod, EndpointSlice controller, proxies on many Nodes, external load balancers, and application clients observe changes at different times. Graceful shutdown needs readiness changes, endpoint propagation, connection draining, termination grace, and application behavior to agree.
+<EndpointLifecycle />
 
 `publishNotReadyAddresses: true` changes discovery semantics for workloads that need addresses before readiness, notably some peer-discovery systems. It should not be used to conceal an incorrect readiness probe.
 
@@ -111,9 +113,9 @@ The older `externalIPs` field does not allocate or advertise addresses; the oper
 
 ## Locality and traffic distribution
 
-`internalTrafficPolicy: Local` is a hard restriction: only node-local endpoints serve internal traffic. On a Node with no local endpoint, the Service behaves as empty. `externalTrafficPolicy: Local` similarly avoids cross-node forwarding for external paths and can preserve the client address, at the cost of possible imbalance or dropped traffic on Nodes without local endpoints. [Internal policy ↗](https://kubernetes.io/docs/concepts/services-networking/service-traffic-policy/) [Source IP ↗](https://kubernetes.io/docs/tutorials/services/source-ip/)
+<TrafficPolicyPaths />
 
-`trafficDistribution` is a preference rather than the same hard constraint. Supported values can prefer same-zone or same-node endpoints, while implementations and safeguards can fall back when local topology lacks adequate endpoints. Topology-aware hints are published in EndpointSlices and consumed by compatible proxies. [Topology-aware routing ↗](https://kubernetes.io/docs/concepts/services-networking/topology-aware-routing/)
+`Local` is a hard eligibility restriction; `trafficDistribution` is a preference with implementation-dependent safeguards and fallback. [Internal policy ↗](https://kubernetes.io/docs/concepts/services-networking/service-traffic-policy/) [Source IP ↗](https://kubernetes.io/docs/tutorials/services/source-ip/) [Topology-aware routing ↗](https://kubernetes.io/docs/concepts/services-networking/topology-aware-routing/)
 
 Locality can reduce latency and cross-zone cost but concentrate traffic. Evaluate endpoint count per topology domain, autoscaling behavior, failure fallback, and actual request distribution.
 

@@ -1,0 +1,37 @@
+---
+import '../../styles/iam.css';
+---
+
+<figure class="principal-grant-comparison" aria-labelledby="principal-grant-title">
+  <figcaption id="principal-grant-title"><span class="content-kicker">Same role family, different policy principal</span><strong>Where a resource policy grants permission changes which implicit limits remain.</strong></figcaption>
+  <div>
+    <section>
+      <header><small>Grant to role ARN</small><code>arn:aws:iam::111…:role/BatchJob</code></header>
+      <div class="grant-flow"><span>Resource policy allow</span><i aria-hidden="true">+</i><span>Boundary and session-policy limits</span><i aria-hidden="true">→</i><b>Role session request</b></div>
+      <p>Implicit denies in the role’s boundary or session policy can still limit the grant.</p>
+    </section>
+    <section class="direct-session">
+      <header><small>Direct grant to session ARN</small><code>arn:aws:sts::111…:assumed-role/BatchJob/run-482</code></header>
+      <div class="grant-flow"><span>Resource policy allow</span><i aria-hidden="true">→</i><b>Named session principal</b><i aria-hidden="true">!</i><span>Explicit denies still win</span></div>
+      <p>Within the same account, boundary and session-policy <em>implicit</em> denies do not limit this direct session grant.</p>
+    </section>
+  </div>
+</figure>
+
+<style>
+  .principal-grant-comparison { margin: 28px 0; }
+  figcaption { display: grid; gap: 7px; margin-bottom: 16px; }
+  figcaption strong { font-size: 1rem; }
+  figure > div { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  section { padding: 16px; border: 1px solid rgba(183,154,255,.24); border-radius: 9px; background: rgba(183,154,255,.035); }
+  section.direct-session { border-color: rgba(246,199,99,.25); background: rgba(246,199,99,.035); }
+  header { display: grid; gap: 5px; }
+  header small { color: var(--dim); font-family: var(--mono); font-size: .53rem; text-transform: uppercase; }
+  header code { overflow-wrap: anywhere; font-size: .55rem; }
+  .grant-flow { display: grid; gap: 6px; margin: 14px 0; text-align: center; }
+  .grant-flow span, .grant-flow b { padding: 9px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); font-size: .59rem; }
+  .grant-flow i { color: var(--green); font-family: var(--mono); font-style: normal; }
+  section p { margin: 0; color: var(--muted); font-size: .65rem; line-height: 1.5; }
+  section em { color: var(--amber); font-style: normal; }
+  @media (max-width: 650px) { figure > div { grid-template-columns: 1fr; } }
+</style>

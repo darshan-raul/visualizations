@@ -63,6 +63,7 @@ Use a scrolling document with deep-linked sections by default. Reserve tabs for 
 
 ### Visual system
 
+- Prefer visual-first explanations with less prose. Use text to frame, clarify, and document caveats rather than repeat what a diagram already shows; give each major mechanism a diagram, comparison, trace, or compact reference where that materially improves understanding.
 - Reuse design tokens and shared components; do not copy page-sized CSS implementations.
 - Prefer small composable primitives for cards, callouts, code, comparisons, nodes, connectors, legends, timelines, packet steps, and diagnostics.
 - Prefer semantic HTML/CSS and inline SVG. Use Canvas only for genuinely dynamic simulations and raster assets only when necessary.

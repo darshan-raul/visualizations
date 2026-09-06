@@ -1,0 +1,36 @@
+<figure class="endpoint-lifecycle" aria-labelledby="endpoint-lifecycle-title">
+  <figcaption id="endpoint-lifecycle-title"><span class="content-kicker">Endpoint state over time</span><strong>Pod termination is observed asynchronously—not as one atomic switch.</strong></figcaption>
+  <ol class="state-track">
+    <li><span>01</span><b>Ready</b><small>ready=true<br/>serving=true</small></li>
+    <i aria-hidden="true">→</i>
+    <li class="transition"><span>02</span><b>Termination begins</b><small>deletion timestamp<br/>readiness changes</small></li>
+    <i aria-hidden="true">→</i>
+    <li class="draining"><span>03</span><b>Draining</b><small>terminating=true<br/>ready=false<br/>serving may remain true</small></li>
+    <i aria-hidden="true">→</i>
+    <li class="removed"><span>04</span><b>Removed</b><small>No longer published<br/>connections finish or close</small></li>
+  </ol>
+  <div class="observer-track">
+    <span>EndpointSlice controller</span><i aria-hidden="true"></i><span>Node proxies</span><i aria-hidden="true"></i><span>Load balancers</span><i aria-hidden="true"></i><span>Clients + connections</span>
+  </div>
+  <p>Each observer reconciles at a different time. Graceful shutdown aligns readiness, propagation, draining, termination grace, and application behavior.</p>
+</figure>
+
+<style>
+  .endpoint-lifecycle { margin: 28px 0; padding: 24px; border: 1px solid var(--border); border-radius: 12px; background: rgba(255,255,255,.014); }
+  figcaption { display: grid; gap: 7px; margin-bottom: 20px; }
+  figcaption strong { font-size: 1rem; }
+  .state-track { display: flex; align-items: center; gap: 7px; margin: 0; padding: 0; list-style: none; }
+  .state-track li { display: grid; flex: 1; align-content: start; gap: 5px; min-height: 120px; padding: 13px; border: 1px solid rgba(73,214,163,.25); border-radius: 8px; background: rgba(73,214,163,.035); }
+  .state-track li.transition { border-color: rgba(246,199,99,.28); background: rgba(246,199,99,.035); }
+  .state-track li.draining { border-color: rgba(183,154,255,.28); background: rgba(183,154,255,.035); }
+  .state-track li.removed { border-color: var(--border); background: var(--surface); }
+  .state-track span { color: var(--dim); font-family: var(--mono); font-size: .54rem; }
+  .state-track b { font-size: .7rem; }
+  .state-track small { color: var(--muted); font-family: var(--mono); font-size: .56rem; line-height: 1.55; }
+  .state-track > i { color: var(--green); font-style: normal; }
+  .observer-track { display: flex; align-items: center; gap: 6px; margin-top: 13px; }
+  .observer-track span { color: var(--dim); font-family: var(--mono); font-size: .54rem; white-space: nowrap; }
+  .observer-track i { width: 100%; border-top: 1px dashed var(--border-strong); }
+  figure > p { margin: 14px 0 0; color: var(--muted); font-size: .68rem; line-height: 1.5; }
+  @media (max-width: 650px) { .state-track { flex-direction: column; align-items: stretch; } .state-track > i { align-self: center; transform: rotate(90deg); } .state-track li { min-height: 0; } .observer-track { display: grid; grid-template-columns: 1fr; } .observer-track i { width: 30px; transform: rotate(90deg); justify-self: center; } }
+</style>

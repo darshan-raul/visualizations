@@ -1,0 +1,78 @@
+---
+const paths = [
+  {
+    id: 'same-node', label: 'Same Node', badge: 'No underlay hop',
+    nodes: ['Pod A netns', 'veth / hook', 'Node data plane', 'veth / hook', 'Pod B netns'],
+    packet: '10.244.1.7 → 10.244.1.9',
+    note: 'The packet stays on one Node. A bridge, routes, or eBPF hooks may connect the two Pod interfaces.',
+  },
+  {
+    id: 'native', label: 'Native routing', badge: 'Pod packet on underlay',
+    nodes: ['Pod A', 'Source Node route', 'Underlay network', 'Destination Node route', 'Pod B'],
+    packet: '10.244.1.7 → 10.244.2.8',
+    note: 'The surrounding network learns routes to Pod prefixes. There is no tunnel header, but the underlay must route and permit Pod addresses.',
+  },
+  {
+    id: 'overlay', label: 'Overlay', badge: 'Inner + outer packet',
+    nodes: ['Pod A', 'Encapsulate', 'Node-IP underlay', 'Decapsulate', 'Pod B'],
+    packet: 'Inner 10.244.1.7 → 10.244.2.8 · Outer 192.0.2.10 → 192.0.2.20',
+    note: 'Node-to-node encapsulation carries the original Pod packet. Tunnel headers consume MTU and require an intact return path.',
+  },
+  {
+    id: 'cloud', label: 'Cloud-native', badge: 'Provider-routed Pod address',
+    nodes: ['Pod A', 'Pod-facing interface', 'Cloud fabric', 'Destination interface', 'Pod B'],
+    packet: 'Provider-routable Pod IP → provider-routable Pod IP',
+    note: 'Pod addressing integrates with cloud networking. Subnet capacity, interface quotas, security controls, and provider routes become part of Pod networking.',
+  },
+];
+---
+
+<figure class="cni-paths" data-cni-paths aria-labelledby="cni-paths-title">
+  <figcaption id="cni-paths-title"><span class="content-kicker">Packet path explorer</span><strong>“CNI” does not identify the path a packet takes.</strong></figcaption>
+  <div class="cni-path-picker" role="group" aria-label="Choose a Pod packet path" hidden>
+    {paths.map((path, index) => <button type="button" data-cni-path-option={path.id} aria-pressed={index === 0}>{path.label}</button>)}
+  </div>
+  {paths.map((path) => (
+    <section data-cni-path={path.id} aria-labelledby={`cni-${path.id}`}>
+      <header><h3 id={`cni-${path.id}`}>{path.label}</h3><span>{path.badge}</span></header>
+      <ol>{path.nodes.map((node, index) => <><li>{node}</li>{index < path.nodes.length - 1 && <i aria-hidden="true">→</i>}</>)}</ol>
+      <code>{path.packet}</code>
+      <p>{path.note}</p>
+    </section>
+  ))}
+  <p class="cni-ebpf-note"><b>eBPF is a data-plane mechanism, not a fifth topology.</b> An eBPF implementation can program same-node, native, overlay, or cloud-integrated paths.</p>
+</figure>
+
+<script>
+  for (const explorer of document.querySelectorAll<HTMLElement>('[data-cni-paths]')) {
+    const buttons = [...explorer.querySelectorAll<HTMLButtonElement>('[data-cni-path-option]')];
+    const sections = [...explorer.querySelectorAll<HTMLElement>('[data-cni-path]')];
+    buttons.forEach((button) => button.addEventListener('click', () => {
+      buttons.forEach((item) => item.setAttribute('aria-pressed', String(item === button)));
+      sections.forEach((section) => { section.hidden = section.dataset.cniPath !== button.dataset.cniPathOption; });
+    }));
+    explorer.querySelector<HTMLElement>('.cni-path-picker')!.hidden = false;
+    sections.forEach((section, index) => { section.hidden = index !== 0; });
+  }
+</script>
+
+<style>
+  .cni-paths { margin: 28px 0; padding: 24px; border: 1px solid var(--border); border-radius: 12px; background: rgba(255,255,255,.014); }
+  figcaption { display: grid; gap: 7px; margin-bottom: 18px; }
+  figcaption strong { font-size: 1rem; }
+  .cni-path-picker { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 18px; }
+  button { padding: 9px 11px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--muted); font-family: var(--mono); font-size: .6rem; cursor: pointer; }
+  button[aria-pressed='true'] { border-color: rgba(66,214,232,.5); background: rgba(66,214,232,.07); color: var(--text); }
+  section { padding: 17px; border: 1px solid rgba(66,214,232,.2); border-radius: 9px; background: rgba(66,214,232,.03); }
+  section header { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+  section h3 { margin: 0; font-size: .9rem; }
+  section header span { color: var(--cyan); font-family: var(--mono); font-size: .56rem; }
+  ol { display: flex; align-items: center; gap: 8px; margin: 18px 0; padding: 0; list-style: none; }
+  li { flex: 1; min-width: 0; padding: 12px 8px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); font-size: .63rem; text-align: center; }
+  i { color: var(--green); font-style: normal; }
+  code { display: block; overflow-wrap: anywhere; color: var(--purple); font-size: .62rem; }
+  section p, .cni-ebpf-note { margin: 13px 0 0; color: var(--muted); font-size: .69rem; line-height: 1.55; }
+  .cni-ebpf-note { padding: 12px; border-left: 2px solid var(--purple); background: rgba(183,154,255,.035); }
+  .cni-ebpf-note b { color: var(--text); }
+  @media (max-width: 650px) { ol { flex-direction: column; align-items: stretch; } i { align-self: center; transform: rotate(90deg); } section header { align-items: flex-start; flex-direction: column; } }
+</style>
