@@ -1,0 +1,73 @@
+---
+import '../../styles/network-explorers.css';
+---
+<section class="network-explorer" data-network-policy aria-labelledby="policy-explorer-title">
+  <span class="content-kicker">Try the policy gates</span>
+  <h3 id="policy-explorer-title">One connection needs permission at both ends</h3>
+  <p>Test a new TCP connection from <code>frontend</code> to <code>api:8080</code> using a known Pod IP. Toggle isolation and matching allow rules; a second rule can restore access without removing the isolation policy.</p>
+  <div data-policy-controls hidden>
+    <label><input type="checkbox" data-policy-enforced checked /> Network implementation enforces NetworkPolicy</label>
+    <div class="network-controls">
+      {['egress', 'ingress'].map((direction, index) => (
+        <fieldset data-policy-direction={direction}>
+          <legend>{index === 0 ? 'Source Pod · egress' : 'Destination Pod · ingress'}</legend>
+          <label><input type="checkbox" data-isolated checked /> A policy isolates this direction</label>
+          <label><input type="checkbox" data-rule-one checked={index === 0} /> Policy A allows this TCP connection</label>
+          <label><input type="checkbox" data-rule-two /> Policy B also allows this connection</label>
+        </fieldset>
+      ))}
+    </div>
+  </div>
+  <div class="network-nodes">
+    <article>
+      <small>Source · frontend</small><h4>Egress gate</h4>
+      <div class="network-node" data-policy-gate="egress" data-state="allowed"><strong>✓ Egress permitted</strong><span>Policy A supplies a matching allow.</span></div>
+    </article>
+    <article>
+      <small>Destination · api</small><h4>Ingress gate</h4>
+      <div class="network-node" data-policy-gate="ingress" data-state="blocked"><strong>× Ingress blocked</strong><span>Isolated, with no matching allow.</span></div>
+    </article>
+  </div>
+  <div class="network-route" aria-label="Logical connection path">
+    <strong data-policy-path>frontend → egress permitted → ingress blocked × api:8080</strong>
+    <span>Arrows show the logical connection and its gates, not physical enforcement locations.</span>
+  </div>
+  <p class="network-result" data-policy-result role="status" aria-atomic="true"><strong>BLOCKED by NetworkPolicy</strong><span>The destination ingress gate blocks this connection.</span></p>
+  <p class="network-note">With no isolation, that direction is unrestricted by NetworkPolicy. Matching allow policies themselves select and isolate a direction; the controls keep that relationship consistent. This model excludes host-network exceptions, other filtering, DNS, and application health. “Permitted” describes NetworkPolicy only. <a href="https://kubernetes.io/docs/concepts/services-networking/network-policies/">Kubernetes policy semantics ↗</a></p>
+</section>
+<script>
+  for (const explorer of document.querySelectorAll<HTMLElement>('[data-network-policy]')) {
+    const enforced = explorer.querySelector<HTMLInputElement>('[data-policy-enforced]')!;
+    const directions = [...explorer.querySelectorAll<HTMLFieldSetElement>('[data-policy-direction]')];
+    function render() {
+      const permits = directions.map(group => {
+        const isolated = group.querySelector<HTMLInputElement>('[data-isolated]')!.checked;
+        const a = group.querySelector<HTMLInputElement>('[data-rule-one]')!.checked;
+        const b = group.querySelector<HTMLInputElement>('[data-rule-two]')!.checked;
+        const direction = group.dataset.policyDirection!;
+        const allowed = !enforced.checked || !isolated || a || b;
+        const gate = explorer.querySelector<HTMLElement>(`[data-policy-gate="${direction}"]`)!;
+        gate.dataset.state = allowed ? 'allowed' : 'blocked';
+        gate.querySelector('strong')!.textContent = `${allowed ? '✓' : '×'} ${direction === 'egress' ? 'Egress' : 'Ingress'} ${allowed ? 'permitted' : 'blocked'}`;
+        gate.querySelector('span')!.textContent = !enforced.checked ? 'No NetworkPolicy enforcement in this model.' : !isolated ? 'No selecting policy: this direction is not isolated.' : a || b ? `Matching allow from ${a && b ? 'A ∪ B' : a ? 'policy A' : 'policy B'}.` : 'Isolated, with no matching allow.';
+        return allowed;
+      });
+      const allowed = permits.every(Boolean);
+      explorer.querySelector('[data-policy-path]')!.textContent = `frontend → egress ${permits[0] ? '✓' : '×'} → ingress ${permits[1] ? '✓' : '×'} ${allowed ? '→' : '×'} api:8080`;
+      const result = explorer.querySelector<HTMLElement>('[data-policy-result]')!;
+      result.dataset.state = allowed ? 'allowed' : 'blocked';
+      result.querySelector('strong')!.textContent = !enforced.checked ? 'NOT ENFORCED' : allowed ? 'PERMITTED by NetworkPolicy' : 'BLOCKED by NetworkPolicy';
+      result.querySelector('span')!.textContent = !enforced.checked ? 'The objects alone cannot enforce these gates. Other networking controls may still block traffic.' : allowed ? 'Both directions permit this connection. Routing and the application must still work.' : `Blocked at ${!permits[0] && !permits[1] ? 'both source egress and destination ingress' : !permits[0] ? 'source egress' : 'destination ingress'}.`;
+    }
+    directions.forEach(group => group.addEventListener('change', event => {
+      const isolated = group.querySelector<HTMLInputElement>('[data-isolated]')!;
+      const rules = [...group.querySelectorAll<HTMLInputElement>('[data-rule-one], [data-rule-two]')];
+      if (event.target === isolated && !isolated.checked) rules.forEach(rule => { rule.checked = false; });
+      if (rules.some(rule => rule.checked)) isolated.checked = true;
+      render();
+    }));
+    enforced.addEventListener('change', render);
+    explorer.querySelector<HTMLElement>('[data-policy-controls]')!.hidden = false;
+    render();
+  }
+</script>

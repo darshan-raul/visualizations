@@ -1,28 +1,57 @@
 ---
+import WorkflowDiagram from '../WorkflowDiagram.astro';
 const paths = [
   {
     name: 'Inside one Pod',
     promise: 'Shared network namespace',
     nodes: ['Container A', 'localhost', 'Container B'],
     note: 'The containers share IP addresses and ports. They must coordinate port usage.',
+    lanes: ['Container A', 'Pod namespace', 'Container B'],
+    steps: [
+      ['Container A', 'Open a local connection', '127.0.0.1:8080', 'The client uses the loopback address shared by containers in this Pod.'],
+      ['Pod namespace', 'Deliver over loopback', 'Shared addresses and ports', 'The kernel finds the listening socket in the same network namespace. This does not test CNI forwarding.'],
+      ['Container B', 'Accept the connection', 'Application port 8080', 'The application must listen on the matching address and port. No Service is involved.'],
+    ],
   },
   {
     name: 'Pod → Pod',
     promise: 'Direct pod addresses',
     nodes: ['Source Pod', 'Pod network', 'Destination Pod'],
     note: 'Same-node and cross-node forwarding are implementation details: routing, switching, encapsulation, cloud interfaces, or eBPF may be involved.',
+    lanes: ['Source Pod', 'Source node', 'Destination node', 'Backend Pod'],
+    steps: [
+      ['Source Pod', 'Address the backend directly', '10.244.3.12:8080', 'This cross-node example starts with a known Pod IP. Enforced source egress and destination ingress policy still apply.'],
+      ['Source node', 'Forward toward the remote Pod', 'Implementation-specific route', 'The installed data plane makes the Pod destination reachable. Kubernetes does not require a bridge or overlay.'],
+      ['Destination node', 'Deliver to the Pod network', 'Routing or decapsulation', 'An overlay removes its outer envelope; native routing does not need that envelope. Actual attachment and enforcement points vary.'],
+      ['Backend Pod', 'Reach the application socket', '10.244.3.12:8080', 'Success here does not establish that Service proxying or DNS works.'],
+    ],
   },
   {
     name: 'Pod → Service',
     promise: 'Stable frontend, changing backends',
     nodes: ['DNS / ClusterIP', 'Service data plane', 'Endpoint Pod'],
     note: 'A service proxy selects an eligible EndpointSlice backend and normally rewrites the destination. DNS discovery and packet forwarding are separate steps.',
+    lanes: ['Client Pod', 'Cluster DNS', 'Service data plane', 'Backend Pod'],
+    steps: [
+      ['Client Pod', 'Resolve the Service name', 'api.team.svc.cluster.local', 'This example uses cluster.local; the real cluster domain is configurable. The DNS exchange is separate from application traffic.'],
+      ['Cluster DNS', 'Return the virtual address', '10.96.0.20', 'For this normal Service, DNS answers with the ClusterIP, not a chosen backend. Headless Services behave differently.'],
+      ['Client Pod', 'Start a new connection', '10.96.0.20:80', 'The client uses the answer as its destination. A successful lookup does not guarantee delivery.'],
+      ['Service data plane', 'Choose an eligible endpoint', '10.96.0.20:80 → 10.244.3.12:8080', 'A typical Linux Service data plane translates the frontend destination. kube-proxy or its replacement programs this behavior.'],
+      ['Backend Pod', 'Receive the application request', 'targetPort: 8080', 'Pod routing, policy, and the listener must all work. CoreDNS does not carry this request.'],
+    ],
   },
   {
     name: 'External → workload',
     promise: 'Entry infrastructure plus routing policy',
     nodes: ['External client', 'Load balancer / Gateway', 'Service → Pod'],
     note: 'The controller implementation determines the real hops, source-address behavior, health checks, and where TLS terminates.',
+    lanes: ['External client', 'Gateway data plane', 'Backend selection', 'Backend Pod'],
+    steps: [
+      ['External client', 'Connect to the public address', 'https://api.example.com', 'External DNS and reachable entry infrastructure are prerequisites. A Gateway object alone does not provide them.'],
+      ['Gateway data plane', 'Accept TLS and match HTTP', 'Host + path → HTTPRoute backendRef', 'This example terminates TLS at the Gateway. Its controller has accepted the configuration and programmed a proxy or equivalent data plane.'],
+      ['Backend selection', 'Resolve the Service backend', 'Service port → eligible endpoint', 'The implementation may connect directly to endpoints or use the Service frontend. A ClusterIP or NodePort hop is not universal.'],
+      ['Backend Pod', 'Accept the upstream request', 'Application listener', 'Source address preservation, health checks, and backend TLS depend on the implementation and configuration.'],
+    ],
   },
 ];
 ---
@@ -30,20 +59,22 @@ const paths = [
 <figure class="traffic-paths" aria-labelledby="traffic-paths-title">
   <figcaption>
     <span>Path comparison</span>
-    <h3 id="traffic-paths-title">First identify which path is failing</h3>
-    <p>“Kubernetes networking” is not one path. Each path activates a different set of components.</p>
+    <h3 id="traffic-paths-title">Follow the components each connection needs</h3>
+    <p>Open a path, then step through it or select any numbered node. Each trace is a conceptual sequence; actual forwarding varies by implementation.</p>
   </figcaption>
   <div class="path-list">
     {paths.map((path, index) => (
-      <details open={index === 1}>
+      <details open={index === 2}>
         <summary><span>{String(index + 1).padStart(2, '0')}</span><strong>{path.name}</strong><small>{path.promise}</small></summary>
-        <div class="path-flow">
-          {path.nodes.map((node, nodeIndex) => (
-            <><b>{node}</b>{nodeIndex < path.nodes.length - 1 && <i aria-hidden="true">→</i>}</>
-          ))}
+        <div class="path-workflow">
+          <WorkflowDiagram id={`k8s-traffic-${index}`} lanes={path.lanes} steps={path.steps} />
         </div>
         <p>{path.note}</p>
       </details>
     ))}
   </div>
 </figure>
+
+<style>
+  .path-workflow { padding: 0 20px 20px; }
+</style>

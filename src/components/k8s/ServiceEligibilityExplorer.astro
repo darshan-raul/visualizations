@@ -1,0 +1,71 @@
+---
+import '../../styles/network-explorers.css';
+---
+<section class="network-explorer" data-service-eligibility aria-labelledby="eligibility-title">
+  <span class="content-kicker">Change the backend pool</span>
+  <h3 id="eligibility-title">A healthy remote Pod cannot rescue a strict Local route</h3>
+  <p>The client is on Node A. Change endpoint readiness and the Service’s internal traffic policy, then inspect which destinations remain eligible for a new connection.</p>
+  <div data-eligibility-controls hidden>
+    <label for="eligibility-policy">Service internalTrafficPolicy</label>
+    <select id="eligibility-policy" data-eligibility-policy><option value="Cluster">Cluster · ready endpoints on either node</option><option value="Local">Local · ready endpoints on Node A only</option></select>
+    <div class="network-controls">
+      <label><input type="checkbox" data-ready="a" checked /> Node A backend is ready</label>
+      <label><input type="checkbox" data-ready="b" checked /> Node B backend is ready</label>
+    </div>
+  </div>
+  <div class="network-route">
+    <strong>Client on Node A → Service 10.96.0.20:80</strong>
+    <span data-eligibility-pool>Eligible endpoint set: 10.244.1.12:8080, 10.244.3.12:8080</span>
+  </div>
+  <svg class="eligibility-branches" viewBox="0 0 800 60" preserveAspectRatio="none" aria-hidden="true">
+    <path data-eligibility-branch="a" d="M400 0 V15 H200 V52 m-6 -7 l6 7 6 -7" />
+    <path data-eligibility-branch="b" d="M400 0 V15 H600 V52 m-6 -7 l6 7 6 -7" />
+  </svg>
+  <div class="network-nodes">
+    {['a', 'b'].map((node, index) => (
+      <article>
+        <small>{index === 0 ? 'Node A · local to client' : 'Node B · remote'}</small>
+        <h4>{index === 0 ? 'Local backend' : 'Remote backend'}</h4>
+        <div class="network-node" data-endpoint={node} data-state="allowed">
+          <code>{index === 0 ? '10.244.1.12:8080' : '10.244.3.12:8080'}</code>
+          <strong>✓ Eligible</strong><span>Ready and included by Cluster policy.</span>
+        </div>
+      </article>
+    ))}
+  </div>
+  <p class="network-result" data-eligibility-result data-state="allowed" role="status" aria-atomic="true"><strong>2 eligible endpoints</strong><span>Either backend can receive a new connection; this diagram does not prescribe selection order.</span></p>
+  <p class="network-note">This shows the state after reconciliation for ordinary, non-terminating endpoints, with <code>publishNotReadyAddresses: false</code>. Actual readiness propagation is asynchronous; existing connections have separate lifetimes. Solid arrows represent a possible connection, not simultaneous delivery to all backends. <a href="https://kubernetes.io/docs/concepts/services-networking/service-traffic-policy/">Internal traffic policy ↗</a></p>
+</section>
+<script>
+  for (const explorer of document.querySelectorAll<HTMLElement>('[data-service-eligibility]')) {
+    const policy = explorer.querySelector<HTMLSelectElement>('[data-eligibility-policy]')!;
+    const inputs = [...explorer.querySelectorAll<HTMLInputElement>('[data-ready]')];
+    function render() {
+      const local = policy.value === 'Local';
+      const eligible = inputs.map((input, index) => input.checked && (!local || index === 0));
+      const addresses = ['10.244.1.12:8080', '10.244.3.12:8080'];
+      inputs.forEach((input, index) => {
+        explorer.querySelector(`[data-eligibility-branch="${input.dataset.ready}"]`)!.classList.toggle('excluded', !eligible[index]);
+        const node = explorer.querySelector<HTMLElement>(`[data-endpoint="${input.dataset.ready}"]`)!;
+        node.dataset.state = eligible[index] ? 'allowed' : 'blocked';
+        node.querySelector('strong')!.textContent = eligible[index] ? '✓ Eligible' : '× Excluded';
+        node.querySelector('span')!.textContent = !input.checked ? 'Not ready: excluded from this new-connection pool.' : local && index === 1 ? 'Ready, but on the wrong node for Local.' : `Ready and included by ${policy.value} policy.`;
+      });
+      const pool = addresses.filter((_, index) => eligible[index]);
+      explorer.querySelector('[data-eligibility-pool]')!.textContent = `Eligible endpoint set: ${pool.join(', ') || 'empty'}`;
+      const result = explorer.querySelector<HTMLElement>('[data-eligibility-result]')!;
+      result.dataset.state = pool.length ? 'allowed' : 'blocked';
+      result.querySelector('strong')!.textContent = `${pool.length} eligible endpoint${pool.length === 1 ? '' : 's'}`;
+      result.querySelector('span')!.textContent = pool.length ? 'A new connection may use the eligible set; selection order is implementation-dependent.' : local && inputs[1].checked ? 'Node B is ready, but Local cannot fall back to it. The Service has no eligible endpoint for this client.' : 'No eligible backend remains for this client. A correct DNS answer does not repair an empty endpoint pool.';
+    }
+    explorer.addEventListener('change', render);
+    explorer.querySelector<HTMLElement>('[data-eligibility-controls]')!.hidden = false;
+    render();
+  }
+</script>
+<style>
+  .eligibility-branches { display: block; width: 100%; height: 60px; margin-bottom: -16px; }
+  .eligibility-branches path { fill: none; stroke: var(--cyan); stroke-width: 2; }
+  .eligibility-branches path.excluded { visibility: hidden; }
+  @media (max-width: 620px) { .eligibility-branches { display: none; } }
+</style>

@@ -1,0 +1,24 @@
+.network-explorer { margin: 28px 0; padding: clamp(16px, 3vw, 24px); border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface-soft); }
+.network-explorer [hidden] { display: none; }
+.network-explorer h3 { margin: 8px 0 12px; font-size: 1.1rem; }
+.network-explorer p { color: var(--muted); font-size: .78rem; line-height: 1.65; }
+.network-explorer fieldset { min-width: 0; margin: 0; padding: 14px; border: 1px solid var(--border-strong); border-radius: 8px; }
+.network-explorer legend { color: var(--purple); padding: 0 6px; font-size: .75rem; }
+.network-explorer label { display: flex; align-items: center; gap: 10px; min-height: 44px; color: var(--text); font-size: .75rem; }
+.network-explorer input { flex: 0 0 auto; width: 18px; height: 18px; accent-color: var(--purple); }
+.network-explorer select { width: 100%; min-height: 44px; padding: 8px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface); color: var(--text); }
+.network-controls, .network-nodes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 16px 0; }
+.network-nodes article { min-width: 0; padding: 16px; border: 1px solid var(--border-strong); border-radius: 9px; background: var(--surface); }
+.network-nodes h4 { margin: 5px 0 12px; font-size: .9rem; }
+.network-nodes small { color: var(--purple); font: .65rem var(--mono); }
+.network-node { display: grid; gap: 8px; padding: 14px; border: 1px solid var(--cyan); border-radius: 7px; font-size: .78rem; }
+.network-node code { overflow-wrap: anywhere; }
+.network-node[data-state='blocked'] { border-color: var(--red); }
+.network-node[data-state='allowed'] { border-color: var(--green); }
+.network-route { display: grid; gap: 10px; margin: 16px 0; padding: 16px; border: 1px solid var(--cyan); border-radius: 8px; }
+.network-route > strong { color: var(--cyan); font-size: .85rem; }
+.network-result { padding: 14px; border-left: 3px solid var(--red); background: var(--surface); }
+.network-result[data-state='allowed'] { border-color: var(--green); }
+.network-result strong { display: block; margin-bottom: 6px; color: var(--text); }
+.network-explorer .network-note { font-size: .7rem; }
+@media (max-width: 620px) { .network-controls, .network-nodes { grid-template-columns: 1fr; } }

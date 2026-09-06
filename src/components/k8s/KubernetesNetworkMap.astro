@@ -14,13 +14,20 @@
     <div><strong>Service proxy</strong><small>programmed node data plane</small></div>
   </div>
 
+  <div class="control-plane-map">
+    <span class="plane-label">Discovery</span>
+    <div><strong>Client resolver</strong><small>asks for api.team.svc</small></div>
+    <i aria-hidden="true">⇢</i>
+    <div><strong>Cluster DNS</strong><small>normal Service lookup</small></div>
+    <i aria-hidden="true">⇢</i>
+    <div><strong>ClusterIP answer</strong><small>used for a new connection</small></div>
+  </div>
+
   <div class="data-plane-map">
     <span class="plane-label">Packet path</span>
     <div class="map-node client"><strong>Client Pod</strong><small>10.244.1.7</small></div>
     <i aria-hidden="true">→</i>
-    <div class="map-node dns"><strong>DNS name</strong><small>api.team.svc</small></div>
-    <i aria-hidden="true">→</i>
-    <div class="map-node service"><strong>Service VIP</strong><small>virtual frontend</small></div>
+    <div class="map-node service"><strong>Service data plane</strong><small>selects backend for VIP</small></div>
     <i aria-hidden="true">→</i>
     <div class="map-node pod"><strong>Backend Pod</strong><small>10.244.3.12</small></div>
   </div>

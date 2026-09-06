@@ -1,0 +1,151 @@
+---
+import '../../styles/network-explorers.css';
+
+const pods = [
+  { id: 'a', name: 'api-a', address: '10.244.1.12', node: 'node-a', match: true, ready: true },
+  { id: 'b', name: 'api-b', address: '10.244.2.18', node: 'node-b', match: true, ready: true },
+  { id: 'c', name: 'worker-c', address: '10.244.3.24', node: 'node-c', match: false, ready: true },
+];
+---
+
+<section class="network-explorer service-endpoint-explorer" data-service-endpoints aria-labelledby="service-endpoints-title">
+  <span class="content-kicker">Change the desired backend set</span>
+  <h3 id="service-endpoints-title">Labels establish membership; conditions describe endpoint state</h3>
+  <p>The Service selects <code>app=api</code>. Change each Pod’s label match and readiness, then inspect what the EndpointSlice controller publishes and what a typical Service data plane considers for a new connection.</p>
+
+  <div class="service-endpoint-controls" data-service-endpoint-controls hidden>
+    {pods.map((pod) => (
+      <fieldset data-pod-control={pod.id}>
+        <legend>{pod.name}</legend>
+        <label><input type="checkbox" data-pod-match checked={pod.match} /> Labels match <code>app=api</code></label>
+        <label><input type="checkbox" data-pod-ready checked={pod.ready} /> Pod is ready</label>
+      </fieldset>
+    ))}
+  </div>
+
+  <div class="service-endpoint-map">
+    <div class="service-endpoint-source">
+      <small>Service</small>
+      <strong>api</strong>
+      <code>selector: app=api</code>
+      <code>port 80 → targetPort 8080</code>
+    </div>
+    <div class="service-endpoint-arrow" aria-hidden="true"><span>selector reconciliation</span>⇢</div>
+    <div class="service-endpoint-slice">
+      <small>EndpointSlice · IPv4</small>
+      <strong>api-k7m9x</strong>
+      <div data-slice-endpoints></div>
+      <p data-slice-empty hidden>No matching Pods: the slice contains no endpoints.</p>
+    </div>
+    <div class="service-endpoint-arrow" aria-hidden="true"><span>watch + program</span>⇢</div>
+    <div class="service-endpoint-consumer">
+      <small>Service data plane</small>
+      <strong>Eligible for a new connection</strong>
+      <div data-eligible-endpoints></div>
+      <p data-eligible-empty hidden>No ready endpoints remain.</p>
+    </div>
+  </div>
+
+  <div class="service-pod-grid" aria-label="Example Pods">
+    {pods.map((pod) => (
+      <article data-pod={pod.id} data-membership={pod.match ? 'member' : 'excluded'}>
+        <small>{pod.node}</small>
+        <strong>{pod.name}</strong>
+        <code>{pod.address}:8080</code>
+        <span data-pod-state>{pod.match ? 'Published · ready=true' : 'Not selected'}</span>
+      </article>
+    ))}
+  </div>
+
+  <p class="network-result" data-service-endpoint-result data-state="allowed" role="status" aria-atomic="true"><strong>2 published · 2 eligible</strong><span>The data plane can choose either ready endpoint for a new connection.</span></p>
+  <p class="network-note">This is a selector-based Service with one illustrative IPv4 slice and explicit readiness values. Real Services can span multiple EndpointSlices, address families, ports, and topology domains. EndpointSlice consumers must combine every slice labeled for the Service. Existing connections can outlive a readiness change. <a href="https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/">EndpointSlice semantics ↗</a></p>
+</section>
+
+<script>
+  for (const explorer of document.querySelectorAll<HTMLElement>('[data-service-endpoints]')) {
+    const controls = [...explorer.querySelectorAll<HTMLFieldSetElement>('[data-pod-control]')];
+    const addresses = {
+      a: ['api-a', '10.244.1.12'],
+      b: ['api-b', '10.244.2.18'],
+      c: ['worker-c', '10.244.3.24'],
+    } as const;
+
+    function render() {
+      const published: Array<[string, string, boolean]> = [];
+      for (const control of controls) {
+        const id = control.dataset.podControl as keyof typeof addresses;
+        const match = control.querySelector<HTMLInputElement>('[data-pod-match]')!.checked;
+        const ready = control.querySelector<HTMLInputElement>('[data-pod-ready]')!.checked;
+        const pod = explorer.querySelector<HTMLElement>(`[data-pod="${id}"]`)!;
+        pod.dataset.membership = match ? ready ? 'member' : 'unready' : 'excluded';
+        pod.querySelector<HTMLElement>('[data-pod-state]')!.textContent = match ? `Published · ready=${ready}` : 'Not selected';
+        if (match) published.push([addresses[id][0], addresses[id][1], ready]);
+      }
+
+      const eligible = published.filter(([, , ready]) => ready);
+      const slice = explorer.querySelector<HTMLElement>('[data-slice-endpoints]')!;
+      const pool = explorer.querySelector<HTMLElement>('[data-eligible-endpoints]')!;
+      slice.replaceChildren(...published.map(([name, address, ready]) => {
+        const item = document.createElement('span');
+        item.className = 'endpoint-chip endpoint-chip-with-state';
+        item.dataset.ready = String(ready);
+        item.innerHTML = `<b>${name}</b><code>${address}:8080</code><em>ready=${ready}</em>`;
+        return item;
+      }));
+      pool.replaceChildren(...eligible.map(([name, address]) => {
+        const item = document.createElement('span');
+        item.className = 'endpoint-chip';
+        item.innerHTML = `<b>${name}</b><code>${address}:8080</code>`;
+        return item;
+      }));
+      explorer.querySelector<HTMLElement>('[data-slice-empty]')!.hidden = published.length !== 0;
+      explorer.querySelector<HTMLElement>('[data-eligible-empty]')!.hidden = eligible.length !== 0;
+
+      const result = explorer.querySelector<HTMLElement>('[data-service-endpoint-result]')!;
+      result.dataset.state = eligible.length ? 'allowed' : 'blocked';
+      result.querySelector('strong')!.textContent = `${published.length} published · ${eligible.length} eligible`;
+      result.querySelector('span')!.textContent = eligible.length
+        ? `The data plane can choose ${eligible.length === 1 ? 'the ready endpoint' : `from ${eligible.length} ready endpoints`} for a new connection.`
+        : published.length ? 'Matching endpoints exist, but none is ready for an ordinary new connection.' : 'The selector currently matches no Pods, so the Service has no backend membership.';
+    }
+
+    explorer.addEventListener('change', render);
+    explorer.querySelector<HTMLElement>('[data-service-endpoint-controls]')!.hidden = false;
+    render();
+  }
+</script>
+
+<style>
+  .service-endpoint-controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 18px 0; }
+  .service-endpoint-map { display: grid; grid-template-columns: minmax(140px, .72fr) 58px minmax(180px, 1fr) 58px minmax(180px, 1fr); align-items: stretch; gap: 8px; }
+  .service-endpoint-source, .service-endpoint-slice, .service-endpoint-consumer { display: grid; align-content: start; gap: 8px; min-width: 0; padding: 15px; border: 1px solid var(--border-strong); border-radius: 9px; background: var(--surface); }
+  .service-endpoint-source { border-color: rgba(183,154,255,.42); }
+  .service-endpoint-slice { border-color: rgba(104,163,255,.42); }
+  .service-endpoint-consumer { border-color: rgba(73,214,163,.38); }
+  .service-endpoint-map small, .service-pod-grid small { color: var(--purple); font: .59rem var(--mono); text-transform: uppercase; }
+  .service-endpoint-map strong { font-size: .78rem; }
+  .service-endpoint-map code { overflow-wrap: anywhere; font-size: .58rem; }
+  .service-endpoint-arrow { display: grid; align-content: center; justify-items: center; color: var(--purple); font: 1rem var(--mono); }
+  .service-endpoint-arrow span { max-width: 75px; color: var(--dim); font-size: .5rem; line-height: 1.4; text-align: center; }
+  [data-slice-endpoints], [data-eligible-endpoints] { display: grid; gap: 6px; }
+  :global(.endpoint-chip) { display: grid; min-width: 0; gap: 3px; padding: 8px; border: 1px solid var(--border); border-radius: 6px; }
+  :global(.endpoint-chip b) { font-size: .65rem; white-space: nowrap; }
+  :global(.endpoint-chip code) { white-space: normal; overflow-wrap: anywhere; font-size: .54rem; }
+  :global(.endpoint-chip-with-state em) { color: var(--green); font: normal .52rem var(--mono); }
+  :global(.endpoint-chip-with-state[data-ready='false']) { border-color: rgba(246,199,99,.35); }
+  :global(.endpoint-chip-with-state[data-ready='false'] em) { color: var(--amber); }
+  .service-endpoint-map p { margin: 0; font-size: .65rem; }
+  .service-pod-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 16px 0; }
+  .service-pod-grid article { display: grid; gap: 6px; padding: 13px; border: 1px solid var(--green); border-radius: 8px; background: var(--surface); }
+  .service-pod-grid article[data-membership='unready'] { border-color: var(--amber); }
+  .service-pod-grid article[data-membership='excluded'] { border-color: var(--border); background: rgba(255,255,255,.01); }
+  .service-pod-grid article[data-membership='excluded'] > strong { color: var(--dim); }
+  .service-pod-grid strong { font-size: .72rem; }
+  .service-pod-grid span { color: var(--muted); font-size: .62rem; }
+  @media (max-width: 760px) {
+    .service-endpoint-controls, .service-pod-grid { grid-template-columns: 1fr; }
+    .service-endpoint-map { grid-template-columns: 1fr; }
+    .service-endpoint-arrow { min-height: 34px; transform: rotate(90deg); }
+    .service-endpoint-arrow span { display: none; }
+  }
+</style>

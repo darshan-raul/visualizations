@@ -1,0 +1,122 @@
+---
+interface Props {
+  id: string;
+  lanes: string[];
+  steps: string[][];
+}
+const { id, lanes, steps } = Astro.props;
+const width = 1000;
+const rowHeight = 100;
+const x = (step: string[]) => (lanes.indexOf(step[0]) + .5) * width / lanes.length;
+---
+
+<div class="workflow" data-workflow>
+  <div class="workflow-controls" hidden>
+    <button type="button" data-workflow-back>← Back</button>
+    <button type="button" data-workflow-reset>Replay from start</button>
+    <button type="button" data-workflow-next>Next step →</button>
+    <p role="status" aria-atomic="true" data-workflow-status></p>
+  </div>
+  <ol class="workflow-details">
+    {steps.map((step, index) => (
+      <li id={`${id}-detail-${index}`} data-workflow-detail={index}>
+        <small>Step {index + 1} · {step[0]}</small>
+        <h4>{step[1]}</h4>
+        <code>{step[2]}</code>
+        <p>{step[3]}</p>
+      </li>
+    ))}
+  </ol>
+  <p class="workflow-legend" id={`${id}-legend`}>Read top to bottom. Dashed arrows show the conceptual sequence, not network calls. Select a numbered node to inspect a step. Scroll sideways on narrow screens to see every participant.</p>
+  <div class="workflow-scroll" tabindex="0" role="region" aria-label="Scrollable workflow diagram" aria-describedby={`${id}-legend`}>
+    <div class="workflow-canvas" style={`--lane-count: ${lanes.length}`}>
+      <div class="workflow-lanes">
+        {lanes.map((lane) => <strong>{lane}</strong>)}
+      </div>
+      <div class="workflow-body">
+        <svg viewBox={`0 0 ${width} ${steps.length * rowHeight}`} preserveAspectRatio="none" aria-hidden="true">
+          <defs><marker id={`${id}-arrow`} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" /></marker></defs>
+          {lanes.map((_, index) => <line class="workflow-lifeline" x1={(index + .5) * width / lanes.length} x2={(index + .5) * width / lanes.length} y1="0" y2={steps.length * rowHeight} />)}
+          {steps.slice(1).map((step, index) => (
+            <path data-workflow-edge={index + 1} class="workflow-edge" marker-end={`url(#${id}-arrow)`} d={`M ${x(steps[index])} ${index * rowHeight + 82} V ${(index + 1) * rowHeight} H ${x(step)} V ${(index + 1) * rowHeight + 17}`} />
+          ))}
+        </svg>
+        {steps.map((step, index) => (
+          <div class="workflow-row">
+            <button type="button" class="workflow-node" data-workflow-node={index} style={`grid-column: ${lanes.indexOf(step[0]) + 1}`} aria-controls={`${id}-detail-${index}`} disabled>
+              <span>{String(index + 1).padStart(2, '0')}</span><strong>{step[1]}</strong>
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  for (const workflow of document.querySelectorAll<HTMLElement>('[data-workflow]')) {
+    const nodes = [...workflow.querySelectorAll<HTMLButtonElement>('[data-workflow-node]')];
+    const details = [...workflow.querySelectorAll<HTMLElement>('[data-workflow-detail]')];
+    const edges = [...workflow.querySelectorAll<SVGPathElement>('[data-workflow-edge]')];
+    const back = workflow.querySelector<HTMLButtonElement>('[data-workflow-back]')!;
+    const next = workflow.querySelector<HTMLButtonElement>('[data-workflow-next]')!;
+    let position = 0;
+    function render() {
+      nodes.forEach((node, index) => {
+        node.setAttribute('aria-current', index === position ? 'step' : 'false');
+        node.classList.toggle('visited', index < position);
+      });
+      edges.forEach((edge, index) => edge.classList.toggle('visited', index < position));
+      details.forEach((detail, index) => { detail.hidden = index !== position; });
+      back.disabled = position === 0;
+      next.disabled = position === nodes.length - 1;
+      workflow.querySelector<HTMLElement>('[data-workflow-status]')!.textContent =
+        `Step ${position + 1} of ${nodes.length} · ${nodes[position].querySelector('strong')!.textContent}${position === nodes.length - 1 ? ' · Journey complete' : ''}`;
+    }
+    nodes.forEach((node, index) => {
+      node.disabled = false;
+      node.addEventListener('click', () => { position = index; render(); });
+    });
+    back.addEventListener('click', () => { position = Math.max(0, position - 1); render(); });
+    next.addEventListener('click', () => { position = Math.min(nodes.length - 1, position + 1); render(); });
+    workflow.querySelector('[data-workflow-reset]')!.addEventListener('click', () => { position = 0; render(); });
+    workflow.addEventListener('workflow-reset', () => { position = 0; render(); });
+    workflow.querySelector<HTMLElement>('.workflow-controls')!.hidden = false;
+    render();
+  }
+</script>
+
+<style>
+  .workflow { margin-top: 22px; }
+  .workflow [hidden] { display: none; }
+  .workflow-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .workflow-controls button { min-height: 40px; padding: 8px 12px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface); color: var(--text); font: .68rem var(--mono); cursor: pointer; }
+  .workflow-controls button:disabled { opacity: .45; cursor: default; }
+  .workflow-controls p, .workflow-legend { color: var(--muted); font-size: .7rem; line-height: 1.6; }
+  .workflow-controls p { flex-basis: 100%; margin: 4px 0; }
+  .workflow-scroll { overflow-x: auto; border: 1px solid var(--border-strong); border-radius: 10px; }
+  .workflow-canvas { min-width: 680px; }
+  .workflow-lanes, .workflow-row { display: grid; grid-template-columns: repeat(var(--lane-count), minmax(0, 1fr)); }
+  .workflow-lanes { background: rgba(183,154,255,.07); }
+  .workflow-lanes strong { padding: 16px 8px; color: var(--purple); font: .65rem var(--mono); text-align: center; }
+  .workflow-body { position: relative; }
+  .workflow-body svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .workflow-lifeline { stroke: var(--border-strong); stroke-width: 1; }
+  .workflow-edge { fill: none; stroke: var(--purple); stroke-width: 2; stroke-dasharray: 5 4; }
+  .workflow-edge.visited { stroke: var(--cyan); }
+  marker path { fill: var(--purple); }
+  .workflow-row { position: relative; height: 100px; align-items: center; }
+  .workflow-node { display: flex; gap: 8px; align-items: center; height: 64px; margin: 0 10px; padding: 8px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); color: var(--text); text-align: left; cursor: pointer; }
+  .workflow-node span { color: var(--purple); font: .63rem var(--mono); }
+  .workflow-node strong { font-size: .69rem; line-height: 1.4; }
+  .workflow-node:disabled { cursor: default; }
+  .workflow-node.visited { border-color: var(--cyan); }
+  .workflow-node[aria-current='step'] { outline: 2px solid var(--cyan); outline-offset: 2px; background: var(--surface-raised, #182333); }
+  .workflow-node:focus-visible { outline: 3px solid var(--text); outline-offset: 4px; }
+  .workflow-details { padding: 0; margin: 16px 0 0; list-style: none; }
+  .workflow-details li { padding: 18px; border: 1px solid var(--border-strong); border-left: 3px solid var(--cyan); border-radius: 8px; margin-top: 10px; }
+  .workflow-details small { color: var(--purple); font: .65rem var(--mono); }
+  .workflow-details h4 { margin: 8px 0; }
+  .workflow-details code { overflow-wrap: anywhere; }
+  .workflow-details p { color: var(--muted); font-size: .78rem; line-height: 1.65; margin-bottom: 0; }
+</style>
