@@ -9,8 +9,8 @@ const topics = (await getCollection('topics')).sort((a, b) => a.data.title.local
 <BaseLayout title="All visualizations" description="Browse every visual deep dive in Infra Illustrated.">
   <section class="page-intro shell">
     <span class="eyebrow"><i></i> Complete catalogue</span>
-    <h1>Every system,<br /><span>ready to inspect.</span></h1>
-    <p>Search the complete reference library or narrow it by collection, topic, technology, and format.</p>
+    <h1>Explore every<br /><span>visual reference.</span></h1>
+    <p>Search for a mechanism or narrow the library by collection, topic, technology, and format.</p>
   </section>
   <section class="catalogue-section shell">
     <LibraryExplorer topics={topics} />

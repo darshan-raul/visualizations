@@ -417,7 +417,7 @@
 <header>
   <div class="badge">&#9673; Observability</div>
   <h1>OpenTelemetry (OTel)</h1>
-  <p class="subtitle">Unified telemetry for cloud-native: traces, metrics, and logs under one vendor-neutral standard. Route to any backend — Jaeger, Prometheus, SigNoz, Datadog, Tempo.</p>
+  <p class="subtitle">See how applications produce traces, metrics, and logs, how context connects the work, and how the Collector processes and exports telemetry.</p>
 </header>
 
 <!-- Tab Navigation -->
@@ -442,19 +442,19 @@
   <div class="concept-grid">
     <div class="concept-card blue">
       <div class="card-title">OpenCensus (Google, 2017)</div>
-      <div class="card-body">Metrics and tracing with vendor-neutral data collection. First to unify signals under one project.</div>
+      <div class="card-body">APIs and libraries for collecting metrics and distributed traces without tying instrumentation to one backend.</div>
     </div>
     <div class="concept-card cyan">
       <div class="card-title">OpenTracing (CNCF, 2016)</div>
-      <div class="card-body">Distributed tracing API. No data collection mandate — pure API spec that anyone could implement.</div>
+      <div class="card-body">A vendor-neutral API for instrumenting distributed traces, with implementations supplied separately.</div>
     </div>
     <div class="concept-card purp">
       <div class="card-title">OpenTelemetry (2019)</div>
-      <div class="card-body">CNCF merged both projects. Absorbed best ideas into single unified API + SDK. Now CNCF's 2nd largest project after Kubernetes.</div>
+      <div class="card-body">OpenCensus and OpenTracing merged into one CNCF project covering telemetry APIs, SDKs, semantic conventions, protocols, and the Collector.</div>
     </div>
   </div>
 
-  <div class="section-label">Why OpenTelemetry?</div>
+  <div class="section-label">Why a shared telemetry layer helps</div>
 
   <div class="flow-container">
     <div style="font-size:.85rem; color:var(--text-muted); margin-bottom:16px; font-weight:600;">Before OTel — Vendor Lock-in</div>
@@ -538,27 +538,27 @@
   <div class="concept-grid">
     <div class="concept-card blue">
       <div class="card-title">Vendor Neutrality</div>
-      <div class="card-body">Own your telemetry data. Route to any backend by swapping Collector config.</div>
+      <div class="card-body">Send supported telemetry to one or more compatible backends by changing the Collector pipeline rather than every application.</div>
     </div>
     <div class="concept-card cyan">
       <div class="card-title">Unified Signals</div>
-      <div class="card-body">Single model for traces, metrics, and logs. Same concepts across all three.</div>
+      <div class="card-body">Traces, metrics, and logs share resource identity, attributes, semantic conventions, and export infrastructure where applicable.</div>
     </div>
     <div class="concept-card green">
       <div class="card-title">Auto-Instrumentation</div>
-      <div class="card-body">Zero-code / low-code observability. Agents attach to libraries automatically.</div>
+      <div class="card-body">Where an instrumentation agent supports the runtime and libraries, it can create common telemetry with little or no application-code change.</div>
     </div>
     <div class="concept-card amber">
       <div class="card-title">Cross-Cutting</div>
-      <div class="card-body">Context propagation, resource attributes, and semantic conventions unify all signals.</div>
+      <div class="card-body">Trace context connects work across process boundaries; resource attributes and semantic conventions give telemetry consistent names.</div>
     </div>
     <div class="concept-card purp">
       <div class="card-title">Polyglot Support</div>
-      <div class="card-body">First-class SDKs: Go, Python, Java, JavaScript, .NET, Rust, C++, PHP, Ruby.</div>
+      <div class="card-body">Language implementations expose the common specification through APIs, SDKs, instrumentation libraries, and exporters with different maturity levels.</div>
     </div>
     <div class="concept-card red">
       <div class="card-title">Open Specification</div>
-      <div class="card-body">OTel spec is vendor-neutral. Every implementation follows the same behavior.</div>
+      <div class="card-body">The specification is vendor-neutral, while language and Collector components publish their own support and stability status.</div>
     </div>
   </div>
 
@@ -569,20 +569,20 @@
 
   <div class="section-label">Three Signals</div>
 
-  <p>OpenTelemetry defines three <strong style="color:var(--text)">signals</strong> — fundamental telemetry types. All three share the same context propagation model and can be correlated.</p>
+  <p>OpenTelemetry works with three main telemetry signals. A trace follows causally related operations, a metric records measurements over time, and a log records an event. Shared resource attributes and trace identifiers can help a backend correlate them.</p>
 
   <div class="concept-grid">
     <div class="concept-card blue">
       <div class="card-title">Traces</div>
-      <div class="card-body">Directed acyclic graph (DAG) of spans. Captures the causal chain of operations across services. The primary observability primitive.</div>
+      <div class="card-body">A collection of spans representing related operations across services. Parent relationships, links, and propagated context show how the work connects.</div>
     </div>
     <div class="concept-card green">
       <div class="card-title">Metrics</div>
-      <div class="card-body">Point-in-time observations of measurements. Sampled separately from traces. Designed for alerting and dashboards.</div>
+      <div class="card-body">Measurements aggregated as sums, gauges, or distributions. Backends use their time series for alerts, dashboards, and longer-term trends.</div>
     </div>
     <div class="concept-card amber">
       <div class="card-title">Logs</div>
-      <div class="card-body">High-fidelity timestamped records. OTel LogRecords can carry trace_id/span_id for correlation back to traces.</div>
+      <div class="card-body">Timestamped records with severity, body, resource, and attributes. Records emitted in a trace context can also carry trace and span identifiers.</div>
     </div>
   </div>
 
@@ -683,7 +683,7 @@ Log (signal)
 
   <div class="section-label">Collector Architecture</div>
 
-  <p>The OTel Collector is a <strong style="color:var(--text)">vendor-neutral proxy</strong> that receives, processes, and exports telemetry. It sits between your application and observability backends.</p>
+  <p>The OpenTelemetry Collector runs telemetry pipelines outside your application. Receivers accept supported protocols, processors transform or batch the data, and exporters send it to one or more destinations.</p>
 
   <div class="flow-container">
     <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; text-align:center;">
@@ -814,15 +814,15 @@ service:
   <div class="concept-grid">
     <div class="concept-card blue">
       <div class="card-title">Agent Mode</div>
-      <div class="card-body">Sidecar or DaemonSet on each node. Applications send to localhost. Reduces backend connections, adds local batching/compression.</div>
+      <div class="card-body">Run a Collector beside workloads or as a DaemonSet on each Node. Applications send to a nearby endpoint, which can batch and enrich data before forwarding it.</div>
     </div>
     <div class="concept-card green">
       <div class="card-title">Gateway Mode</div>
-      <div class="card-body">Single Collector Deployment as central aggregation point. Single choke point for routing, filtering, sampling.</div>
+      <div class="card-body">Run a scalable Collector service as a shared aggregation tier. It centralizes routing, filtering, and processing that needs telemetry from several sources.</div>
     </div>
     <div class="concept-card purp">
       <div class="card-title">Standalone</div>
-      <div class="card-body">Single process doing everything. For small deployments and local development.</div>
+      <div class="card-body">One Collector receives, processes, and exports the data. This can suit local development or a small deployment while leaving one failure and capacity boundary.</div>
     </div>
   </div>
 
@@ -919,7 +919,7 @@ service:
 
   <div class="section-label">W3C Trace Context</div>
 
-  <p>Context propagation links spans across <strong style="color:var(--text)">process boundaries</strong> (network calls, message queues, async tasks) into a single end-to-end trace.</p>
+  <p>When one service calls another, the trace must cross the process boundary with the request. A propagator injects trace context into an HTTP header, message metadata, or another carrier; the receiver extracts it and uses it as the parent context for new spans.</p>
 
   <div class="section-label">traceparent Header</div>
 
@@ -947,7 +947,7 @@ service:
 
   <div class="section-label">Propagators</div>
 
-  <p>The Propagators API injects context into outgoing carriers (HTTP headers, message metadata) and extracts from incoming carriers.</p>
+  <p>The Propagators API performs those two operations: inject the current context into an outgoing carrier, then extract it from the incoming carrier. Both services must agree on a propagation format for the trace to remain connected.</p>
 
   <table>
     <tr><th>Propagator</th><th>traceparent</th><th>tracestate</th><th>Baggage</th><th>Notes</th></tr>
@@ -997,7 +997,7 @@ set_global_textmap(TraceContextPropagator())</pre></div>
 
   <div class="section-label">Baggage</div>
 
-  <p>Baggage is <strong style="color:var(--text)">key-value metadata</strong> propagated alongside trace context. Unlike span attributes (scoped to a single span), baggage flows through the <em>entire trace</em> and across all services.</p>
+  <p>Baggage carries key-value context across service boundaries alongside the trace context. A baggage item is not automatically a span attribute; instrumentation must copy it deliberately when that is useful. Because downstream services receive it, avoid secrets and unbounded values.</p>
 
   <div class="concept-grid">
     <div class="concept-card amber">
@@ -1213,7 +1213,7 @@ tracer = trace.get_tracer(<span class="s">"invoice-service"</span>)
     </div>
     <div class="concept-card amber">
       <div class="card-title">Pattern 5: Error Marking</div>
-      <div class="card-body">Always set <code>span.SetStatus(codes.Error, "reason")</code> and <code>attribute.Bool("error", true)</code> on error spans.</div>
+      <div class="card-body">Record the error and set the span status according to the language's semantic-convention guidance. Avoid adding a duplicate custom error attribute when standard fields already describe it.</div>
     </div>
   </div>
 
@@ -1347,7 +1347,7 @@ duration_histogram.record(<span class="m">127.5</span>, {<span class="s">"method
 
   <div class="section-label">Attributes (Labels)</div>
 
-  <p>Attributes classify metric recordings. Every unique combination creates a new time series.</p>
+  <p>Attributes divide metric measurements into time series. Each distinct attribute set can create another series in the backend, so values such as user IDs or request IDs can produce unbounded cardinality and high storage cost.</p>
 
   <div class="warn-box">
     <strong>Cardinality Warning:</strong> <code>attribute.String("request_id", unique_id)</code> creates a new time series for every request. Keep attribute values low cardinality (≤ 100 unique values).
@@ -1369,7 +1369,7 @@ counter.add(<span class="m">1</span>, {<span class="s">"request_id"</span>: <spa
 
   <div class="section-label">Exemplars</div>
 
-  <p>Exemplars are <strong style="color:var(--text)">trace references embedded in histogram buckets</strong>: actual <code>trace_id</code> and <code>span_id</code> attached to a bucket recording. Enable drill-down from metric → trace.</p>
+  <p>An exemplar attaches a representative trace and span identifier to a metric measurement, such as one observation contributing to a histogram bucket. A compatible backend can use it to open the trace behind an unusual latency value.</p>
 
   <div class="flow-container">
     <div class="flow-row" style="flex-wrap:wrap; gap:8px; justify-content:center; align-items:center;">
@@ -1428,7 +1428,7 @@ counter.add(<span class="m">1</span>, {<span class="s">"request_id"</span>: <spa
 
   <div class="section-label">LogRecord Model</div>
 
-  <p>Logs in OTel are <strong style="color:var(--text)">first-class signals</strong>. A LogRecord carries timestamp, severity, body, resource, attributes, and optionally trace_id + span_id for correlation.</p>
+  <p>An OpenTelemetry LogRecord carries a timestamp, observed time, severity, body, resource, and attributes. When code emits the record inside an active span, it can also carry the trace and span identifiers needed for correlation.</p>
 
   <div class="concept-grid">
     <div class="concept-card blue">
@@ -1647,7 +1647,7 @@ spec:
 
   <div class="section-label">K8s Attributes Processor</div>
 
-  <p>The <code>k8sattributes</code> processor automatically enriches spans with Kubernetes metadata.</p>
+  <p>The <code>k8sattributes</code> processor can associate telemetry with Kubernetes workloads and add selected metadata. Its result depends on the Collector's deployment mode, permissions, association rules, and processor configuration.</p>
 
   <div class="code-block"><pre>processors:
   k8sattributes:

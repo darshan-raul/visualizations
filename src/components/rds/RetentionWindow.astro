@@ -4,9 +4,9 @@ const days = Array.from({ length: 9 }, (_, index) => index + 1);
 
 <figure class="rolling-window" aria-labelledby="rolling-window-title">
   <figcaption>
-    <span>Static mental model · seven-day example</span>
+    <span>Seven-day retention example</span>
     <h3 id="rolling-window-title">The window moves forward with time</h3>
-    <p>Compare the same retention setting on two consecutive days. Green days are inside the available recovery window.</p>
+    <p>Read the two rows together: a new day becomes available on the right while the oldest day drops out on the left. The green days show the recovery window.</p>
   </figcaption>
 
   <div class="window-comparison" role="img" aria-label="Today, days 2 through 8 are in the seven-day recovery window. One day later, days 3 through 9 are in the window. Day 2 leaves as day 9 enters.">
@@ -42,7 +42,7 @@ const days = Array.from({ length: 9 }, (_, index) => index + 1);
   </div>
 
   <div class="window-takeaway">
-    <strong>What changed?</strong>
-    <p>The retention setting stayed at seven days. The boundary moved: the oldest day left the window as a new day entered it.</p>
+    <strong>Check the available times before restoring</strong>
+    <p>These rows group time into days to show the movement. For an actual restore, use the earliest and latest restorable times reported by RDS; RDS manages the backups behind that range.</p>
   </div>
 </figure>

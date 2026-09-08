@@ -10,8 +10,8 @@ const pods = [
 
 <section class="network-explorer service-endpoint-explorer" data-service-endpoints aria-labelledby="service-endpoints-title">
   <span class="content-kicker">Change the desired backend set</span>
-  <h3 id="service-endpoints-title">Labels establish membership; conditions describe endpoint state</h3>
-  <p>The Service selects <code>app=api</code>. Change each Pod’s label match and readiness, then inspect what the EndpointSlice controller publishes and what a typical Service data plane considers for a new connection.</p>
+  <h3 id="service-endpoints-title">The controller publishes Pods that match the selector</h3>
+  <p>This Service selects <code>app=api</code>. Change each Pod's labels and readiness to see what the EndpointSlice controller publishes and which addresses a typical Service data plane can choose for a new connection.</p>
 
   <div class="service-endpoint-controls" data-service-endpoint-controls hidden>
     {pods.map((pod) => (

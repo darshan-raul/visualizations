@@ -51,7 +51,7 @@ const technologies = [...new Set<string>(topics.flatMap((topic: any): string[] =
 
   <div class="results-head">
     <p data-results-status aria-live="polite">{topics.length} visualizations</p>
-    <span>Independent references. No required order.</span>
+    <span>Open any reference directly.</span>
   </div>
   <div class="topic-grid" data-topic-grid>
     {topics.map((topic: any) => <TopicCard topic={topic} />)}

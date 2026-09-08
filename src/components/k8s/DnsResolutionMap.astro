@@ -1,5 +1,5 @@
 <figure class="companion-map" aria-labelledby="dns-map-title">
-  <figcaption><span>Resolution map</span><h3 id="dns-map-title">A short name can trigger several candidate queries</h3><p>Resolver policy constructs names first. Cluster DNS then answers locally or forwards upstream.</p></figcaption>
+  <figcaption><span>Resolution map</span><h3 id="dns-map-title">A short name can produce several DNS queries</h3><p>The Pod's resolver applies its search rules first. Cluster DNS then answers a Kubernetes name or forwards another name upstream.</p></figcaption>
   <div class="lane"><span>Application</span><b>lookup “api”</b><i>→</i><b>Pod resolver</b><i>→</i><b>search suffixes</b></div>
   <div class="lane purple"><span>Cluster DNS</span><b>Service record?</b><i>→</i><b>Endpoint records?</b><i>→</i><b>cache response</b></div>
   <div class="lane green"><span>Answer</span><b>ClusterIP</b><em>or</em><b>Pod IPs</b><em>or</em><b>upstream result</b></div>

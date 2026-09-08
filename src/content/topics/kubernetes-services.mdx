@@ -1,6 +1,6 @@
 ---
 title: Kubernetes Services and Traffic Distribution
-summary: Trace how Services, EndpointSlices, proxy modes, connection state, locality, and external traffic policies turn stable frontends into changing backend paths.
+summary: Follow a connection from a stable Service address through EndpointSlices, proxy rules, traffic policy, and a changing set of backend Pods.
 slug: kubernetes-services
 collection: kubernetes
 tags: [Networking, Load Balancing, Troubleshooting]
@@ -39,17 +39,17 @@ import TrafficPolicyPaths from '../../components/k8s/TrafficPolicyPaths.astro';
 import MechanismFlow from '../../components/MechanismFlow.astro';
 import ReferenceTable from '../../components/ReferenceTable.astro';
 
-## The mental model
+## From a stable address to a changing backend
 
-A Service is a stable frontend plus a policy for reaching a logical backend set. The Service object does not contain a live list of Pod addresses, and the ClusterIP is not a load-balancer process. Controllers publish backend state in EndpointSlices; a Service proxy implementation turns that state into packet forwarding. [Service concepts ↗](https://kubernetes.io/docs/concepts/services-networking/service/)
+Your application can keep connecting to one Service address while Pods appear, disappear, or move between Nodes. Kubernetes maintains that stable frontend separately from the changing backend list. Controllers publish eligible addresses in EndpointSlices, and the cluster's Service implementation turns that state into packet forwarding. [Service concepts ↗](https://kubernetes.io/docs/concepts/services-networking/service/)
 
 <ServiceStateMap />
 
-> **Data-plane boundary:** This page uses destination translation to explain the common kube-proxy path. A replacement implementation can realize equivalent Service behavior differently. First identify the implementation, then inspect its rules.
+The diagrams use destination translation to explain the common kube-proxy path. Another implementation can provide the same Service behavior through different data-plane machinery, so identify the implementation before inspecting its rules.
 
 ## From selector to EndpointSlice
 
-For a Service with a selector, the control plane finds matching Pods and creates EndpointSlices. Selection establishes membership, while endpoint conditions describe whether an address is ready, serving, or terminating. A Service without a selector needs endpoints supplied separately or may represent an `ExternalName`. [EndpointSlices ↗](https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/)
+When a Service has a selector, the endpoint controller compares that selector with Pod labels and publishes matching addresses in EndpointSlices. Each endpoint also carries conditions such as `ready`, `serving`, and `terminating`, which help consumers decide whether to use it. A Service without a selector needs separately managed EndpointSlices or can represent an `ExternalName`. [EndpointSlices ↗](https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/)
 
 <MechanismFlow label="Control-plane reconciliation for a selector-based Service" steps={[
   { title: 'Labels match', detail: 'The Service selector identifies candidate Pods.', tone: 'purple' },
@@ -68,11 +68,11 @@ The deprecated `Endpoints` API truncates large backend sets and cannot represent
   ['nodePort', 'Node-facing Service exposure', 'A port allocated or selected on eligible Node addresses for NodePort-style traffic.'],
 ]} />
 
-A healthy Pod listening on `8080` does not help a Service whose `targetPort` resolves to `8081`. Named ports allow different Pods to expose the same logical name at different numeric ports, which can require separate EndpointSlices because ports apply to the whole slice.
+If a Pod listens on `8080` while the Service sends traffic to `8081`, the connection still fails even when the Pod is healthy. A named `targetPort` lets Pods expose the same logical port name at different numbers. Kubernetes may place those endpoints in separate slices because a port definition applies to the entire EndpointSlice.
 
 ## ClusterIP interception
 
-The control plane allocates a ClusterIP from the Service address range unless the Service is headless. In a common Linux kube-proxy path, rules match the frontend address and port, choose an endpoint, and destination-NAT the packet to the endpoint address and target port. Connection tracking keeps subsequent packets in that connection consistent with the translation. [Virtual IPs ↗](https://kubernetes.io/docs/reference/networking/virtual-ips/)
+Unless the Service is headless, the control plane allocates a ClusterIP from the Service address range. In a common Linux kube-proxy path, a Node matches packets for that address and port, chooses an endpoint, and rewrites the destination to the endpoint address and `targetPort`. Connection tracking remembers the translation for later packets in the same connection. [Virtual IPs ↗](https://kubernetes.io/docs/reference/networking/virtual-ips/)
 
 <ReferenceTable caption="Service proxy modes and boundaries" headers={['Implementation', 'How it programs forwarding', 'What to remember']} rows={[
   ['kube-proxy iptables', 'Netfilter chains and DNAT rules', 'Common and mature; rule synchronization grows with Service and endpoint count.'],
@@ -90,7 +90,7 @@ Endpoint readiness normally follows Pod readiness. A terminating endpoint has `t
 
 <EndpointLifecycle />
 
-`publishNotReadyAddresses: true` changes discovery semantics for workloads that need addresses before readiness, notably some peer-discovery systems. It should not be used to conceal an incorrect readiness probe.
+Some peer-discovery systems need addresses before their members become ready. Setting `publishNotReadyAddresses: true` supports that pattern by publishing those endpoints early. It also lets clients reach processes that may not serve normal traffic yet, so it cannot compensate for a readiness probe that tests the wrong thing.
 
 ## Headless and selectorless Services
 
@@ -117,7 +117,7 @@ The older `externalIPs` field does not allocate or advertise addresses; the oper
 
 `Local` is a hard eligibility restriction; `trafficDistribution` is a preference with implementation-dependent safeguards and fallback. [Internal policy ↗](https://kubernetes.io/docs/concepts/services-networking/service-traffic-policy/) [Source IP ↗](https://kubernetes.io/docs/tutorials/services/source-ip/) [Topology-aware routing ↗](https://kubernetes.io/docs/concepts/services-networking/topology-aware-routing/)
 
-Locality can reduce latency and cross-zone cost but concentrate traffic. Evaluate endpoint count per topology domain, autoscaling behavior, failure fallback, and actual request distribution.
+Keeping traffic near the client can reduce latency and cross-zone cost. It can also overload a small local endpoint set while healthy capacity sits elsewhere. Check endpoint counts by zone or Node, autoscaling behavior, fallback during failure, and the distribution you observe in production.
 
 ## Session affinity and connection state
 
@@ -148,8 +148,8 @@ Traffic distribution is not application health. Kubernetes readiness says an end
   <div><span>06</span><p>For external traffic, inspect controller status, registered targets, health checks, Node firewall rules, source translation, and return routing.</p></div>
 </div>
 
-## Practical implications
+## What this means in practice
 
-Treat Service debugging as a state-reconciliation problem: desired frontend, published backends, programmed data plane, and observed connection state. Record all four. Changing selectors or restarting kube-proxy before locating the divergent layer destroys useful evidence.
+When a Service fails, compare four things: the frontend you declared, the backends published in EndpointSlices, the forwarding state programmed on the Nodes, and the connection the client actually opened. The first mismatch usually identifies the responsible layer. Record that evidence before changing selectors or restarting the Service implementation.
 
 For new Linux clusters, evaluate nftables or the chosen proxy replacement against kernel support and implementation documentation; do not move to deprecated IPVS merely because an older comparison calls it the high-performance option.

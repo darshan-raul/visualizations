@@ -786,7 +786,7 @@
 <header>
   <div class="badge"><span class="dot"></span> Security Deep Dive</div>
   <h1>OAuth 2.0 &amp; OIDC<br>Explained</h1>
-  <p>A deep-dive into authorization flows — from foundational concepts to PKCE, JWTs, and why Implicit Flow was deprecated.</p>
+  <p>Follow how clients obtain and use tokens, where PKCE protects the authorization-code exchange, and how OpenID Connect adds identity.</p>
 
   <nav class="tabs" style="justify-content:center;">
     <button class="tab-btn active" onclick="showTab(0)"><span class="tab-num">00</span> Concepts &amp; JWT</button>
@@ -804,56 +804,56 @@
     <div class="section-label">Foundation</div>
     <div class="section-title">Core Concepts</div>
     <div class="section-desc">
-      OAuth 2.0 is an authorization framework that lets applications obtain limited access to user accounts without exposing passwords. Before exploring the flows, understand these building blocks.
+      OAuth 2.0 lets a client request scoped access to a protected resource. The actors and tokens below play different roles in that exchange; keeping them separate makes each flow easier to reason about.
     </div>
 
     <div class="concept-grid">
       <div class="concept-card blue">
         <div class="card-icon">👤</div>
         <div class="card-title">Resource Owner</div>
-        <div class="card-body">The user who owns the data and can grant or deny access to it. When you click "Allow" on a permissions screen, you're acting as the Resource Owner.</div>
+        <div class="card-body">The party that can grant access to the protected resource. In a user-facing flow, this is often the person reviewing the client's request.</div>
         <span class="tag blue">ACTOR</span>
       </div>
       <div class="concept-card blue">
         <div class="card-icon">📱</div>
         <div class="card-title">Client</div>
-        <div class="card-body">The application requesting access to the resource owner's data. Clients are either <strong>confidential</strong> (can store secrets — like backend servers) or <strong>public</strong> (cannot — like SPAs or mobile apps).</div>
+        <div class="card-body">The application requesting access. A <strong>confidential</strong> client can protect credentials in a controlled backend; a <strong>public</strong> client, such as a browser or native app, cannot keep a shared secret from its users.</div>
         <span class="tag blue">ACTOR</span>
       </div>
       <div class="concept-card green">
         <div class="card-icon">🔐</div>
         <div class="card-title">Authorization Server</div>
-        <div class="card-body">Issues tokens after authenticating the user and obtaining consent. Examples: Auth0, Okta, Google Identity, Keycloak. It's the gatekeeper that validates who you are.</div>
+        <div class="card-body">Issues tokens after it authorizes the client's request. In user-facing flows it commonly authenticates the user and may collect consent. Examples include Auth0, Okta, Google Identity, and Keycloak.</div>
         <span class="tag green">ACTOR</span>
       </div>
       <div class="concept-card green">
         <div class="card-icon">🗄️</div>
         <div class="card-title">Resource Server</div>
-        <div class="card-body">The API holding the protected data. It validates the access token on every request. Often the same server as the auth server in smaller systems, but conceptually separate.</div>
+        <div class="card-body">The API that accepts access tokens for protected operations. It validates each token according to the authorization server's contract before serving the request.</div>
         <span class="tag green">ACTOR</span>
       </div>
       <div class="concept-card yellow">
         <div class="card-icon">🎟️</div>
         <div class="card-title">Access Token</div>
-        <div class="card-body">A short-lived credential (often a JWT) the client sends with API requests. Typically expires in 15 minutes to 1 hour. The resource server validates it without calling the auth server (if using JWT).</div>
+        <div class="card-body">A credential the client presents to the resource server. Its format, lifetime, audience, and validation method come from the authorization server; OAuth does not require it to be a JWT.</div>
         <span class="tag yellow">TOKEN</span>
       </div>
       <div class="concept-card yellow">
         <div class="card-icon">🔄</div>
         <div class="card-title">Refresh Token</div>
-        <div class="card-body">A long-lived token used to obtain new access tokens without re-prompting the user. Only given in confidential flows. Stored securely on the server — never exposed to a browser.</div>
+        <div class="card-body">A credential a client can use to obtain another access token without repeating the full authorization flow. Whether the server issues one and how the client protects it depend on the client type and authorization-server policy.</div>
         <span class="tag yellow">TOKEN</span>
       </div>
       <div class="concept-card red">
         <div class="card-icon">🎫</div>
         <div class="card-title">Authorization Code</div>
-        <div class="card-body">A short-lived, single-use code returned to the client after user consent. It's exchanged for tokens via a back-channel server-to-server request. Not a token itself — just a temporary voucher.</div>
+        <div class="card-body">A short-lived code returned through the browser after authorization. The client sends it to the token endpoint, along with the required client authentication or PKCE verifier, to request tokens.</div>
         <span class="tag red">INTERMEDIARY</span>
       </div>
       <div class="concept-card red">
         <div class="card-icon">🔭</div>
         <div class="card-title">Scopes</div>
-        <div class="card-body">Fine-grained permissions requested by the client. Examples: <code style="font-family:monospace;font-size:12px;background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:3px;">read:email</code>, <code style="font-family:monospace;font-size:12px;background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:3px;">write:calendar</code>. The user sees and approves them on the consent screen. Principle of least privilege — ask only for what you need.</div>
+        <div class="card-body">Strings that describe the access a client requests, such as <code style="font-family:monospace;font-size:12px;background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:3px;">read:email</code> or <code style="font-family:monospace;font-size:12px;background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:3px;">write:calendar</code>. The authorization server decides what they mean and which ones it grants.</div>
         <span class="tag red">CONCEPT</span>
       </div>
     </div>
@@ -864,7 +864,7 @@
     <div class="section-label">Token Format</div>
     <div class="section-title">JSON Web Tokens (JWT)</div>
     <div class="section-desc">
-      JWTs are the most common format for OAuth 2.0 access tokens. A JWT is a self-contained, cryptographically signed credential that can be verified without a database lookup. Click each colored section to inspect its decoded contents.
+      An authorization server may issue an access token as a JWT, although OAuth does not require that format. A signed JWT carries claims that a resource server can validate locally when the deployment is designed for it. Select each colored section to inspect this example.
     </div>
 
     <div class="jwt-box">
@@ -912,18 +912,18 @@
     <div class="concept-grid" style="margin-top:20px;">
       <div class="concept-card blue">
         <div class="card-icon">✅</div>
-        <div class="card-title">Stateless Verification</div>
-        <div class="card-body">The resource server verifies the signature using the auth server's public key — no database lookup, no network call. This is why JWTs scale beautifully in distributed systems.</div>
+        <div class="card-title">Local verification</div>
+        <div class="card-body">The resource server can verify a signed JWT with the issuer's public key and validate claims such as issuer, audience, and expiration. Some deployments still consult server-side state for revocation or policy.</div>
       </div>
       <div class="concept-card red">
         <div class="card-icon">⚠️</div>
-        <div class="card-title">Cannot Be Revoked Instantly</div>
-        <div class="card-body">Since JWTs are self-verified, a stolen token is valid until expiry. This is why expiry should be short (15–60 min). Token revocation usually requires a denylist or very short TTLs.</div>
+        <div class="card-title">Revocation needs a design</div>
+        <div class="card-body">A resource server validating a JWT locally may continue accepting it until expiration. Faster revocation requires another mechanism, such as short lifetimes, server-side state, key rotation, or introspection where the system supports it.</div>
       </div>
       <div class="concept-card yellow">
         <div class="card-icon">🔓</div>
         <div class="card-title">Payload Is Readable</div>
-        <div class="card-body">Base64 is encoding, not encryption. Anyone can decode the payload. Never put sensitive data (passwords, SSNs) in a JWT. The signature only proves authenticity — not confidentiality.</div>
+        <div class="card-body">Base64url encoding does not hide the claims. Anyone holding this signed JWT can read its payload; the signature protects integrity and authenticity, not confidentiality.</div>
       </div>
     </div>
 
@@ -981,7 +981,7 @@
     <div class="section-label">Grant Type 01</div>
     <div class="section-title">Authorization Code Flow</div>
     <div class="section-desc">
-      The gold standard for server-side web applications. Tokens are exchanged on the back-channel (server-to-server) so they never touch the browser. Click each step in the diagram to learn more.
+      A server-side client can exchange the authorization code at the token endpoint and keep the resulting tokens in its backend. Select a step to see what each actor sends and receives.
     </div>
 
     <div class="ok-box">
@@ -1048,7 +1048,7 @@ Content-Type: application/x-www-form-urlencoded
     <div class="section-label">Grant Type 02 — Deprecated</div>
     <div class="section-title">Implicit Flow</div>
     <div class="section-desc">
-      Designed in 2012 for single-page apps before CORS and PKCE existed. The auth server returned tokens directly in the URL fragment. It's now officially deprecated by <a href="https://datatracker.ietf.org/doc/html/rfc9700" style="color:var(--accent);">RFC 9700</a> and should never be used for new systems.
+      The implicit grant returned an access token through the browser redirect instead of issuing an authorization code for a token-endpoint exchange. Current OAuth security guidance says clients should use the authorization code flow and avoid the implicit grant. <a href="https://datatracker.ietf.org/doc/html/rfc9700" style="color:var(--accent);">RFC 9700</a>
     </div>
 
     <div class="warn-box">
@@ -1080,44 +1080,44 @@ Content-Type: application/x-www-form-urlencoded
       <div class="concept-card red">
         <div class="card-icon">🔗</div>
         <div class="card-title">Token in URL Fragment</div>
-        <div class="card-body">The access token appears in <code style="font-family:monospace;font-size:12px;background:rgba(255,255,255,0.07);padding:1px 5px;border-radius:3px;">#access_token=eyJ...</code> in the browser's address bar. This token is stored in browser history, server logs, and is accessible to any JavaScript on the page — including analytics and ad scripts.</div>
+        <div class="card-body">The access token returns in the URI fragment as <code style="font-family:monospace;font-size:12px;background:rgba(255,255,255,0.07);padding:1px 5px;border-radius:3px;">#access_token=eyJ...</code>. Browser code must extract it, which exposes the credential to the user agent and scripts running in the redirect page.</div>
         <span class="tag red">CRITICAL</span>
       </div>
       <div class="concept-card red">
         <div class="card-icon">🧩</div>
         <div class="card-title">No Client Authentication</div>
-        <div class="card-body">There's no way to verify the recipient of the token is actually the registered client. A malicious page that redirects to the auth server with a stolen <code style="font-family:monospace;font-size:12px;background:rgba(255,255,255,0.07);padding:1px 5px;border-radius:3px;">client_id</code> can obtain tokens.</div>
+        <div class="card-body">A public client cannot authenticate with a shared secret, and the implicit flow offers no code-verifier check at the token endpoint. The browser receives a bearer credential directly, leaving fewer opportunities to bind redemption to the initiating client instance.</div>
         <span class="tag red">CRITICAL</span>
       </div>
       <div class="concept-card red">
         <div class="card-icon">📜</div>
         <div class="card-title">Referrer Header Leakage</div>
-        <div class="card-body">When a user navigates from a page with a token-bearing URL to any external resource (images, fonts, third-party JS), the browser sends the full URL — including the token — in the <code style="font-family:monospace;font-size:12px;background:rgba(255,255,255,0.07);padding:1px 5px;border-radius:3px;">Referer</code> header.</div>
+        <div class="card-body">Tokens delivered through a browser URI can leak through browser behavior, extensions, application code, or incorrect redirect handling. The fragment is normally excluded from HTTP requests, but it still reaches browser-side code.</div>
         <span class="tag red">HIGH</span>
       </div>
       <div class="concept-card red">
         <div class="card-icon">🦠</div>
         <div class="card-title">XSS Amplification</div>
-        <div class="card-body">Tokens stored in JavaScript variables (memory) or localStorage are fully readable by any XSS payload. Unlike httpOnly cookies, there's no browser-enforced sandbox. A single XSS vulnerability means complete token compromise.</div>
+        <div class="card-body">A script that executes in the application's origin can read tokens available to JavaScript, including values held in memory or local storage. Storage choice changes exposure, but it does not repair an XSS vulnerability.</div>
         <span class="tag red">HIGH</span>
       </div>
       <div class="concept-card red">
         <div class="card-icon">❄️</div>
         <div class="card-title">No Refresh Tokens</div>
-        <div class="card-body">Implicit flow never issues refresh tokens (by design). When the access token expires, the user must go through the entire flow again. This forced a terrible pattern: extremely long-lived access tokens, which worsened the theft risk.</div>
+        <div class="card-body">The implicit grant does not return a refresh token. Applications historically worked around expiration with another authorization request or longer-lived access tokens, increasing complexity or exposure.</div>
         <span class="tag red">DESIGN FLAW</span>
       </div>
       <div class="concept-card yellow">
         <div class="card-icon">📅</div>
         <div class="card-title">Why It Existed (2012 context)</div>
-        <div class="card-body">In 2012, browser CORS support was limited. SPAs couldn't make cross-origin POST requests to exchange codes for tokens. The fragment trick worked around this. Today, all browsers support CORS, making Auth Code + PKCE viable for SPAs.</div>
+        <div class="card-body">The flow addressed browser constraints that made a direct token-endpoint exchange difficult for early single-page applications. Modern authorization servers can support browser-based code exchange with CORS and PKCE.</div>
         <span class="tag yellow">HISTORICAL</span>
       </div>
     </div>
 
     <div class="highlight-box">
-      <h3>The One Difference From Auth Code Flow</h3>
-      <p>Implicit flow skips the authorization code entirely. Instead of: <strong>redirect → code → POST for token</strong>, it goes directly: <strong>redirect → token in URL</strong>. This eliminated the secure back-channel exchange — which was the only thing protecting tokens from exposure.</p>
+      <h3>Where the implicit flow diverges</h3>
+      <p>Authorization Code returns a code through the redirect and obtains tokens from the token endpoint. Implicit returns an access token through the redirect itself. That removes the separate redemption step where PKCE can bind the code to the client instance.</p>
     </div>
 
     <div class="code-block">
@@ -1358,7 +1358,7 @@ Authorization: Bearer eyJhbGciOiJSUzI1NiJ9...
       <div class="concept-card green">
         <div class="card-icon">⚡</div>
         <div class="card-title">Extremely Simple</div>
-        <div class="card-body">Just one round-trip: POST credentials, receive token. No redirects, no user interaction, no consent screens. Ideal for automated infrastructure.</div>
+        <div class="card-body">The client authenticates directly at the token endpoint and receives an access token. No resource owner or browser redirect participates, which suits service-to-service access.</div>
       </div>
       <div class="concept-card yellow">
         <div class="card-icon">🔑</div>
@@ -1369,7 +1369,7 @@ Authorization: Bearer eyJhbGciOiJSUzI1NiJ9...
       <div class="concept-card blue">
         <div class="card-icon">♻️</div>
         <div class="card-title">Token Caching Pattern</div>
-        <div class="card-body">Best practice: cache the access token until 60 seconds before expiry, then request a new one. Avoids hammering the auth server on every API call. No refresh tokens — just re-authenticate with credentials.</div>
+        <div class="card-body">Reuse the access token until it approaches expiration, allowing enough clock-skew and retry margin for the deployment. Then authenticate again with the client credentials to obtain another token.</div>
         <span class="tag blue">PATTERN</span>
       </div>
     </div>

@@ -26,8 +26,8 @@ const related = overrides
 
 {related.length > 0 && (
   <section class="related-visuals" id="related-visuals" aria-labelledby="related-heading">
-    <span class="content-kicker">Keep exploring</span>
-    <h2 id="related-heading">Related Visuals</h2>
+    <span class="content-kicker">Connected concepts</span>
+    <h2 id="related-heading">Related visuals</h2>
     <div class="related-grid">
       {related.map((topic: any) => {
         const collection = collections[topic.data.collection as keyof typeof collections];
@@ -36,7 +36,7 @@ const related = overrides
             <span>{collection.label} · {formatLabels[topic.data.format as keyof typeof formatLabels]}</span>
             <strong>{topic.data.title}</strong>
             <p>{topic.data.summary}</p>
-            <small>Explore <i aria-hidden="true">→</i></small>
+            <small>Open visual <i aria-hidden="true">→</i></small>
           </a>
         );
       })}

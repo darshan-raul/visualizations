@@ -19,7 +19,7 @@ const topics = (await getCollection('topics', ({ data }) => data.collection === 
     <span class="eyebrow"><i></i> {collection.eyebrow}</span>
     <h1>{collection.label}</h1>
     <p>{collection.description}</p>
-    <div class="intro-meta"><span>{topics.length} visualizations</span><span>Independent references</span></div>
+    <div class="intro-meta"><span>{topics.length} visualizations</span><span>Open any topic directly</span></div>
   </section>
   <section class="catalogue-section shell">
     <LibraryExplorer topics={topics} compact />

@@ -2,7 +2,7 @@ export const collections = {
   aws: {
     label: 'AWS',
     eyebrow: 'Cloud platform',
-    description: 'Visual models for the AWS services, boundaries, and data flows that matter in production.',
+    description: 'Trace how AWS services move requests, apply policy, store state, and fail at their boundaries.',
   },
   kubernetes: {
     label: 'Kubernetes',
@@ -12,12 +12,12 @@ export const collections = {
   'devops-sre': {
     label: 'DevOps & SRE',
     eyebrow: 'Operating systems well',
-    description: 'Delivery, observability, reliability, and the operational mechanics behind dependable software.',
+    description: 'See how delivery, observability, and reliability practices change the systems you operate.',
   },
   foundations: {
     label: 'Foundations',
     eyebrow: 'The layers underneath',
-    description: 'Networking, identity, containers, and distributed-system concepts that make the rest click.',
+    description: 'Build the networking, identity, container, and distributed-systems models that infrastructure relies on.',
   },
 } as const;
 

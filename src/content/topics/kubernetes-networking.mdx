@@ -1,6 +1,6 @@
 ---
 title: Kubernetes Networking
-summary: Build a complete mental model from pod network namespaces and CNI through Services, EndpointSlices, DNS, traffic policy, NetworkPolicy, and north–south routing.
+summary: Follow a Kubernetes connection across Pod networking, Services, EndpointSlices, DNS, traffic policy, NetworkPolicy, and external entry points.
 slug: k8s-networking
 collection: kubernetes
 tags: [Networking, Containers, Troubleshooting, Security, DNS]
@@ -59,15 +59,15 @@ import WorkflowDiagram from '../../components/WorkflowDiagram.astro';
 import MechanismFlow from '../../components/MechanismFlow.astro';
 import ReferenceTable from '../../components/ReferenceTable.astro';
 
-## The mental model
+## The layers behind a connection
 
-Kubernetes networking is a set of contracts joined together. The Kubernetes API describes Pods, Services, EndpointSlices, policies, and routes, but a container runtime, network implementation, service proxy, DNS server, and entry controller perform most of the networking work. A failure at one layer can look identical to a failure at another until you inspect the right object and the right packet path. [Kubernetes networking model ↗](https://kubernetes.io/docs/concepts/services-networking/)
+When one Pod connects to another, Kubernetes API objects describe the intended addresses, backends, and policy, but they do not carry the packet. The container runtime, Pod network, Service implementation, DNS server, and entry controller each perform part of the work. Two failures can produce the same timeout even when they occur in different layers, so you need both the declared state and the packet path. [Kubernetes networking model ↗](https://kubernetes.io/docs/concepts/services-networking/)
 
-Start with four questions: **Who owns the destination address? How was the destination discovered? Which data plane forwards the packet? Which policy can admit or reject it?**
+For any connection, ask four questions: **Who owns the destination address? How did the client discover it? Which data plane forwards the packet? Which policy can allow or reject it?**
 
 <KubernetesNetworkMap />
 
-> **Model boundary:** Kubernetes requires connectivity outcomes; it does not require every cluster to use a Linux bridge, VXLAN, iptables, kube-proxy, or even the same packet path. This overview labels those as implementation choices instead of universal Kubernetes internals.
+Kubernetes defines connectivity outcomes, while each cluster chooses how to produce them. Linux bridges, VXLAN, iptables, kube-proxy, and the packet paths shown here are implementation choices rather than universal Kubernetes internals.
 
 <div class="network-principles">
   <article><span>01 · Pod</span><h3>Identity for a workload instance</h3><p>Each Pod receives an address for each configured IP family. Containers in that Pod share its network namespace and port space.</p></article>
@@ -78,7 +78,7 @@ Start with four questions: **Who owns the destination address? How was the desti
 
 ## Addresses belong to different planes
 
-A cluster commonly has non-overlapping address ranges for Nodes, Pods, and Services. These ranges are configured through different components and should not be treated as one pool. Dual-stack clusters repeat the model for IPv4 and IPv6, and all relevant components must agree on the configured families. [Cluster address ranges ↗](https://kubernetes.io/docs/concepts/cluster-administration/networking/)
+Nodes, Pods, and Services commonly draw addresses from separate, non-overlapping ranges. Different components allocate and route each range, so available addresses in one pool say nothing about capacity in another. A dual-stack cluster repeats these responsibilities for IPv4 and IPv6, and every participating component must support the configured families. [Cluster address ranges ↗](https://kubernetes.io/docs/concepts/cluster-administration/networking/)
 
 <ReferenceTable caption="Address ownership in a Kubernetes cluster" headers={['Address', 'Usually allocated by', 'What it identifies', 'Important consequence']} rows={[
   ['Node IP', 'kubelet or cloud integration', 'A machine participating in the cluster', 'May carry encapsulated pod traffic or receive NodePort traffic.'],
@@ -108,7 +108,7 @@ When a Pod is deleted, the runtime invokes cleanup. A leaked IP allocation, stal
 
 ## Four traffic paths
 
-Before opening node rules or CNI logs, identify the path under test. A connection within one Pod never exercises the pod network. A direct Pod-IP test bypasses Service discovery and Service proxying. A Service-name test exercises DNS and the Service data plane as well.
+Name the path before opening Node rules or CNI logs. `localhost` between containers in one Pod stays inside the shared namespace. A direct Pod-IP connection adds the Pod network but bypasses DNS and Service forwarding. A Service-name connection exercises all three. Each extra layer narrows what a successful or failed test can prove.
 
 <TrafficPaths />
 
@@ -147,7 +147,7 @@ The word “proxy” is easy to misread: kube-proxy usually programs kernel forw
   ['Replacement data plane', 'Implementation-specific, often eBPF or provider integrated', 'Do not expect kube-proxy processes or KUBE-* rules when it has been replaced.'],
 ]} />
 
-Existing connections can outlive an EndpointSlice change because connection tracking and application connections have their own lifetimes. “The Pod became unready” does not guarantee that every established connection disappears immediately.
+Removing a Pod from EndpointSlices stops it from being selected for new traffic after consumers reconcile the update. Existing application connections and connection-tracking entries have their own lifetimes, so they can continue using that Pod after readiness changes.
 
 ## DNS is discovery, not delivery
 
@@ -160,7 +160,7 @@ Cluster DNS commonly runs CoreDNS behind a Service historically named `kube-dns`
   { title: 'Network delivers traffic', detail: 'Service proxying or direct pod routing handles the result.', tone: 'green' },
 ]} />
 
-DNS success proves only that discovery worked. A correct ClusterIP answer can still lead to a timeout because the Service has no ready endpoints, the data plane is stale, policy blocks traffic, or the application is not listening. Conversely, direct Pod-IP success does not prove DNS or the Service works.
+A correct DNS answer proves that the client discovered an address. The following connection can still time out because the Service has no ready endpoints, forwarding state is stale, policy blocks the packet, or the application is not listening. Likewise, a successful direct Pod-IP test has bypassed both DNS and the Service frontend.
 
 `ClusterFirstWithHostNet` is the usual cluster-DNS choice for Pods using `hostNetwork`. `dnsPolicy: None` requires explicit `dnsConfig`. Search expansion can also amplify DNS traffic, so inspect the actual query name and the Pod's `/etc/resolv.conf` rather than assuming what the application asked.
 
@@ -206,7 +206,7 @@ The API does nothing unless the installed network implementation enforces Networ
 
 ## Diagnose one layer at a time
 
-Start close to the application and add abstractions one by one. Use a disposable diagnostic Pod or ephemeral container when the workload image lacks networking tools. Exact plugin and managed-service commands vary.
+Start beside the application, prove the shortest path, and add one layer at a time. If the workload image has no diagnostic tools, use a disposable Pod or ephemeral container in a comparable policy and network context. Plugin and managed-service commands vary, but the order of evidence remains useful.
 
 <div class="command-stack">
   <div><span>01</span><p><strong>Application:</strong> confirm readiness, listening address, and port. Inspect <code>kubectl get pod -o wide</code>, events, logs, and the process socket from inside the Pod.</p></div>
@@ -221,7 +221,7 @@ Start close to the application and add abstractions one by one. Use a disposable
 
 Packet capture points must match the suspected layer. An overlay can show an inner Pod packet on one interface and an outer node-to-node packet on another. A missing packet at the destination is not enough to tell whether routing, encapsulation, policy, or Service selection removed it.
 
-## Misconceptions to discard
+## Where the common shortcuts break down
 
 <div class="misconception-grid">
   <article><span>Misconception</span><h3>“CNI means VXLAN and a cni0 bridge.”</h3><p>CNI is a runtime/plugin contract. Bridges and overlays are possible implementations, not requirements.</p></article>

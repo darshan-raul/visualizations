@@ -61,6 +61,12 @@ Every published topic should include:
 
 Use a scrolling document with deep-linked sections by default. Reserve tabs for genuine alternate states or comparisons. Interactivity must serve a teaching purpose and progressively enhance readable content.
 
+### Editorial voice and tone
+
+- Follow `WRITING-GUIDE.md` for editorial voice, rhythm, and tone.
+- Avoid robotic, staccato, LLM-generated summaries and defensive disclaimer boilerplate (e.g., compulsive `> **Model boundary:**` callouts).
+- Write like an experienced senior engineer talking to a peer at a whiteboard: technically rigorous, empathetic to common traps and operational scars, with natural sentence cadence and active verbs.
+
 ### Visual system
 
 - Prefer visual-first explanations with less prose. Use text to frame, clarify, and document caveats rather than repeat what a diagram already shows; give each major mechanism a diagram, comparison, trace, or compact reference where that materially improves understanding.

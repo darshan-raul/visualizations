@@ -1,6 +1,6 @@
 ---
 title: VPC Packet Flow
-summary: Follow the request and its reply through routes, address translation, and network filters. Keep each step visible and see exactly where a broken configuration stops the journey.
+summary: Follow a request and its reply through VPC routes, gateways, address translation, security groups, and network ACLs.
 slug: vpc-flow
 collection: aws
 tags: [Networking, Security, Troubleshooting]
@@ -73,11 +73,11 @@ import EndpointTypePaths from '../../components/vpc/EndpointTypePaths.astro';
 import TransitGatewayRouteDomains from '../../components/vpc/TransitGatewayRouteDomains.astro';
 import { scenarios } from '../../components/vpc/scenarios';
 
-## The mental model
+## What a packet needs
 
-A VPC connection works when **the destination can be reached, the traffic is permitted, and the reply can get back**. A route chooses a path. A security rule permits traffic on that path. Address translation can change what the next component sees. These are separate decisions.
+When a connection times out, finding one correct route or one open security-group rule does not settle the question. The request needs a route to its destination, every relevant filter must permit it, and the reply needs its own path back. Address translation may also change the source or destination seen at each checkpoint.
 
-An elastic network interface (ENI) is a resource’s network interface. A subnet supplies its address range; a subnet route table tells the VPC’s implicit router where to direct traffic. The route with the longest matching destination prefix normally wins. A route to a gateway leaves the packet’s destination address intact unless a translation function changes it. [AWS routing ↗](https://docs.aws.amazon.com/vpc/latest/userguide/subnet-route-tables.html)
+The packet enters the VPC through an elastic network interface (ENI), the network interface attached to an EC2 instance or another resource. Its subnet supplies the address range, and the associated route table tells the VPC router which target should receive each destination. The route with the longest matching prefix normally wins. Selecting a gateway as that target does not itself rewrite the destination; translation happens only where the path provides it. [AWS routing ↗](https://docs.aws.amazon.com/vpc/latest/userguide/subnet-route-tables.html)
 
 <MechanismFlow
   label="A successful VPC connection chooses a path, permits the flow, and returns the reply"
@@ -90,15 +90,15 @@ An elastic network interface (ENI) is a resource’s network interface. A subnet
 
 ## Follow a packet
 
-Choose one of six paths, then advance with **Next step** or **Play**. Each completed step stays below the topology, including the source and destination addresses visible at that point. Use **Try a failure** to see where the same journey stops. Changing the scenario or failure restarts the trace.
+Choose a path, then use **Next step** or **Play** to follow the packet. Completed steps remain visible with the source and destination seen at that checkpoint. **Try a failure** changes one condition and shows where the same journey stops; changing the path or failure resets the trace.
 
-> **Model scope:** These are logical checkpoints, not physical routers or a claim about AWS’s internal processing order. Each trace groups some routing and filtering checks; omitted checks are assumed to allow traffic. TCP request/reply examples omit retransmissions and the rest of the handshake. Playback timing is for reading, not a latency measurement. Reduced-motion mode uses manual stepping. Without JavaScript, every complete trace remains readable.
+Each trace shows logical checkpoints rather than physical routers or AWS's internal processing order. It groups some routing and filtering checks and assumes that omitted checks allow the traffic. The TCP examples focus on one request and reply, so they leave out retransmissions and the rest of the handshake. Playback timing gives you time to read each step; it does not represent network latency. Reduced-motion mode uses manual stepping, and every complete trace remains readable without JavaScript.
 
 <PacketFlowExplorer scenarios={scenarios} />
 
 ## Routes choose where, rules choose whether
 
-Consider the following subnet route table. A packet for `10.1.2.10` matches both `10.1.0.0/16` and `0.0.0.0/0`; the more specific `/16` selects peering. Rules that break ties between equally specific routes depend on their type. **Route selection is not a firewall decision.** [AWS route priority ↗](https://docs.aws.amazon.com/vpc/latest/userguide/route-tables-priority.html)
+Consider a packet addressed to `10.1.2.10`. The table below contains both `10.1.0.0/16` and `0.0.0.0/0`, so the more specific `/16` route sends the packet toward the peering connection. If equally specific routes compete, AWS applies priority rules based on route type. After choosing the target, the VPC still evaluates the network controls on that path. [AWS route priority ↗](https://docs.aws.amazon.com/vpc/latest/userguide/route-tables-priority.html)
 
 <ReferenceTable caption="Example route decisions" headers={['Destination', 'Target', 'What it means']} rows={[
   ['10.0.0.0/16', 'local', 'Reach addresses inside this VPC.'],
@@ -111,9 +111,9 @@ A subnet is public when its route table has a direct route to an internet gatewa
 
 ## Addresses and translation
 
-In the public EC2 trace, the internet client addresses `203.0.113.10:443`, while the instance receives traffic for `10.0.1.5:443`. The IGW supplies the public/private IPv4 mapping; the guest does not configure that public address on its interface. The reverse mapping restores the public source on the reply. [IGW translation ↗](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Internet_Gateway.html)
+In the public EC2 trace, the client sends traffic to `203.0.113.10:443`, but the instance receives it at `10.0.1.5:443`. The internet gateway applies the public-to-private IPv4 mapping; the public address is not configured inside the guest. On the reply, the gateway maps the private source back to the public address. [IGW translation ↗](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Internet_Gateway.html)
 
-The NAT trace makes two translations visible: the gateway maps the client to its own private address and a source port, then the IGW maps that private address to the NAT Elastic IP. The reply reverses those mappings. The illustrated port `62000` is an example, not a predicted allocation. Unsolicited inbound internet connections cannot use this existing outbound-only design. [NAT behavior ↗](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html)
+The NAT trace shows two mappings. First, the NAT gateway replaces the private client's source with its own private address and a translated port. The internet gateway then maps that private address to the NAT gateway's Elastic IP. The reply reverses both mappings. Port `62000` is illustrative; it does not predict the port AWS will allocate. This path supports connections initiated by the private client, not unsolicited connections initiated from the internet. [NAT behavior ↗](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html)
 
 <ReferenceTable caption="Choose the gateway for the address family and intent" headers={['Gateway', 'Purpose', 'Boundary']} rows={[
   ['Internet gateway', 'Direct IPv4 or IPv6 internet connectivity', 'IPv4 needs a public mapping; IPv6 does not use this IPv4 NAT mapping.'],
@@ -128,7 +128,7 @@ IPv6 routes are separate from IPv4 routes: `0.0.0.0/0` does not cover `::/0`. An
 
 ## Why the reply can fail
 
-The strongest test is the **Internet → public EC2** scenario with a reply-side NACL failure. The request reaches the server on port 443; the reply goes to the client’s temporary port **52140**, not to destination port 443.
+In the **Internet → public EC2** scenario, choose the reply-side NACL failure. The request reaches the server on destination port 443, but the reply is addressed to the client's temporary port, **52140**. A stateless ACL must permit those two directions separately.
 
 <ReferenceTable caption="Two filters with different memory" headers={['Property', 'Security group', 'Network ACL']} rows={[
   ['Scope', 'Associated resource/network interface', 'Traffic entering or leaving a subnet'],
@@ -138,7 +138,7 @@ The strongest test is the **Internet → public EC2** scenario with a reply-side
   ['Same-subnet traffic', 'SG rules still matter', 'Not filtered as a subnet boundary crossing'],
 ]} />
 
-Security-group state allows replies to an admitted connection even if the reverse-direction SG rules would not independently admit a new connection. It does not create missing routes or override ACLs. The illustrated flow assumes normal connection tracking. [Security groups ↗](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-groups.html)
+A security group tracks an admitted connection and permits its reply without requiring a reverse rule that would admit a new connection. That state does not supply a missing route and cannot override a network ACL. The example assumes the flow is tracked normally. [Security groups ↗](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-groups.html)
 
 ACL rules evaluate destination ports in each direction. For a private client initiating HTTPS, the inbound reply rule must allow the client ephemeral port. For a public server accepting HTTPS, the **outbound** reply rule must allow the remote client ephemeral port. Real ephemeral ranges depend on the client or translating device; `1024–65535` is a broad compatibility range, not every operating system’s allocation range. [ACL rules ↗](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-network-acls.html) [Ephemeral ports ↗](https://docs.aws.amazon.com/vpc/latest/userguide/custom-network-acl.html)
 
@@ -146,7 +146,7 @@ ACL rules evaluate destination ports in each direction. For a private client ini
 
 <EndpointTypePaths />
 
-Gateway endpoint routing and interface endpoint DNS choose different paths. Inspect the route-table association or actual DNS answer before assuming private connectivity is active. [Gateway endpoints ↗](https://docs.aws.amazon.com/vpc/latest/privatelink/gateway-endpoints.html) [Interface endpoint DNS ↗](https://docs.aws.amazon.com/vpc/latest/privatelink/privatelink-access-aws-services.html)
+A gateway endpoint adds routes for a service prefix list to associated route tables. An interface endpoint instead provides ENIs and commonly uses private DNS to direct the service name toward them. Check the route-table association or the DNS answer to confirm which private path the client will use. [Gateway endpoints ↗](https://docs.aws.amazon.com/vpc/latest/privatelink/gateway-endpoints.html) [Interface endpoint DNS ↗](https://docs.aws.amazon.com/vpc/latest/privatelink/privatelink-access-aws-services.html)
 
 The PrivateLink scenario exposes a provider service through a Network Load Balancer (NLB). It does not connect entire VPC address spaces like peering. Provider permissions and acceptance, endpoint security groups, listeners, target health and application authorization solve different parts of delivery. The trace avoids inventing provider-side source addresses, which depend on the service configuration. [PrivateLink services ↗](https://docs.aws.amazon.com/vpc/latest/privatelink/privatelink-share-your-services.html)
 
@@ -154,7 +154,7 @@ The PrivateLink scenario exposes a provider service through a Network Load Balan
 
 Peering joins two non-overlapping VPC address spaces. Both participating subnet route tables need routes for the other side, and network rules must allow the flow. **A ↔ B and B ↔ C do not imply A ↔ C.** Peering is not transitive, and it does not let a peer borrow another VPC’s internet gateway or gateway endpoint. Cross-Region peering SG rules use CIDRs rather than references to the remote SG. [Peering boundaries ↗](https://docs.aws.amazon.com/vpc/latest/peering/vpc-peering-basics.html)
 
-A transit gateway (TGW) is a routing hub. A VPC subnet first selects its TGW attachment. Then the TGW uses the table **associated with the attachment on which traffic arrived** to select the next attachment. Association chooses the lookup table; propagation installs reachable prefixes into chosen tables. These are distinct configuration choices. [TGW routing ↗](https://docs.aws.amazon.com/vpc/latest/tgw/how-transit-gateways-work.html)
+A transit gateway (TGW) adds another routing decision. The VPC subnet route sends the packet to its TGW attachment. The TGW then looks up the destination in the route table associated with the attachment where the packet arrived and chooses the next attachment. Association selects the table used for that lookup; propagation adds learned prefixes to selected tables. Configuring one does not configure the other. [TGW routing ↗](https://docs.aws.amazon.com/vpc/latest/tgw/how-transit-gateways-work.html)
 
 <TransitGatewayRouteDomains />
 
@@ -196,6 +196,6 @@ Availability Zone names may map differently between accounts. Use AZ IDs when yo
   ['Small probes work, large transfers stall', 'Effective path MTU and ICMP required for discovery', 'A successful small packet does not test large-packet delivery.'],
 ]} />
 
-VPC Flow Logs record information about IP flows, including acceptance or rejection; they are not packet captures and do not record all traffic types. Correlate the interface, five-tuple, direction and time window before drawing a conclusion. [Flow Logs ↗](https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs.html)
+VPC Flow Logs can show that an observed IP flow was accepted or rejected at a supported interface. They do not capture packet contents or cover every traffic type. Match the interface, source and destination addresses, ports, protocol, direction, and time window before using a record as evidence for this connection. [Flow Logs ↗](https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs.html)
 
 Reachability Analyzer evaluates supported network configuration paths without sending packets. Use it to find configuration blockers, then test DNS, host firewalls, listeners, TLS and application permissions separately. A reachable model does not prove an application is healthy. [Reachability Analyzer ↗](https://docs.aws.amazon.com/vpc/latest/reachability/how-reachability-analyzer-works.html)

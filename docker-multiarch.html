@@ -556,7 +556,7 @@
     DevOps / Docker
   </div>
   <h1>Docker Multi-Architecture Images</h1>
-  <p>From CPU architectures to manifest lists — how Docker builds, pushes, and resolves images across platforms.</p>
+  <p>Follow an image from platform-specific binaries through a multi-platform build, registry index, and client-side selection.</p>
 </header>
 
 <div class="tabs">
@@ -575,30 +575,30 @@
 <div class="content">
   <div class="panel active" id="panel-0">
 
-    <div class="section-label">The Problem</div>
+    <div class="section-label">Why platform matters</div>
 
     <div class="concept-grid">
       <div class="concept-card">
-        <h3>The Silicon Shift</h3>
-        <p>In November 2020, Apple shipped the M1 Mac — first mass-market ARM64 laptops. Within months, millions of developers had ARM hardware that couldn't run traditional x86_64 Docker images.</p>
+        <h3>Developer machines changed</h3>
+        <p>Apple Silicon put ARM64 machines on many developers' desks. An image containing only x86_64 binaries cannot run natively on that hardware, even though both machines can run Docker.</p>
       </div>
       <div class="concept-card cyan">
-        <h3>Cloud ARM Adoption</h3>
-        <p>AWS Graviton2/3 instances offer 20–40% better price-performance than equivalent x86 instances. Your `python:3.12` image now needs an ARM64 variant to run on Graviton.</p>
+        <h3>Cloud workloads use ARM too</h3>
+        <p>AWS Graviton instances use ARM64 processors. A container scheduled there needs an ARM64 image variant or a compatible emulation layer; an x86_64-only image is not enough.</p>
       </div>
     </div>
 
     <div class="warn-box">
-      <h4>Classic Error: No Matching Manifest</h4>
+      <h4>When no platform matches</h4>
       <p>When Docker pulls an image, it asks the registry for a manifest list. If your Apple Silicon Mac (linux/arm64) requests an image that only has linux/amd64 built, Docker fails with:</p>
       <p style="font-family: var(--mono); color: var(--accent-red); margin-top: 8px;">ERROR: no matching manifest for linux/arm64/v8 in the manifest list</p>
     </div>
 
-    <div class="section-label">The Solution</div>
+    <div class="section-label">One tag, several variants</div>
 
     <div class="ok-box">
       <h4>One Tag, Multiple Platforms</h4>
-      <p>Multi-architecture images solve this. A single tag like `nginx:latest` returns a manifest list pointing to platform-specific variants. Docker automatically pulls the correct one for your hardware.</p>
+      <p>A tag such as `nginx:latest` can resolve to an image index that points to several platform-specific manifests. The client selects the entry that matches its requested operating system and architecture.</p>
     </div>
 
     <h3>Supported Platforms</h3>
@@ -631,11 +631,9 @@
       </div>
     </div>
 
-    <h3>The Developer Experience Goal</h3>
+    <h3>What stays consistent</h3>
 
-    <p>`docker run nginx:latest` should work identically whether you're on an Intel Mac, Apple Silicon Mac, Raspberry Pi, or x86_64 EC2. The image tag is the same. The container behavior is the same. Only the underlying binary differs.</p>
-
-    <p>This is what containerization promised: write once, run anywhere. Multi-arch images deliver on that promise for CPU architecture.</p>
+    <p>The same command, such as `docker run nginx:latest`, can select a different image manifest on an Intel machine, Apple Silicon, or an ARM cloud instance. The publisher still has to build and test every advertised variant; sharing a tag does not make platform-specific behavior identical.</p>
 
   </div>
 
@@ -643,28 +641,28 @@
 
     <div class="section-label">Part 1</div>
     <h2>CPU Architectures Explained</h2>
-    <p>An Instruction Set Architecture (ISA) defines the contract between hardware and software — registers, data types, memory model, system calls, and calling conventions.</p>
+    <p>A compiled program contains instructions for a particular CPU architecture. An instruction set architecture (ISA) defines those machine instructions and registers; operating-system and ABI conventions add details such as system calls and calling conventions. An x86_64 binary and an ARM64 binary can implement the same application, but the processors decode different instructions.</p>
 
     <h3>x86_64 (AMD64)</h3>
     <div class="concept-card">
-      <p>Created by AMD in 2003 as a 64-bit extension to Intel's x86. Dominant in desktops, laptops, and servers. Complex CISC design with hundreds of instructions and variable-length encoding (1–15 bytes per instruction).</p>
+      <p>AMD introduced this 64-bit extension to x86. Intel and AMD processors use it across many developer machines and servers. Its instruction encoding is variable-length and retains compatibility with the older x86 family.</p>
       <p style="margin-top: 10px;">Powers most cloud workloads with high single-threaded performance. Compiled code runs natively on any Intel or AMD 64-bit CPU.</p>
     </div>
 
     <h3>ARM64 (AArch64)</h3>
     <div class="concept-card cyan">
-      <p>64-bit ARM architecture (ARMv8-A onwards). Designed for power efficiency — more performance per watt than x86. Powers Apple Silicon (M1/M2/M3), AWS Graviton2/3, mobile devices, and embedded systems.</p>
+      <p>AArch64 is the 64-bit execution state introduced with ARMv8-A. Apple Silicon and AWS Graviton are familiar implementations, alongside mobile and embedded systems. Software still needs binaries and dependencies built for the target platform.</p>
       <p style="margin-top: 10px;">Simpler RISC design with fixed-length 4-byte instructions. Every instruction is exactly 32 bits, making decoding simpler and pipelines more efficient.</p>
     </div>
 
     <h3>ARMv7 (armhf)</h3>
     <div class="concept-card green">
-      <p>32-bit ARM architecture common in IoT and Raspberry Pi 2/3/4. Docker supports `linux/arm/v7` as a third-tier platform. Many official images ship an armhf variant for the Raspberry Pi community.</p>
+      <p>This 32-bit ARM target appears in older Raspberry Pi and embedded systems. An image index can distinguish it as `linux/arm/v7`, including the architecture variant that an `arm` label alone would leave ambiguous.</p>
     </div>
 
     <h3>IBM s390x</h3>
     <div class="concept-card purp">
-      <p>IBM Z mainframe architecture used by IBM zSeries mainframes. Less common but fully supported by official images like `python`, `node`, and `golang`. Big-endian by default.</p>
+      <p>This is the 64-bit architecture used by IBM Z systems. Some image publishers include an `s390x` variant, and its big-endian byte order can expose assumptions hidden on common little-endian platforms.</p>
     </div>
 
     <div class="section-label">Register Models</div>
@@ -733,7 +731,7 @@
       </tbody>
     </table>
 
-    <p>Docker buildx uses these automatically when native toolchains are available. When they're not, it falls back to QEMU emulation.</p>
+    <p>Buildx can coordinate cross-compilation, emulation, or native builders. Which path it uses depends on the builder, Dockerfile, toolchain, and registered emulators.</p>
 
   </div>
 
@@ -741,14 +739,14 @@
 
     <div class="section-label">Part 2</div>
     <h2>Operating Systems & Base Images</h2>
-    <p>Linux base images contain binaries compiled for a specific architecture. The same tag (`alpine:latest`) on ARM64 is a different image binary than on x86 — they share the tag but have different manifest entries pointing to different layer blobs.</p>
+    <p>A Linux base image contains executables and libraries built for a target architecture. Pulling `alpine:latest` for ARM64 therefore selects a different manifest and layer content from an x86_64 pull, even though both requests use the same tag.</p>
 
     <h3>Linux Distributions</h3>
 
     <div class="concept-grid">
       <div class="concept-card green">
         <h3>Alpine</h3>
-        <p>Minimal (5 MB), musl libc, BusyBox. Designed for containers. Best for truly minimal workloads.</p>
+        <p>A small base built around musl libc and BusyBox. Its size is useful, but native dependencies built for glibc may require different packages or compilation.</p>
       </div>
       <div class="concept-card">
         <h3>Debian</h3>
@@ -760,11 +758,11 @@
       </div>
       <div class="concept-card purp">
         <h3>Distroless</h3>
-        <p>Google minimal images — no shell, just runtime. Best for security-sensitive deployments.</p>
+        <p>Minimal runtime images that commonly omit a shell and package manager. The smaller contents reduce what ships, while also changing how you debug a running container.</p>
       </div>
       <div class="concept-card amber">
         <h3>Scratch</h3>
-        <p>Empty image, no OS at all. Only for statically linked binaries that need nothing extra.</p>
+        <p>An empty starting filesystem. The application must bring every runtime file it needs, which suits carefully built static binaries and similarly self-contained artifacts.</p>
       </div>
     </div>
 
@@ -772,7 +770,7 @@
 
     <div class="warn-box">
       <h4>Alpine Uses musl, Not glibc</h4>
-      <p>Alpine Linux uses musl libc instead of glibc. Some binaries compiled on Debian/Ubuntu (glibc) won't run on Alpine without recompilation. The Go toolchain produces statically linked binaries by default, which is why Go-based images work everywhere.</p>
+      <p>Alpine uses musl libc, while Debian and Ubuntu use glibc. A native binary or Python wheel built against glibc may not run on musl without a compatible build. Go programs can often be built as static binaries, but cgo and other native dependencies can reintroduce platform and libc requirements.</p>
     </div>
 
     <p>Python and Node official images ship with statically linked binaries that work on both glibc and musl systems. The pip install process downloads the correct wheel for your architecture from PyPI.</p>
@@ -936,7 +934,7 @@ docker-image/
 
     <div class="section-label">Part 4</div>
     <h2>The Manifest List (Multi-Arch Manifest)</h2>
-    <p>The manifest list is the top-level "index" that points to multiple platform-specific manifests. It allows a single tag (`nginx:latest`) to work across all architectures. Added to Docker distribution spec v2.2 in 2016.</p>
+    <p>An image index is a top-level object whose entries point to platform-specific image manifests. A publisher can attach `nginx:latest` to that index, allowing one tag to resolve to different content for each platform included in the list.</p>
 
     <h3>Manifest List Structure</h3>
 
@@ -990,7 +988,7 @@ docker-image/
         <div class="flow-num">3</div>
         <div class="flow-content">
           <h4>Client reads os/arch from kernel</h4>
-          <p>Uses `uname -m` and `uname -s` to determine native platform</p>
+          <p>Determines the requested platform from the client, daemon, or an explicit platform override</p>
         </div>
       </div>
       <div class="flow-step">
@@ -1023,7 +1021,7 @@ docker-image/
       <p>One tag would equal one platform only. Users would need `nginx:amd64` and `nginx:arm64` separate tags. CI/CD would need conditional logic to select the right tag per architecture.</p>
     </div>
 
-    <p>Docker Hub automatically builds multi-arch images via manifest lists. The single tag works everywhere because the client does the platform selection automatically.</p>
+    <p>Publishers can attach several platform manifests to one tag. When the registry returns that index, the client selects a compatible entry for the requested platform.</p>
 
     <h3>OCI Image Index</h3>
 
@@ -1082,7 +1080,7 @@ docker-image/
     tags: myrepo/myimage:latest
     </div>
 
-    <p>Builds run in parallel on Docker's build servers. Buildx orchestrates them and merges manifests into a manifest list.</p>
+    <p>In this workflow, Buildx asks the configured builder to produce each requested platform variant and publishes an index that refers to the resulting manifests. The builds may run natively, through cross-compilation, or under emulation.</p>
 
     <h3>AWS ECR Variant Resolution</h3>
 
@@ -1105,7 +1103,7 @@ docker-image/
 
     <div class="section-label">Part 6</div>
     <h2>Buildx — Building for Multiple Platforms</h2>
-    <p>Buildx is Docker's advanced build frontend built on BuildKit. It supports multi-platform builds, build caching, parallel builds, and remote builders.</p>
+    <p>Buildx exposes BuildKit features through the Docker CLI. A builder can produce multiple platforms, share build cache, and distribute work across local or remote nodes.</p>
 
     <h3>Creating a Multi-Platform Builder</h3>
 
@@ -1125,12 +1123,12 @@ docker buildx build \
   .
     </div>
 
-    <p>Builds for both platforms in parallel. Uses QEMU emulation by default on native hosts. Native cross-compilation when a native toolchain is available.</p>
+    <p>This requests both platform outputs. The configured builder decides whether each stage runs on a native node, uses a cross-compiler, or executes foreign binaries through a registered emulator such as QEMU.</p>
 
     <h3>QEMU User-Mode Emulation</h3>
 
     <div class="concept-card green">
-      <p><code>qemu-user-static</code> provides linux-user emulation for foreign architectures. Transparent to the build process — the build container doesn't know it's being emulated.</p>
+      <p>Linux can register QEMU user-mode handlers for foreign executable formats. Build commands may then run foreign-architecture binaries through emulation, which is convenient but often slower and can expose compatibility differences.</p>
       <p style="margin-top: 10px;">Slow compared to native cross-compilation but requires no special setup. Works by registering binfmt_misc handlers on the host.</p>
     </div>
 
@@ -1300,7 +1298,7 @@ registry/
 
     <div class="ok-box">
       <h4>Shared Base Layers</h4>
-      <p>If all platform images share the same base layer (e.g., alpine:3.19), that blob is stored once in the registry. On pull, the base layer is downloaded once regardless of architecture. Subsequent pulls of any variant reuse that cached layer.</p>
+      <p>A registry stores one copy when two manifests reference the exact same blob digest. Platform-specific base layers usually contain different binaries and therefore have different digests, while architecture-independent content can still be shared.</p>
     </div>
 
     <div class="warn-box">
@@ -1391,7 +1389,7 @@ docker buildx build \
   --file Dockerfile.windows .
     </div>
 
-    <p>Requires Windows host with container support. Buildx can use QEMU on Linux to cross-compile Windows images, but native Windows builds are more reliable.</p>
+    <p>Windows container image stages require a compatible Windows build environment. A Linux builder can cross-compile an application for Windows, but it cannot generally execute Windows container build steps through Linux user-mode QEMU.</p>
 
   </div>
 

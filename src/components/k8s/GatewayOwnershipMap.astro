@@ -1,5 +1,5 @@
 <figure class="companion-map" aria-labelledby="gateway-map-title">
-  <figcaption><span>Ownership map</span><h3 id="gateway-map-title">Gateway API separates infrastructure from application routes</h3><p>Each resource has a different owner and acceptance boundary.</p></figcaption>
+  <figcaption><span>Ownership map</span><h3 id="gateway-map-title">Gateway API separates infrastructure from application routes</h3><p>The infrastructure provider supplies a class, the cluster operator opens listeners, and application teams attach routes within those limits.</p></figcaption>
   <div class="lane purple"><span>Infrastructure</span><b>GatewayClass</b><i>→</i><b>controller implementation</b></div>
   <div class="lane"><span>Cluster operator</span><b>Gateway</b><i>→</i><b>listeners + allowed routes</b></div>
   <div class="lane green"><span>Application</span><b>HTTPRoute</b><i>→</i><b>Service backend</b></div>

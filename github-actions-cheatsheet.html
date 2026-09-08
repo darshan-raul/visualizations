@@ -835,8 +835,8 @@
       <div class="hero">
         <div class="hero-eyebrow">// reference — 2024</div>
         <h1>GitHub <em>Actions</em><br>Cheatsheet</h1>
-        <p class="hero-sub">Complete syntax reference for workflows, triggers, jobs, secrets, matrix builds, caching,
-          and more. Copy-ready snippets.</p>
+        <p class="hero-sub">Find working patterns for workflow triggers, jobs, expressions, matrices, caching,
+          artifacts, secrets, and deployments. Adapt each snippet to your repository and permissions.</p>
       </div>
 
       <div class="filters" id="filters"></div>
@@ -845,7 +845,7 @@
   </div>
 
   <footer>
-    <strong>GitHub Actions Cheatsheet</strong> &mdash; All snippets use current API syntax &mdash; actions/checkout@v4
+    <strong>GitHub Actions Cheatsheet</strong> &mdash; Check action versions and permissions before use &mdash; actions/checkout@v4
     &bull; actions/cache@v4 &bull; actions/upload-artifact@v4
   </footer>
 
@@ -964,7 +964,7 @@ runs-on: [self-hosted, macOS, ARM64]`},
       - run: echo "Deploying \${{ needs.build.outputs.sha }}"
       - run: echo "Version \${{ needs.build.outputs.version }}"`},
           {
-            title: "concurrency", desc: "Cancel in-progress runs when new pushes arrive.", code: `concurrency:
+            title: "concurrency", desc: "Group related runs and choose whether a newer run cancels one already in progress.", code: `concurrency:
   group: \${{ github.workflow }}-\${{ github.ref }}
   cancel-in-progress: true
 
@@ -1043,7 +1043,7 @@ concurrency:
     if: failure()
     run: ./notify-slack.sh`},
           {
-            title: "continue-on-error", desc: "Let the job pass even if a step fails.", code: `steps:
+            title: "continue-on-error", desc: "Allow execution to continue after a step or matrix job reports failure.", code: `steps:
   - name: Optional security scan
     continue-on-error: true
     run: npm audit --audit-level=moderate
@@ -1126,7 +1126,7 @@ concurrency:
     with:
       token: \${{ secrets.MY_PAT }}`},
           {
-            title: "GITHUB_TOKEN", desc: "Auto-provided token for repo operations.", code: `# Auto-provided — no setup needed
+            title: "GITHUB_TOKEN", desc: "Use the installation token GitHub creates for this workflow job.", code: `# Auto-provided — no setup needed
 - uses: actions/github-script@v7
   with:
     github-token: \${{ secrets.GITHUB_TOKEN }}
@@ -1389,7 +1389,7 @@ jobs:
       {
         cat: "Permissions", slug: "permissions", items: [
           {
-            title: "least-privilege permissions", desc: "Restrict GITHUB_TOKEN to exactly what's needed.", code: `# Workflow-level (applies to all jobs)
+            title: "least-privilege permissions", desc: "Grant GITHUB_TOKEN only the repository permissions used by the workflow.", code: `# Workflow-level (applies to all jobs)
 permissions:
   contents: read
   pull-requests: write
@@ -1409,7 +1409,7 @@ permissions: {}
 # Grant all (avoid in production)
 permissions: write-all`},
           {
-            title: "OIDC — keyless cloud auth", desc: "Authenticate to AWS, GCP, or Azure without stored secrets.", code: `permissions:
+            title: "OIDC — cloud federation", desc: "Exchange GitHub's OIDC token for temporary cloud credentials instead of storing access keys.", code: `permissions:
   id-token: write  # required for OIDC
   contents: read
 

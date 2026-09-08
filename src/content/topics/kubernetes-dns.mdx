@@ -1,6 +1,6 @@
 ---
 title: Kubernetes DNS
-summary: Trace a lookup from Pod resolver configuration through CoreDNS, Service and EndpointSlice records, caches, upstream forwarding, and systematic failure diagnosis.
+summary: Follow a Pod's DNS lookup through resolver search rules, CoreDNS, Kubernetes records, caches, and upstream resolvers.
 slug: kubernetes-dns
 collection: kubernetes
 tags: [Networking, DNS, Troubleshooting, Service Discovery]
@@ -37,17 +37,17 @@ import DnsCacheLayers from '../../components/k8s/DnsCacheLayers.astro';
 import MechanismFlow from '../../components/MechanismFlow.astro';
 import ReferenceTable from '../../components/ReferenceTable.astro';
 
-## The mental model
+## From a name to a connection
 
-Kubernetes DNS is a discovery pipeline. Kubelet writes resolver policy into each Pod, the application resolver turns a name into one or more queries, cluster DNS answers from Kubernetes state or forwards upstream, and caches decide how long the answer survives. Only after that does networking attempt a connection. [DNS specification ↗](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/)
+Your application connects to `payments`, but the network cannot route a name. The Pod's resolver first turns that name into one or more DNS queries. Cluster DNS answers a Kubernetes name from cluster state or forwards another name upstream, and any cache along the path can reuse the answer until its TTL expires. The application opens a connection only after it receives an address. [DNS specification ↗](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/)
 
 <DnsResolutionMap />
 
-> **Naming boundary:** `cluster.local` is a common example, not a universal constant. Use the cluster's configured domain and inspect the Pod's actual resolver configuration.
+The examples use `cluster.local`, the common default. Your cluster may use another domain, so inspect the Pod's actual resolver configuration before applying these names literally.
 
 ## Resolver configuration inside a Pod
 
-With the usual `ClusterFirst` policy, a Pod's `/etc/resolv.conf` points at the cluster DNS Service and includes search suffixes for its namespace, all Services, and the cluster domain. A typical shape is:
+Kubelet writes DNS settings into each Pod. With the usual `ClusterFirst` policy, `/etc/resolv.conf` points to the cluster DNS Service and includes search suffixes for the Pod's namespace, all Services, and the cluster domain. A typical file looks like this:
 
 ```text
 nameserver 10.96.0.10
@@ -55,7 +55,7 @@ search team-a.svc.cluster.local svc.cluster.local cluster.local
 options ndots:5
 ```
 
-These values are examples. Kubelet configuration, Node resolver state, operating system, runtime, and `dnsPolicy` determine the real file.
+Treat those values as examples. The Pod's `dnsPolicy` and `dnsConfig`, kubelet configuration, Node resolver state, operating system, and runtime all influence the file you actually get.
 
 <ReferenceTable caption="Pod DNS policies" headers={['Policy', 'Resolver basis', 'Use with care']} rows={[
   ['ClusterFirst', 'Cluster DNS for cluster names; other names forwarded upstream', 'The default when dnsPolicy is omitted.'],
@@ -68,7 +68,7 @@ These values are examples. Kubelet configuration, Node resolver state, operating
 
 ## Search paths and ndots
 
-A resolver does not necessarily send the literal string passed by the application. With `ndots:5`, a name containing fewer than five dots is commonly tried with search suffixes before or alongside an absolute lookup, depending on resolver behavior. That makes `api`, `api.team-a`, and `api.example.com` operationally different query inputs.
+If an application asks for `api`, the resolver may not send that exact name first. With `ndots:5`, a resolver following the usual search-list behavior can append the Pod's search suffixes because `api` contains fewer than five dots. The same rule can affect a name that looks external: `api.example.com` still has only two dots.
 
 <MechanismFlow label="How the short name api can become a cluster DNS query" steps={[
   { title: 'Application requests api', detail: 'The name has no trailing dot and few dots.' },
@@ -77,11 +77,11 @@ A resolver does not necessarily send the literal string passed by the applicatio
   { title: 'Return Service answer', detail: 'The application receives addresses and TTLs.', tone: 'green' },
 ]} />
 
-Search expansion can multiply DNS queries and latency for external-looking names. A trailing dot makes a name absolute for conventional resolvers. Measure actual queries before changing `ndots`; application libraries do not all use the system resolver in the same way.
+Each attempted suffix can add a query and wait time before the resolver tries the absolute name. A trailing dot marks a name as absolute for conventional resolvers. Observe the queries from the affected application before changing `ndots`, because some runtimes use their own resolver behavior or cache.
 
 ## Normal Service records
 
-A normal Service receives an A record for IPv4 and/or an AAAA record for IPv6 at a name shaped like `<service>.<namespace>.svc.<cluster-domain>`. The answer is the Service ClusterIP for that family. DNS does not choose a backend Pod; the Service data plane does that when the client connects to the returned VIP. [Service DNS records ↗](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/)
+For a normal Service, cluster DNS serves A records for IPv4 addresses and AAAA records for IPv6 addresses at a name shaped like `<service>.<namespace>.svc.<cluster-domain>`. The answer points to the Service ClusterIP for that address family. When the client connects to that virtual IP, the Service data plane chooses a backend Pod. [Service DNS records ↗](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/)
 
 Named Service ports can create SRV records. An SRV lookup expresses service, protocol, port, and target information, but applications must explicitly perform and understand SRV discovery.
 
@@ -91,7 +91,7 @@ Named Service ports can create SRV records. An SRV lookup expresses service, pro
 
 <DnsRecordPaths />
 
-A headless Service sets `clusterIP: None`. DNS returns addresses for eligible endpoints instead of a Service VIP. The client or its library now owns endpoint selection, caching, retry, and reaction to backend changes.
+A headless Service sets `clusterIP: None`, so there is no Service virtual IP for DNS to return. Cluster DNS answers with eligible endpoint addresses instead. The client or its library must then choose an endpoint and cope with caching, retries, and backend changes.
 
 StatefulSets commonly pair a headless Service with stable Pod identity. A Pod can receive a name shaped like `<pod>.<service>.<namespace>.svc.<cluster-domain>` when its hostname/subdomain and governing Service align. Stable DNS identity does not mean a stable Pod IP; a recreated Pod can keep its ordinal name while receiving new addresses. [StatefulSet identity ↗](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/)
 
@@ -101,7 +101,7 @@ StatefulSets commonly pair a headless Service with stable Pod identity. A Pod ca
 
 CoreDNS is the common cluster DNS implementation and runs as Pods behind a Service named `kube-dns` for compatibility. Its `kubernetes` plugin watches Services, namespaces, Pods where configured, and EndpointSlices, then serves authoritative records for configured cluster zones. The `forward` plugin commonly sends other names toward upstream resolvers. [CoreDNS kubernetes plugin ↗](https://coredns.io/plugins/kubernetes/)
 
-This creates two separate dependencies: the CoreDNS Pods must be reachable through their Service path, and CoreDNS must have API connectivity plus RBAC permission to observe the objects used to build records.
+CoreDNS therefore depends on two working paths. Clients must be able to reach the CoreDNS Pods through the `kube-dns` Service, and CoreDNS must be able to read the Kubernetes objects from which it builds records. A failure on either side can look like “DNS is down.”
 
 Corefile order matters because CoreDNS is a plugin chain. Caching, rewrites, forwarding, loop detection, health, readiness, metrics, and logging behavior depend on the deployed configuration. Managed platforms may restrict or generate that configuration.
 
@@ -109,7 +109,7 @@ Corefile order matters because CoreDNS is a plugin chain. Caching, rewrites, for
 
 <DnsCacheLayers />
 
-Answers can be cached in the application, language runtime, operating-system resolver, Node-local cache, CoreDNS, and upstream resolver. Positive and negative answers have separate TTL behavior. A corrected Service can therefore continue returning an old address or `NXDOMAIN` to some clients until the relevant cache expires.
+The application, language runtime, operating-system resolver, Node-local cache, CoreDNS, and upstream resolver can each cache an answer. They may also cache negative answers such as `NXDOMAIN`, often with different TTL behavior. Fixing a Service record does not immediately clear those caches, so some clients can keep seeing the old result.
 
 Compare a failing application's lookup with a known diagnostic tool from the same Pod namespace and Node. A difference can indicate application-level caching or a custom resolver rather than CoreDNS itself.
 
@@ -124,11 +124,11 @@ NodeLocal DNSCache runs a caching agent on each Node. Pods can query the local a
   { title: 'Answer returns and caches', detail: 'Node-local metrics expose local latency and errors.', tone: 'green' },
 ]} />
 
-NodeLocal DNSCache adds another component to debug. A failure isolated to one Node can be a local agent, local listener, or Node-specific network problem even when central CoreDNS is healthy.
+The local cache also becomes another place a lookup can fail. If Pods fail only on one Node while central CoreDNS remains healthy, inspect that Node's cache agent, listener, and network path.
 
 ## DNS and NetworkPolicy
 
-A default-deny egress policy also denies DNS unless a policy allows the actual cluster DNS path. Selecting `kube-system` Pods by assumed labels can be brittle, while allowing only a ClusterIP may interact with when the policy engine evaluates pre- or post-translation addresses. Follow the installed implementation's documented semantics and test from selected workloads.
+A default-deny egress policy blocks DNS along with other outbound traffic until you allow the path your Pods actually use. A rule based on assumed `kube-system` labels can miss the deployed DNS Pods, while a rule containing only the ClusterIP can behave differently depending on where the network plugin enforces policy relative to address translation. Check the plugin's semantics and test from a Pod selected by the policy.
 
 DNS over UDP 53 is common, but TCP 53 is also required for valid DNS behavior such as larger responses and retries. Encrypted DNS used directly by applications can bypass cluster DNS policy entirely.
 
@@ -145,7 +145,7 @@ DNS over UDP 53 is common, but TCP 53 is also required for valid DNS behavior su
   <div><span>08</span><p>Account for caches and TTLs. Test from a fresh process or Pod before concluding that a configuration correction did not work.</p></div>
 </div>
 
-## Misconceptions and implications
+## Where DNS intuition goes wrong
 
 <div class="misconception-grid">
   <article><span>Misconception</span><h3>“CoreDNS balances a normal Service across Pods.”</h3><p>It normally returns the Service VIP. The Service data plane selects an endpoint.</p></article>

@@ -550,7 +550,7 @@
   <!-- FLOW TAB -->
   <div id="tab-flow" class="section active">
     <h1>Pipeline Flow</h1>
-    <p class="subtitle">Shift-left security for containerised apps on AWS EKS. Click a job to inspect it.</p>
+    <p class="subtitle">Follow a container image from source checks through signing, staged deployment, approval, and rollback on AWS EKS. Select a job to inspect its work.</p>
     <div class="pipeline-wrap">
       <!-- left lanes -->
       <div style="flex:1;min-width:260px;">
@@ -606,7 +606,7 @@
       </div>
       <!-- detail panel -->
       <div class="detail-panel" id="detail-panel">
-        <p class="placeholder">👆 Click any job card to see its steps, tools, and details here.</p>
+        <p class="placeholder">Select a job to see its steps, tools, and dependencies.</p>
       </div>
     </div>
   </div>
@@ -614,7 +614,7 @@
   <!-- JOBS TAB -->
   <div id="tab-jobs" class="section">
     <h1>Jobs Reference</h1>
-    <p class="subtitle">All jobs defined in <code>secopspipeline.yaml</code> with triggers and timeouts.</p>
+    <p class="subtitle">Use the trigger, dependency, and timeout columns to see when each job runs and what must finish first.</p>
     <table>
       <thead>
         <tr>
@@ -733,7 +733,7 @@
   <!-- SECURITY TAB -->
   <div id="tab-security" class="section">
     <h1>Security Controls Map</h1>
-    <p class="subtitle">Every control, the tool that enforces it, and whether it blocks the pipeline.</p>
+    <p class="subtitle">Match each security check to the pipeline stage that runs it, then see whether a finding blocks delivery or records evidence.</p>
     <table>
       <thead>
         <tr>
@@ -823,41 +823,43 @@
   <!-- DESIGN TAB -->
   <div id="tab-design" class="section">
     <h1>Key Design Decisions</h1>
-    <p class="subtitle">Architectural choices that make this pipeline supply-chain safe and operationally robust.</p>
+    <p class="subtitle">These choices reduce artifact substitution, credential exposure, and deployment risk. Their protection still depends on the referenced policies, tools, and environment settings.</p>
     <div class="card-grid">
       <div class="card">
         <h3>1. Build Once, Deploy Everywhere (Digest Pinning)</h3>
         <p>The image is built <strong>once</strong> in <code>build</code> and tagged by <code>github.sha</code>. All
-          subsequent jobs reference the immutable <code>sha256:…</code> digest — never a mutable tag. This guarantees
-          staging and production receive byte-for-byte identical images.</p>
+          subsequent jobs reference the immutable <code>sha256:…</code> digest instead of a mutable tag. Staging and
+          production therefore request the same image manifest.</p>
       </div>
       <div class="card">
         <h3>2. OIDC — No Long-Lived Credentials</h3>
-        <p>AWS credentials are federated via GitHub Actions OIDC (<code>id-token: write</code>). No
-          <code>AWS_ACCESS_KEY_ID</code> or <code>AWS_SECRET_ACCESS_KEY</code> secrets are stored anywhere. Each job
-          assumes a least-privilege IAM role scoped to its action (ECR push, EKS staging, EKS prod).</p>
+        <p>GitHub Actions requests an OIDC token and exchanges it for temporary AWS role credentials. This removes
+          stored IAM access keys from the workflow. Each job uses a role scoped to its task, such as pushing to ECR
+          or deploying to one EKS environment.</p>
       </div>
       <div class="card">
         <h3>3. Cosign Verification at Deploy Time</h3>
-        <p>Even if ECR were compromised post-sign, <code>cosign verify</code> at deploy time rejects unsigned or
-          tampered images. Verification uses Sigstore's public Fulcio/Rekor transparency log.</p>
+        <p>The deployment jobs run <code>cosign verify</code> against the selected digest before using it. Whether this
+          blocks an unwanted image depends on the verification identity and issuer constraints configured in the
+          workflow, so treat those values as part of the policy.</p>
       </div>
       <div class="card">
         <h3>4. Canary-First Progressive Delivery</h3>
-        <p>Both staging and production use <strong>Argo Rollouts</strong> with a canary strategy. Traffic shifts
-          incrementally. If the rollout health check fails, the <code>rollback-prod</code> job issues
-          <code>argo rollouts undo</code> automatically.</p>
+        <p>Both environments use an Argo Rollouts canary so traffic can move in stages. The workflow waits for the
+          rollout result and runs <code>argo rollouts undo</code> after a failed production deployment. The configured
+          analysis and health checks determine what the rollout can detect.</p>
       </div>
       <div class="card">
         <h3>5. Concurrency Protection</h3>
-        <p><code>cancel-in-progress: true</code> ensures only one run per ref is active at a time. A fast follow-up push
-          cancels the previous run rather than queuing a stale deployment.</p>
+        <p>The concurrency group identifies runs for the same ref, and <code>cancel-in-progress: true</code> cancels an
+          older matching run when a newer one starts. Review this behavior carefully for deployment jobs that should
+          finish rather than be interrupted.</p>
       </div>
       <div class="card">
         <h3>6. Language-Agnostic by Design</h3>
-        <p>CodeQL auto-detects the language. Semgrep rules apply universally. The only app-specific step is
-          unit/integration testing — add it in <code>code-quality</code> for Python (<code>pytest</code>), Node
-          (<code>npm test</code>), Go (<code>go test</code>), or Java (<code>mvn test</code>).</p>
+        <p>The sample leaves application tests for you to add to <code>code-quality</code>. Configure CodeQL,
+          Semgrep, the linter, and the test command for the languages and build system in the repository; their
+          defaults do not make the workflow language-independent by themselves.</p>
       </div>
     </div>
   </div>
@@ -865,7 +867,7 @@
   <!-- CONFIG TAB -->
   <div id="tab-config" class="section">
     <h1>Required Configuration</h1>
-    <p class="subtitle">Secrets, IAM roles, and GitHub environments needed before running this pipeline.</p>
+    <p class="subtitle">Configure these repository values, AWS roles, and GitHub environments before the workflow can authenticate or deploy.</p>
     <div class="config-grid">
       <div class="config-card">
         <h3>🔑 Secrets</h3>
@@ -966,7 +968,7 @@
     </div>
     <div
       style="margin-top:1.5rem;padding:1rem 1.4rem;background:var(--surface);border:1px solid var(--yellow);border-radius:10px;font-size:.84rem;color:var(--muted);line-height:1.7;">
-      <strong style="color:var(--yellow);">💡 Tip:</strong> Store the DAST target as a GitHub Environment variable
+      <strong style="color:var(--yellow);">DAST target:</strong> Store the target as a GitHub Environment variable
       (<code>vars.STAGING_URL</code>) instead of hardcoding it in the YAML to avoid manual edits on every deploy.
     </div>
     <div
@@ -981,7 +983,7 @@
   <!-- CODE TAB -->
   <div id="tab-code" class="section">
     <h1>YAML Source</h1>
-    <p class="subtitle">Raw workflow files — copy and place in <code>.github/workflows/</code>.</p>
+    <p class="subtitle">Review the permissions, action versions, role ARNs, environments, and application commands before adapting these workflow files.</p>
     <div class="file-tabs">
       <button class="file-tab active" onclick="showFile('main')">secopspipeline.yaml</button>
       <button class="file-tab" onclick="showFile('tools')">setup-tools.yml</button>

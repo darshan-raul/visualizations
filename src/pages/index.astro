@@ -14,8 +14,8 @@ const featuredTopics = sortedTopics.filter((topic) => topic.data.featured);
   <section class="hero shell">
     <div class="hero-copy">
       <span class="eyebrow"><i></i> Visual infrastructure reference</span>
-      <h1>Complex infrastructure,<br /><span>made visually intuitive.</span></h1>
-      <p>A visual reference library for AWS, Kubernetes, DevOps, SRE, and the foundations beneath them. Explore each concept independently, from the mental model to the operational details.</p>
+      <h1>See how infrastructure<br /><span>actually works.</span></h1>
+      <p>Trace the mechanisms behind AWS, Kubernetes, DevOps, SRE, and the foundations beneath them. Each visual starts with a usable mental model and follows it into the details that matter in practice.</p>
       <div class="hero-actions">
         <a class="primary-action" href="#library">Explore the library <span aria-hidden="true">↓</span></a>
         <span>{topics.length} visualizations · AWS and Kubernetes first</span>
@@ -46,7 +46,7 @@ const featuredTopics = sortedTopics.filter((topic) => topic.data.featured);
           );
         })}
       </div>
-      <p class="preview-note">Independent explainers for the concept you need now—no prescribed path.</p>
+      <p class="preview-note">Open the concept you need now. Each explainer stands on its own.</p>
     </aside>
   </section>
 
@@ -56,9 +56,9 @@ const featuredTopics = sortedTopics.filter((topic) => topic.data.featured);
     <div class="section-heading catalogue-heading">
       <div>
         <span>Explore the library</span>
-        <h2>Find the layer you need.</h2>
+        <h2>Find the system you need to understand.</h2>
       </div>
-      <p>Each visual stands on its own. Search by mechanism, service, or the problem you are trying to understand.</p>
+      <p>Search by mechanism, service, or the behavior you are trying to explain.</p>
     </div>
     <LibraryExplorer topics={sortedTopics} />
   </section>

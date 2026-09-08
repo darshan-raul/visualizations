@@ -1,5 +1,5 @@
 <figure class="endpoint-lifecycle" aria-labelledby="endpoint-lifecycle-title">
-  <figcaption id="endpoint-lifecycle-title"><span class="content-kicker">Endpoint state over time</span><strong>Pod termination is observed asynchronously—not as one atomic switch.</strong></figcaption>
+  <figcaption id="endpoint-lifecycle-title"><span class="content-kicker">Endpoint state over time</span><strong>Each component observes Pod termination at a different point.</strong></figcaption>
   <ol class="state-track">
     <li><span>01</span><b>Ready</b><small>ready=true<br/>serving=true</small></li>
     <i aria-hidden="true">→</i>
@@ -12,7 +12,7 @@
   <div class="observer-track">
     <span>EndpointSlice controller</span><i aria-hidden="true"></i><span>Node proxies</span><i aria-hidden="true"></i><span>Load balancers</span><i aria-hidden="true"></i><span>Clients + connections</span>
   </div>
-  <p>Each observer reconciles at a different time. Graceful shutdown aligns readiness, propagation, draining, termination grace, and application behavior.</p>
+  <p>A graceful shutdown gives readiness changes time to reach EndpointSlices and traffic handlers before the process exits. The application, controller, proxy, and load balancer still reconcile on their own schedules.</p>
 </figure>
 
 <style>
