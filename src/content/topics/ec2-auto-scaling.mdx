@@ -1,6 +1,6 @@
 ---
 title: EC2 Auto Scaling, Illustrated
-summary: Predict what an Auto Scaling group will do next by separating requested capacity, instance lifecycle, readiness, policy decisions, and placement constraints.
+summary: Start with one application on one computer, then see how AWS replaces failed instances, adds capacity, and updates a running fleet.
 slug: ec2-auto-scaling
 collection: aws
 tags: [EC2, Auto Scaling, Compute, Availability, Troubleshooting, Deployments]
@@ -42,49 +42,46 @@ sources:
     url: https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-suspend-resume-processes.html
   - label: Auto Scaling group metrics
     url: https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-metrics.html
+  - label: Health-check grace period and its starting point
+    url: https://docs.aws.amazon.com/autoscaling/ec2/userguide/health-check-grace-period.html
+  - label: Refresh preferences and fallback ordering
+    url: https://docs.aws.amazon.com/autoscaling/ec2/APIReference/API_RefreshPreferences.html
+  - label: Root-volume replacement prerequisites
+    url: https://docs.aws.amazon.com/autoscaling/ec2/userguide/replace-root-volume.html
+  - label: Warm-pool lifecycle and hooks
+    url: https://docs.aws.amazon.com/autoscaling/ec2/userguide/warm-pool-instance-lifecycle.html
 ---
 
 import AutoScalingLabs from '../../components/asg/AutoScalingLabs.astro';
-import MechanismFlow from '../../components/MechanismFlow.astro';
 import ReferenceTable from '../../components/ReferenceTable.astro';
 
-## One group, several versions of capacity
+## Start with an application
 
-Suppose an Auto Scaling group has six instances across three Availability Zones. Traffic rises, so a target-tracking policy raises desired capacity to eight. That number changes immediately. Usable capacity does not: EC2 still has to accept two launches, the instances must boot, lifecycle work may need to finish, and the targets must become ready.
+A customer opens your website. A computer runs the application that answers their request. On AWS, that virtual computer is called an **EC2 instance**. What happens if it fails, or if more customers arrive than it can handle?
 
-Now let one existing target fail while another instance is protected from scale in. The group is handling a scale-out request, a health replacement, and an eligibility constraint at the same time. Looking only at **desired capacity** or the green EC2 `running` badge hides most of the answer.
+Build the answer below: first one application, then several copies sharing requests, then an Auto Scaling group to keep the computers running. Each step introduces a term after showing what it does. Later chapters explain how demand, startup time, available supply, and updates change the same system.
 
-<MechanismFlow
-  label="A capacity request becomes useful application capacity through several separately observable decisions"
-  steps={[
-    { title: 'Request capacity', detail: 'Minimum, desired and maximum define the current envelope', tone: 'purple' },
-    { title: 'Place instances', detail: 'Zones, subnets, types and purchase options constrain launches' },
-    { title: 'Complete lifecycle', detail: 'Boot, hooks, registration and warmup run on their own clocks', tone: 'amber' },
-    { title: 'Serve work', detail: 'Healthy targets or workers can finally handle the workload', tone: 'green' },
-  ]}
-/>
+## Follow the explanation
 
-<ReferenceTable caption="Capacity ledgers answer different operational questions" headers={['Ledger', 'Question it answers', 'What it must not imply']} rows={[
-  ['Requested', 'What capacity does the group currently want?', 'That EC2 accepted or fulfilled the request'],
-  ['Present', 'Which instances exist, and which launches are only attempts?', 'That every instance is in service'],
-  ['In service', 'Which instances are active ASG members?', 'That a load balancer can route to them'],
-  ['Serving', 'Which targets or workers can do useful work now?', 'That scaling policies include their metrics'],
-  ['Metric eligible', 'Which measurements participate in this policy decision?', 'That those instances are traffic ready'],
-  ['Replacement ready', 'Which new capacity satisfies refresh or maintenance gates?', 'That a rollout or bake period is complete'],
-  ['Outside active capacity', 'What is in standby, a warm pool, retained, detached, or terminating?', 'That the resources stopped costing money'],
-]} />
+The page now scrolls through separate visuals. The first five introduce one application, a load balancer, the Auto Scaling group, replacement startup, and the three capacity counts. The later visuals are collected into demand, capacity supply, fleet changes, and diagnosis. You can read them in order or use the section links to revisit one mechanism.
 
-The labs use repeatable fixtures. Startup time, throughput, queue arrivals, inventory, failures, and forecasts are illustrative inputs. AWS does not publish one fixed reconciliation tick, universal forecasting formula, or exact Spot-pool depth, so the diagrams do not invent them.
-
-## Follow the learning path
-
-The visual path begins with the four building blocks that every later decision depends on: capacity ledgers, lifecycle state, timer ownership, and health evidence. It then moves through four broader groups—demand, capacity supply, fleet changes, and diagnosis. Only one lesson is shown at a time, so each diagram can answer one question before the next concept is introduced.
-
-Change the example or step through its events, then use **Next lesson** to continue. **Previous event** restores an earlier teaching snapshot; it does not imply that an AWS API can reverse a termination. Direct links such as [lifecycle](#v02), [warm pools](#v09), and [refresh](#v14) still open the corresponding lesson.
-
-The colors keep one meaning throughout: cyan is normal infrastructure flow, green is a successful condition, amber is a wait or transition, red is a failure or destructive consequence, and purple is policy or control-plane activity. A dashed connector marks a separate clock or conceptual relationship.
+Within an interactive visual, use **Next step** to inspect its explanation. The “Read every step” section includes the alternate examples as a readable reference. Playback walks through authored examples and comparisons; it does not call AWS or simulate every possible event ordering. Times and workload figures are illustrative.
 
 <AutoScalingLabs />
+
+## Keep the capacity counts separate
+
+Once you have watched a replacement start, the counts have something concrete to refer to.
+
+<ReferenceTable caption="Which count answers your question?" headers={['Count', 'Meaning', 'Example while a replacement starts']} rows={[
+  ['Desired', 'How many instances the group is asked to maintain', '6 requested'],
+  ['Present', 'How many instances actually exist', '5 existing + 1 starting = 6'],
+  ['InService', 'How many instances ASG has admitted to active membership', 'A starting replacement may not be admitted yet'],
+  ['Serving', 'How many application copies can handle requests in this example', '5 ready; the replacement is still preparing'],
+  ['Metric eligible', 'Which instances contribute to the selected scaling calculation', 'A new instance may still be warming even after it begins serving'],
+]} />
+
+Serving is a teaching measure of application usefulness. An ASG instance count does not itself establish that a load balancer can send requests successfully.
 
 ## The timers have different owners
 

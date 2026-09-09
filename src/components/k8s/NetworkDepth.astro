@@ -1,0 +1,37 @@
+---
+interface Props { id: string; label: string; }
+const { id, label } = Astro.props;
+---
+
+<details id={id} class="network-depth">
+  <summary>{label}<span>Optional detail</span></summary>
+  <div class="network-depth-body"><slot /></div>
+</details>
+
+<style>
+  .network-depth { margin: 16px 0; border: 1px solid var(--line, #344354); border-radius: 10px; }
+  .network-depth > summary { padding: 18px 20px; cursor: pointer; font-weight: 600; line-height: 1.5; }
+  .network-depth > summary span { display: block; margin-left: 16px; color: var(--muted); font-size: .75rem; font-weight: 400; }
+  .network-depth > summary:focus-visible { outline: 2px solid var(--cyan, #42d6e8); outline-offset: 3px; }
+  .network-depth-body { padding: 0 20px 20px; min-width: 0; }
+  .network-depth[open] > summary { border-bottom: 1px solid var(--line, #344354); margin-bottom: 20px; }
+  @media (max-width: 650px) { .network-depth-body { padding: 0 12px 12px; } }
+</style>
+
+<script>
+  function revealNetworkFragment() {
+    let id: string;
+    try { id = decodeURIComponent(location.hash.slice(1)); } catch { return; }
+    const target = document.getElementById(id);
+    if (!target) return;
+    let parent: HTMLElement | null = target;
+    let opened = false;
+    while (parent) {
+      if (parent instanceof HTMLDetailsElement && !parent.open) { parent.open = true; opened = true; }
+      parent = parent.parentElement;
+    }
+    if (opened) requestAnimationFrame(() => target.scrollIntoView({ block: 'start' }));
+  }
+  revealNetworkFragment();
+  window.addEventListener('hashchange', revealNetworkFragment);
+</script>

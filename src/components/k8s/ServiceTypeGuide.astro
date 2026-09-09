@@ -1,0 +1,94 @@
+<figure class="service-guide" aria-labelledby="service-guide-title">
+  <figcaption>
+    <span class="content-kicker">Service and entry-point atlas</span>
+    <h3 id="service-guide-title">Choose the frontend by who must reach it</h3>
+    <p>A Service gives a changing backend set a stable way to be found. The Service type changes the frontend and exposure mechanism; Ingress and Gateway API add protocol-aware routing rather than becoming new Service types.</p>
+  </figcaption>
+
+  <div class="service-cards">
+    <article>
+      <header><code>ClusterIP</code><span>default</span></header>
+      <div class="mini-flow"><b>Pod client</b><i>→</i><b>VIP :80</b><i>→</i><b>Pod :8080</b></div>
+      <p><strong>Use for:</strong> stable internal application access.</p>
+      <small>The Service data plane chooses an eligible endpoint. The VIP is not an application process.</small>
+    </article>
+    <article>
+      <header><code>Headless</code><span>clusterIP: None</span></header>
+      <div class="mini-flow"><b>DNS query</b><i>→</i><b>Pod IP set</b><i>→</i><b>client chooses</b></div>
+      <p><strong>Use for:</strong> peer discovery and clients that need individual endpoint addresses.</p>
+      <small>No virtual-IP load balancing. Clients must handle churn, selection, and cached answers.</small>
+    </article>
+    <article>
+      <header><code>NodePort</code><span>node IP + port</span></header>
+      <div class="mini-flow"><b>client</b><i>→</i><b>Node :30xxx</b><i>→</i><b>endpoint</b></div>
+      <p><strong>Use for:</strong> simple exposure or an implementation’s load-balancer target.</p>
+      <small>Node reachability, firewall rules, traffic policy, and source translation all matter.</small>
+    </article>
+    <article>
+      <header><code>LoadBalancer</code><span>controller required</span></header>
+      <div class="mini-flow"><b>external IP</b><i>→</i><b>provider LB</b><i>→</i><b>Service / Pods</b></div>
+      <p><strong>Use for:</strong> one externally reachable TCP or UDP service.</p>
+      <small>The implementation decides whether it targets Nodes, NodePorts, or Pods directly.</small>
+    </article>
+    <article>
+      <header><code>ExternalName</code><span>DNS CNAME</span></header>
+      <div class="mini-flow"><b>Service name</b><i>⇢</i><b>external DNS name</b></div>
+      <p><strong>Use for:</strong> a Kubernetes-local alias to a DNS name you manage elsewhere.</p>
+      <small>No proxy, health check, ClusterIP, or EndpointSlice backend is created.</small>
+    </article>
+  </div>
+
+  <section class="north-south-choice" aria-labelledby="north-south-choice-title">
+    <header><span>HTTP and HTTPS entry</span><h4 id="north-south-choice-title">Add a routing API when many routes share entry infrastructure</h4></header>
+    <div class="entry-flow">
+      <div><small>Clients</small><b>api.example.com</b><code>HTTPS :443</code></div><i>→</i>
+      <div class="control"><small>Gateway / Ingress controller</small><b>TLS + host/path matching</b><code>status → programmed data plane</code></div><i>→</i>
+      <div><small>Route backend</small><b>Service port</b><code>→ eligible endpoint</code></div>
+    </div>
+    <p><strong>Prefer Gateway API for new, multi-team routing designs.</strong> Ingress remains common and stable but is frozen. A resource object does not carry traffic by itself; an implementation must accept it and program a reachable data plane.</p>
+  </section>
+
+  <div class="choice-grid" aria-label="Service selection quick reference">
+    <div><span>Only callers inside the cluster?</span><strong>ClusterIP</strong></div>
+    <div><span>Clients need Pod addresses?</span><strong>Headless</strong></div>
+    <div><span>One external L4 service?</span><strong>LoadBalancer</strong></div>
+    <div><span>Shared HTTP entry and routing?</span><strong>Gateway API</strong></div>
+    <div><span>Just alias an external DNS name?</span><strong>ExternalName</strong></div>
+  </div>
+</figure>
+
+<style>
+  .service-guide { margin: 30px 0; padding: clamp(18px, 3vw, 26px); border: 1px solid var(--border-strong); border-radius: 12px; background: rgba(255,255,255,.014); }
+  figcaption { max-width: 760px; }
+  figcaption h3 { margin: 8px 0; font-size: clamp(1.3rem, 3vw, 1.9rem); letter-spacing: -.035em; }
+  figcaption p, .north-south-choice > p { color: var(--muted); font-size: .8rem; line-height: 1.65; }
+  .service-cards { display: grid; grid-template-columns: repeat(6, 1fr); gap: 9px; margin-top: 20px; }
+  .service-cards article { grid-column: span 2; display: grid; align-content: start; gap: 10px; min-width: 0; padding: 14px; border: 1px solid var(--border); border-top: 2px solid var(--cyan); border-radius: 9px; background: var(--surface); }
+  .service-cards article:nth-child(4), .service-cards article:nth-child(5) { grid-column: span 3; border-top-color: var(--purple); }
+  .service-cards header { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .service-cards header code { color: var(--cyan); font-size: .72rem; }
+  .service-cards header span { color: var(--dim); font: .54rem var(--mono); text-transform: uppercase; }
+  .mini-flow { display: flex; align-items: stretch; gap: 5px; }
+  .mini-flow b { display: grid; flex: 1; place-items: center; min-width: 0; min-height: 48px; padding: 7px; border: 1px solid var(--border); border-radius: 6px; font-size: .58rem; line-height: 1.35; text-align: center; }
+  .mini-flow i { align-self: center; color: var(--cyan); font-style: normal; }
+  .service-cards p { margin: 0; color: var(--text); font-size: .67rem; line-height: 1.5; }
+  .service-cards small { color: var(--muted); font-size: .62rem; line-height: 1.5; }
+  .north-south-choice { margin-top: 10px; padding: 16px; border: 1px solid rgba(183,154,255,.35); border-radius: 9px; background: rgba(183,154,255,.035); }
+  .north-south-choice header span { color: var(--purple); font: .57rem var(--mono); text-transform: uppercase; }
+  .north-south-choice h4 { margin: 7px 0 14px; font-size: 1rem; }
+  .entry-flow { display: grid; grid-template-columns: 1fr auto 1.4fr auto 1fr; gap: 8px; align-items: center; }
+  .entry-flow > div { display: grid; gap: 5px; min-width: 0; padding: 11px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); }
+  .entry-flow > div.control { border-color: rgba(183,154,255,.5); }
+  .entry-flow > i { color: var(--purple); font-style: normal; }
+  .entry-flow small { color: var(--dim); font: .54rem var(--mono); text-transform: uppercase; }
+  .entry-flow b { font-size: .66rem; }
+  .entry-flow code { color: var(--muted); font-size: .57rem; overflow-wrap: anywhere; }
+  .north-south-choice > p { margin: 13px 0 0; }
+  .north-south-choice > p strong { color: var(--text); }
+  .choice-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; margin-top: 10px; }
+  .choice-grid > div { display: grid; gap: 7px; padding: 11px; border: 1px solid var(--border); border-radius: 7px; }
+  .choice-grid span { color: var(--muted); font-size: .58rem; line-height: 1.4; }
+  .choice-grid strong { color: var(--green); font-size: .67rem; }
+  @media (max-width: 820px) { .service-cards { grid-template-columns: 1fr 1fr; } .service-cards article, .service-cards article:nth-child(4), .service-cards article:nth-child(5) { grid-column: auto; } .choice-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 560px) { .service-cards, .choice-grid { grid-template-columns: 1fr; } .entry-flow { grid-template-columns: 1fr; } .entry-flow > i { justify-self: center; transform: rotate(90deg); } }
+</style>

@@ -1,0 +1,228 @@
+---
+import { labs } from './k8s-labs';
+import '../../styles/k8s.css';
+
+export interface Props {
+  chapterId?: string;
+}
+
+const { chapterId } = Astro.props;
+
+const allChapters = [
+  { id: 'foundations', number: '01', title: 'Build the network', short: 'Foundations', description: 'Start with one container answering one request. Add Pod sandboxes, veth pairs, bridges, cross-node forwarding, and address planes in that order.', outcome: 'You can trace a packet from one Pod to another and name each forwarding hop.', labIds: ['v01', 'v02', 'v03', 'v04'] },
+  { id: 'discovery', number: '02', title: 'Find the destination', short: 'Discovery', description: 'See how Services, EndpointSlices, DNS, and iptables DNAT transform a name into a routable backend address.', outcome: 'You can explain why DNS success does not prove connectivity.', labIds: ['v05', 'v06', 'v07', 'v08'] },
+  { id: 'routing', number: '03', title: 'Control the traffic', short: 'Routing', description: 'Follow traffic policy, source IP behavior, Gateway API attachment, and TLS termination as external traffic enters the cluster.', outcome: 'You can identify where source address translation occurs and which component inspects the request.', labIds: ['v09', 'v10', 'v11', 'v12'] },
+  { id: 'policy', number: '04', title: 'Enforce the boundaries', short: 'Policy', description: 'Apply NetworkPolicy isolation, selector logic, default-deny egress, and implementation-specific NAT ordering.', outcome: 'You can identify the address a policy observes instead of assuming that policy always runs before or after NAT.', labIds: ['v13', 'v14', 'v15', 'v16'] },
+  { id: 'diagnosis', number: '05', title: 'Read the incident', short: 'Diagnosis', description: 'Combine mechanisms when connections fail, overlays break, or multiple systems change at once.', outcome: 'You can locate the first failed layer and choose evidence that belongs to it.', labIds: ['v17', 'v18', 'v19', 'v20'] },
+];
+
+const chapters = chapterId ? allChapters.filter(c => c.id === chapterId) : allChapters;
+const orderedLabIds = allChapters.flatMap((chapter) => chapter.labIds);
+const visibleLabIds = new Set(chapters.flatMap((chapter) => chapter.labIds));
+const visibleLabs = labs.filter((lab) => visibleLabIds.has(lab.id));
+const displayText = (value: string) => value.replaceAll('`', '');
+---
+
+<div class="k8s-lab-course" data-k8s-course>
+  {!chapterId && (
+    <nav class="k8s-lab-chapter-nav" aria-label="Sections in this Kubernetes networking explanation">
+      <p class="k8s-lab-course-kicker">Five visual groups</p>
+      <ol>
+        {allChapters.map((chapter) => (
+          <li><a href={`#k8s-lab-chapter-${chapter.id}`}><small>{chapter.number}</small><span>{chapter.short}</span></a></li>
+        ))}
+      </ol>
+    </nav>
+  )}
+
+  {chapters.map((chapter) => (
+    <section id={`k8s-lab-chapter-${chapter.id}`} class="k8s-lab-chapter" aria-labelledby={`${chapter.id}-title`}>
+      <header class="k8s-lab-chapter-heading">
+        <span>Visual group {chapter.number} of 05</span>
+        <h3 id={`${chapter.id}-title`}>{chapter.title}</h3>
+        <p>{chapter.description}</p>
+        <strong>{chapter.outcome}</strong>
+      </header>
+
+      <div class="k8s-lab-visual-list">
+        {chapter.labIds.map((labId) => {
+          const lab = labs.find((item) => item.id === labId)!;
+          const absoluteIndex = orderedLabIds.indexOf(lab.id);
+          return (
+            <details id={lab.id} class:list={['k8s-lab-lesson', `k8s-lab-${lab.kind}`]} data-lesson={lab.id} data-scenario-index="0" aria-labelledby={`${lab.id}-title`}>
+              <summary class="k8s-lab-lesson-heading">
+                <span class="k8s-lab-lesson-number">Explore example {String(absoluteIndex + 1).padStart(2, '0')}</span>
+                <strong id={`${lab.id}-title`}>{lab.title}</strong>
+                <p>{lab.introduction}</p>
+              </summary>
+
+              <fieldset class="k8s-lab-scenario-picker">
+                <legend>Choose an example</legend>
+                <div>
+                  {lab.scenarios.map((scenario, index) => (
+                    <button type="button" data-scenario-option={index} aria-pressed={index === 0 ? 'true' : 'false'}>
+                      <small>{String(index + 1).padStart(2, '0')}</small>
+                      <strong>{scenario.label}</strong>
+                      <span>{scenario.summary}</span>
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+
+              <div class="k8s-lab-visual" aria-label={`Steps in ${lab.title}`}>
+                <p class="k8s-lab-scenario-summary" data-summary>{lab.scenarios[0].summary}</p>
+                <ol class="k8s-lab-nodes" data-nodes>
+                  {lab.scenarios[0].nodes.map((node, index) => (
+                    <li class={`tone-${node.tone}`} data-node-index={index}>
+                      <span>{String(index + 1).padStart(2, '0')}</span>
+                      <strong>{node.label}</strong>
+                      <small>{node.detail}</small>
+                    </li>
+                  ))}
+                </ol>
+                <p class="k8s-lab-connector-key"><span></span> Scenario sequence <i></i> separate plane, asynchronous step, or conceptual relationship</p>
+              </div>
+
+              <section class="k8s-lab-event-explanation" aria-live="polite" aria-atomic="true">
+                <header><span data-event-number>Step 1</span><strong data-event-heading>{lab.scenarios[0].nodes[0].label}</strong></header>
+                <p data-event-body>{lab.scenarios[0].nodes[0].explanation}</p>
+              </section>
+
+              <div class="k8s-lab-playback" data-playback hidden>
+                <div class="k8s-lab-playback-buttons">
+                  <button type="button" data-reset>Restart</button>
+                  <button type="button" data-previous>← Previous step</button>
+                  <button type="button" data-play>Play</button>
+                  <button type="button" data-next>Next step →</button>
+                </div>
+                <p data-status role="status">Step 1 of {lab.scenarios[0].nodes.length}</p>
+              </div>
+
+              <aside class="k8s-lab-takeaway"><span>Example outcome</span><p data-result>{lab.scenarios[0].result}</p></aside>
+
+              <details class="k8s-lab-inspector">
+                <summary>Inspect the evidence and effective setting</summary>
+                <div>
+                  <p><span>Evidence</span><code data-evidence>{displayText(lab.scenarios[0].evidence)}</code></p>
+                  <p><span>Configuration in play</span><code data-setting>{lab.scenarios[0].setting}</code></p>
+                </div>
+              </details>
+
+              <details class="k8s-lab-inspector k8s-lab-transcript">
+                <summary>Read every step and alternate example</summary>
+                {lab.scenarios.map((scenario) => (
+                  <section>
+                    <h5>{scenario.label}</h5>
+                    <p>{scenario.summary}</p>
+                    <ol>{scenario.nodes.map((node) => <li><strong>{node.label}</strong><p>{node.explanation}</p></li>)}</ol>
+                  </section>
+                ))}
+              </details>
+            </details>
+          );
+        })}
+      </div>
+    </section>
+  ))}
+
+  <script is:inline type="application/json" data-course-data set:html={JSON.stringify({ labs: visibleLabs })}></script>
+</div>
+
+<style>
+  summary.k8s-lab-lesson-heading { cursor: pointer; }
+  summary.k8s-lab-lesson-heading > strong { display: block; margin: 8px 0; font-size: 1.15rem; }
+  summary.k8s-lab-lesson-heading:focus-visible { outline: 2px solid var(--cyan, #42d6e8); outline-offset: 4px; }
+  details.k8s-lab-lesson[open] > summary { margin-bottom: 24px; }
+</style>
+
+<script>
+  type CourseData = { labs: typeof import('./k8s-labs').labs };
+
+  for (const root of document.querySelectorAll<HTMLElement>('[data-k8s-course]')) {
+    const data = JSON.parse(root.querySelector<HTMLScriptElement>('[data-course-data]')!.textContent || '{}') as CourseData;
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    root.classList.add('is-enhanced');
+
+    for (const lesson of root.querySelectorAll<HTMLElement>('[data-lesson]')) {
+      const lab = data.labs.find((item) => item.id === lesson.dataset.lesson)!;
+      let step = 0;
+      let timer: number | undefined;
+
+      const scenarioIndex = () => Number(lesson.dataset.scenarioIndex || '0');
+      const scenario = () => lab.scenarios[scenarioIndex()];
+      const query = <T extends HTMLElement>(selector: string) => lesson.querySelector<T>(selector)!;
+
+      function pause() {
+        if (timer !== undefined) window.clearInterval(timer);
+        timer = undefined;
+        query<HTMLButtonElement>('[data-play]').textContent = 'Play';
+      }
+
+      lesson.addEventListener('toggle', () => { if (!(lesson as HTMLDetailsElement).open) pause(); });
+
+      function renderStep() {
+        const nodes = [...lesson.querySelectorAll<HTMLElement>('[data-node-index]')];
+        const current = scenario().nodes[step];
+        nodes.forEach((node, index) => {
+          node.classList.toggle('is-reached', index <= step);
+          node.classList.toggle('is-current', index === step);
+        });
+        query('[data-event-number]').textContent = `Step ${step + 1} of ${nodes.length}`;
+        query('[data-event-heading]').textContent = current.label;
+        query('[data-event-body]').textContent = current.explanation!;
+        query<HTMLElement>('.k8s-lab-takeaway').hidden = step !== nodes.length - 1;
+        query<HTMLButtonElement>('[data-previous]').disabled = step === 0;
+        query<HTMLButtonElement>('[data-next]').disabled = step >= nodes.length - 1;
+        query<HTMLButtonElement>('[data-play]').disabled = step >= nodes.length - 1 || motion.matches;
+        query('[data-status]').textContent = `Step ${step + 1} of ${nodes.length} · ${current.label}`;
+        if (step >= nodes.length - 1) pause();
+      }
+
+      function renderScenario() {
+        const selected = scenario();
+        lesson.querySelectorAll<HTMLButtonElement>('[data-scenario-option]').forEach((option) => {
+          option.setAttribute('aria-pressed', String(Number(option.dataset.scenarioOption) === scenarioIndex()));
+        });
+        query('[data-summary]').textContent = selected.summary;
+        query('[data-result]').textContent = selected.result;
+        query('[data-evidence]').textContent = selected.evidence.replaceAll('`', '');
+        query('[data-setting]').textContent = selected.setting;
+        query<HTMLOListElement>('[data-nodes]').replaceChildren(...selected.nodes.map((node, index) => {
+          const item = document.createElement('li');
+          item.className = `tone-${node.tone}`;
+          item.dataset.nodeIndex = String(index);
+          const number = document.createElement('span'); number.textContent = String(index + 1).padStart(2, '0');
+          const label = document.createElement('strong'); label.textContent = node.label;
+          const detail = document.createElement('small'); detail.textContent = node.detail;
+          item.append(number, label, detail);
+          return item;
+        }));
+        step = 0;
+        renderStep();
+      }
+
+      lesson.querySelectorAll<HTMLButtonElement>('[data-scenario-option]').forEach((option) => {
+        option.addEventListener('click', () => {
+          pause();
+          lesson.dataset.scenarioIndex = option.dataset.scenarioOption || '0';
+          renderScenario();
+        });
+      });
+      query<HTMLButtonElement>('[data-reset]').addEventListener('click', () => { pause(); step = 0; renderStep(); });
+      query<HTMLButtonElement>('[data-previous]').addEventListener('click', () => { pause(); step = Math.max(0, step - 1); renderStep(); });
+      query<HTMLButtonElement>('[data-next]').addEventListener('click', () => { pause(); step += 1; renderStep(); });
+      query<HTMLButtonElement>('[data-play]').addEventListener('click', () => {
+        if (timer !== undefined) { pause(); return; }
+        if (motion.matches) return;
+        query<HTMLButtonElement>('[data-play]').textContent = 'Pause';
+        timer = window.setInterval(() => { step += 1; renderStep(); }, 4800);
+      });
+
+      query<HTMLElement>('[data-playback]').hidden = false;
+      motion.addEventListener('change', () => { pause(); renderStep(); });
+      document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+      window.addEventListener('pagehide', pause);
+      renderScenario();
+    }
+  }
+</script>

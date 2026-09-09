@@ -1,0 +1,63 @@
+---
+import PodBoundary from './PodBoundary.astro';
+interface Props { stage: 'pod' | 'pods' | 'service' | 'external' | 'policy'; }
+const { stage } = Astro.props;
+---
+<figure class="network-scene" aria-label={`Kubernetes network anatomy: ${stage}`}>
+  {stage === 'pod' ? <>
+    <PodBoundary name="Web Pod" ip="10.244.1.10" app="Web application" port="8080" helper />
+    <figcaption>The localhost connection stays inside this Pod’s dashed namespace boundary. Its eth0 interface is used to reach other Pods.</figcaption>
+  </> : <>
+    {stage === 'external' && <div class="outside"><strong>Browser · outside the cluster</strong><code>https://app.example.com</code><div class="wire">↓ HTTPS request</div></div>}
+    <div class="cluster">
+      <p class="boundary-label">Cluster network</p>
+      {stage === 'external' && <>
+        <div class="gateway"><strong>Gateway data plane</strong><span>Terminates TLS · matches host + path</span><code>Route backend: web Service</code></div>
+        <div class="wire">↓ selects an eligible web endpoint</div>
+      </>}
+      {stage === 'service' && <aside class="discovery"><strong>First: discover the address</strong><span>Web Pod ⇄ cluster DNS</span><code>api → 10.96.0.20</code><small>This DNS exchange finishes before the application connection below.</small></aside>}
+      <div class="nodes">
+        <section class="node">
+          <header><strong>Node A</strong><span>192.168.1.10</span></header>
+          <PodBoundary name="Web Pod" ip="10.244.1.10" app="Web application" port="8080" />
+          {stage === 'policy' ? <div class="gate"><strong>Egress permission</strong><span>Allow web → API TCP 8080</span></div> : <div class="attachment"><span>↕ Pod attachment</span><small>Connects eth0 to the Node’s forwarding path</small></div>}
+        </section>
+        <div class="connection">
+          {stage === 'service' ? <><div class="service"><strong>api Service</strong><code>10.96.0.20:80</code><small>Virtual frontend</small></div><div class="wire">↓ backend selection</div><code>10.244.2.10:8080</code></> : <><code>API destination</code><code>10.244.2.10:8080</code></>}
+          <div class="wire horizontal" aria-hidden="true">→</div>
+          <span>{stage === 'policy' ? 'Both permissions must allow the connection' : 'Node-to-Node network'}</span>
+          <small>{stage === 'service' ? 'Forwarding maps the Service port to the backend port.' : 'Request → API · response returns to web'}</small>
+        </div>
+        <section class="node">
+          <header><strong>Node B</strong><span>192.168.1.20</span></header>
+          <PodBoundary name="API Pod" ip="10.244.2.10" app="API application" port="8080" />
+          {stage === 'policy' ? <div class="gate"><strong>Ingress permission</strong><span>Allow from web on TCP 8080</span></div> : <div class="attachment"><span>↕ Pod attachment</span><small>Delivers traffic to the API Pod’s eth0</small></div>}
+        </section>
+      </div>
+    </div>
+    <figcaption>{stage === 'service' ? 'The Service is a virtual address implemented by network forwarding, not another machine. Pod and Node boundaries stay the same.' : stage === 'external' ? 'The browser reaches the web application through the gateway. The web application then makes its own connection to the API. Gateway implementations may target Pod endpoints directly or use a Service frontend.' : stage === 'policy' ? 'Purple labels show logical enforcement at the source and destination; actual hooks depend on the network implementation. An isolated direction needs an applicable allow. The API still checks application identity and authorization.' : 'The Pod network joins the two Node forwarding paths. A bridge, routing, or an overlay can implement this connection; the detailed Linux example below shows one design.'}</figcaption>
+  </>}
+</figure>
+<style>
+  .network-scene { margin: 32px 0; }
+  .cluster { border: 1px solid var(--border-strong); border-radius: 16px; padding: clamp(12px, 2vw, 24px); background: var(--surface-soft); }
+  .boundary-label { margin: 0 0 18px; color: var(--muted); font-size: .8rem; }
+  .nodes { display: grid; grid-template-columns: minmax(0,1fr) minmax(130px,.55fr) minmax(0,1fr); align-items: stretch; gap: 14px; }
+  .node { min-width: 0; padding: 14px; border: 1px solid var(--border-strong); border-radius: 12px; background: var(--surface); }
+  .node > header { display: flex; flex-wrap: wrap; gap: 6px 12px; justify-content: space-between; margin-bottom: 16px; }
+  .node > header span, small { color: var(--muted); font-size: .75rem; line-height: 1.5; }
+  code { font: .75rem var(--mono); color: var(--cyan); overflow-wrap: anywhere; }
+  .attachment, .gate { display: grid; gap: 8px; margin-top: 14px; padding: 12px; font-size: .8rem; }
+  .attachment { border-top: 2px solid var(--cyan); }
+  .gate { border: 1px solid var(--purple); color: var(--purple); border-radius: 8px; }
+  .connection { display: flex; flex-direction: column; justify-content: center; gap: 10px; text-align: center; min-width: 0; font-size: .8rem; }
+  .wire { color: var(--cyan); text-align: center; padding: 12px 0; font-size: .8rem; }
+  .wire.horizontal { font-size: 2rem; border-top: 2px solid var(--cyan); padding: 0; }
+  .service, .gateway { display: grid; gap: 10px; padding: 16px 12px; border: 1px solid var(--cyan); border-radius: 9px; background: var(--surface); }
+  .gateway { max-width: 440px; margin: auto; border-color: var(--purple); font-size: .85rem; }
+  .discovery { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; border: 1px dashed var(--purple); padding: 16px; margin-bottom: 22px; border-radius: 8px; font-size: .85rem; }
+  .discovery strong { color: var(--purple); } .discovery small { flex-basis: 100%; }
+  .outside { display: grid; gap: 12px; text-align: center; }
+  figcaption { color: var(--muted); font-size: .85rem; line-height: 1.7; margin-top: 16px; }
+  @media(max-width:1000px) { .nodes { grid-template-columns: 1fr; } .connection { padding: 12px; } .wire.horizontal { transform: rotate(90deg); border: 0; } }
+</style>

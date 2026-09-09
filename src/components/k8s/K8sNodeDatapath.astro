@@ -1,0 +1,186 @@
+---
+import PodBoundary from './PodBoundary.astro';
+---
+
+<figure class="node-datapath" aria-labelledby="node-datapath-title" aria-describedby="node-datapath-note">
+  <figcaption>
+    <span class="content-kicker">One concrete Linux example</span>
+    <h3 id="node-datapath-title">Follow a packet from Pod eth0 to the network</h3>
+    <p>The Pod and Node boundaries are the same ones used above. This time, the middle is expanded to show one bridge-based CNI datapath.</p>
+  </figcaption>
+
+  <div class="path-key" aria-label="Connector legend">
+    <span><i class="local"></i>Pod packet</span>
+    <span><i class="remote"></i>Cross-Node packet</span>
+    <span><i class="setup"></i>Setup activity</span>
+  </div>
+
+  <div class="topology" aria-label="Two Kubernetes Nodes connected through an underlay network">
+    <section class="node node-a" aria-labelledby="node-a-title">
+      <header class="node-heading">
+        <div><small>Worker Node</small><strong id="node-a-title">Node A</strong></div>
+        <code>Node IP · 192.168.1.10</code>
+      </header>
+
+      <div class="pods">
+        <div class="pod-attachment">
+          <PodBoundary name="Web Pod" ip="10.244.1.10" app="Web application" port="8080" helper />
+          <div class="veth-wire"><span aria-hidden="true">↕</span><code>eth0 ⇄ veth-web</code><small>the two ends of one veth pair</small></div>
+        </div>
+        <div class="pod-attachment">
+          <PodBoundary name="API Pod" ip="10.244.1.11" app="API application" port="8080" />
+          <div class="veth-wire"><span aria-hidden="true">↕</span><code>eth0 ⇄ veth-api</code><small>crosses the namespace boundary</small></div>
+        </div>
+      </div>
+
+      <section class="host" aria-labelledby="host-title">
+        <header><div><small>Node A</small><strong id="host-title">Host network namespace</strong></div><span>interfaces and routes owned by the Node</span></header>
+
+        <div class="host-path local-path" aria-label="Same Node path">
+          <div><small>Web Pod peer</small><strong>veth-web</strong></div>
+          <i aria-hidden="true">→</i>
+          <div class="bridge"><small>Linux bridge</small><strong>cni0</strong><code>10.244.1.1/24</code></div>
+          <i aria-hidden="true">→</i>
+          <div><small>API Pod peer</small><strong>veth-api</strong></div>
+        </div>
+
+        <div class="host-path remote-path" aria-label="Cross Node path">
+          <div class="bridge"><small>Pod-side datapath</small><strong>cni0</strong></div>
+          <i aria-hidden="true">→</i>
+          <div><small>Layer 3 decision</small><strong>Host routing</strong><code>10.244.2.0/24 via Node B</code></div>
+          <i aria-hidden="true">→</i>
+          <div class="nic"><small>Node interface</small><strong>ens5</strong><code>192.168.1.10</code></div>
+        </div>
+      </section>
+    </section>
+
+    <div class="underlay" aria-label="Node to Node underlay path">
+      <span aria-hidden="true">→</span>
+      <div><strong>Underlay network</strong><small>VPC, routed LAN, or provider fabric</small><code>Node A ⇄ Node B</code></div>
+      <span aria-hidden="true">→</span>
+    </div>
+
+    <section class="node node-b" aria-labelledby="node-b-title">
+      <header class="node-heading">
+        <div><small>Worker Node</small><strong id="node-b-title">Node B</strong></div>
+        <code>Node IP · 192.168.1.20</code>
+      </header>
+
+      <div class="arrival-path">
+        <div><small>Node interface</small><strong>ens5</strong><code>192.168.1.20</code></div>
+        <span aria-hidden="true">↓</span>
+        <div><small>Node B datapath</small><strong>route or decapsulate</strong><code>destination 10.244.2.10</code></div>
+        <span aria-hidden="true">↓</span>
+      </div>
+      <PodBoundary name="Remote API Pod" ip="10.244.2.10" app="API application" port="8080" />
+    </section>
+  </div>
+
+  <section class="packet-paths" aria-labelledby="packet-paths-title">
+    <header><span>Read one path at a time</span><h4 id="packet-paths-title">What changes as the destination moves farther away?</h4></header>
+    <div>
+      <article class="same-pod">
+        <span>01 · Same Pod</span>
+        <strong>Web → loopback → Helper</strong>
+        <code>localhost:9090</code>
+        <p>The kernel finds the Helper socket in the shared Pod namespace. The packet never reaches eth0.</p>
+      </article>
+      <article class="same-node">
+        <span>02 · Same Node</span>
+        <strong>Web Pod → cni0 → API Pod</strong>
+        <code>eth0 → veth-web → cni0 → veth-api → eth0</code>
+        <p>The bridge switches the Pod packet locally. Host routing and the Node NIC are not needed.</p>
+      </article>
+      <article class="cross-node">
+        <span>03 · Different Node</span>
+        <strong>Web Pod → Node A → Node B → API Pod</strong>
+        <code>eth0 → veth → route → ens5 ⇄ ens5 → Pod</code>
+        <p>Routing or an overlay carries the traffic between Nodes. An overlay adds an outer Node-to-Node packet.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="setup-flow" aria-labelledby="setup-title">
+    <header><span>Control path</span><h4 id="setup-title">These steps create the path; they do not repeat for every packet</h4></header>
+    <ol>
+      <li><b>1</b><div><strong>Kubelet</strong><small>requests a Pod sandbox through CRI</small></div></li>
+      <li><b>2</b><div><strong>Runtime</strong><small>creates the sandbox network namespace</small></div></li>
+      <li><b>3</b><div><strong>CNI ADD</strong><small>attaches networking; IPAM may allocate an address</small></div></li>
+      <li><b>4</b><div><strong>Data plane</strong><small>installs interfaces, routes, and policy state</small></div></li>
+    </ol>
+  </section>
+
+  <p id="node-datapath-note" class="model-note"><strong>Where this example stops:</strong> the bridge, interface names, and address ranges are illustrative. Other implementations can route directly, attach cloud interfaces, use eBPF, or encapsulate packets. Kubernetes specifies the connectivity outcome rather than this exact Linux layout.</p>
+</figure>
+
+<style>
+  .node-datapath { container-type: inline-size; margin: 32px 0; }
+  figcaption { max-width: 780px; }
+  figcaption h3 { margin: 8px 0; font-size: clamp(1.35rem, 3vw, 2rem); letter-spacing: -.035em; }
+  figcaption p, .model-note { color: var(--muted); font-size: .85rem; line-height: 1.7; }
+  code { color: var(--cyan); font: .72rem var(--mono); overflow-wrap: anywhere; }
+  small { color: var(--muted); font-size: .72rem; line-height: 1.5; }
+  .path-key { display: flex; flex-wrap: wrap; gap: 10px 22px; margin: 22px 0 14px; color: var(--muted); font: .7rem var(--mono); }
+  .path-key span { display: flex; align-items: center; gap: 8px; }
+  .path-key i { width: 32px; border-top: 2px solid var(--cyan); }
+  .path-key .remote { border-color: var(--amber); }
+  .path-key .setup { border-color: var(--purple); border-top-style: dashed; }
+  .topology { display: grid; grid-template-columns: minmax(0, 2fr) minmax(110px, .42fr) minmax(250px, .85fr); align-items: center; gap: 14px; }
+  .node { min-width: 0; padding: clamp(14px, 2vw, 22px); border: 1px solid var(--border-strong); border-radius: 16px; background: var(--surface-soft); }
+  .node-heading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin-bottom: 20px; }
+  .node-heading > div { display: grid; gap: 3px; }
+  .node-heading small { text-transform: uppercase; font: .62rem var(--mono); }
+  .node-heading strong { font-size: 1.05rem; }
+  .pods { display: grid; grid-template-columns: 1.2fr .8fr; gap: 14px; align-items: stretch; }
+  .pod-attachment { display: grid; grid-template-rows: 1fr auto; min-width: 0; }
+  .veth-wire { display: grid; justify-items: center; gap: 4px; padding: 10px 4px; text-align: center; }
+  .veth-wire > span { color: var(--cyan); font-size: 1.6rem; line-height: 1; }
+  .host { padding: 16px; border: 1px dashed rgba(246,199,99,.55); border-radius: 11px; background: rgba(246,199,99,.025); }
+  .host > header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+  .host > header > div { display: grid; gap: 3px; }
+  .host > header small { color: var(--amber); font: .62rem var(--mono); text-transform: uppercase; }
+  .host > header span { color: var(--muted); font-size: .72rem; }
+  .host-path { display: grid; grid-template-columns: 1fr auto 1.25fr auto 1fr; align-items: center; gap: 8px; }
+  .host-path + .host-path { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+  .host-path > div, .arrival-path > div { display: grid; min-width: 0; gap: 6px; padding: 12px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); }
+  .host-path > i { color: var(--cyan); font-style: normal; }
+  .remote-path > i { color: var(--amber); }
+  .bridge { border-color: var(--cyan) !important; }
+  .nic { border-color: var(--amber) !important; }
+  .underlay { display: flex; align-items: center; justify-content: center; color: var(--amber); text-align: center; }
+  .underlay > span { font-size: 1.4rem; }
+  .underlay > div { display: grid; gap: 7px; padding: 18px 8px; }
+  .underlay strong { font-size: .82rem; }
+  .underlay code { color: var(--amber); }
+  .arrival-path { display: grid; justify-items: stretch; gap: 8px; margin-bottom: 12px; text-align: center; }
+  .arrival-path > span { color: var(--amber); font-size: 1.4rem; }
+  .packet-paths, .setup-flow { margin-top: 16px; padding: clamp(14px, 2vw, 20px); border: 1px solid var(--border-strong); border-radius: 12px; background: var(--surface-soft); }
+  .packet-paths > header, .setup-flow > header { margin-bottom: 14px; }
+  .packet-paths header span, .setup-flow header span { color: var(--dim); font: .62rem var(--mono); text-transform: uppercase; }
+  .packet-paths h4, .setup-flow h4 { margin: 6px 0 0; font-size: 1rem; }
+  .packet-paths > div { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .packet-paths article { display: grid; align-content: start; gap: 8px; padding: 15px; border: 1px solid var(--border); border-top: 2px solid var(--green); border-radius: 9px; background: var(--surface); }
+  .packet-paths article.same-node { border-top-color: var(--cyan); }
+  .packet-paths article.cross-node { border-top-color: var(--amber); }
+  .packet-paths article > span { color: var(--dim); font: .62rem var(--mono); text-transform: uppercase; }
+  .packet-paths article strong { font-size: .8rem; }
+  .packet-paths article p { margin: 0; color: var(--muted); font-size: .72rem; line-height: 1.55; }
+  .setup-flow { border-style: dashed; border-color: rgba(183,154,255,.48); }
+  .setup-flow ol { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; margin: 0; padding: 0; list-style: none; }
+  .setup-flow li { display: flex; gap: 10px; padding: 13px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+  .setup-flow li b { color: var(--purple); font: .68rem var(--mono); }
+  .setup-flow li div { display: grid; gap: 5px; }
+  .setup-flow li strong { font-size: .76rem; }
+  .model-note { margin: 16px 0 0; padding: 13px 15px; border-left: 2px solid var(--purple); background: rgba(183,154,255,.04); }
+  .model-note strong { color: var(--text); }
+  @container (max-width: 900px) {
+    .topology { grid-template-columns: 1fr; }
+    .underlay { flex-direction: column; }
+    .underlay > span { transform: rotate(90deg); }
+  }
+  @container (max-width: 680px) {
+    .pods, .packet-paths, .setup-flow ol { grid-template-columns: 1fr; }
+    .host-path { grid-template-columns: 1fr; text-align: center; }
+    .host-path > i { transform: rotate(90deg); }
+  }
+</style>

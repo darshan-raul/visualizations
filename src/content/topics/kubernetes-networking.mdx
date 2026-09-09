@@ -1,14 +1,14 @@
 ---
 title: Kubernetes Networking
-summary: Follow a Kubernetes connection across Pod networking, Services, EndpointSlices, DNS, traffic policy, NetworkPolicy, and external entry points.
+summary: 'Follow a web app calling an API: start with a Pod, add a Service, then decide how traffic enters and who may connect.'
 slug: k8s-networking
 collection: kubernetes
-tags: [Networking, Containers, Troubleshooting, Security, DNS]
-technologies: [Kubernetes, CNI, CoreDNS, Gateway API]
+tags: [Networking, Containers, Troubleshooting, Security, DNS, Observability]
+technologies: [Kubernetes, CNI, CoreDNS, Gateway API, kube-proxy, nftables, iptables, NetworkPolicy, VXLAN]
 format: deep-dive
 difficulty: advanced
 published: 2026-05-13
-reviewed: 2026-09-05
+reviewed: 2026-09-09
 versionScope: Kubernetes v1.35+ where version-sensitive; Linux examples unless stated; data-plane behavior varies by implementation
 legacyPath: /k8s-networking
 featured: true
@@ -39,6 +39,8 @@ sources:
     url: https://kubernetes.io/docs/concepts/services-networking/ingress/
   - label: Gateway API introduction
     url: https://gateway-api.sigs.k8s.io/docs/introduction/
+  - label: Gateway API troubleshooting and status
+    url: https://gateway-api.sigs.k8s.io/docs/concepts/troubleshooting/
   - label: Service source IP behavior
     url: https://kubernetes.io/docs/tutorials/services/source-ip/
   - label: Service internal traffic policy
@@ -47,10 +49,18 @@ sources:
     url: https://kubernetes.io/docs/tasks/debug/debug-application/debug-service/
   - label: Debug DNS resolution
     url: https://kubernetes.io/docs/tasks/administer-cluster/dns-debugging-resolution/
+  - label: NodeLocal DNSCache
+    url: https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/
+  - label: Amazon EKS security groups for Pods
+    url: https://docs.aws.amazon.com/eks/latest/best-practices/sgpp.html
 ---
 
 import KubernetesNetworkMap from '../../components/k8s/KubernetesNetworkMap.astro';
 import TrafficPaths from '../../components/k8s/TrafficPaths.astro';
+import K8sNodeDatapath from '../../components/k8s/K8sNodeDatapath.astro';
+import K8sNetworkingLabs from '../../components/k8s/K8sNetworkingLabs.astro';
+import ServiceTypeGuide from '../../components/k8s/ServiceTypeGuide.astro';
+import SecurityControlMap from '../../components/k8s/SecurityControlMap.astro';
 import NetworkPolicyExplorer from '../../components/k8s/NetworkPolicyExplorer.astro';
 import ServiceEligibilityExplorer from '../../components/k8s/ServiceEligibilityExplorer.astro';
 import ServiceEndpointExplorer from '../../components/k8s/ServiceEndpointExplorer.astro';
@@ -59,7 +69,258 @@ import WorkflowDiagram from '../../components/WorkflowDiagram.astro';
 import MechanismFlow from '../../components/MechanismFlow.astro';
 import ReferenceTable from '../../components/ReferenceTable.astro';
 
-## The layers behind a connection
+import ProgressiveNetwork from '../../components/k8s/ProgressiveNetwork.astro';
+import NetworkDepth from '../../components/k8s/NetworkDepth.astro';
+
+## Begin with one Pod
+
+Imagine a web application that calls an API. Before connecting the two, look at where one application runs.
+
+Kubernetes schedules containers in a **Pod**. A Pod can contain a single container or a few containers that need to run together. In an ordinary Pod, those containers share one network namespace—the Linux view of interfaces, addresses, routes, and ports. [Pod networking ↗](https://kubernetes.io/docs/concepts/workloads/pods/)
+
+<ProgressiveNetwork stage="pod" />
+
+**Keep this idea:** containers in one Pod share localhost. They must coordinate ports because they cannot independently listen on the same address and port. A different Pod has its own localhost.
+
+## Reach another Pod
+
+Now put the API in its own Pod. The web application must use the API Pod’s address; calling localhost would still reach only its own Pod.
+
+<ProgressiveNetwork stage="pods" />
+
+A **Node** is a machine running Pods. The cluster’s network implementation connects those Pods across Nodes. **CNI** is the interface through which the runtime invokes network plugins during Pod setup. You can understand the connection before learning which Linux interfaces implement it.
+
+**Keep this idea:** different Pods communicate through Pod addresses. The app must be listening, and the network and security rules must permit the connection.
+
+<section id="start-inside-one-kubernetes-node">
+
+### Inside the Node: follow the interfaces
+
+
+This Linux bridge example expands the Pod attachments and Node forwarding paths above. Follow one path at a time: inside a Pod, between local Pods, then across Nodes. Other network implementations use different attachments and forwarding.
+
+<K8sNodeDatapath />
+
+
+</section>
+
+<section id="pod-creation-and-cni">
+
+### How the Pod gets connected
+
+
+All regular containers in a Pod share the Pod sandbox's network namespace, addresses, interfaces, routes, and port space. They communicate over `localhost`; two containers cannot independently bind the same address and port. The sandbox may be represented by an infrastructure container, but “the pause container owns networking” is an implementation shortcut, not the Kubernetes contract. [Pod networking ↗](https://kubernetes.io/docs/concepts/workloads/pods/)
+
+<WorkflowDiagram id="k8s-cni-lifecycle" lanes={['Kubelet', 'Container runtime', 'CNI plugins', 'Pod sandbox']} steps={[
+  ['Kubelet', 'Request the Pod sandbox', 'CRI RunPodSandbox', 'Kubelet asks the node runtime to prepare the Pod sandbox.'],
+  ['Container runtime', 'Prepare network isolation', 'Network namespace', 'In this ordinary Linux Pod example, the namespace exists before network attachment.'],
+  ['CNI plugins', 'Attach and configure networking', 'CNI ADD + optional IPAM delegation', 'The runtime supplies the namespace reference and configuration. Plugins configure networking and may delegate address allocation.'],
+  ['Container runtime', 'Receive the plugin result', 'Interfaces, IPs, routes, DNS', 'The runtime receives the CNI result. Exact interfaces and forwarding mechanisms belong to the plugin implementation.'],
+  ['Pod sandbox', 'Share the configured network', 'Pod IP + shared port space', 'Containers in this Pod use the sandbox network. This setup is not repeated for each packet.'],
+]} />
+
+CNI is an execution protocol between a runtime and plugin binaries. It defines operations such as `ADD`, `DEL`, `CHECK`, `GC`, `STATUS`, and `VERSION`; it does not mandate a bridge, an overlay, a particular IPAM database, or NetworkPolicy enforcement. Plugins can be chained, and an IPAM plugin can be delegated address allocation. [CNI specification ↗](https://www.cni.dev/docs/spec/)
+
+When a Pod is deleted, the runtime invokes cleanup. A leaked IP allocation, stale interface, or failed plugin daemon can therefore break later Pod creation even when the Kubernetes objects look valid.
+
+
+</section>
+
+
+<NetworkDepth id="addresses-belong-to-different-planes" label="Compare Node, Pod, and Service addresses">
+
+Nodes, Pods, and Services commonly draw addresses from separate, non-overlapping ranges. Different components allocate and route each range, so available addresses in one pool say nothing about capacity in another. A dual-stack cluster repeats these responsibilities for IPv4 and IPv6, and every participating component must support the configured families. [Cluster address ranges ↗](https://kubernetes.io/docs/concepts/cluster-administration/networking/)
+
+<ReferenceTable caption="Address ownership in a Kubernetes cluster" headers={['Address', 'Usually allocated by', 'What it identifies', 'Important consequence']} rows={[
+  ['Node IP', 'kubelet or cloud integration', 'A machine participating in the cluster', 'May carry encapsulated pod traffic or receive NodePort traffic.'],
+  ['Pod IP', 'Pod network implementation / IPAM', 'One Pod sandbox', 'Normally changes when a replacement Pod is created.'],
+  ['ClusterIP', 'Kubernetes control plane', 'A virtual Service frontend', 'It is not a backend and need not be assigned to an interface.'],
+  ['External address', 'Cloud, load-balancer, or gateway implementation', 'An entry point outside the pod network', 'Its path and source-IP behavior are provider-specific.'],
+  ['DNS name', 'Cluster DNS and upstream DNS', 'A discoverable name, not a packet hop', 'The answer may be a Service VIP, Pod addresses, or an external alias.'],
+]} />
+
+`containerPort` documents an application port but does not publish it. `hostPort` binds a Pod port on a Node and creates scheduling/port constraints. `hostNetwork: true` places the Pod in the Node network namespace instead of the ordinary pod network. These are exceptions, not the default path.
+
+</NetworkDepth>
+
+
+## Give the API a stable address
+
+Pods can be replaced, and replacement Pods can receive different addresses. A **Service** gives the web application a stable destination while the API Pods behind it change.
+
+For the ordinary internal Service below, the web app first asks cluster DNS for the name `api`. DNS returns the Service’s virtual IP, called a **ClusterIP**. When the app connects, the Service’s forwarding implementation selects an eligible backend Pod.
+
+<ProgressiveNetwork stage="service" />
+
+The Service’s `port: 80` is what callers use; `targetPort: 8080` is where the API listens. **EndpointSlices** are the backend records the Service implementation consults. [Services ↗](https://kubernetes.io/docs/concepts/services-networking/service/)
+
+**Keep this idea:** DNS finds the address; Service forwarding gets the connection to a backend. A successful name lookup does not prove that the API can answer.
+
+<ServiceEndpointExplorer />
+
+<NetworkDepth id="services-and-endpointslices" label="Inspect backend selection and compare all Service forms">
+
+A Service separates a stable frontend from a changing backend set. For a selector-based Service, the control plane finds matching Pods and maintains EndpointSlices. Each slice groups endpoints with compatible address family, protocol, port, and Service identity. Readiness, serving, and terminating conditions help consumers decide whether an endpoint should receive new traffic. [Services ↗](https://kubernetes.io/docs/concepts/services-networking/service/) [EndpointSlices ↗](https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/)
+
+
+
+The legacy `Endpoints` API is deprecated from Kubernetes v1.33; EndpointSlice is the scalable source for modern consumers. The default slice target is up to 100 endpoints, but slices are not continually repacked just to be full because every update must propagate to consumers across the cluster.
+
+Endpoint removal is also a convergence process rather than one instantaneous switch. The timeline below shows why readiness, published endpoint state, proxy state, and existing connections can briefly disagree while a Pod terminates.
+
+<EndpointLifecycle />
+
+<ReferenceTable caption="Service forms solve different discovery and exposure problems" headers={['Form', 'Frontend', 'Typical use', 'Caveat']} rows={[
+  ['ClusterIP', 'Cluster-internal virtual IP', 'Stable in-cluster access', 'Requires a working Service data plane.'],
+  ['Headless', 'No ClusterIP', 'Direct DNS discovery of endpoints', 'Clients see backend churn and implement their own selection behavior.'],
+  ['NodePort', 'Node address plus allocated port', 'Simple external or load-balancer target', 'Firewall, source IP, and cross-node behavior matter.'],
+  ['LoadBalancer', 'Implementation-provisioned external address', 'Provider-integrated external access', 'Kubernetes declares intent; a controller must provide the load balancer.'],
+  ['ExternalName', 'DNS CNAME', 'Alias to an external DNS name', 'No proxying or endpoint health management is created.'],
+]} />
+
+
+
+</NetworkDepth>
+
+
+<NetworkDepth id="the-service-data-plane" label="Under the hood: kube-proxy, forwarding rules, and existing connections">
+
+`kube-proxy` is Kubernetes' default Service proxy, but a pod network implementation can replace it. On Linux, kube-proxy can program iptables or nftables; IPVS mode is deprecated from Kubernetes v1.35 because it cannot correctly represent every Service edge case. Windows uses a different kernel data plane. [Virtual IPs and proxies ↗](https://kubernetes.io/docs/reference/networking/virtual-ips/)
+
+The word “proxy” is easy to misread: kube-proxy usually programs kernel forwarding rules rather than accepting every connection in a user-space process. A ClusterIP is similarly virtual—the Service API defines the frontend, while the chosen implementation decides how packets addressed to it are intercepted and redirected.
+
+<ReferenceTable caption="Service proxy implementations" headers={['Mode', 'Mechanism', 'Operational implication']} rows={[
+  ['iptables', 'Netfilter rules and destination NAT', 'Widely deployed; large rule sets can increase synchronization work.'],
+  ['nftables', 'nftables rules and destination NAT', 'Newer Linux mode with different NodePort and firewall defaults; verify kernel and Kubernetes support.'],
+  ['IPVS', 'IPVS plus iptables integration', 'Deprecated from v1.35; plan migrations instead of choosing it for new clusters.'],
+  ['Replacement data plane', 'Implementation-specific, often eBPF or provider integrated', 'Do not expect kube-proxy processes or KUBE-* rules when it has been replaced.'],
+]} />
+
+Removing a Pod from EndpointSlices stops it from being selected for new traffic after consumers reconcile the update. Existing application connections and connection-tracking entries have their own lifetimes, so they can continue using that Pod after readiness changes.
+
+</NetworkDepth>
+
+
+<NetworkDepth id="dns-is-discovery-not-delivery" label="Inspect DNS names, resolver configuration, and discovery failures">
+
+Cluster DNS commonly runs CoreDNS behind a Service historically named `kube-dns`. With the usual `ClusterFirst` policy, kubelet writes a cluster DNS nameserver and search suffixes into the Pod's resolver configuration. A query such as `api` can expand to `api.<namespace>.svc.<cluster-domain>`; cross-namespace callers normally use `api.<namespace>` or the full name. The cluster domain is configurable and is not always `cluster.local`. [DNS for Services and Pods ↗](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/)
+
+<MechanismFlow label="DNS discovery followed by Service delivery" steps={[
+  { title: 'Application asks resolver', detail: 'Search paths and ndots influence which names are queried.' },
+  { title: 'Cluster DNS answers', detail: 'A normal Service returns its ClusterIP; a headless Service can return endpoint addresses.', tone: 'purple' },
+  { title: 'Application opens a connection', detail: 'The returned address becomes the packet destination.' },
+  { title: 'Network delivers traffic', detail: 'Service proxying or direct pod routing handles the result.', tone: 'green' },
+]} />
+
+A correct DNS answer proves that the client discovered an address. The following connection can still time out because the Service has no ready endpoints, forwarding state is stale, policy blocks the packet, or the application is not listening. Likewise, a successful direct Pod-IP test has bypassed both DNS and the Service frontend.
+
+`ClusterFirstWithHostNet` is the usual cluster-DNS choice for Pods using `hostNetwork`. `dnsPolicy: None` requires explicit `dnsConfig`. Search expansion can also amplify DNS traffic, so inspect the actual query name and the Pod's `/etc/resolv.conf` rather than assuming what the application asked.
+
+</NetworkDepth>
+
+
+## Choose how callers reach it
+
+For our web app calling its API inside the cluster, start with **ClusterIP**. When callers are outside the cluster, choose the entry behavior they need.
+
+<ReferenceTable caption="Choose from the caller’s need" headers={['What you need', 'Start here', 'Why']} rows={[
+  ['Web app → API inside the cluster', 'ClusterIP Service', 'Stable internal access to changing Pods.'],
+  ['External access to one TCP/UDP service', 'LoadBalancer Service', 'A supported implementation provisions a reachable load balancer.'],
+  ['HTTP/HTTPS host or path routing', 'Gateway API or Ingress', 'A controller configures entry routing and, commonly, TLS.'],
+]} />
+
+A LoadBalancer Service needs a supporting controller or provider. Gateway and Ingress resources also need an implementation. Creating their configuration alone does not make the application reachable.
+
+<ProgressiveNetwork stage="external" />
+
+This example shows the logical path; the gateway implementation determines whether it connects through the Service IP or directly to backend Pods.
+
+<section id="service-type-guide">
+
+### Service types and where to use them
+
+
+<ServiceTypeGuide />
+
+
+</section>
+
+<NetworkDepth id="northsouth-traffic" label="Explore Gateway and Ingress configuration">
+
+External traffic needs infrastructure that can receive packets and an API/controller combination that maps them toward Services or endpoints. A `LoadBalancer` Service handles a relatively direct exposure model. Ingress and Gateway API add protocol-aware routing, usually for HTTP and HTTPS.
+
+Ingress is stable but frozen; the Kubernetes project recommends Gateway API for new capabilities. Creating an Ingress, Gateway, or Route object alone does not create a working data path—an implementation controller must accept it and report useful status. Gateway API separates `GatewayClass`, `Gateway`, and route resources such as `HTTPRoute`, allowing infrastructure owners, cluster operators, and application teams to control different layers. [Ingress ↗](https://kubernetes.io/docs/concepts/services-networking/ingress/) [Gateway API ↗](https://gateway-api.sigs.k8s.io/docs/introduction/)
+
+<MechanismFlow label="A typical Gateway API north-south path" steps={[
+  { title: 'GatewayClass', detail: 'Names the controller and implementation class.', tone: 'purple' },
+  { title: 'Gateway + listener', detail: 'Requests an address, port, protocol, TLS, and attachment policy.' },
+  { title: 'HTTPRoute', detail: 'Matches host, path, headers, or other request attributes.' },
+  { title: 'Service backend', detail: 'Targets a Service and ultimately eligible endpoints.', tone: 'green' },
+]} />
+
+Where TLS terminates, whether traffic reaches NodePorts or Pod addresses directly, which health checks run, and whether the original client address survives are implementation decisions. Read controller status and documentation instead of treating the conceptual arrows as guaranteed hops.
+
+</NetworkDepth>
+
+
+<NetworkDepth id="locality-source-ip-and-topology" label="Explore local endpoints and client source addresses">
+
+Service routing can express strict constraints and softer preferences. `internalTrafficPolicy: Local` restricts internal Service traffic to node-local endpoints; on a node with none, the Service behaves as if it has no endpoints there. `externalTrafficPolicy: Local` can preserve client source addresses and avoid an extra node hop, but may reduce load distribution and requires entry traffic to land on nodes with local endpoints. [Internal traffic policy ↗](https://kubernetes.io/docs/concepts/services-networking/service-traffic-policy/) [Source IP ↗](https://kubernetes.io/docs/tutorials/services/source-ip/)
+
+`trafficDistribution` expresses preferences such as same-zone or same-node routing in supported versions; it is not the same as the hard `Local` constraint. EndpointSlice topology and hints can guide the proxy, but implementations may fall back to cluster-wide endpoints when safeguards are not satisfied.
+
+Always test the source address as observed by the application. Load balancers, node forwarding, proxies, and `externalTrafficPolicy` can change it, and NetworkPolicy `ipBlock` behavior can be affected by where address translation occurs.
+
+<ServiceEligibilityExplorer />
+
+</NetworkDepth>
+
+
+## Decide who may connect
+
+Our web app needs to call the API. Other workloads might not. **NetworkPolicy** lets you describe allowed Pod traffic when the installed network implementation supports enforcement.
+
+Think about a connection from both ends: permission to leave the web Pod (**egress**) and permission to enter the API Pod (**ingress**).
+
+<ProgressiveNetwork stage="policy" />
+
+Pods begin non-isolated in each direction. Selecting them with policies can restrict that direction; applicable allow rules add together. When introducing default-deny egress, allow the DNS traffic and other dependencies your app requires. [NetworkPolicy ↗](https://kubernetes.io/docs/concepts/services-networking/network-policies/)
+
+**Keep this idea:** a route makes a destination reachable; policy decides whether the connection is permitted. Application identity and authorization add another layer.
+
+<NetworkPolicyExplorer />
+
+<SecurityControlMap />
+
+<NetworkDepth id="networkpolicy-changes-permission" label="Try policy examples and inspect the security controls">
+
+By default, Pods are non-isolated for ingress and egress. A NetworkPolicy begins isolation only for the selected Pods and directions, and allowed traffic is the union of every applicable policy—policies are additive, not processed in order. For Pod A to initiate a connection to Pod B, A's egress policy and B's ingress policy must both allow it when each side is isolated. Reply traffic for an allowed connection is implicitly allowed. [NetworkPolicy ↗](https://kubernetes.io/docs/concepts/services-networking/network-policies/)
+
+The API does nothing unless the installed network implementation enforces NetworkPolicy. The standard model is primarily Layer 3/4 and defines TCP, UDP, and optionally SCTP behavior; ICMP and other protocols can vary. It does not replace application authentication or authorization.
+
+
+
+
+
+<div class="network-principles">
+  <article><span>Default allow</span><h3>No selecting policy means no isolation</h3><p>Creating one policy for a different workload does not make the whole namespace default-deny.</p></article>
+  <article><span>Both directions</span><h3>Ingress and egress are independent</h3><p>A source can allow egress while the destination still rejects ingress, or the reverse.</p></article>
+  <article><span>Additive rules</span><h3>Another policy cannot subtract an allow</h3><p>The allowed set is the union of applicable rules. There is no first-match order.</p></article>
+  <article><span>DNS dependency</span><h3>Default-deny egress also blocks DNS</h3><p>Add the DNS traffic your workloads require, using addresses and ports that match the actual cluster DNS path.</p></article>
+</div>
+
+</NetworkDepth>
+
+
+## Put the four paths together
+
+You have now met the four networking paths: containers within a Pod, Pod to Pod, Pod to Service, and external callers reaching workloads. Open any path below to follow the detailed sequence.
+
+<TrafficPaths />
+
+That is enough to explain the web app’s connection to its API. The remaining material is available when you want to inspect a mechanism or investigate a failure.
+
+<NetworkDepth id="the-layers-behind-a-connection" label="See the complete system map">
 
 When one Pod connects to another, Kubernetes API objects describe the intended addresses, backends, and policy, but they do not carry the packet. The container runtime, Pod network, Service implementation, DNS server, and entry controller each perform part of the work. Two failures can produce the same timeout even when they occur in different layers, so you need both the declared state and the packet path. [Kubernetes networking model ↗](https://kubernetes.io/docs/concepts/services-networking/)
 
@@ -76,135 +337,10 @@ Kubernetes defines connectivity outcomes, while each cluster chooses how to prod
   <article><span>04 · Policy</span><h3>Reachability and permission are separate</h3><p>A valid route does not imply that NetworkPolicy, host filtering, or application policy permits the connection.</p></article>
 </div>
 
-## Addresses belong to different planes
+</NetworkDepth>
 
-Nodes, Pods, and Services commonly draw addresses from separate, non-overlapping ranges. Different components allocate and route each range, so available addresses in one pool say nothing about capacity in another. A dual-stack cluster repeats these responsibilities for IPv4 and IPv6, and every participating component must support the configured families. [Cluster address ranges ↗](https://kubernetes.io/docs/concepts/cluster-administration/networking/)
 
-<ReferenceTable caption="Address ownership in a Kubernetes cluster" headers={['Address', 'Usually allocated by', 'What it identifies', 'Important consequence']} rows={[
-  ['Node IP', 'kubelet or cloud integration', 'A machine participating in the cluster', 'May carry encapsulated pod traffic or receive NodePort traffic.'],
-  ['Pod IP', 'Pod network implementation / IPAM', 'One Pod sandbox', 'Normally changes when a replacement Pod is created.'],
-  ['ClusterIP', 'Kubernetes control plane', 'A virtual Service frontend', 'It is not a backend and need not be assigned to an interface.'],
-  ['External address', 'Cloud, load-balancer, or gateway implementation', 'An entry point outside the pod network', 'Its path and source-IP behavior are provider-specific.'],
-  ['DNS name', 'Cluster DNS and upstream DNS', 'A discoverable name, not a packet hop', 'The answer may be a Service VIP, Pod addresses, or an external alias.'],
-]} />
-
-`containerPort` documents an application port but does not publish it. `hostPort` binds a Pod port on a Node and creates scheduling/port constraints. `hostNetwork: true` places the Pod in the Node network namespace instead of the ordinary pod network. These are exceptions, not the default path.
-
-## Pod creation and CNI
-
-All regular containers in a Pod share the Pod sandbox's network namespace, addresses, interfaces, routes, and port space. They communicate over `localhost`; two containers cannot independently bind the same address and port. The sandbox may be represented by an infrastructure container, but “the pause container owns networking” is an implementation shortcut, not the Kubernetes contract. [Pod networking ↗](https://kubernetes.io/docs/concepts/workloads/pods/)
-
-<WorkflowDiagram id="k8s-cni-lifecycle" lanes={['Kubelet', 'Container runtime', 'CNI plugins', 'Pod sandbox']} steps={[
-  ['Kubelet', 'Request the Pod sandbox', 'CRI RunPodSandbox', 'Kubelet asks the node runtime to prepare the Pod sandbox.'],
-  ['Container runtime', 'Prepare network isolation', 'Network namespace', 'In this ordinary Linux Pod example, the namespace exists before network attachment.'],
-  ['CNI plugins', 'Attach and configure networking', 'CNI ADD + optional IPAM delegation', 'The runtime supplies the namespace reference and configuration. Plugins configure networking and may delegate address allocation.'],
-  ['Container runtime', 'Receive the plugin result', 'Interfaces, IPs, routes, DNS', 'The runtime receives the CNI result. Exact interfaces and forwarding mechanisms belong to the plugin implementation.'],
-  ['Pod sandbox', 'Share the configured network', 'Pod IP + shared port space', 'Containers in this Pod use the sandbox network. This setup is not repeated for each packet.'],
-]} />
-
-CNI is an execution protocol between a runtime and plugin binaries. It defines operations such as `ADD`, `DEL`, `CHECK`, `GC`, `STATUS`, and `VERSION`; it does not mandate a bridge, an overlay, a particular IPAM database, or NetworkPolicy enforcement. Plugins can be chained, and an IPAM plugin can be delegated address allocation. [CNI specification ↗](https://www.cni.dev/docs/spec/)
-
-When a Pod is deleted, the runtime invokes cleanup. A leaked IP allocation, stale interface, or failed plugin daemon can therefore break later Pod creation even when the Kubernetes objects look valid.
-
-## Four traffic paths
-
-Name the path before opening Node rules or CNI logs. `localhost` between containers in one Pod stays inside the shared namespace. A direct Pod-IP connection adds the Pod network but bypasses DNS and Service forwarding. A Service-name connection exercises all three. Each extra layer narrows what a successful or failed test can prove.
-
-<TrafficPaths />
-
-For Pod-to-Pod traffic, Kubernetes expects direct Pod addressing without application-visible proxies or destination NAT between the Pods, unless intentional segmentation applies. How the cluster makes remote Pod prefixes reachable is left to the network implementation. Common strategies include native routing, cloud-native interfaces, overlays such as VXLAN or Geneve, and eBPF-based data planes. Do not infer the strategy from Kubernetes API objects alone. [Network model ↗](https://kubernetes.io/docs/concepts/services-networking/)
-
-## Services and EndpointSlices
-
-A Service separates a stable frontend from a changing backend set. For a selector-based Service, the control plane finds matching Pods and maintains EndpointSlices. Each slice groups endpoints with compatible address family, protocol, port, and Service identity. Readiness, serving, and terminating conditions help consumers decide whether an endpoint should receive new traffic. [Services ↗](https://kubernetes.io/docs/concepts/services-networking/service/) [EndpointSlices ↗](https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/)
-
-<ServiceEndpointExplorer />
-
-The legacy `Endpoints` API is deprecated from Kubernetes v1.33; EndpointSlice is the scalable source for modern consumers. The default slice target is up to 100 endpoints, but slices are not continually repacked just to be full because every update must propagate to consumers across the cluster.
-
-Endpoint removal is also a convergence process rather than one instantaneous switch. The timeline below shows why readiness, published endpoint state, proxy state, and existing connections can briefly disagree while a Pod terminates.
-
-<EndpointLifecycle />
-
-<ReferenceTable caption="Service forms solve different discovery and exposure problems" headers={['Form', 'Frontend', 'Typical use', 'Caveat']} rows={[
-  ['ClusterIP', 'Cluster-internal virtual IP', 'Stable in-cluster access', 'Requires a working Service data plane.'],
-  ['Headless', 'No ClusterIP', 'Direct DNS discovery of endpoints', 'Clients see backend churn and implement their own selection behavior.'],
-  ['NodePort', 'Node address plus allocated port', 'Simple external or load-balancer target', 'Firewall, source IP, and cross-node behavior matter.'],
-  ['LoadBalancer', 'Implementation-provisioned external address', 'Provider-integrated external access', 'Kubernetes declares intent; a controller must provide the load balancer.'],
-  ['ExternalName', 'DNS CNAME', 'Alias to an external DNS name', 'No proxying or endpoint health management is created.'],
-]} />
-
-## The Service data plane
-
-`kube-proxy` is Kubernetes' default Service proxy, but a pod network implementation can replace it. On Linux, kube-proxy can program iptables or nftables; IPVS mode is deprecated from Kubernetes v1.35 because it cannot correctly represent every Service edge case. Windows uses a different kernel data plane. [Virtual IPs and proxies ↗](https://kubernetes.io/docs/reference/networking/virtual-ips/)
-
-The word “proxy” is easy to misread: kube-proxy usually programs kernel forwarding rules rather than accepting every connection in a user-space process. A ClusterIP is similarly virtual—the Service API defines the frontend, while the chosen implementation decides how packets addressed to it are intercepted and redirected.
-
-<ReferenceTable caption="Service proxy implementations" headers={['Mode', 'Mechanism', 'Operational implication']} rows={[
-  ['iptables', 'Netfilter rules and destination NAT', 'Widely deployed; large rule sets can increase synchronization work.'],
-  ['nftables', 'nftables rules and destination NAT', 'Newer Linux mode with different NodePort and firewall defaults; verify kernel and Kubernetes support.'],
-  ['IPVS', 'IPVS plus iptables integration', 'Deprecated from v1.35; plan migrations instead of choosing it for new clusters.'],
-  ['Replacement data plane', 'Implementation-specific, often eBPF or provider integrated', 'Do not expect kube-proxy processes or KUBE-* rules when it has been replaced.'],
-]} />
-
-Removing a Pod from EndpointSlices stops it from being selected for new traffic after consumers reconcile the update. Existing application connections and connection-tracking entries have their own lifetimes, so they can continue using that Pod after readiness changes.
-
-## DNS is discovery, not delivery
-
-Cluster DNS commonly runs CoreDNS behind a Service historically named `kube-dns`. With the usual `ClusterFirst` policy, kubelet writes a cluster DNS nameserver and search suffixes into the Pod's resolver configuration. A query such as `api` can expand to `api.<namespace>.svc.<cluster-domain>`; cross-namespace callers normally use `api.<namespace>` or the full name. The cluster domain is configurable and is not always `cluster.local`. [DNS for Services and Pods ↗](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/)
-
-<MechanismFlow label="DNS discovery followed by Service delivery" steps={[
-  { title: 'Application asks resolver', detail: 'Search paths and ndots influence which names are queried.' },
-  { title: 'Cluster DNS answers', detail: 'A normal Service returns its ClusterIP; a headless Service can return endpoint addresses.', tone: 'purple' },
-  { title: 'Application opens a connection', detail: 'The returned address becomes the packet destination.' },
-  { title: 'Network delivers traffic', detail: 'Service proxying or direct pod routing handles the result.', tone: 'green' },
-]} />
-
-A correct DNS answer proves that the client discovered an address. The following connection can still time out because the Service has no ready endpoints, forwarding state is stale, policy blocks the packet, or the application is not listening. Likewise, a successful direct Pod-IP test has bypassed both DNS and the Service frontend.
-
-`ClusterFirstWithHostNet` is the usual cluster-DNS choice for Pods using `hostNetwork`. `dnsPolicy: None` requires explicit `dnsConfig`. Search expansion can also amplify DNS traffic, so inspect the actual query name and the Pod's `/etc/resolv.conf` rather than assuming what the application asked.
-
-## North–south traffic
-
-External traffic needs infrastructure that can receive packets and an API/controller combination that maps them toward Services or endpoints. A `LoadBalancer` Service handles a relatively direct exposure model. Ingress and Gateway API add protocol-aware routing, usually for HTTP and HTTPS.
-
-Ingress is stable but frozen; the Kubernetes project recommends Gateway API for new capabilities. Creating an Ingress, Gateway, or Route object alone does not create a working data path—an implementation controller must accept it and report useful status. Gateway API separates `GatewayClass`, `Gateway`, and route resources such as `HTTPRoute`, allowing infrastructure owners, cluster operators, and application teams to control different layers. [Ingress ↗](https://kubernetes.io/docs/concepts/services-networking/ingress/) [Gateway API ↗](https://gateway-api.sigs.k8s.io/docs/introduction/)
-
-<MechanismFlow label="A typical Gateway API north-south path" steps={[
-  { title: 'GatewayClass', detail: 'Names the controller and implementation class.', tone: 'purple' },
-  { title: 'Gateway + listener', detail: 'Requests an address, port, protocol, TLS, and attachment policy.' },
-  { title: 'HTTPRoute', detail: 'Matches host, path, headers, or other request attributes.' },
-  { title: 'Service backend', detail: 'Targets a Service and ultimately eligible endpoints.', tone: 'green' },
-]} />
-
-Where TLS terminates, whether traffic reaches NodePorts or Pod addresses directly, which health checks run, and whether the original client address survives are implementation decisions. Read controller status and documentation instead of treating the conceptual arrows as guaranteed hops.
-
-## Locality, source IP, and topology
-
-Service routing can express strict constraints and softer preferences. `internalTrafficPolicy: Local` restricts internal Service traffic to node-local endpoints; on a node with none, the Service behaves as if it has no endpoints there. `externalTrafficPolicy: Local` can preserve client source addresses and avoid an extra node hop, but may reduce load distribution and requires entry traffic to land on nodes with local endpoints. [Internal traffic policy ↗](https://kubernetes.io/docs/concepts/services-networking/service-traffic-policy/) [Source IP ↗](https://kubernetes.io/docs/tutorials/services/source-ip/)
-
-`trafficDistribution` expresses preferences such as same-zone or same-node routing in supported versions; it is not the same as the hard `Local` constraint. EndpointSlice topology and hints can guide the proxy, but implementations may fall back to cluster-wide endpoints when safeguards are not satisfied.
-
-Always test the source address as observed by the application. Load balancers, node forwarding, proxies, and `externalTrafficPolicy` can change it, and NetworkPolicy `ipBlock` behavior can be affected by where address translation occurs.
-
-<ServiceEligibilityExplorer />
-
-## NetworkPolicy changes permission
-
-By default, Pods are non-isolated for ingress and egress. A NetworkPolicy begins isolation only for the selected Pods and directions, and allowed traffic is the union of every applicable policy—policies are additive, not processed in order. For Pod A to initiate a connection to Pod B, A's egress policy and B's ingress policy must both allow it when each side is isolated. Reply traffic for an allowed connection is implicitly allowed. [NetworkPolicy ↗](https://kubernetes.io/docs/concepts/services-networking/network-policies/)
-
-The API does nothing unless the installed network implementation enforces NetworkPolicy. The standard model is primarily Layer 3/4 and defines TCP, UDP, and optionally SCTP behavior; ICMP and other protocols can vary. It does not replace application authentication or authorization.
-
-<NetworkPolicyExplorer />
-
-<div class="network-principles">
-  <article><span>Default allow</span><h3>No selecting policy means no isolation</h3><p>Creating one policy for a different workload does not make the whole namespace default-deny.</p></article>
-  <article><span>Both directions</span><h3>Ingress and egress are independent</h3><p>A source can allow egress while the destination still rejects ingress, or the reverse.</p></article>
-  <article><span>Additive rules</span><h3>Another policy cannot subtract an allow</h3><p>The allowed set is the union of applicable rules. There is no first-match order.</p></article>
-  <article><span>DNS dependency</span><h3>Default-deny egress also blocks DNS</h3><p>Add the DNS traffic your workloads require, using addresses and ports that match the actual cluster DNS path.</p></article>
-</div>
-
-## Diagnose one layer at a time
+<NetworkDepth id="diagnose-one-layer-at-a-time" label="Troubleshoot a connection with commands and evidence">
 
 Start beside the application, prove the shortest path, and add one layer at a time. If the workload image has no diagnostic tools, use a disposable Pod or ephemeral container in a comparable policy and network context. Plugin and managed-service commands vary, but the order of evidence remains useful.
 
@@ -214,14 +350,17 @@ Start beside the application, prove the shortest path, and add one layer at a ti
   <div><span>03</span><p><strong>Backend membership:</strong> run <code>kubectl get endpointslice -l kubernetes.io/service-name=&lt;service&gt; -o wide</code>. Check addresses, ports, readiness, and terminating state.</p></div>
   <div><span>04</span><p><strong>Service frontend:</strong> inspect <code>kubectl get svc &lt;service&gt; -o yaml</code>, then test the ClusterIP and Service port. Verify <code>port</code> versus <code>targetPort</code>.</p></div>
   <div><span>05</span><p><strong>Discovery:</strong> query the fully qualified Service name, inspect <code>/etc/resolv.conf</code>, and verify the <code>kube-dns</code> Service plus its EndpointSlices.</p></div>
-  <div><span>06</span><p><strong>Permission:</strong> list every policy selecting the source and destination. Confirm the installed plugin actually enforces the API and account for post-NAT source addresses.</p></div>
+  <div><span>06</span><p><strong>Permission:</strong> list every policy selecting the source and destination. Confirm the installed implementation enforces the API, then verify which addresses policy observes along paths that also perform NAT.</p></div>
   <div><span>07</span><p><strong>Node data plane:</strong> identify kube-proxy mode or its replacement before inspecting iptables, nftables, eBPF maps, routes, interfaces, conntrack, or plugin-agent logs.</p></div>
   <div><span>08</span><p><strong>External entry:</strong> inspect Service, Gateway, and Route status conditions, controller events/logs, load-balancer health, firewall rules, TLS, and external DNS.</p></div>
 </div>
 
 Packet capture points must match the suspected layer. An overlay can show an inner Pod packet on one interface and an outer node-to-node packet on another. A missing packet at the destination is not enough to tell whether routing, encapsulation, policy, or Service selection removed it.
 
-## Where the common shortcuts break down
+</NetworkDepth>
+
+
+<NetworkDepth id="where-the-common-shortcuts-break-down" label="Check common misconceptions">
 
 <div class="misconception-grid">
   <article><span>Misconception</span><h3>“CNI means VXLAN and a cni0 bridge.”</h3><p>CNI is a runtime/plugin contract. Bridges and overlays are possible implementations, not requirements.</p></article>
@@ -232,15 +371,18 @@ Packet capture points must match the suspected layer. An overlay can show an inn
   <article><span>Misconception</span><h3>“Ingress exposes traffic by itself.”</h3><p>Ingress is configuration. A compatible controller and its provisioned data plane must implement it.</p></article>
 </div>
 
-## How this topic should split
+</NetworkDepth>
 
-This page owns the integrated mental model and the diagnostic handoffs between layers. Four companion explainers can go deeper without turning this overview into a reference manual:
 
-<div class="split-grid">
-  <a href="/pod-networking-cni"><article><span>Companion 01</span><h3>Pod Networking and CNI</h3><p>Sandbox lifecycle, network namespaces, IPAM, routes, overlays, native routing, MTU, eBPF, dual stack, and plugin failure modes.</p></article></a>
-  <a href="/kubernetes-services"><article><span>Companion 02</span><h3>Services and Traffic Distribution</h3><p>EndpointSlice reconciliation, proxy modes, conntrack, session affinity, NodePort, source IP, topology, terminating endpoints, and scale.</p></article></a>
-  <a href="/kubernetes-dns"><article><span>Companion 03</span><h3>Kubernetes DNS</h3><p>Record generation, search paths, ndots, caching, headless Services, StatefulSets, NodeLocal DNSCache, and systematic diagnosis.</p></article></a>
-  <a href="/kubernetes-gateway-ingress"><article><span>Companion 04</span><h3>Gateway API and Ingress</h3><p>Resource ownership, attachment, status, TLS, cross-namespace references, routing precedence, implementations, and migration from Ingress.</p></article></a>
-</div>
+<NetworkDepth id="explore-the-mechanisms-one-decision-at-a-time" label="Explore the twenty detailed scenarios">
 
-NetworkPolicy remains cross-cutting here because it changes every packet path. It should become its own operational reference only when the site can cover policy design, implementation differences, and verification with equal depth.
+Choose a mechanism you want to inspect. Each example opens independently; you can step through it or read its complete transcript.
+
+<K8sNetworkingLabs />
+
+</NetworkDepth>
+
+<span id="the-four-networking-paths"></span>
+<span id="how-this-topic-should-split"></span>
+
+For a closer look at a particular subsystem, see [Pod networking and CNI](/pod-networking-cni), [Services](/kubernetes-services), [DNS](/kubernetes-dns), or [Gateway API and Ingress](/kubernetes-gateway-ingress).

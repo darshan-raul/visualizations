@@ -1,0 +1,36 @@
+---
+interface Props { name: string; ip: string; app: string; port: string; helper?: boolean; }
+const { name, ip, app, port, helper = false } = Astro.props;
+---
+<section class="pod">
+  <header><strong>{name}</strong><code>Pod IP · {ip}</code></header>
+  <div class="namespace">
+    <p class="boundary-label">Shared network namespace</p>
+    <div class:list={['containers', { paired: helper }]}>
+      <div class="container"><small>Container</small><strong>{app}</strong><code>listens on :{port}</code></div>
+      {helper && <>
+        <div class="loopback"><code>localhost:9090</code><span aria-hidden="true">⇄</span><small>request / response via lo</small></div>
+        <div class="container"><small>Container</small><strong>Helper</strong><code>listens on :9090</code></div>
+      </>}
+    </div>
+    <p class="shared">{helper ? 'Both containers use the same IP, routes, and port space.' : 'This Pod has its own localhost and port space.'}</p>
+    <div class="interface"><b>eth0</b><code>{ip}</code><span>Pod network interface</span></div>
+  </div>
+</section>
+<style>
+  .pod { container-type: inline-size; min-width: 0; border: 2px solid var(--cyan); border-radius: 16px; padding: clamp(14px, 2vw, 24px); background: rgba(66,214,232,.035); }
+  header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin-bottom: 16px; }
+  header strong { font-size: 1rem; } code { font: .8rem var(--mono); color: var(--cyan); overflow-wrap: anywhere; }
+  .namespace { padding: 16px; border: 1px dashed rgba(66,214,232,.5); border-radius: 10px; }
+  .boundary-label { margin: 0 0 18px; color: var(--muted); font-size: .8rem; }
+  .containers { display: grid; align-items: center; }
+  .containers.paired { grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .container { display: grid; gap: 10px; padding: 20px 14px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); }
+  .container small, .loopback small { color: var(--muted); font-size: .75rem; }
+  .loopback { display: grid; text-align: center; gap: 4px; }
+  .loopback span { color: var(--cyan); font-size: 2rem; }
+  .shared { color: var(--muted); font-size: .8rem; line-height: 1.6; margin: 18px 0; }
+  .interface { display: flex; flex-wrap: wrap; gap: 8px 16px; padding: 12px; border: 1px solid var(--cyan); border-radius: 6px; background: var(--surface); font-size: .8rem; }
+  .interface span { color: var(--muted); }
+  @container (max-width: 400px) { .containers.paired { grid-template-columns: 1fr; } .loopback span { transform: rotate(90deg); } .namespace { padding: 12px; } }
+</style>

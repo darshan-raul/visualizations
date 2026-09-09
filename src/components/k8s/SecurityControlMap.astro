@@ -1,0 +1,59 @@
+<figure class="security-map" aria-labelledby="security-map-title">
+  <figcaption>
+    <span class="content-kicker">Defense in depth</span>
+    <h3 id="security-map-title">Put each control at the boundary it can actually see</h3>
+    <p>Reachability, workload permission, and application identity are different decisions. A packet can pass NetworkPolicy and still fail TLS or authorization; an authenticated request can never arrive if routing or egress policy blocks it first.</p>
+  </figcaption>
+
+  <div class="secured-flow" aria-label="External client to protected backend flow">
+    <article><small>Untrusted network</small><strong>External client</strong><code>203.0.113.5</code></article><i>→</i>
+    <article class="edge"><small>Edge controls</small><strong>LB / firewall</strong><code>reachable IP + allowed port</code></article><i>→</i>
+    <article class="identity"><small>L7 boundary</small><strong>Gateway</strong><code>TLS · host/path · auth integration</code></article><i>→</i>
+    <article class="policy"><small>Workload boundary</small><strong>Ingress policy</strong><code>source + protocol + port</code></article><i>→</i>
+    <article class="healthy"><small>Application</small><strong>Backend Pod</strong><code>identity + authorization</code></article>
+  </div>
+
+  <div class="policy-pair">
+    <article><span>Source Pod</span><strong>Egress gate</strong><code>frontend → TCP 8080</code><p>If this direction is isolated, some applicable policy must allow the connection.</p></article>
+    <i aria-hidden="true">→ packet must pass both →</i>
+    <article><span>Destination Pod</span><strong>Ingress gate</strong><code>from frontend → TCP 8080</code><p>If this direction is isolated, destination policies must independently allow it.</p></article>
+  </div>
+
+  <div class="control-matrix">
+    <article><span>NetworkPolicy</span><strong>Pod traffic at L3/L4</strong><p>Use namespace and Pod selectors for workload relationships. Use <code>ipBlock</code> mainly for external CIDRs, and verify how the deployed data plane orders NAT and policy.</p></article>
+    <article><span>Gateway / proxy policy</span><strong>HTTP, TLS, and client context</strong><p>Use for hostname, path, certificate, rate-limit, and authentication decisions when the implementation supports them.</p></article>
+    <article><span>Workload identity</span><strong>Who is calling, not only where from</strong><p>mTLS or signed tokens can authenticate a workload across changing addresses. Authorization remains an application or policy-layer decision.</p></article>
+    <article><span>Node and cloud controls</span><strong>Infrastructure boundaries</strong><p>Security groups, host firewalls, and routing constrain Node or interface reachability. Their scope is provider- and datapath-specific.</p></article>
+  </div>
+
+  <p class="baseline"><strong>Practical baseline:</strong> confirm policy enforcement exists, default-deny ingress and egress per namespace where appropriate, explicitly allow cluster DNS and required dependencies, restrict external entry, encrypt sensitive paths, and test the effective flow from a representative Pod.</p>
+</figure>
+
+<style>
+  .security-map { margin: 30px 0; padding: clamp(18px, 3vw, 26px); border: 1px solid var(--border-strong); border-radius: 12px; background: radial-gradient(circle at 80% 0%, rgba(183,154,255,.09), transparent 36%), rgba(255,255,255,.014); }
+  figcaption { max-width: 780px; }
+  figcaption h3 { margin: 8px 0; font-size: clamp(1.3rem, 3vw, 1.9rem); letter-spacing: -.035em; }
+  figcaption p, .baseline { color: var(--muted); font-size: .8rem; line-height: 1.65; }
+  .secured-flow { display: grid; grid-template-columns: repeat(4, minmax(110px, 1fr) auto) minmax(110px, 1fr); gap: 6px; align-items: center; margin-top: 20px; overflow-x: auto; padding-bottom: 4px; }
+  .secured-flow article { display: grid; min-width: 120px; min-height: 105px; align-content: center; gap: 6px; padding: 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+  .secured-flow article.edge { border-color: rgba(246,199,99,.45); }
+  .secured-flow article.identity, .secured-flow article.policy { border-color: rgba(183,154,255,.48); }
+  .secured-flow article.healthy { border-color: rgba(73,214,163,.45); }
+  .secured-flow > i { color: var(--cyan); font-style: normal; }
+  .secured-flow small, .policy-pair span, .control-matrix span { color: var(--dim); font: .54rem var(--mono); text-transform: uppercase; }
+  .secured-flow strong { font-size: .68rem; }
+  .secured-flow code { color: var(--muted); font-size: .55rem; line-height: 1.4; white-space: normal; }
+  .policy-pair { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: center; margin-top: 12px; padding: 14px; border: 1px dashed rgba(183,154,255,.45); border-radius: 9px; }
+  .policy-pair article { display: grid; gap: 6px; padding: 12px; border: 1px solid rgba(183,154,255,.35); border-radius: 7px; background: rgba(183,154,255,.035); }
+  .policy-pair strong { font-size: .74rem; }
+  .policy-pair code { color: var(--purple); font-size: .59rem; }
+  .policy-pair p, .control-matrix p { margin: 0; color: var(--muted); font-size: .63rem; line-height: 1.5; }
+  .policy-pair > i { color: var(--purple); font: normal .56rem var(--mono); text-align: center; }
+  .control-matrix { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 12px; }
+  .control-matrix article { display: grid; gap: 7px; padding: 13px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+  .control-matrix strong { font-size: .72rem; }
+  .control-matrix code { color: var(--purple); font-size: .6rem; }
+  .baseline { margin: 12px 0 0; padding: 13px 15px; border-left: 2px solid var(--green); background: rgba(73,214,163,.035); }
+  .baseline strong { color: var(--text); }
+  @media (max-width: 680px) { .policy-pair, .control-matrix { grid-template-columns: 1fr; } .policy-pair > i { transform: rotate(90deg); } }
+</style>

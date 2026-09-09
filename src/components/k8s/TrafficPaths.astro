@@ -64,7 +64,7 @@ const paths = [
   </figcaption>
   <div class="path-list">
     {paths.map((path, index) => (
-      <details open={index === 2}>
+      <details>
         <summary><span>{String(index + 1).padStart(2, '0')}</span><strong>{path.name}</strong><small>{path.promise}</small></summary>
         <div class="path-workflow">
           <WorkflowDiagram id={`k8s-traffic-${index}`} lanes={path.lanes} steps={path.steps} />
