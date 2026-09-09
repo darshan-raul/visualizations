@@ -1,0 +1,11 @@
+---
+import { getEntry, render } from 'astro:content';
+import TopicLayout from '../layouts/TopicLayout.astro';
+
+const topic = await getEntry('topics', 'ec2-auto-scaling');
+if (!topic) throw new Error('EC2 Auto Scaling content is missing');
+const { Content, headings } = await render(topic);
+const sections = headings.filter(({ depth }) => depth === 2).map(({ slug, text }) => ({ id: slug, label: text }));
+---
+
+<TopicLayout topic={topic} sections={sections}><Content /></TopicLayout>

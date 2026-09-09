@@ -1,0 +1,161 @@
+---
+title: EC2 Auto Scaling, Illustrated
+summary: Predict what an Auto Scaling group will do next by separating requested capacity, instance lifecycle, readiness, policy decisions, and placement constraints.
+slug: ec2-auto-scaling
+collection: aws
+tags: [EC2, Auto Scaling, Compute, Availability, Troubleshooting, Deployments]
+technologies: [Amazon EC2 Auto Scaling, Amazon EC2, Elastic Load Balancing, Amazon CloudWatch]
+format: deep-dive
+difficulty: advanced
+published: 2026-09-09
+versionScope: EC2 Auto Scaling configuration and APIs reviewed September 2026
+legacyPath: /ec2-auto-scaling
+featured: true
+state: draft
+related: [vpc-flow, aws-identity-credential-flows]
+sources:
+  - label: EC2 Auto Scaling API actions
+    url: https://docs.aws.amazon.com/autoscaling/ec2/APIReference/API_Operations.html
+  - label: Auto Scaling group lifecycle
+    url: https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-lifecycle.html
+  - label: Lifecycle hooks
+    url: https://docs.aws.amazon.com/autoscaling/ec2/userguide/lifecycle-hooks.html
+  - label: Health checks for Auto Scaling instances
+    url: https://docs.aws.amazon.com/autoscaling/ec2/userguide/health-checks-overview.html
+  - label: Dynamic scaling
+    url: https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-scale-based-on-demand.html
+  - label: Scheduled scaling
+    url: https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-scheduled-scaling.html
+  - label: Predictive scaling
+    url: https://docs.aws.amazon.com/autoscaling/ec2/userguide/predictive-scaling-policy-overview.html
+  - label: Warm pools
+    url: https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-warm-pools.html
+  - label: Mixed instances groups
+    url: https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-mixed-instances-groups.html
+  - label: Capacity Rebalancing
+    url: https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-capacity-rebalancing.html
+  - label: Instance refresh
+    url: https://docs.aws.amazon.com/autoscaling/ec2/userguide/instance-refresh-overview.html
+  - label: Termination policies
+    url: https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-termination-policies.html
+  - label: Suspended processes
+    url: https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-suspend-resume-processes.html
+  - label: Auto Scaling group metrics
+    url: https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-metrics.html
+---
+
+import AutoScalingLabs from '../../components/asg/AutoScalingLabs.astro';
+import MechanismFlow from '../../components/MechanismFlow.astro';
+import ReferenceTable from '../../components/ReferenceTable.astro';
+
+## One group, several versions of capacity
+
+Suppose an Auto Scaling group has six instances across three Availability Zones. Traffic rises, so a target-tracking policy raises desired capacity to eight. That number changes immediately. Usable capacity does not: EC2 still has to accept two launches, the instances must boot, lifecycle work may need to finish, and the targets must become ready.
+
+Now let one existing target fail while another instance is protected from scale in. The group is handling a scale-out request, a health replacement, and an eligibility constraint at the same time. Looking only at **desired capacity** or the green EC2 `running` badge hides most of the answer.
+
+<MechanismFlow
+  label="A capacity request becomes useful application capacity through several separately observable decisions"
+  steps={[
+    { title: 'Request capacity', detail: 'Minimum, desired and maximum define the current envelope', tone: 'purple' },
+    { title: 'Place instances', detail: 'Zones, subnets, types and purchase options constrain launches' },
+    { title: 'Complete lifecycle', detail: 'Boot, hooks, registration and warmup run on their own clocks', tone: 'amber' },
+    { title: 'Serve work', detail: 'Healthy targets or workers can finally handle the workload', tone: 'green' },
+  ]}
+/>
+
+<ReferenceTable caption="Capacity ledgers answer different operational questions" headers={['Ledger', 'Question it answers', 'What it must not imply']} rows={[
+  ['Requested', 'What capacity does the group currently want?', 'That EC2 accepted or fulfilled the request'],
+  ['Present', 'Which instances exist, and which launches are only attempts?', 'That every instance is in service'],
+  ['In service', 'Which instances are active ASG members?', 'That a load balancer can route to them'],
+  ['Serving', 'Which targets or workers can do useful work now?', 'That scaling policies include their metrics'],
+  ['Metric eligible', 'Which measurements participate in this policy decision?', 'That those instances are traffic ready'],
+  ['Replacement ready', 'Which new capacity satisfies refresh or maintenance gates?', 'That a rollout or bake period is complete'],
+  ['Outside active capacity', 'What is in standby, a warm pool, retained, detached, or terminating?', 'That the resources stopped costing money'],
+]} />
+
+The labs use repeatable fixtures. Startup time, throughput, queue arrivals, inventory, failures, and forecasts are illustrative inputs. AWS does not publish one fixed reconciliation tick, universal forecasting formula, or exact Spot-pool depth, so the diagrams do not invent them.
+
+## Follow the learning path
+
+The visual path begins with the four building blocks that every later decision depends on: capacity ledgers, lifecycle state, timer ownership, and health evidence. It then moves through four broader groups—demand, capacity supply, fleet changes, and diagnosis. Only one lesson is shown at a time, so each diagram can answer one question before the next concept is introduced.
+
+Change the example or step through its events, then use **Next lesson** to continue. **Previous event** restores an earlier teaching snapshot; it does not imply that an AWS API can reverse a termination. Direct links such as [lifecycle](#v02), [warm pools](#v09), and [refresh](#v14) still open the corresponding lesson.
+
+The colors keep one meaning throughout: cyan is normal infrastructure flow, green is a successful condition, amber is a wait or transition, red is a failure or destructive consequence, and purple is policy or control-plane activity. A dashed connector marks a separate clock or conceptual relationship.
+
+<AutoScalingLabs />
+
+## The timers have different owners
+
+Auto Scaling timing settings sit close together in the console, but they do not pause the same action. An ELB target keeps receiving health checks during an ASG health-check grace period. Grace changes when the group acts on a startup health failure. It does not suppress the raw checks, and leaving EC2 `running` can still lead to immediate replacement.
+
+Warmup controls eligibility for scaling calculations and refresh progress. It does not erase CloudWatch samples or decide when a target begins receiving traffic. A simple-scaling cooldown gates another simple-scaling action; it does not lock health replacement, schedules, manual changes, target tracking, or step scaling.
+
+<ReferenceTable caption="Start each clock at the event that owns it" headers={['Clock', 'Starts when', 'Gates']} rows={[
+  ['Lifecycle heartbeat', 'The instance enters the hook wait state', 'Timeout of the current lifecycle action; a heartbeat restarts this timer'],
+  ['Lifecycle absolute limit', 'The lifecycle action begins', 'Total hook wait, limited to the smaller of 48 hours or 100 heartbeat periods'],
+  ['Health-check grace', 'A startup, attach, or standby-return case enters its applicable path', 'When ASG acts on covered startup health failures'],
+  ['Instance warmup', 'The policy or refresh-specific trigger occurs', 'Scaling calculations or refresh readiness for that consumer'],
+  ['Simple cooldown', 'The simple scaling activity starts', 'Another action from that simple policy'],
+  ['Deregistration delay', 'The target begins deregistering', 'How long in-flight connections may drain'],
+  ['Refresh checkpoint delay', 'The refresh reaches a configured checkpoint', 'When the next replacement batch may begin'],
+  ['Refresh bake time', 'Replacement work has otherwise finished', 'Final observation before refresh success'],
+]} />
+
+A termination hook and target deregistration delay are separate clocks. In the ordinary flow, draining begins before the termination hook. Neither clock extends a forced Spot interruption deadline.
+
+## Read the configuration by owner
+
+The same word can name several settings. `MinSize` on the group and `MinSize` on a warm pool are different parameters. Refresh warmup can override group warmup, while a policy can have another fallback chain. Inspect the exact path, owner, units, explicit or omitted state, effective source, and change timing before comparing values.
+
+<ReferenceTable caption="Configuration families and the labs that expose them" headers={['Family', 'Representative settings and operations', 'Labs']} rows={[
+  ['Group and placement', 'MinSize, DesiredCapacity, MaxSize, VPCZoneIdentifier, AvailabilityZoneDistribution', 'V01, V10, V13'],
+  ['Health and integrations', 'HealthCheckType, HealthCheckGracePeriod, target groups, traffic sources', 'V03, V04, V19'],
+  ['Launch and mixed instances', 'LaunchTemplate, overrides, InstanceRequirements, weights, InstancesDistribution', 'V11, V12, V19'],
+  ['Scaling policies', 'TargetTrackingConfiguration, StepAdjustments, Cooldown, metric specifications', 'V05–V07'],
+  ['Schedules and forecasts', 'PutScheduledUpdateGroupAction, PredictiveScalingConfiguration', 'V08'],
+  ['Hooks and warm pools', 'HeartbeatTimeout, DefaultResult, CompleteLifecycleAction, PutWarmPool', 'V02, V03, V09'],
+  ['Maintenance and refresh', 'InstanceMaintenancePolicy, RefreshPreferences, checkpoints, alarms, rollback', 'V14, V15'],
+  ['Instance operations', 'Standby, attach, detach, explicit launch, protection, termination', 'V16, V17'],
+  ['Control and evidence', 'SuspendProcesses, metrics collection, activities, notifications, tags', 'V18–V20'],
+]} />
+
+Changing a launch template reference affects future launches. It does not repaint existing instances as updated. A rolling refresh, a root-volume replacement, and a health replacement follow different eligibility and lifecycle rules even when they converge on the same desired template.
+
+## Choose settings from the workload
+
+Start with what makes capacity useful. A web service may care about registered targets, request latency, and safe connection draining. A queue worker may care about visible backlog per usable worker, message visibility timeout, long-job protection, and acknowledgment. A GPU workload may be constrained by a reservation or an instance type before any scaling policy gets a chance to help.
+
+The queue fixture uses two seconds of average service time and 60 seconds of acceptable queue delay, which gives a starting target of 30 messages per worker. That relationship assumes comparable workers and service times; it is not a latency guarantee. At zero workers, the ratio is undefined and CPU samples may be absent, so an independent queue-depth signal must wake the fleet.
+
+<ReferenceTable caption="A setting choice should answer a workload question" headers={['Workload question', 'Configuration surface to inspect', 'Failure to replay']} rows={[
+  ['How early must capacity be usable?', 'Warm pools, schedules, predictive scaling, startup hooks', 'Traffic arrives while instances are present but not serving'],
+  ['What signal changes with capacity?', 'Target tracking metric and missing-data behavior', 'Average looks healthy while load is skewed'],
+  ['Can work stop safely?', 'Scale-in protection, deregistration, termination hook, queue visibility', 'A long job is interrupted before acknowledgment'],
+  ['Which supply is actually available?', 'Zones, subnets, instance requirements, Spot and reservations', 'Desired rises while every launch destination fails'],
+  ['How much rollout overlap is affordable?', 'Maintenance minimum and maximum healthy percentages', 'A refresh cannot satisfy both its floor and ceiling'],
+]} />
+
+## Diagnose the first missing condition
+
+Begin with the requested-versus-serving gap, then find the stage where progress stopped. Activity history can show that a launch request failed; EC2 state can show that an instance exists; target health can show why it is not routed; refresh status can show which readiness gate is still waiting. Those observations describe different moments in the path.
+
+<ReferenceTable caption="Evidence narrows the failure domain" headers={['Observation', 'Check next', 'Why']} rows={[
+  ['Desired exceeds present capacity', 'Scaling activities, placement, subnet addresses, quotas, launch authorization', 'The request exists, but EC2 capacity has not been created'],
+  ['EC2 is running but the target is unhealthy', 'Bootstrap logs, listener port, target path, security rules, application readiness', 'Launch succeeded; service readiness did not'],
+  ['Target is healthy but refresh is waiting', 'Refresh warmup, minimum healthy floor, checkpoints, alarms, protected instances', 'Routing health is only one refresh gate'],
+  ['Desired fell but the fleet did not shrink', 'Scale-in protection, standby, suspended Terminate, retention', 'The capacity request and termination eligibility diverged'],
+  ['Warm starts succeed, then replacements loop', 'Pool depletion and the template used by cold launches', 'Prepared instances can hide a broken current launch path'],
+  ['A Spot instance disappears during cleanup', 'Recommendation time, replacement readiness, drain and hook clocks', 'Protection and hooks cannot freeze forced reclamation'],
+]} />
+
+Repeated launch failures can lead to administrative process suspension. Treat that as evidence about the group’s recent failures, not as proof that the scaling policy is wrong. Keep observation timestamps visible: a missing metric sample is not zero, a pending instance is not a successful launch, and a healthy replacement does not automatically mean a rollout has passed bake time.
+
+## Operations that look similar are not interchangeable
+
+`EnterStandby` changes ASG membership state and begins deregistration. Directly deregistering a target does not put the instance in standby. Detaching removes ASG management while the EC2 instance continues; entering standby preserves group membership. Whether either operation decrements desired capacity determines whether the group asks for replacement capacity.
+
+Scale-in protection applies to ordinary scale-in selection. EC2 termination protection, group deletion protection, refresh treatment of protected instances, and a forced Spot interruption are separate safeguards. When every active instance is protected, desired capacity can fall while actual capacity remains above it.
+
+The nine suspendable processes also have narrow effects: `Launch`, `Terminate`, `AddToLoadBalancer`, `AlarmNotification`, `AZRebalance`, `HealthCheck`, `InstanceRefresh`, `ReplaceUnhealthy`, and `ScheduledActions`. Resuming a process does not universally replay everything missed while it was suspended. In particular, past scheduled actions are not replayed, and instances missed while `AddToLoadBalancer` was suspended need repair.

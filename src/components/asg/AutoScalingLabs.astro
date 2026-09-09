@@ -1,0 +1,210 @@
+---
+import { labs } from './labs';
+import '../../styles/asg.css';
+
+const chapters = [
+  { id: 'fundamentals', number: '01', title: 'Build the model', short: 'Fundamentals', description: 'Separate the group’s target from the instances that exist, the instances ASG accepts, and the capacity your application can use.', outcome: 'You can explain a capacity gap without treating every green status as the same fact.', labIds: ['v01', 'v02', 'v03', 'v04'] },
+  { id: 'demand', number: '02', title: 'Turn demand into a request', short: 'Demand', description: 'Follow metrics, alarms, queue depth, schedules, and forecasts until one of them proposes a capacity change.', outcome: 'You can identify the policy that acted and the timing rule that applies to it.', labIds: ['v05', 'v06', 'v07', 'v08'] },
+  { id: 'supply', number: '03', title: 'Find capacity to launch', short: 'Capacity supply', description: 'See how warm pools, Availability Zones, instance requirements, purchase options, Spot, and reservations constrain fulfillment.', outcome: 'You can tell a scaling-policy decision from a placement or supply failure.', labIds: ['v09', 'v10', 'v11', 'v12', 'v13'] },
+  { id: 'change', number: '04', title: 'Change the fleet safely', short: 'Fleet changes', description: 'Replace, refresh, protect, park, detach, or rebalance instances while preserving the capacity the workload needs.', outcome: 'You can explain why a planned change proceeds, waits, or leaves resources behind.', labIds: ['v14', 'v15', 'v16', 'v17', 'v18'] },
+  { id: 'diagnose', number: '05', title: 'Read the incident', short: 'Diagnosis', description: 'Combine the same rules into launch investigations and compound incidents without blaming every gap on scaling policy.', outcome: 'You can start from evidence, locate the stalled stage, and choose one useful configuration change.', labIds: ['v19', 'v20'] },
+];
+
+const orderedLabIds = chapters.flatMap((chapter) => chapter.labIds);
+---
+
+<div class="asg-course" data-asg-course>
+  <nav class="asg-chapter-nav" aria-label="EC2 Auto Scaling learning sequence">
+    <p class="asg-course-kicker">Learning path · five visual chapters</p>
+    <ol>
+      {chapters.map((chapter, index) => (
+        <li><button type="button" data-chapter-button={chapter.id} aria-current={index === 0 ? 'step' : undefined}><small>{chapter.number}</small><span>{chapter.short}</span></button></li>
+      ))}
+    </ol>
+  </nav>
+
+  {chapters.map((chapter, chapterIndex) => (
+    <section class="asg-chapter" data-chapter={chapter.id} aria-labelledby={`${chapter.id}-title`}>
+      <header class="asg-chapter-heading">
+        <span>Chapter {chapter.number} of 05</span>
+        <h3 id={`${chapter.id}-title`}>{chapter.title}</h3>
+        <p>{chapter.description}</p>
+        <strong>{chapter.outcome}</strong>
+      </header>
+
+      <nav class="asg-lesson-nav" aria-label={`${chapter.title} lessons`}>
+        {chapter.labIds.map((labId, index) => {
+          const lab = labs.find((item) => item.id === labId)!;
+          return <a href={`#${lab.id}`} data-lesson-link={lab.id} aria-current={chapterIndex === 0 && index === 0 ? 'step' : undefined}><small>{String(index + 1).padStart(2, '0')}</small><span>{lab.nav}</span></a>;
+        })}
+      </nav>
+
+      {chapter.labIds.map((labId) => {
+        const lab = labs.find((item) => item.id === labId)!;
+        const absoluteIndex = orderedLabIds.indexOf(lab.id);
+        return (
+          <article id={lab.id} class:list={['asg-lesson', `asg-${lab.kind}`]} data-lesson={lab.id} data-chapter-id={chapter.id} aria-labelledby={`${lab.id}-title`}>
+            <header class="asg-lesson-heading">
+              <div><span class="asg-lesson-number">Lesson {String(absoluteIndex + 1).padStart(2, '0')} of 20</span><h4 id={`${lab.id}-title`}>{lab.title}</h4><p>{lab.question}</p></div>
+              <label>Change the example<select data-scenario-select>{lab.scenarios.map((scenario, index) => <option value={index}>{scenario.label}</option>)}</select></label>
+            </header>
+
+            {lab.id === 'v01' && (
+              <div class="asg-building-blocks" aria-label="The capacity envelope and a six-instance Auto Scaling group">
+                <div class="asg-capacity-ruler"><span>Capacity envelope</span><ol><li><small>minimum</small><strong>3</strong></li><li class="active"><small>desired</small><strong>6 → 8</strong></li><li><small>maximum</small><strong>12</strong></li></ol></div>
+                <div class="asg-fleet-map">
+                  <div class="asg-control-plane"><span>Metric</span><b>→</b><strong>Policy asks for 8</strong><b>→</b><span>ASG reconciles</span></div>
+                  <div class="asg-zones">{['us-east-1a', 'us-east-1b', 'us-east-1c'].map((zone) => <div class="asg-zone"><small>{zone}</small><div><span class="asg-instance">EC2<em>InService · serving</em></span><span class="asg-instance">EC2<em>InService · serving</em></span></div></div>)}</div>
+                  <div class="asg-load-balancer"><span>Application Load Balancer</span><small>target health and traffic readiness stay separately visible</small></div>
+                </div>
+              </div>
+            )}
+
+            <div class="asg-visual" aria-live="polite">
+              <p class="asg-scenario-summary" data-summary>{lab.scenarios[0].summary}</p>
+              <ol class="asg-nodes" data-nodes>{lab.scenarios[0].nodes.map((node, index) => <li class={`tone-${node.tone}`} data-node-index={index}><span>{String(index + 1).padStart(2, '0')}</span><strong>{node.label}</strong><small>{node.detail}</small></li>)}</ol>
+              <p class="asg-connector-key"><span></span> Direct sequence <i></i> separate clock or conceptual relationship</p>
+            </div>
+
+            <section class="asg-event-explanation" data-event-explanation aria-live="polite" aria-atomic="true">
+              <header><span data-event-number>Event 1</span><strong data-event-heading>{lab.scenarios[0].nodes[0].label}</strong></header>
+              <p data-event-body>{lab.scenarios[0].nodes[0].detail}. {lab.scenarios[0].summary}</p>
+              <div>
+                <article><small>How to read this</small><p data-event-meaning>The trace starts with the evidence or request that sets this mechanism in motion.</p></article>
+                <article><small>Next gate</small><p data-event-next>{lab.scenarios[0].nodes[1] ? `Next, ${lab.scenarios[0].nodes[1].label}: ${lab.scenarios[0].nodes[1].detail}.` : lab.scenarios[0].result}</p></article>
+              </div>
+            </section>
+
+            <div class="asg-playback" data-playback hidden><div class="asg-playback-buttons"><button type="button" data-reset>Restart</button><button type="button" data-previous>← Previous event</button><button type="button" data-play>Play</button><button type="button" data-next>Next event →</button></div><p data-status role="status">Event 1 of {lab.scenarios[0].nodes.length}</p></div>
+
+            <aside class="asg-takeaway"><span>What to notice</span><p data-result>{lab.scenarios[0].result}</p></aside>
+            <details class="asg-inspector"><summary>Inspect the evidence and effective setting</summary><div><p><span>Evidence</span><strong data-evidence>{lab.scenarios[0].evidence}</strong></p><p><span>Setting in play</span><code data-setting>{lab.scenarios[0].setting}</code></p></div></details>
+
+            <nav class="asg-sequence-controls" aria-label="Lesson sequence"><button type="button" data-course-previous disabled={absoluteIndex === 0}>← Previous lesson</button><span>{absoluteIndex + 1} / {orderedLabIds.length}</span><button type="button" data-course-next disabled={absoluteIndex === orderedLabIds.length - 1}>{absoluteIndex === orderedLabIds.length - 1 ? 'Path complete' : 'Next lesson →'}</button></nav>
+          </article>
+        );
+      })}
+    </section>
+  ))}
+
+  <script is:inline type="application/json" data-course-data set:html={JSON.stringify({ labs, chapters, orderedLabIds })}></script>
+</div>
+
+<script>
+  type CourseData = { labs: typeof import('./labs').labs; chapters: Array<{ id: string; labIds: string[] }>; orderedLabIds: string[] };
+
+  for (const root of document.querySelectorAll<HTMLElement>('[data-asg-course]')) {
+    const data = JSON.parse(root.querySelector<HTMLScriptElement>('[data-course-data]')!.textContent || '{}') as CourseData;
+    const chapters = [...root.querySelectorAll<HTMLElement>('[data-chapter]')];
+    const lessons = [...root.querySelectorAll<HTMLElement>('[data-lesson]')];
+    const chapterButtons = [...root.querySelectorAll<HTMLButtonElement>('[data-chapter-button]')];
+    const lessonLinks = [...root.querySelectorAll<HTMLAnchorElement>('[data-lesson-link]')];
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let active = lessons[0];
+    let step = 0;
+    let timer: number | undefined;
+
+    root.classList.add('is-enhanced');
+    root.querySelectorAll<HTMLElement>('[data-playback]').forEach((controls) => { controls.hidden = false; });
+    const currentLab = () => data.labs.find((lab) => lab.id === active.dataset.lesson)!;
+    const scenarioIndex = () => Number(active.querySelector<HTMLSelectElement>('[data-scenario-select]')!.value);
+    const currentScenario = () => currentLab().scenarios[scenarioIndex()];
+
+    function pause() {
+      if (timer !== undefined) window.clearInterval(timer);
+      timer = undefined;
+      const button = active.querySelector<HTMLButtonElement>('[data-play]');
+      if (button) button.textContent = 'Play';
+    }
+
+    function renderStep() {
+      const nodes = [...active.querySelectorAll<HTMLElement>('[data-node-index]')];
+      nodes.forEach((node, index) => { node.classList.toggle('is-reached', index <= step); node.classList.toggle('is-current', index === step); });
+      const scenario = currentScenario();
+      const event = scenario.nodes[step];
+      const previous = scenario.nodes[step - 1];
+      const next = scenario.nodes[step + 1];
+      const meaning: Record<string, string> = {
+        purple: 'The control plane has made or evaluated a request. Requested state can change before any instance or serving capacity changes.',
+        amber: 'This is a wait or transition. Keep it separate from success: capacity can still fail before the application can use it.',
+        red: `This is the blocker or destructive event in this path. ${scenario.evidence}`,
+        green: 'This condition succeeded. It confirms this stage only; later readiness, warmup, or rollout gates may still be open.',
+        cyan: 'The infrastructure is progressing normally at this stage. Application readiness can still be a separate condition.',
+        muted: 'Nothing advanced at this stage. Absence is evidence; do not count it as zero demand or as a successfully created resource.',
+      };
+      active.querySelector<HTMLElement>('[data-event-number]')!.textContent = `Event ${step + 1} of ${nodes.length}`;
+      active.querySelector<HTMLElement>('[data-event-heading]')!.textContent = event.label;
+      active.querySelector<HTMLElement>('[data-event-body]')!.textContent = previous
+        ? `${previous.label} is already part of the trace. Now ${event.label} adds the next condition: ${event.detail}.`
+        : `${event.label} is the starting observation: ${event.detail}. ${scenario.summary}`;
+      active.querySelector<HTMLElement>('[data-event-meaning]')!.textContent = meaning[event.tone];
+      active.querySelector<HTMLElement>('[data-event-next]')!.textContent = next
+        ? `Next, inspect ${next.label}: ${next.detail}. This is the next condition that can move or stop the mechanism.`
+        : `The sequence ends here. ${scenario.result}`;
+      active.querySelector<HTMLButtonElement>('[data-previous]')!.disabled = step === 0;
+      active.querySelector<HTMLButtonElement>('[data-next]')!.disabled = step >= nodes.length - 1;
+      active.querySelector<HTMLButtonElement>('[data-play]')!.disabled = step >= nodes.length - 1 || motion.matches;
+      active.querySelector<HTMLElement>('[data-status]')!.textContent = `Event ${step + 1} of ${nodes.length} · ${nodes[step]?.querySelector('strong')?.textContent ?? ''}`;
+      if (step >= nodes.length - 1) pause();
+    }
+
+    function renderScenario() {
+      const scenario = currentScenario();
+      active.querySelector<HTMLElement>('[data-summary]')!.textContent = scenario.summary;
+      active.querySelector<HTMLElement>('[data-result]')!.textContent = scenario.result;
+      active.querySelector<HTMLElement>('[data-evidence]')!.textContent = scenario.evidence;
+      active.querySelector<HTMLElement>('[data-setting]')!.textContent = scenario.setting;
+      const list = active.querySelector<HTMLOListElement>('[data-nodes]')!;
+      list.replaceChildren(...scenario.nodes.map((node, index) => {
+        const item = document.createElement('li'); item.className = `tone-${node.tone}`; item.dataset.nodeIndex = String(index);
+        const number = document.createElement('span'); number.textContent = String(index + 1).padStart(2, '0');
+        const label = document.createElement('strong'); label.textContent = node.label;
+        const detail = document.createElement('small'); detail.textContent = node.detail;
+        item.append(number, label, detail); return item;
+      }));
+      step = 0; renderStep();
+    }
+
+    function activate(id: string, updateHistory = false, scroll = false) {
+      const next = lessons.find((lesson) => lesson.dataset.lesson === id) || lessons[0];
+      pause(); active = next;
+      const chapterId = active.dataset.chapterId;
+      chapters.forEach((chapter) => { chapter.hidden = chapter.dataset.chapter !== chapterId; });
+      lessons.forEach((lesson) => { lesson.hidden = lesson !== active; });
+      chapterButtons.forEach((button) => { if (button.dataset.chapterButton === chapterId) button.setAttribute('aria-current', 'step'); else button.removeAttribute('aria-current'); });
+      lessonLinks.forEach((link) => { if (link.dataset.lessonLink === active.dataset.lesson) link.setAttribute('aria-current', 'step'); else link.removeAttribute('aria-current'); });
+      renderScenario();
+      if (updateHistory) history.pushState(null, '', `#${active.id}`);
+      if (scroll) requestAnimationFrame(() => root.scrollIntoView({ behavior: motion.matches ? 'auto' : 'smooth', block: 'start' }));
+    }
+
+    function adjacent(offset: number) {
+      const index = data.orderedLabIds.indexOf(active.dataset.lesson || '');
+      const next = data.orderedLabIds[index + offset];
+      if (next) activate(next, true, true);
+    }
+
+    for (const lesson of lessons) {
+      lesson.querySelector<HTMLSelectElement>('[data-scenario-select]')!.addEventListener('change', () => { pause(); renderScenario(); });
+      lesson.querySelector<HTMLButtonElement>('[data-reset]')!.addEventListener('click', () => { pause(); step = 0; renderStep(); });
+      lesson.querySelector<HTMLButtonElement>('[data-previous]')!.addEventListener('click', () => { pause(); step = Math.max(0, step - 1); renderStep(); });
+      lesson.querySelector<HTMLButtonElement>('[data-next]')!.addEventListener('click', () => { pause(); step += 1; renderStep(); });
+      lesson.querySelector<HTMLButtonElement>('[data-play]')!.addEventListener('click', () => {
+        if (timer !== undefined) { pause(); return; }
+        if (motion.matches) return;
+        lesson.querySelector<HTMLButtonElement>('[data-play]')!.textContent = 'Pause';
+        timer = window.setInterval(() => { step += 1; renderStep(); }, 4800);
+      });
+      lesson.querySelector<HTMLButtonElement>('[data-course-previous]')!.addEventListener('click', () => adjacent(-1));
+      lesson.querySelector<HTMLButtonElement>('[data-course-next]')!.addEventListener('click', () => adjacent(1));
+    }
+
+    for (const link of lessonLinks) link.addEventListener('click', (event) => { event.preventDefault(); activate(link.dataset.lessonLink || 'v01', true, true); });
+    for (const button of chapterButtons) button.addEventListener('click', () => { const chapter = data.chapters.find((item) => item.id === button.dataset.chapterButton); if (chapter) activate(chapter.labIds[0], true, true); });
+    window.addEventListener('hashchange', () => activate(location.hash.slice(1), false, true));
+    document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+    window.addEventListener('pagehide', pause);
+    motion.addEventListener('change', () => { pause(); renderStep(); });
+    activate(location.hash.slice(1) || 'v01');
+  }
+</script>
