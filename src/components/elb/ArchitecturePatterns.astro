@@ -1,7 +1,7 @@
 ---
 ---
 <figure class="visual">
-        <figcaption class="visual-cap"><span class="label">Architecture patterns + operating loop</span><h3>Three coherent paths</h3><p>These are role compositions, not universal reference architectures.</p></figcaption>
+        <figcaption class="visual-cap"><span class="label">Deployable starting points</span><h3>Three common deployment patterns</h3><p>Start with the smallest path that meets the requirement. Add another service only when it contributes a distinct capability.</p></figcaption>
         <div class="patterns">
           <article class="pattern"><div class="path-text">Client → ALB → HTTP services</div><div><strong>Choose this when</strong>A regional HTTP entrance needs content-aware routing.</div><div><strong>Verify</strong>Rules, target health, TLS boundaries, and the all-targets-unhealthy drill.</div></article>
           <article class="pattern"><div class="path-text">Client → Global Accelerator → ALB Region A / B → services</div><div><strong>Choose this when</strong>You need stable global entry plus health-based regional choice and HTTP routing.</div><div><strong>Verify</strong>Endpoint health inheritance, client IP behavior, and new-connection failover.</div></article>

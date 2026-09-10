@@ -1,7 +1,7 @@
 ---
 ---
 <figure class="visual">
-        <figcaption class="visual-cap"><span class="label">Failure-boundary matrix</span><h3>Unhealthy narrows the normal choice. All unhealthy can reopen it.</h3><p>Read across each row: detector, new traffic, existing traffic, then the documented all-unhealthy behavior.</p></figcaption>
+        <figcaption class="visual-cap"><span class="label">What failure changes</span><h3>What happens when a target becomes unhealthy?</h3><p>Read across each row to see who detects failure, where new traffic goes, what happens to existing traffic, and why an all-unhealthy fail-open state is not recovery.</p></figcaption>
         <div class="health-grid" role="table" aria-label="Health behavior by service">
           <div class="health-row head" role="row"><div role="columnheader">Layer</div><div role="columnheader">Health boundary</div><div role="columnheader">New traffic</div><div role="columnheader">Existing traffic</div><div role="columnheader">Every candidate unhealthy</div></div>
           <div class="health-row" role="row"><div class="service" data-label="Layer" role="rowheader">ALB</div><div data-label="Health boundary" role="cell">Target in target group<span class="observe">Observe: reason codes, target metrics</span></div><div data-label="New traffic" role="cell">Select another healthy target</div><div data-label="Existing traffic" role="cell">Depends on protocol and draining context</div><div data-label="Every candidate unhealthy" role="cell"><span class="fail-open"><strong>FAIL OPEN</strong>Routes to all targets in the affected group</span></div></div>

@@ -1,7 +1,7 @@
 ---
 ---
 <figure class="visual" id="gwlb-lab">
-        <figcaption class="visual-cap"><span class="label">Hero interaction · routed stepper</span><h3>The route creates the detour; GWLB scales the appliance hop</h3><p>Step through an allowed packet, then switch the appliance verdict to see exactly where the path ends.</p></figcaption>
+        <figcaption class="visual-cap"><span class="label">Example · firewall inspection</span><h3>Route a packet through a firewall fleet</h3><p>Choose GWLB because the VPC route must insert an appliance before the packet reaches the application. Step through an allowed packet, then switch the firewall verdict to see where a dropped path ends.</p></figcaption>
         <div class="lab-controls">
           <fieldset class="radio-set"><legend>Appliance result</legend><label><input type="radio" name="verdict" value="allow" checked /> Allow packet</label><label><input type="radio" name="verdict" value="drop" /> Drop packet</label></fieldset>
           <div class="controls"><button class="control-button" type="button" id="gwlb-prev">Previous</button><button class="control-button primary" type="button" id="gwlb-next">Next step</button><button class="control-button" type="button" id="gwlb-reset">Reset</button></div>
@@ -31,9 +31,10 @@
       ['Firewall-a inspects the packet','VERDICT_COPY','firewall'],
       ['The allowed packet returns to the route','The appliance returns the packet through GWLB and the endpoint. The consumer VPC route can now carry it toward the application subnet.','app']
     ];
+    const gwlbLab = document.getElementById('gwlb-lab');
     let gwlbStep = 0;
     let gwlbVerdict = 'allow';
-    const stepCards = [...document.querySelectorAll('.step-card')];
+    const stepCards = [...gwlbLab.querySelectorAll('.step-card')];
     function renderGwlb() {
       const maxStep = gwlbVerdict === 'drop' ? 5 : 6;
       if (gwlbStep > maxStep) gwlbStep = maxStep;
@@ -53,4 +54,18 @@
       document.getElementById('gwlb-next').disabled = gwlbStep === maxStep;
     }
     document.getElementById('gwlb-prev').addEventListener('click', () => { gwlbStep = Math.max(0, gwlbStep - 1); renderGwlb(); });
+    document.getElementById('gwlb-next').addEventListener('click', () => { gwlbStep += 1; renderGwlb(); });
+    document.getElementById('gwlb-reset').addEventListener('click', () => {
+      gwlbStep = 0;
+      gwlbVerdict = 'allow';
+      gwlbLab.querySelector('input[name="verdict"][value="allow"]').checked = true;
+      renderGwlb();
+    });
+    gwlbLab.querySelectorAll('input[name="verdict"]').forEach((input) => input.addEventListener('change', () => {
+      gwlbVerdict = input.value;
+      gwlbStep = 0;
+      renderGwlb();
+    }));
+    renderGwlb();
+    gwlbLab.classList.add('is-enhanced');
 </script>

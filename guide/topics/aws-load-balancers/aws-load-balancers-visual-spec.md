@@ -1,19 +1,21 @@
-# AWS traffic entry points — visual specification
+# ALB vs NLB: choosing an AWS traffic entry point — visual specification
 
 - **Topic:** Application Load Balancer, Network Load Balancer, Gateway Load Balancer, and AWS Global Accelerator
 - **Status and version:** Integrated to src/content/topics/aws-load-balancers.mdx; product behavior verified 2026-09-10
 - **Target audience:** Developers moving into cloud infrastructure who understand HTTP, TCP/IP, VPCs, and Availability Zones but do not yet have a dependable model for choosing and combining these services
-- **Page promise:** Compare the information each service reads, the decision it makes, where it sits, and how health failures change its path.
-- **Narrative structure:** Begin with a bird’s-eye composition, compare all four services in a decision matrix, then give each service a detailed mechanism view: the full HTTP processing path for ALB, transport lifecycle for NLB, routed inspection loop for GWLB, and regional endpoint selection for Global Accelerator.
+- **Page promise:** Give the reader a direct selection rule: ALB for HTTP-aware application routing, NLB for transport protocols or zonal static IPs, GWLB for routed appliance inspection, and Global Accelerator for stable multi-Region entry.
+- **Narrative structure:** Begin with practical “use this when” choices, place the four services in an example architecture, then show how to build and operate each path: ALB request routing, NLB transport forwarding, GWLB appliance insertion, and Global Accelerator regional failover.
 - **Format and difficulty:** Deep Dive; intermediate
 - **Primary collection and tags:** AWS; Networking, Reliability, Security, Troubleshooting
 - **Scope:** Standard AWS Global Accelerator, ALB, NLB, and GWLB data-plane behavior; listeners, target groups or endpoint groups, routing information, health boundaries, common compositions, and operational implications.
 - **Non-goals:** Classic Load Balancer, custom routing accelerators, API Gateway, CloudFront, Route 53 policy design, exhaustive quotas, pricing arithmetic, Kubernetes controller annotations, detailed TLS policies, and virtual-appliance vendor configuration.
-- **Visual thesis:** **Four traffic desks, four different questions.** ALB reads an HTTP request, NLB pins a transport flow, GWLB inserts an appliance fleet into a routed IP path, and Global Accelerator chooses a healthy regional entrance from the AWS edge. They are composable roles rather than four interchangeable load balancers.
+- **Visual thesis:** **Start with the protocol and required decision.** ALB can route from HTTP request data; NLB forwards transport flows and supplies zonal addresses; GWLB sends routed traffic through appliances; Global Accelerator directs new connections to regional endpoints. Combine them only when each service adds a separate capability.
 
 ## Semantic color and diagram grammar
 
 The prototype adapts the repository tokens: `#090c13` page background; `#0f141e` and `#141b28` surfaces; cyan/blue for the active data path; green plus a check label for healthy state; amber plus a diamond label for a transition or caution; red plus a broken connector and failure label for an unavailable path; purple for rules, configuration, and health decisions. AWS orange appears only in collection framing, never as a runtime state.
+
+The integrated page uses the official July 2026 AWS architecture resource icons for ALB, NLB, GWLB, and Global Accelerator. Icons reinforce adjacent text labels and never replace them.
 
 - Solid arrow: runtime packet, connection, or HTTP request.
 - Dashed arrow: health signal, configuration relationship, or a route-table decision.
@@ -41,16 +43,18 @@ The prototype adapts the repository tokens: `#090c13` page background; `#0f141e`
 
 ## Narrative sequence
 
+The production revision requested on 2026-09-10 places the selection guide before the architecture map. The detailed visual-contract numbers below retain the original approval-artifact numbering.
+
 | # | Section | Core learner question | Visual form | Interaction | Required takeaway |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Bird’s-eye architecture | Where do all four services sit, and which can be combined? | Global-to-regional architecture map with a separate egress-inspection lane | Static overview | Global Accelerator can select regional ALB or NLB entry points; GWLB belongs in a routed inspection path and is neither a Global Accelerator endpoint nor the firewall itself. |
-| 2 | Decision matrix | Which service makes which decision? | Full service-column comparison matrix | Static comparison | Choose by scope, traffic semantics, decision inputs, address needs, destination, and security behavior. |
-| 3 | ALB: route the request | How does an HTTPS request pass access, TLS, WAF, listener rules, and target health? | Detailed request lifecycle with ordered rules, target selection, controls, and caveats | Static | ALB terminates the client TLS connection, evaluates HTTP-aware controls and listener rules, then selects a target from the chosen target group. |
-| 4 | NLB: keep the flow | How do listener mode, flow mapping, target health, and source identity fit together? | Detailed transport lifecycle, five-tuple anatomy, TLS modes, controls, and caveats | Static | NLB balances transport flows and provides zonal static addresses; client-IP and TLS behavior depend on listener, target type, protocol, and attributes. |
-| 5 | GWLB: force an inspection detour | How does a packet visit an appliance and still reach the application? | Detailed routed round-trip with endpoint ownership, flow symmetry, controls, and appliance states | **Hero 1:** previous/next/reset and allow/drop appliance result | Route tables send traffic to a zonal GWLB endpoint; GWLB encapsulates the original packet in GENEVE to a sticky appliance flow and returns it to the routed path. |
-| 6 | Global Accelerator: choose a regional entrance | What changes when the nearest regional endpoint becomes unhealthy? | Detailed global edge and two-Region failover lab with configuration cards | **Hero 2:** toggle Mumbai endpoint health and traffic dial; reset | Global Accelerator supplies global anycast entry addresses and chooses healthy regional endpoints for new connections; the regional endpoint still performs the local load-balancing job. |
-| 7 | Health is layered | Which component notices a failure, and what moves? | Failure-boundary matrix with existing/new traffic columns | Static expandable details | Health decisions are local to each selection layer, and all-unhealthy states can fail open rather than fail closed. |
-| 8 | Compose and operate | How do these services fit into real architectures? | Three composition strips plus an operational loop | Static | Combine roles deliberately, preserve symmetric inspection, test health boundaries, and observe every layer that can select or drop traffic. |
+| 1 | Choose from the requirement | Do I need ALB, NLB, GWLB, or Global Accelerator? | Four direct use-case cards followed by an exact comparison matrix | Static comparison | HTTP-aware routing means ALB; transport protocols or zonal static IPs mean NLB; routed appliances mean GWLB; stable multi-Region entry means Global Accelerator. |
+| 2 | Put each service in the path | Where does the selected service sit, and which services can be combined? | Global-to-regional architecture map with a separate egress-inspection lane | Static overview | ALB and NLB are alternative regional application entrances, Global Accelerator can sit in front, and GWLB belongs on a routed inspection path. |
+| 3 | Use ALB for HTTP routing | How does an HTTPS request reach the right application service? | Detailed request lifecycle with ordered rules, target selection, controls, and caveats | Static | ALB evaluates HTTP-aware controls and listener rules, then selects a target from the chosen target group. |
+| 4 | Use NLB for transport protocols or zonal static IPs | How does a TCP, UDP, or QUIC flow reach a target? | Detailed transport lifecycle, five-tuple anatomy, TLS modes, controls, and caveats | Static | NLB forwards transport flows and provides zonal static addresses; client-IP and TLS behavior depend on listener, target type, protocol, and attributes. |
+| 5 | Use GWLB to insert a firewall fleet | How does routed traffic pass through an appliance and continue? | Detailed routed round-trip with endpoint ownership, flow symmetry, controls, and appliance states | **Hero 1:** previous/next/reset and allow/drop appliance result | Route tables send traffic to a zonal GWLB endpoint; GWLB selects an appliance and returns allowed traffic to the routed path. |
+| 6 | Use Global Accelerator for multi-Region entry | How do new connections reach another Region without changing the client entry addresses? | Detailed global edge and two-Region failover lab with configuration cards | **Hero 2:** toggle Mumbai endpoint health and traffic dial; reset | Global Accelerator supplies global anycast addresses and selects regional endpoints; the regional ALB or NLB still selects the application target. |
+| 7 | Check what happens when targets become unhealthy | Which component notices a failure, and what moves? | Failure-boundary matrix with existing/new traffic columns | Static expandable details | Health decisions are local to each selection layer, and all-unhealthy states can fail open rather than recover. |
+| 8 | Choose a deployment pattern and test failures | Which deployable path meets the requirement? | Three composition strips plus an operational loop | Static | Start with one regional load balancer, then add Global Accelerator or GWLB only for a distinct requirement. |
 
 ## Visual 1 — Bird’s-eye architecture
 
@@ -271,33 +275,37 @@ Use an ordered list for rules and explicit `MATCH`, `SKIPPED`, `HEALTHY`, and `U
 - Rule selection and target selection are separate steps.
 - TLS termination does not imply an unencrypted backend.
 
-## Visual 4 — NLB pins a transport flow
+## Visual 4 — Deploy a TCP service behind NLB
 
 ### Purpose
 
-Explain the stable-flow mental model and prevent absolute claims about source-IP preservation or TLS pass-through.
+Show the deployable NLB path first—client, zonal address and listener, target group, healthy target—then explain the connection-level behavior and conditional details.
 
 ### Learner question
 
-“If NLB does not inspect an HTTP path, how does it choose a target?”
+“When should I use NLB, what do I configure, and what happens to a connection?”
 
 ### Example state
 
-An NLB-specific example compares two connections whose source ports differ: `TCP · 203.0.113.24:51514 → 198.51.100.10:443` and the same fields with source port `51515`.
+An internet-facing TCP service uses zonal NLB address `198.51.100.10`, listener `TCP :443`, target group `tcp-service-tg` on `TCP :8443`, and healthy target `10.0.21.18:8443`. A second connection changes the source port from `51514` to `51515`.
 
 ### Concepts and actors
 
-Zonal NLB address; optional Elastic IP for an internet-facing IPv4 NLB; listener; flow hash; target group; target; five-tuple chips; client-IP preservation attribute; TCP pass-through and TLS-listener modes. Configuration and runtime states are labelled separately.
+Client connection; zonal NLB address; official NLB, ALB, and VPC endpoint icons; listener; target group; healthy and unhealthy targets; connection mapping; client-IP preservation attribute; TCP pass-through and TLS-listener modes; ALB target type; interface VPC endpoint; PrivateLink endpoint service; endpoint ENI IPs. Configuration and runtime states are labelled separately.
 
 ### Composition
 
-Begin with three connected stages: client access and zonal addresses; listener and action/rule selection; target-group health and flow selection. Then show the five tuple entering a “flow mapping” dial that points to `10.0.21.18:8443`. Three packets bearing the same tuple follow the same solid lane. A second flow with source port `51515` lands on another target to show that a connection, not each packet independently, is the useful unit.
+Begin with one left-to-right deployable path: a client opens `TCP 203.0.113.24:51514 → 198.51.100.10:443`; the NLB card exposes the zonal address, `TCP :443` listener, and forward action; the target-group card exposes backend protocol and port, the selected healthy target, and an unhealthy target excluded from ordinary new-flow selection. A short “Why NLB fits” callout states that this service needs TCP forwarding and a stable zonal address, with no HTTP routing decision.
+
+Below the path, compare an existing connection with a new connection. Packets on source port `51514` remain mapped to `10.0.21.18:8443`; a connection using source port `51515` triggers selection again and may use another healthy target. Do not imply that AWS publishes its internal target-selection formula.
 
 Below it, compare two modes. `TCP :443` keeps the encrypted TLS exchange end to end to the target. `TLS :443` terminates client TLS at NLB and establishes the configured backend connection. Place a qualified client-IP card beside them: instance targets and several protocol combinations preserve it by default; TCP/TLS IP targets default differently and use a target-group attribute. Finish with detail cards for current protocols/rules, target-group controls and identity, and network/operational behavior.
 
+Add a three-card composition guide whose arrows are part of the lesson. First, show the native `NLB → target group type alb → ALB` pattern for combining static zonal addresses or PrivateLink with ALB HTTP routing; call out the TCP, matching-port, same-VPC, same-account, single-ALB, and IPv4 constraints. Second, show the normal PrivateLink provider pattern as `consumer interface VPCE → endpoint service → NLB → service`, explaining that consumer traffic does not run from NLB to VPCE. Third, cover a literal `NLB → target group type ip → interface endpoint ENI private IPs` bridge as a specialized IP-target design, not a native `vpce` target type; make ownership of registration lifecycle, reachability, health checks, security groups, ports, TLS hostname/SNI, and zonal coverage explicit.
+
 ### Interaction
 
-Static because exposing the tuple and two simultaneous flows teaches mapping more clearly than a decorative packet generator.
+Static because the configuration path and side-by-side connection cases answer the operational question without a decorative packet generator.
 
 ### Data or content states
 
@@ -309,31 +317,37 @@ An unhealthy target is absent from new ordinary selections. Existing established
 
 ### Required copy
 
-- Heading: “NLB keeps a flow together.”
-- Takeaway: “NLB makes a transport-level choice. It can terminate TLS or pass encrypted bytes through, depending on the listener you configure.”
+- Heading: “Use NLB for a TCP service with a stable zonal address.”
+- Takeaway: “Create the client-facing listener, forward it to a compatible target group, register healthy targets in every enabled zone, and plan for one NLB address per zone.”
 - Misconception: “NLB does not always preserve the original client address. The outcome depends on target type, protocol, and `preserve_client_ip.enabled`.”
 
 ### Accuracy caveats
 
-The dial is a conceptual flow mapping, not a disclosed hash formula. QUIC/TCP_QUIC and source-address-type listener rules are current features verified 2026-09-10; they are named in Visual 2 but not expanded here. Source-IP preservation has additional topology constraints.
+The connection mapping is conceptual, not a disclosed selection formula. QUIC/TCP_QUIC and source-address-type listener rules are current features verified 2026-09-10; they are named in Visual 2 but not expanded here. Source-IP preservation has additional topology constraints. NLB fail-open behavior is stated separately so the ordinary unhealthy-target state is not presented as absolute. NLB target types are `instance`, `ip`, and `alb`; a VPC endpoint ID is never shown as directly registrable. The literal NLB-to-VPCE composition depends on registering reachable endpoint ENI IPs and must not be confused with the managed PrivateLink provider direction.
 
 ### Mobile behavior
 
-Break the horizontal packet lanes into two vertical flow cards. TLS modes stack. Five-tuple chips wrap without truncation.
+Stack client, NLB, and target-group cards with downward arrows. Connection, TLS, and integration comparisons become one column. Addresses and ports wrap without truncation.
 
 ### Accessibility
 
-Every flow has a numbered text label and explicit selected target. Solid lanes have arrow characters in the text alternative. TLS states say `terminates here` or `stays encrypted to target`.
+The deployable path has numbered text steps and an explicit selected target. The path has a complete text alternative. TLS states say `terminates here` or `stays encrypted to target`.
 
 ### Source anchors
 
 - [What is a Network Load Balancer?](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/introduction.html)
 - [NLB target groups and protocols](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/load-balancer-target-groups.html)
 - [NLB client IP preservation](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/edit-target-group-attributes.html#client-ip-preservation)
+- [Use an ALB as an NLB target](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/application-load-balancer-target.html)
+- [Share services through AWS PrivateLink](https://docs.aws.amazon.com/vpc/latest/privatelink/privatelink-share-your-services.html)
 
 ### Acceptance checks
 
-- A changed source port creates a visibly separate flow.
+- Client, listener, target group, and selected target are visible in one path.
+- A changed source port creates a visibly separate connection case.
+- NLB-to-ALB uses the native `alb` target type and shows its material constraints.
+- PrivateLink consumer flow points from interface endpoint through the endpoint service to NLB.
+- A literal NLB-to-interface-endpoint design is labelled as IP targets with lifecycle duties, never as a `vpce` target type.
 - Static addresses are described per enabled Availability Zone, not globally.
 - Client-IP and TLS copy remain conditional.
 
@@ -655,12 +669,13 @@ Use ordered lists, explicit decision-owner labels, and descriptive link text. Th
 
 ## Integration guidance
 
-- Proposed canonical slug: `/aws-load-balancers/`.
-- Proposed canonical content: `src/content/topics/aws-load-balancers.mdx`, with metadata `collection: aws`, `format: Deep Dive`, `difficulty: intermediate`, technologies `Elastic Load Balancing`, `Application Load Balancer`, `Network Load Balancer`, `Gateway Load Balancer`, `AWS Global Accelerator`.
-- Proposed reusable components: `TrafficArchitectureOverview.astro`, `LoadBalancerDecisionMatrix.astro`, `AlbRuleTrace.astro`, `NlbFlowAnatomy.astro`, `GwlbInspectionPath.astro`, `GlobalAcceleratorFailover.astro`, and `HealthBoundaryMatrix.astro`, colocated under `src/components/load-balancing/`; behavior in a small `load-balancing.ts` module.
-- Reuse `TopicHeader`, `SectionNav`, `SourcesList`, `RelatedVisuals`, global tokens, and topic typography. Add only topic composition rules in `src/styles/load-balancing.css`.
+- Canonical slug: `/aws-load-balancers`.
+- Canonical content: `src/content/topics/aws-load-balancers.mdx`, with metadata `collection: aws`, `format: Deep Dive`, and `difficulty: intermediate`.
+- Reusable visual components are colocated under `src/components/elb/`; their shared production styles live in `src/components/elb/elb-shared.css`.
+- The page reuses `TopicHeader`, `SectionNav`, `SourcesList`, `RelatedVisuals`, global tokens, and topic typography.
 - Preserve the section IDs listed above. The approval files stay under `guide/topics/` and are not added to content collections, Pagefind, legacy sync, or public routes.
-- **Integration status:** Not integrated; awaiting approval of this specification and prototype direction.
+- **Integration status:** Integrated on 2026-09-10 in the canonical MDX topic and `/aws-load-balancers` Astro route. The prototype remains an approval artifact, not a second published implementation.
+- **Post-integration revision:** On 2026-09-10, the canonical page was reordered and rewritten around direct selection rules and deployable examples. The prototype preserves the earlier approval snapshot; the MDX topic is the maintained reader-facing source.
 
 ## Deep-dive page handoffs
 
@@ -701,28 +716,29 @@ Do not link these as published related pages until their targets exist.
 
 ### NLB
 
-7. [What is a Network Load Balancer?](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/introduction.html)
-8. [NLB listeners](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/load-balancer-listeners.html)
-9. [NLB target groups](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/load-balancer-target-groups.html)
-10. [NLB target-group attributes and client IP](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/edit-target-group-attributes.html)
-11. [Use an ALB as an NLB target](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/application-load-balancer-target.html)
+9. [What is a Network Load Balancer?](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/introduction.html)
+10. [NLB listeners](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/load-balancer-listeners.html)
+11. [NLB target groups](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/load-balancer-target-groups.html)
+12. [NLB target-group attributes and client IP](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/edit-target-group-attributes.html)
+13. [Use an ALB as an NLB target](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/application-load-balancer-target.html)
+14. [Share services through AWS PrivateLink](https://docs.aws.amazon.com/vpc/latest/privatelink/privatelink-share-your-services.html)
 
 ### GWLB
 
-12. [What is a Gateway Load Balancer?](https://docs.aws.amazon.com/elasticloadbalancing/latest/gateway/introduction.html)
-13. [Gateway Load Balancer behavior](https://docs.aws.amazon.com/elasticloadbalancing/latest/gateway/gateway-load-balancers.html)
-14. [Getting started with Gateway Load Balancer](https://docs.aws.amazon.com/elasticloadbalancing/latest/gateway/getting-started.html)
-15. [GWLB target health](https://docs.aws.amazon.com/elasticloadbalancing/latest/gateway/health-checks.html)
-16. [GWLB target-group attributes](https://docs.aws.amazon.com/elasticloadbalancing/latest/gateway/edit-target-group-attributes.html)
+15. [What is a Gateway Load Balancer?](https://docs.aws.amazon.com/elasticloadbalancing/latest/gateway/introduction.html)
+16. [Gateway Load Balancer behavior](https://docs.aws.amazon.com/elasticloadbalancing/latest/gateway/gateway-load-balancers.html)
+17. [Getting started with Gateway Load Balancer](https://docs.aws.amazon.com/elasticloadbalancing/latest/gateway/getting-started.html)
+18. [GWLB target health](https://docs.aws.amazon.com/elasticloadbalancing/latest/gateway/health-checks.html)
+19. [GWLB target-group attributes](https://docs.aws.amazon.com/elasticloadbalancing/latest/gateway/edit-target-group-attributes.html)
 
 ### AWS Global Accelerator
 
-17. [How AWS Global Accelerator works](https://docs.aws.amazon.com/global-accelerator/latest/dg/introduction-how-it-works.html)
-18. [Global Accelerator components](https://docs.aws.amazon.com/global-accelerator/latest/dg/introduction-components.html)
-19. [Standard accelerator endpoints](https://docs.aws.amazon.com/global-accelerator/latest/dg/about-endpoints.html)
-20. [Endpoint groups](https://docs.aws.amazon.com/global-accelerator/latest/dg/about-endpoint-groups.html)
-21. [Traffic dials](https://docs.aws.amazon.com/global-accelerator/latest/dg/about-endpoint-groups-traffic-dial.html)
-22. [Health-check guidance](https://docs.aws.amazon.com/global-accelerator/latest/dg/about-endpoint-groups-health-check-options.html)
-23. [Unhealthy endpoint failover](https://docs.aws.amazon.com/global-accelerator/latest/dg/about-endpoints-endpoint-weights.unhealthy-endpoints.html)
-24. [Client-IP preservation](https://docs.aws.amazon.com/global-accelerator/latest/dg/preserve-client-ip-address.html)
-25. [Client-IP preservation restrictions](https://docs.aws.amazon.com/global-accelerator/latest/dg/preserve-client-ip-address.how-to-enable-preservation.html)
+20. [How AWS Global Accelerator works](https://docs.aws.amazon.com/global-accelerator/latest/dg/introduction-how-it-works.html)
+21. [Global Accelerator components](https://docs.aws.amazon.com/global-accelerator/latest/dg/introduction-components.html)
+22. [Standard accelerator endpoints](https://docs.aws.amazon.com/global-accelerator/latest/dg/about-endpoints.html)
+23. [Endpoint groups](https://docs.aws.amazon.com/global-accelerator/latest/dg/about-endpoint-groups.html)
+24. [Traffic dials](https://docs.aws.amazon.com/global-accelerator/latest/dg/about-endpoint-groups-traffic-dial.html)
+25. [Health-check guidance](https://docs.aws.amazon.com/global-accelerator/latest/dg/about-endpoint-groups-health-check-options.html)
+26. [Unhealthy endpoint failover](https://docs.aws.amazon.com/global-accelerator/latest/dg/about-endpoints-endpoint-weights.unhealthy-endpoints.html)
+27. [Client-IP preservation](https://docs.aws.amazon.com/global-accelerator/latest/dg/preserve-client-ip-address.html)
+28. [Client-IP preservation restrictions](https://docs.aws.amazon.com/global-accelerator/latest/dg/preserve-client-ip-address.how-to-enable-preservation.html)

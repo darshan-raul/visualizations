@@ -1,6 +1,6 @@
 ---
-title: AWS traffic entry points
-summary: Compare the information ALB, NLB, GWLB, and Global Accelerator read, the decisions they make, and how health failures change their path.
+title: "ALB vs NLB: which should you use?"
+summary: Use ALB for HTTP-aware routing and NLB for transport protocols or zonal static IPs. See where GWLB and Global Accelerator fit when those are separate requirements.
 slug: aws-load-balancers
 collection: aws
 tags: [Networking, Reliability, Security, Troubleshooting]
@@ -13,6 +13,10 @@ versionScope: Standard accelerator, ALB, NLB, GWLB behavior verified 2026-09-10
 legacyPath: /aws-load-balancers
 state: reviewed
 sources:
+  - label: AWS architecture icons
+    url: https://aws.amazon.com/architecture/icons/
+  - label: Elastic Load Balancing product types
+    url: https://docs.aws.amazon.com/elasticloadbalancing/latest/userguide/what-is-load-balancing.html
   - label: Application Load Balancer introduction
     url: https://docs.aws.amazon.com/elasticloadbalancing/latest/application/introduction.html
   - label: ALB listeners
@@ -21,6 +25,8 @@ sources:
     url: https://docs.aws.amazon.com/elasticloadbalancing/latest/application/rule-condition-types.html
   - label: ALB listener rule actions
     url: https://docs.aws.amazon.com/elasticloadbalancing/latest/application/rule-action-types.html
+  - label: ALB JWT validation
+    url: https://docs.aws.amazon.com/elasticloadbalancing/latest/application/listener-verify-jwt.html
   - label: ALB target health
     url: https://docs.aws.amazon.com/elasticloadbalancing/latest/application/target-group-health-checks.html
   - label: Network Load Balancer introduction
@@ -29,16 +35,36 @@ sources:
     url: https://docs.aws.amazon.com/elasticloadbalancing/latest/network/load-balancer-listeners.html
   - label: NLB target groups and health
     url: https://docs.aws.amazon.com/elasticloadbalancing/latest/network/load-balancer-target-groups.html
+  - label: NLB target-group attributes and client IP
+    url: https://docs.aws.amazon.com/elasticloadbalancing/latest/network/edit-target-group-attributes.html
+  - label: Use an ALB as an NLB target
+    url: https://docs.aws.amazon.com/elasticloadbalancing/latest/network/application-load-balancer-target.html
+  - label: Share a service through AWS PrivateLink
+    url: https://docs.aws.amazon.com/vpc/latest/privatelink/privatelink-share-your-services.html
   - label: Gateway Load Balancer introduction
     url: https://docs.aws.amazon.com/elasticloadbalancing/latest/gateway/introduction.html
   - label: GWLB behavior and GENEVE
     url: https://docs.aws.amazon.com/elasticloadbalancing/latest/gateway/gateway-load-balancers.html
+  - label: GWLB inspection routing
+    url: https://docs.aws.amazon.com/elasticloadbalancing/latest/gateway/getting-started.html
   - label: GWLB target failure behavior
     url: https://docs.aws.amazon.com/elasticloadbalancing/latest/gateway/health-checks.html
+  - label: GWLB target-group attributes
+    url: https://docs.aws.amazon.com/elasticloadbalancing/latest/gateway/edit-target-group-attributes.html
   - label: How Global Accelerator works
     url: https://docs.aws.amazon.com/global-accelerator/latest/dg/introduction-how-it-works.html
+  - label: Global Accelerator components
+    url: https://docs.aws.amazon.com/global-accelerator/latest/dg/introduction-components.html
   - label: Standard accelerator endpoints
     url: https://docs.aws.amazon.com/global-accelerator/latest/dg/about-endpoints.html
+  - label: Global Accelerator traffic dials
+    url: https://docs.aws.amazon.com/global-accelerator/latest/dg/about-endpoint-groups-traffic-dial.html
+  - label: Global Accelerator unhealthy endpoint failover
+    url: https://docs.aws.amazon.com/global-accelerator/latest/dg/about-endpoints-endpoint-weights.unhealthy-endpoints.html
+  - label: Global Accelerator client-IP preservation
+    url: https://docs.aws.amazon.com/global-accelerator/latest/dg/preserve-client-ip-address.html
+  - label: Client-IP preservation restrictions
+    url: https://docs.aws.amazon.com/global-accelerator/latest/dg/preserve-client-ip-address.how-to-enable-preservation.html
 ---
 
 import './../../components/elb/elb-shared.css';
@@ -51,63 +77,65 @@ import GaFailover from '../../components/elb/GaFailover.astro';
 import HealthMatrix from '../../components/elb/HealthMatrix.astro';
 import ArchitecturePatterns from '../../components/elb/ArchitecturePatterns.astro';
 
-## See the whole traffic shape first
+## Choose from the requirement
 
-Global Accelerator owns global entry. ALB and NLB are parallel regional entry points. GWLB inserts an appliance fleet into a route such as inspected egress.
+Start with the protocol and the decision you need AWS to make. If the requirement says URL path, hostname, headers, authentication, or WAF, start with ALB. If it says TCP, UDP, QUIC, TLS pass-through, or a fixed address in each Availability Zone, start with NLB.
+
+<DecisionMatrix />
+
+> [!NOTE]
+> **A common wrong turn:** choosing NLB because it sounds faster, then discovering that the application needs path routing or WAF. Choose from the protocol and routing requirement first; validate capacity and latency separately.
+
+## Put each service in the path
+
+ALB and NLB are alternative regional application entrances. Global Accelerator can sit in front of either one when clients need stable global addresses and regional failover. GWLB belongs on a route that must pass through a firewall or another virtual appliance.
 
 <BirdseyeArchitecture />
 
 > [!NOTE]
-> **Architecture boundary:** ALB and NLB are parallel service entry points. GWLB is neither a Global Accelerator endpoint nor the firewall itself. Repeat endpoints and appliances per Availability Zone where the production design requires zonal resilience.
+> **Architecture boundary:** GWLB is neither an application frontend nor the firewall. A route sends traffic to a GWLB endpoint, and GWLB selects an appliance. Repeat endpoints and appliances per Availability Zone where the production design requires zonal resilience.
 
-## What can each decision see?
+## Use ALB for HTTP routing
 
-A service cannot route on information it does not inspect. Scope matters as much as the familiar OSI-layer shorthand.
-
-<DecisionMatrix />
-
-## ALB reads the HTTP request
-
-The listener evaluates rules in priority order. A matching forward action selects a target group; load balancing inside that group is the next decision.
+Use ALB when one HTTPS entrance must send `/checkout` to one service and `/static` to another, route multiple hostnames, apply AWS WAF, or perform supported authentication and JWT checks. The listener evaluates rules in priority order; the selected target group then chooses a healthy application target.
 
 <AlbRequest />
 
 > [!NOTE]
 > **Common misconception:** the target group inspects the URL. **Correct model:** the listener rule selects the target group.
 
-## NLB keeps a transport flow together
+## Use NLB for transport protocols or zonal static IPs
 
-NLB does not inspect an HTTP path to map a connection. A changed source port creates another flow and may choose another target.
+Use NLB for TCP, TLS, UDP, TCP_UDP, QUIC, or TCP_QUIC services; for TLS pass-through; or when allowlists require a stable address per enabled Availability Zone. NLB maps a transport flow without reading an HTTP path. It can also target an ALB directly, or publish a service to interface VPC endpoints through PrivateLink—the arrows and target types matter.
 
 <NlbFlow />
 
-## GWLB creates an inspection loop
+## Use GWLB to insert a firewall fleet
 
-A route table sends the packet to a zonal endpoint. GWLB then distributes the flow to a GENEVE-capable appliance and returns allowed traffic to the routed path.
+Use GWLB when a route must send traffic through third-party firewalls, intrusion detection, or other GENEVE-capable appliances. The route table points to a zonal endpoint; GWLB selects an appliance and returns allowed traffic to the routed path.
 
 <GwlbStepper />
 
 > [!NOTE]
 > **Common misconception:** GWLB replaces the ALB or NLB. **Correct model:** route tables and an endpoint insert an appliance hop; allowed traffic continues toward the application entry.
 
-## Global Accelerator chooses a regional entrance
+## Use Global Accelerator for multi-Region entry
 
-The client keeps the same anycast entry addresses while health and configuration can change which regional endpoint receives a new connection.
+Use a standard accelerator when clients need static anycast addresses and new connections should move between healthy regional ALB or NLB endpoints. Global Accelerator chooses the Region and endpoint; the regional load balancer still chooses the application target.
 
 <GaFailover />
 
 > [!NOTE]
 > **Common misconception:** a 50% traffic dial means half of all listener traffic, and changing it moves existing connections. **Correct model:** the dial applies to traffic already directed to that endpoint group, and updates affect new connections.
 
-## Health is layered
+## Check what happens when targets become unhealthy
 
 A failed check changes one selector’s eligible set. It does not prove that the full request path has failed—or recovered.
 
 <HealthMatrix />
 
-## Compose roles; test the seams
+## Choose a deployment pattern and test failures
 
 Each extra selector adds a health boundary. Give every service one explicit job, then test what crosses the boundary when it fails.
 
 <ArchitecturePatterns />
-

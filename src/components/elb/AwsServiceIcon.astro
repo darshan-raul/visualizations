@@ -1,0 +1,39 @@
+---
+import albIcon from '../../assets/aws/Res_Elastic-Load-Balancing_Application-Load-Balancer_48.svg';
+import nlbIcon from '../../assets/aws/Res_Elastic-Load-Balancing_Network-Load-Balancer_48.svg';
+import gwlbIcon from '../../assets/aws/Res_Elastic-Load-Balancing_Gateway-Load-Balancer_48.svg';
+import globalAcceleratorIcon from '../../assets/aws/Arch_AWS-Global-Accelerator_48.svg';
+import vpcEndpointIcon from '../../assets/aws/Res_Amazon-VPC_Endpoints_48.svg';
+
+const icons = {
+  alb: { src: albIcon.src, label: 'Application Load Balancer' },
+  nlb: { src: nlbIcon.src, label: 'Network Load Balancer' },
+  gwlb: { src: gwlbIcon.src, label: 'Gateway Load Balancer' },
+  ga: { src: globalAcceleratorIcon.src, label: 'AWS Global Accelerator' },
+  vpce: { src: vpcEndpointIcon.src, label: 'Amazon VPC endpoint' },
+} as const;
+
+interface Props {
+  service: keyof typeof icons;
+  size?: number;
+}
+
+const { service, size = 38 } = Astro.props;
+const icon = icons[service];
+---
+
+<span class={`aws-service-icon service-${service}`} style={`--icon-size: ${size}px`} aria-hidden="true">
+  <img src={icon.src} width={size} height={size} alt="" loading="lazy" decoding="async" />
+</span>
+
+<style>
+  .aws-service-icon {
+    display: inline-grid;
+    width: var(--icon-size);
+    height: var(--icon-size);
+    flex: 0 0 var(--icon-size);
+    place-items: center;
+  }
+
+  img { display: block; width: 100%; height: 100%; }
+</style>

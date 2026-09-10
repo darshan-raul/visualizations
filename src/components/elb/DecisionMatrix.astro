@@ -1,10 +1,17 @@
 ---
+import AwsServiceIcon from './AwsServiceIcon.astro';
 ---
 <figure class="visual">
-        <figcaption class="visual-cap"><span class="label">AWS load balancing · comparison matrix</span><h3>Which service makes which decision?</h3><p>Choose by traffic semantics, destination, address model, and scope. These services can be combined in one architecture.</p></figcaption>
+        <figcaption class="visual-cap"><span class="label">Practical selection guide</span><h3>Start with what the workload needs</h3><p>Choose from the protocol, routing decision, and address requirement. If several apply, give each service a separate job.</p></figcaption>
+        <div class="quick-choices">
+          <article class="quick-choice alb"><h4><AwsServiceIcon service="alb" /> <span>Use ALB</span></h4><p>For HTTP or HTTPS applications that need routing by hostname, path, header, method, or query—and for AWS WAF or supported authentication at the load balancer.</p><code>DNS → HTTPS listener → path rule → target group</code><small>Example: <code>/checkout → checkout-tg</code>. Not for arbitrary TCP, UDP, or opaque TLS pass-through.</small></article>
+          <article class="quick-choice nlb"><h4><AwsServiceIcon service="nlb" /> <span>Use NLB</span></h4><p>For TCP, UDP, or QUIC services; TLS pass-through; or a stable address in each enabled Availability Zone.</p><code>DNS / zonal IP → TCP listener → target group</code><small>Example: <code>:443 → tcp-service-tg</code>. It cannot route from an HTTP URL or apply AWS WAF.</small></article>
+          <article class="quick-choice gwlb"><h4><AwsServiceIcon service="gwlb" /> <span>Use GWLB</span></h4><p>When VPC routes must insert a scalable fleet of third-party firewalls, IDS/IPS appliances, or other transparent network appliances.</p><code>route → GWLBE ⇄ firewall fleet → route</code><small>It is an inspection hop, not the application entrance.</small></article>
+          <article class="quick-choice ga"><h4><AwsServiceIcon service="ga" /> <span>Use Global Accelerator</span></h4><p>When internet clients need static global anycast addresses and health-based routing to application endpoints in more than one AWS Region.</p><code>anycast IPs → Region → ALB or NLB</code><small>It does not replace ALB request rules or NLB flow selection.</small></article>
+        </div>
         <div class="matrix-wrap">
           <table class="matrix">
-            <caption>Capabilities and decision boundaries for ALB, NLB, GWLB, and standard AWS Global Accelerator.</caption>
+            <caption>Use the detailed comparison to verify protocols, address behavior, security controls, and target types.</caption>
             <thead><tr><th>Decision / option</th><th>ALB<br/><span class="read-chip">reads HTTP</span></th><th>NLB<br/><span class="read-chip">balances flows</span></th><th>GWLB<br/><span class="read-chip">inserts appliances</span></th><th>Global Accelerator<br/><span class="read-chip">selects regional entry</span></th></tr></thead>
             <tbody>
               <tr><th scope="row">Scope + role</th><td data-label="ALB">Regional application proxy · Layer 7</td><td data-label="NLB">Regional transport load balancer · Layer 4</td><td data-label="GWLB">Regional routed inspection path · Layer 3</td><td data-label="Global Accelerator">Global standard accelerator · TCP/UDP delivery</td></tr>
@@ -19,5 +26,5 @@
             </tbody>
           </table>
         </div>
-        <div class="takeaway"><strong>Common compositions:</strong> Global Accelerator → ALB or NLB · NLB → ALB where its documented constraints fit · routed workload traffic → GWLBE ⇄ GWLB ⇄ appliance fleet.</div>
+        <div class="takeaway"><strong>Fast answer:</strong> HTTP-aware application routing → ALB · transport protocols or zonal static IPs → NLB · routed appliance inspection → GWLB · static multi-Region internet entry → Global Accelerator.</div>
       </figure>
