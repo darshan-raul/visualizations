@@ -32,7 +32,7 @@ const related = overrides
       {related.map((topic: any) => {
         const collection = collections[topic.data.collection as keyof typeof collections];
         return (
-          <a class={`related-card collection-${topic.data.collection}`} href={topic.data.legacyPath}>
+          <a class={`related-card collection-${topic.data.collection}`} href={topic.data.legacyPath || `/${topic.data.slug}`}>
             <span>{collection.label} · {formatLabels[topic.data.format as keyof typeof formatLabels]}</span>
             <strong>{topic.data.title}</strong>
             <p>{topic.data.summary}</p>

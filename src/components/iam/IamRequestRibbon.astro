@@ -1,0 +1,23 @@
+---
+import '../../styles/iam-overview.css';
+---
+
+<aside class="iam-request" aria-label="Running example request" data-iam-request>
+  <div><small>Runtime principal</small><strong data-request-principal>AppDeployer / darshan</strong></div>
+  <div><small>Action</small><strong>s3:PutObject</strong></div>
+  <div><small>Resource</small><strong>prod-artifacts/releases/app.zip</strong></div>
+  <div><small>Decision</small><strong data-request-decision>Not evaluated</strong></div>
+</aside>
+
+<script>
+  const ribbon = document.querySelector<HTMLElement>('[data-iam-request]');
+  window.addEventListener('iam:principal', ((event: CustomEvent<string>) => {
+    ribbon?.querySelector<HTMLElement>('[data-request-principal]')?.replaceChildren(event.detail);
+    ribbon?.querySelector<HTMLElement>('[data-request-decision]')?.replaceChildren('Not evaluated');
+    ribbon?.removeAttribute('data-decision');
+  }) as EventListener);
+  window.addEventListener('iam:decision', ((event: CustomEvent<string>) => {
+    ribbon?.querySelector<HTMLElement>('[data-request-decision]')?.replaceChildren(event.detail);
+    ribbon?.setAttribute('data-decision', event.detail.toLowerCase());
+  }) as EventListener);
+</script>

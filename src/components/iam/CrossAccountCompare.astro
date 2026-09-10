@@ -1,0 +1,35 @@
+---
+const patterns = {
+  role: { arrow: '1 · STS AssumeRole', a: ['Caller identity policy','Allows sts:AssumeRole on Account B role'], b: ['Role trust policy','Trusts the Account A caller'], final: ['Role permissions','Allow s3:PutObject on the bucket'], result: 'STS creates an Account B role session. That session then makes a separately authorized S3 request.' },
+  direct: { arrow: 'Signed S3 request', a: ['Caller identity policy','Allows s3:PutObject on the Account B object'], b: ['Bucket resource policy','Grants s3:PutObject to the Account A principal'], final: ['Runtime principal','The original Account A principal remains the caller'], result: 'The original principal calls S3 directly. No role switch occurs.' }
+};
+---
+
+<figure class="iam-figure cross-account" data-cross-account>
+  <figcaption><strong>Cross-account access has two valid patterns</strong><span>Keep the caller and bucket fixed while changing how Account B authorizes the request.</span></figcaption>
+  <div class="iam-selector compact" role="group" aria-label="Choose a cross-account pattern"><button type="button" aria-pressed="true" data-pattern="role">Assume target role</button><button type="button" aria-pressed="false" data-pattern="direct">Direct resource policy</button></div>
+  <div class="account-layout">
+    <article><small>Account A · Engineering</small><h3>Original caller</h3><button type="button" class="lock-card" aria-pressed="true" data-lock="a"><b data-a-title>{patterns.role.a[0]}</b><span data-a-detail>{patterns.role.a[1]}</span></button></article>
+    <div class="account-arrow" data-arrow>{patterns.role.arrow}</div>
+    <article><small>Account B · Production</small><h3>prod-artifacts</h3><button type="button" class="lock-card" aria-pressed="true" data-lock="b"><b data-b-title>{patterns.role.b[0]}</b><span data-b-detail>{patterns.role.b[1]}</span></button><button type="button" class="lock-card" aria-pressed="true" data-lock="final"><b data-final-title>{patterns.role.final[0]}</b><span data-final-detail>{patterns.role.final[1]}</span></button></article>
+  </div>
+  <div class="cross-result" role="status" aria-live="polite"><strong data-cross-word>READY</strong><span data-cross-reason>{patterns.role.result}</span></div>
+</figure>
+<p class="iam-visual-summary">A role trust policy permits assumption; the role’s permissions govern the later service request. Direct resource access keeps the Account A identity as the caller and normally requires permission from both account sides.</p>
+
+<script is:inline data-patterns={JSON.stringify(patterns)}>
+  const patterns = JSON.parse(document.currentScript.dataset.patterns);
+  for (const visual of document.querySelectorAll('[data-cross-account]')) {
+    let pattern = 'role';
+    const render = () => {
+      const p = patterns[pattern];
+      for (const [selector,value] of [['[data-arrow]',p.arrow],['[data-a-title]',p.a[0]],['[data-a-detail]',p.a[1]],['[data-b-title]',p.b[0]],['[data-b-detail]',p.b[1]],['[data-final-title]',p.final[0]],['[data-final-detail]',p.final[1]]]) visual.querySelector(selector).textContent = value;
+      const missing = [...visual.querySelectorAll('[data-lock]')].find((item) => item.getAttribute('aria-pressed') !== 'true');
+      visual.querySelector('[data-cross-word]').textContent = missing ? 'BLOCKED' : 'READY';
+      visual.querySelector('[data-cross-reason]').textContent = missing ? `${missing.querySelector('b').textContent} is missing.` : p.result;
+      visual.querySelector('.cross-result').dataset.result = missing ? 'deny' : 'allow';
+    };
+    for (const tab of visual.querySelectorAll('[data-pattern]')) tab.addEventListener('click', () => { pattern = tab.dataset.pattern; visual.querySelectorAll('[data-pattern]').forEach((item) => item.setAttribute('aria-pressed', String(item === tab))); visual.querySelectorAll('[data-lock]').forEach((item) => item.setAttribute('aria-pressed','true')); render(); });
+    for (const lock of visual.querySelectorAll('[data-lock]')) lock.addEventListener('click', () => { lock.setAttribute('aria-pressed', String(lock.getAttribute('aria-pressed') !== 'true')); render(); });
+  }
+</script>

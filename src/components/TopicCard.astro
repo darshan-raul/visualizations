@@ -5,6 +5,7 @@ const { topic } = Astro.props;
 const data = topic.data;
 const collection = collections[data.collection as keyof typeof collections];
 const searchText = [data.title, data.summary, collection.label, ...data.tags, ...data.technologies].join(' ').toLowerCase();
+const url = data.legacyPath || `/${data.slug}`;
 ---
 
 <article
@@ -15,9 +16,9 @@ const searchText = [data.title, data.summary, collection.label, ...data.tags, ..
   data-tags={data.tags.join('|')}
   data-technologies={data.technologies.join('|')}
   data-search={searchText}
-  data-url={data.legacyPath}
+  data-url={url}
 >
-  <a href={data.legacyPath} aria-label={`Open ${data.title}`}>
+  <a href={url} aria-label={`Open ${data.title}`}>
     <div class="card-topline">
       <span class="collection-label">{collection.label}</span>
       <span class="format-label">{formatLabels[data.format as keyof typeof formatLabels]}</span>

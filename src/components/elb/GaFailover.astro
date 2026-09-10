@@ -1,0 +1,49 @@
+---
+---
+<figure class="visual" id="ga-lab">
+        <figcaption class="visual-cap"><span class="label">Hero interaction · regional failover</span><h3>The address stays; the regional entrance can change</h3><p>This simplified two-endpoint lab separates the global endpoint choice from the ALB’s regional HTTP rule.</p></figcaption>
+        <div class="ga-controls">
+          <label class="check-control"><input type="checkbox" id="ga-unhealthy" /> Make Mumbai endpoint unhealthy</label>
+          <div class="range-control"><label for="ga-dial"><span>Mumbai traffic dial</span><output id="ga-dial-output">100%</output></label><input id="ga-dial" type="range" min="0" max="100" step="50" value="100" /></div>
+          <div class="controls"><button class="control-button" type="button" id="ga-reset">Reset</button></div>
+        </div>
+        <div class="ga-map">
+          <div><div class="node"><b>Internet clients</b><small>global entry</small></div><div class="anycast" aria-label="Illustrative Global Accelerator anycast addresses"><span>192.0.2.10</span><span>192.0.2.20</span><span class="status">ILLUSTRATIVE ADDRESSES</span></div></div>
+          <div class="arrow" aria-hidden="true"></div>
+          <div class="node healthy"><span class="status healthy">AWS EDGE</span><b>GA listener</b><small>TCP :443</small></div>
+          <div class="arrow" aria-hidden="true"></div>
+          <div class="regions">
+            <div class="region" id="region-mumbai"><strong>ap-south-1 · Mumbai</strong><div class="region-badges"><span class="status healthy" id="mumbai-health">✓ HEALTHY</span><span class="status" id="mumbai-dial-badge">DIAL 100</span></div><div class="node"><b>Endpoint group</b><small>regional selection</small></div><div class="arrow" aria-hidden="true"></div><div class="node healthy"><b>ALB</b><small>regional request routing</small></div></div>
+            <div class="region" id="region-ireland"><strong>eu-west-1 · Ireland</strong><div class="region-badges"><span class="status healthy">✓ HEALTHY</span><span class="status">DIAL 100</span></div><div class="node"><b>Endpoint group</b><small>failover candidate</small></div><div class="arrow" aria-hidden="true"></div><div class="node healthy"><b>ALB</b><small>regional request routing</small></div></div>
+          </div>
+        </div>
+        <div class="ga-decisions"><div><strong>Global decision · Global Accelerator</strong>Choose a healthy endpoint group and endpoint for a new connection.</div><div><strong>Regional decision · ALB</strong>Evaluate HTTP listener rules, choose a target group, then a healthy target.</div></div>
+        <div class="ga-result" aria-live="polite"><strong id="ga-result-title">New connections → Mumbai ALB</strong><span id="ga-result-copy"> Normal simplified path: the endpoint is healthy with dial 100%. Configuration changes do not migrate established connections.</span></div>
+        <details><summary>When nothing is healthy</summary><p>If Global Accelerator cannot find a healthy, positive-weight endpoint through its documented failover search, it can route to a random endpoint in the closest endpoint group. That is fail open, not a healthy result.</p></details>
+        <div class="service-details"><article><h4>Addresses and listeners</h4><p>A standard accelerator provides static anycast addresses. TCP and UDP listeners define accepted ports or ranges; AWS edge locations carry traffic onto the AWS global network.</p></article><article><h4>Endpoint groups and controls</h4><p>Each endpoint group belongs to one Region. Traffic dials adjust traffic already directed to a group; endpoint weights divide that group’s traffic among endpoints.</p></article><article><h4>Health, TLS, and client IP</h4><p>ALB and NLB endpoint health comes from Elastic Load Balancing. The regional endpoint terminates application TLS. Client-IP preservation depends on endpoint type and configuration and can change the VPC security path.</p></article></div>
+        <div class="behavior-note"><strong>Behavior to keep in mind.</strong> Dial and weight changes apply to new connections. When no healthy positive-weight endpoint is found through the documented failover search, Global Accelerator can fail open to an endpoint in the closest group.</div>
+        <div class="takeaway"><strong>The regional load balancer still has a job:</strong> Global Accelerator selects the entrance; the ALB or NLB then performs its own local selection.</div>
+      </figure>
+
+<script>
+// @ts-nocheck
+    const gaUnhealthy = document.getElementById('ga-unhealthy');
+    const gaDial = document.getElementById('ga-dial');
+    function renderGa() {
+      const unhealthy = gaUnhealthy.checked;
+      const dial = Number(gaDial.value);
+      document.getElementById('ga-dial-output').textContent = `${dial}%`;
+      document.getElementById('mumbai-dial-badge').textContent = `DIAL ${dial}`;
+      document.getElementById('mumbai-health').textContent = unhealthy ? '× UNHEALTHY' : '✓ HEALTHY';
+      document.getElementById('mumbai-health').className = `status ${unhealthy ? 'unhealthy' : 'healthy'}`;
+      document.getElementById('region-mumbai').classList.toggle('unhealthy', unhealthy);
+      const ireland = unhealthy || dial === 0;
+      document.getElementById('ga-result-title').textContent = `New connections → ${ireland ? 'Ireland' : 'Mumbai'} ALB`;
+      let reason = unhealthy ? ' Mumbai is excluded from normal selection because the endpoint is unhealthy; the next connection uses the healthy Ireland endpoint.' : dial === 0 ? ' In this simplified lab, Mumbai accepts no normal traffic already directed to its group, so the next connection uses Ireland.' : dial === 50 ? ' Mumbai is healthy at dial 50. The dial reduces only traffic already directed to this endpoint group; it is not half of all listener traffic.' : ' Normal simplified path: the endpoint is healthy with dial 100%.';
+      document.getElementById('ga-result-copy').textContent = `${reason} Configuration changes do not migrate established connections.`;
+    }
+    gaUnhealthy.addEventListener('change', renderGa);
+    gaDial.addEventListener('input', renderGa);
+    document.getElementById('ga-reset').addEventListener('click', () => { gaUnhealthy.checked = false; gaDial.value = 100; renderGa(); });
+    document.getElementById('ga-reset').addEventListener('click', () => { gaUnhealthy.checked = false; gaDial.value = 100; renderGa(); });
+</script>

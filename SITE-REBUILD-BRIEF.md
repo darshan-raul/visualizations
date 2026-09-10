@@ -6,6 +6,14 @@ Confirmed on: 2026-09-05
 
 This document is the persistent source of truth for the planned transformation of this repository. It records the decisions reached during the product grilling session. Future work should follow this brief unless the user explicitly changes a decision.
 
+## Adopted visual authoring workflow
+
+Adopted on 2026-09-10: use [Infra Illustrated — Universal Visual Specification Generator](guide/INFRA_ILLUSTRATED_VISUAL_SPEC_GENERATOR.md) for new topic visuals and substantial visual rebuilds. It defines the research, narrative design, detailed specification, working approval prototype, and validation process. [AGENTS.md](AGENTS.md#visual-design-workflow) records the repository workflow and artifact locations; [WRITING-GUIDE.md](WRITING-GUIDE.md) governs reader-facing copy.
+
+The specification and HTML prototype are pre-integration design artifacts, stored under `guide/topics/<topic-slug>/`. Review the completed direction before full integration when approval is still needed; existing user authorization carries forward. After integration, one MDX topic and its components remain the canonical published content.
+
+Apply the generator's existing-project rule: preserve this brief's audience, focused topic formats, static Astro/MDX architecture, shared visual semantics, progressive enhancement, and publication gates. Its overview size and example diagram grammar adapt to the topic and existing system. Routine corrections do not require a fresh prototype.
+
 ## Product identity
 
 - Product name: **Infra Illustrated**

@@ -4,6 +4,8 @@ Status: Style agreed on 2026-09-08 and applied across the current canonical page
 
 Use this guide alongside `SITE-REBUILD-BRIEF.md`, which remains the source of truth for product, content, accuracy, and design decisions.
 
+For new topic visuals and substantial visual rebuilds, use the [Universal Visual Specification Generator](guide/INFRA_ILLUSTRATED_VISUAL_SPEC_GENERATOR.md) and the [repository workflow](AGENTS.md#visual-design-workflow) to establish the narrative, visual contracts, and working prototype. Apply this writing guide to required copy in specifications, prototype labels and feedback, and the final page. The generator's misconception markers and example sequences are illustrative; express corrections naturally where the mechanism is explained and retain material caveats without repeating a fixed callout formula.
+
 ## Voice
 
 Write like an engineer helping a capable colleague understand a system. Use concrete examples, explain what causes what, and give the reader time to follow the idea. Be conversational, precise, and restrained. Let personality come through in what you notice and how you explain it.

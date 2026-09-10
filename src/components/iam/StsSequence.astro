@@ -1,0 +1,31 @@
+---
+const steps = [
+  ['Call AssumeRole','The caller requests AppDeployer and names the new session.'],
+  ['Authorize assumption','STS evaluates caller authorization, the role trust policy and its conditions where required.'],
+  ['Create role session','The resulting principal is AppDeployer / darshan.'],
+  ['Return credentials','STS returns four values that the session can use until expiration.'],
+];
+---
+
+<figure class="iam-figure sts-visual" data-sts>
+  <figcaption><strong>A role is configuration. STS creates the session.</strong><span>Advance the sequence to see trust, session creation and temporary credential delivery as separate events.</span></figcaption>
+  <div class="role-contract"><article><small>Trust policy</small><strong>Who may assume?</strong><p>Principal, STS operation and conditions</p></article><div>IAM<br/>role</div><article><small>Permissions policies</small><strong>What may the session attempt?</strong><p>Service actions, resources and conditions</p></article></div>
+  <ol class="sts-steps">{steps.map((step, i) => <li class:list={[i === 0 && 'active']} data-sts-step={i + 1}><span>{i + 1}</span><strong>{step[0]}</strong><p>{step[1]}</p></li>)}</ol>
+  <div class="credential-set" data-credentials data-visible="false"><small>Temporary credential set · illustrative values</small><code>AccessKeyId: ASIA…</code><code>SecretAccessKey: ••••••••</code><code>SessionToken: IQoJ…</code><code>Expiration: 2026-09-10T10:42:00Z</code></div>
+  <div class="iam-controls"><button type="button" data-sts-reset>Reset</button><span aria-live="polite" data-sts-status>Step 1 of 4</span><button type="button" data-sts-next>Next step</button></div>
+</figure>
+<p class="iam-visual-summary">A trust policy authorizes an STS operation such as <code>AssumeRole</code>; it does not grant S3 or KMS access. The resulting role session uses temporary credentials to sign later service requests, which receive their own authorization decisions.</p>
+
+<script>
+  for (const visual of document.querySelectorAll<HTMLElement>('[data-sts]')) {
+    let step = 1;
+    const render = () => {
+      for (const item of visual.querySelectorAll<HTMLElement>('[data-sts-step]')) { const n = Number(item.dataset.stsStep); item.classList.toggle('active', n === step); item.classList.toggle('complete', n < step); }
+      visual.querySelector<HTMLElement>('[data-credentials]')!.dataset.visible = String(step === 4);
+      visual.querySelector('[data-sts-status]')!.textContent = `Step ${step} of 4`;
+      visual.querySelector('[data-sts-next]')!.textContent = step === 4 ? 'Replay' : 'Next step';
+    };
+    visual.querySelector('[data-sts-next]')!.addEventListener('click', () => { step = step === 4 ? 1 : step + 1; render(); });
+    visual.querySelector('[data-sts-reset]')!.addEventListener('click', () => { step = 1; render(); });
+  }
+</script>

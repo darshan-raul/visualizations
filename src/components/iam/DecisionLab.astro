@@ -1,0 +1,67 @@
+---
+const controls = [
+  ['grant','Identity-policy allow','grant','Role policy allows s3:PutObject'],
+  ['boundary','Permissions boundary','optional','Attached and permits the action'],
+  ['session','Session policy','absent','No session policy supplied'],
+  ['scp','SCP','optional','Applies and permits the action'],
+  ['rcp','RCP','absent','No applicable RCP'],
+  ['deny','Explicit deny','off','No matching deny statement'],
+];
+---
+
+<figure class="iam-figure decision-lab" data-decision-lab>
+  <figcaption><strong>Common identity-policy path</strong><span>Change the grant, optional ceilings, or explicit deny. The result names the first reason this request fails.</span></figcaption>
+  <div class="decision-layout">
+    <div class="decision-controls">
+      {controls.map((control) => (
+        <label><span><strong>{control[1]}</strong><small data-control-detail={control[0]}>{control[3]}</small></span>
+          {control[2] === 'optional' || control[2] === 'absent' ?
+            <select aria-label={`${control[1]} state`} data-control={control[0]}><option value="absent" selected={control[2] === 'absent'}>Not present</option><option value="permit" selected={control[2] === 'optional'}>Permits</option><option value="block">Does not permit</option></select> :
+            <button type="button" class:list={['iam-switch', control[0] === 'deny' && 'deny']} aria-pressed={control[0] === 'grant' ? 'true' : 'false'} data-control={control[0]}><span class="sr-only">Toggle {control[1]}</span></button>}
+        </label>
+      ))}
+    </div>
+    <div>
+      <ol class="gate-pipeline">
+        <li data-gate="grant"><span>1</span><strong>Grant</strong><small>identity policy</small></li>
+        <li data-gate="boundary"><span>2</span><strong>Boundary</strong><small>optional ceiling</small></li>
+        <li data-gate="session"><span>3</span><strong>Session</strong><small>optional filter</small></li>
+        <li data-gate="scp"><span>4</span><strong>SCP</strong><small>principal ceiling</small></li>
+        <li data-gate="rcp"><span>5</span><strong>RCP</strong><small>resource ceiling</small></li>
+        <li data-gate="deny"><span>6</span><strong>No deny</strong><small>all applicable policies</small></li>
+      </ol>
+      <div class="decision-output" role="status" aria-live="polite" data-output><strong data-word>ALLOW</strong><span data-reason>A matching identity-policy allow survives every applicable ceiling, and no explicit deny applies.</span></div>
+    </div>
+  </div>
+  <details><summary>Where resource-policy grants change this model</summary><p>A resource policy grant to a user ARN, role ARN, or assumed-role session ARN can interact differently with permissions boundaries and session policies. This lab deliberately follows a role session whose grant comes from its role’s identity policy. See the principal edge-case section below before applying this pipeline to a direct resource-policy grant.</p></details>
+</figure>
+<p class="iam-visual-summary">A request begins denied. A relevant grant must survive every limiter that applies to this path. Any applicable explicit deny wins, even when all other controls allow the request.</p>
+
+<script>
+  for (const lab of document.querySelectorAll<HTMLElement>('[data-decision-lab]')) {
+    const controls = [...lab.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-control]')];
+    const read = (id: string) => {
+      const control = controls.find((item) => item.dataset.control === id)!;
+      return control instanceof HTMLSelectElement ? control.value : control.getAttribute('aria-pressed') === 'true' ? 'on' : 'off';
+    };
+    const render = () => {
+      const states = Object.fromEntries(['grant','boundary','session','scp','rcp','deny'].map((id) => [id, read(id)]));
+      const blockers: Record<string,string> = { grant: 'No applicable allow exists, so the request remains implicitly denied.', boundary: 'The attached permissions boundary does not permit s3:PutObject.', session: 'The supplied session policy filters out s3:PutObject.', scp: 'The applicable SCP does not permit s3:PutObject.', rcp: 'The applicable RCP does not permit access to this resource.' };
+      let blocked = states.grant === 'off' ? 'grant' : ['boundary','session','scp','rcp'].find((id) => states[id] === 'block');
+      if (states.deny === 'on') blocked = 'deny';
+      for (const gate of lab.querySelectorAll<HTMLElement>('[data-gate]')) {
+        const id = gate.dataset.gate!;
+        const state = states[id];
+        gate.dataset.state = id === 'deny' ? (state === 'on' ? 'blocked' : 'pass') : state === 'block' || state === 'off' ? 'blocked' : state === 'absent' ? 'absent' : 'pass';
+        if (id === 'deny') gate.querySelector('strong')!.textContent = state === 'on' ? 'Explicit deny' : 'No deny';
+      }
+      const denied = Boolean(blocked);
+      lab.querySelector<HTMLElement>('[data-output]')!.dataset.result = denied ? 'deny' : 'allow';
+      lab.querySelector('[data-word]')!.textContent = denied ? 'DENY' : 'ALLOW';
+      lab.querySelector('[data-reason]')!.textContent = blocked === 'deny' ? 'An applicable explicit deny overrides every allow.' : blocked ? blockers[blocked] : 'A matching identity-policy allow survives every applicable ceiling, and no explicit deny applies.';
+      window.dispatchEvent(new CustomEvent('iam:decision', { detail: denied ? 'DENY' : 'ALLOW' }));
+    };
+    for (const control of controls) control.addEventListener(control instanceof HTMLSelectElement ? 'change' : 'click', () => { if (!(control instanceof HTMLSelectElement)) control.setAttribute('aria-pressed', String(control.getAttribute('aria-pressed') !== 'true')); render(); });
+    render();
+  }
+</script>

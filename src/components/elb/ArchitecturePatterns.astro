@@ -1,0 +1,13 @@
+---
+---
+<figure class="visual">
+        <figcaption class="visual-cap"><span class="label">Architecture patterns + operating loop</span><h3>Three coherent paths</h3><p>These are role compositions, not universal reference architectures.</p></figcaption>
+        <div class="patterns">
+          <article class="pattern"><div class="path-text">Client → ALB → HTTP services</div><div><strong>Choose this when</strong>A regional HTTP entrance needs content-aware routing.</div><div><strong>Verify</strong>Rules, target health, TLS boundaries, and the all-targets-unhealthy drill.</div></article>
+          <article class="pattern"><div class="path-text">Client → Global Accelerator → ALB Region A / B → services</div><div><strong>Choose this when</strong>You need stable global entry plus health-based regional choice and HTTP routing.</div><div><strong>Verify</strong>Endpoint health inheritance, client IP behavior, and new-connection failover.</div></article>
+          <article class="pattern"><div class="path-text">Client → routed GWLB inspection → NLB or ALB → targets</div><div><strong>Choose this when</strong>A routed path must traverse a scalable appliance fleet before application entry.</div><div><strong>Verify</strong>Forward and return routes, AZ placement, flow symmetry, and appliance failure.</div></article>
+        </div>
+        <div class="ops-loop" aria-label="Production operating loop"><div class="ops-step"><b>01 DEFINE</b>Protocol, scope, identity, and failure boundary.</div><div class="ops-step"><b>02 ROUTE</b>Map DNS, listeners, zones, routes, and trust.</div><div class="ops-step"><b>03 HEALTH</b>Probe a condition that represents useful service.</div><div class="ops-step"><b>04 OBSERVE</b>Correlate endpoint, target, flow, and app evidence.</div><div class="ops-step"><b>05 BREAK</b>Test one target, one zone, one appliance, one Region.</div><div class="ops-step"><b>06 REFINE</b>Right-size capacity and remove redundant hops.</div></div>
+        <div class="inspection-warning"><strong>Inspection-path caveat · verified 2026-09-10.</strong> AWS documents that Global Accelerator traffic with client-IP preservation enabled bypasses GWLB endpoints, AWS Network Firewall, and NACL evaluation. Validate the exact ingress path before claiming inline inspection.</div>
+        <div class="takeaway"><strong>Monitor the full decision chain:</strong> edge endpoint health, regional load-balancer health, appliance health where used, and the application outcome seen by a synthetic client.</div>
+      </figure>

@@ -1,0 +1,56 @@
+---
+---
+<figure class="visual" id="gwlb-lab">
+        <figcaption class="visual-cap"><span class="label">Hero interaction · routed stepper</span><h3>The route creates the detour; GWLB scales the appliance hop</h3><p>Step through an allowed packet, then switch the appliance verdict to see exactly where the path ends.</p></figcaption>
+        <div class="lab-controls">
+          <fieldset class="radio-set"><legend>Appliance result</legend><label><input type="radio" name="verdict" value="allow" checked /> Allow packet</label><label><input type="radio" name="verdict" value="drop" /> Drop packet</label></fieldset>
+          <div class="controls"><button class="control-button" type="button" id="gwlb-prev">Previous</button><button class="control-button primary" type="button" id="gwlb-next">Next step</button><button class="control-button" type="button" id="gwlb-reset">Reset</button></div>
+        </div>
+        <div class="gwlb-map">
+          <div class="vpc"><strong>CONSUMER VPC · 10.0.0.0/16</strong><div class="vpc-nodes"><div class="node" id="gwlb-route"><b>Ingress route</b><small>app subnet → vpce</small></div><div class="node" id="gwlb-endpoint"><b>GWLB endpoint</b><small>vpce-0abc123example · zonal</small></div><div class="node" id="gwlb-app"><b>Application subnet</b><small>10.0.21.0/24</small></div></div></div>
+          <div class="gwlb-tunnel" id="gwlb-tunnel">PrivateLink<br/>service path</div>
+          <div class="vpc"><strong>SERVICE VPC · 10.2.0.0/16</strong><div class="vpc-nodes"><div class="node" id="gwlb-node"><b>Gateway Load Balancer</b><small>flow → target group</small></div><div class="node" id="gwlb-fw"><span class="status healthy" id="gwlb-verdict">ALLOW</span><b>firewall-a</b><small>10.2.11.20 · UDP 6081</small></div><div class="node"><b>firewall-b</b><small>healthy alternate for new flow</small></div></div></div>
+        </div>
+        <div class="packet-anatomy" id="packet-anatomy"><span>outer IPv4</span><span>UDP :6081</span><span>GENEVE metadata</span><span>inner: 203.0.113.24 → 10.0.21.18</span></div>
+        <div class="step-output" aria-live="polite"><strong id="gwlb-step-title">Step 1 · The ingress route matches</strong><p id="gwlb-step-copy">The destination route points at the zonal GWLB endpoint. The route, not the application listener, begins this detour.</p></div>
+        <div class="step-rail" aria-label="Inspection sequence"><div class="step-card active"><b>1</b>Route</div><div class="step-card"><b>2</b>Endpoint</div><div class="step-card"><b>3</b>Service path</div><div class="step-card"><b>4</b>Select</div><div class="step-card"><b>5</b>Encapsulate</div><div class="step-card"><b>6</b>Inspect</div><div class="step-card"><b>7</b>Return</div></div>
+        <ol class="no-js-sequence"><li>Route matches the application-subnet destination.</li><li>The packet enters the zonal GWLB endpoint.</li><li>The endpoint service carries it to GWLB.</li><li>GWLB maps the flow to a healthy appliance.</li><li>GWLB sends the original packet inside GENEVE over UDP 6081.</li><li>The appliance allows or drops the packet.</li><li>Allowed traffic returns through the endpoint and route to the application.</li></ol>
+        <div class="service-details"><article><h4>Route and endpoint ownership</h4><p>A route table targets a zonal GWLB endpoint in the consumer VPC. PrivateLink connects that endpoint to the provider’s endpoint service and GWLB; the endpoint is distinct from the load balancer.</p></article><article><h4>Flow stickiness and symmetry</h4><p>Five-tuple stickiness is the default for TCP/UDP flows. Stateful appliances need both directions of a flow to traverse the expected inspection path; Transit Gateway appliance-mode designs add their own constraints.</p></article><article><h4>Appliance and operations</h4><p>Appliances must support GENEVE and allow UDP 6081. Observe target health, appliance capacity, dropped packets, route tables, flow logs, and forward/return-path symmetry.</p></article></div>
+        <div class="behavior-note"><strong>Behavior to keep in mind.</strong> By default, an existing flow stays on its appliance even after that target becomes unhealthy; configurable target failover can rebalance. If every appliance target is unhealthy, GWLB still selects one and traffic can drop.</div>
+        <div class="takeaway"><strong>GWLB’s target is the appliance.</strong> The application remains beyond the inspection return path.</div>
+      </figure>
+
+<script>
+// @ts-nocheck
+    const gwlbSteps = [
+      ['The ingress route matches','The destination route points at the zonal GWLB endpoint. The route, not the application listener, begins this detour.','route'],
+      ['The packet enters the endpoint','The original packet enters vpce-0abc123example in the consumer VPC.','endpoint'],
+      ['The endpoint service carries the packet','PrivateLink connectivity carries traffic from the consumer endpoint to GWLB in the service VPC.','tunnel'],
+      ['GWLB selects firewall-a','A flow mapping chooses a healthy appliance target. New packets in the same flow stay with that appliance.','node'],
+      ['GWLB adds a GENEVE envelope','The original IP packet remains inside an outer IPv4, UDP 6081, and GENEVE envelope sent to firewall-a.','packet'],
+      ['Firewall-a inspects the packet','VERDICT_COPY','firewall'],
+      ['The allowed packet returns to the route','The appliance returns the packet through GWLB and the endpoint. The consumer VPC route can now carry it toward the application subnet.','app']
+    ];
+    let gwlbStep = 0;
+    let gwlbVerdict = 'allow';
+    const stepCards = [...document.querySelectorAll('.step-card')];
+    function renderGwlb() {
+      const maxStep = gwlbVerdict === 'drop' ? 5 : 6;
+      if (gwlbStep > maxStep) gwlbStep = maxStep;
+      const [title, copy] = gwlbSteps[gwlbStep];
+      document.getElementById('gwlb-step-title').textContent = `Step ${gwlbStep + 1} · ${title}`;
+      document.getElementById('gwlb-step-copy').textContent = copy === 'VERDICT_COPY' ? (gwlbVerdict === 'allow' ? 'Firewall-a allows the packet and returns it to GWLB. Inspection does not choose the application target.' : 'Firewall-a drops the packet. No inspected packet returns to the endpoint or reaches the application subnet.') : copy;
+      stepCards.forEach((card,index) => { card.className = 'step-card' + (index < gwlbStep ? ' done' : '') + (index === gwlbStep ? ' active' : ''); });
+      if (gwlbVerdict === 'drop' && gwlbStep === 5) stepCards[5].className = 'step-card active failed';
+      ['gwlb-route','gwlb-endpoint','gwlb-node','gwlb-fw','gwlb-app'].forEach(id => document.getElementById(id).classList.remove('healthy','unhealthy'));
+      const activeIds = ['gwlb-route','gwlb-endpoint','gwlb-tunnel','gwlb-node','packet-anatomy','gwlb-fw','gwlb-app'];
+      const active = document.getElementById(activeIds[gwlbStep]);
+      if (active && !['gwlb-tunnel','packet-anatomy'].includes(active.id)) active.classList.add(gwlbVerdict === 'drop' && gwlbStep === 5 ? 'unhealthy' : 'healthy');
+      document.getElementById('gwlb-tunnel').classList.toggle('broken', gwlbVerdict === 'drop' && gwlbStep >= 5);
+      document.getElementById('gwlb-verdict').textContent = gwlbVerdict === 'allow' ? '✓ ALLOW' : '× DROP';
+      document.getElementById('gwlb-verdict').className = `status ${gwlbVerdict === 'allow' ? 'healthy' : 'unhealthy'}`;
+      document.getElementById('gwlb-prev').disabled = gwlbStep === 0;
+      document.getElementById('gwlb-next').disabled = gwlbStep === maxStep;
+    }
+    document.getElementById('gwlb-prev').addEventListener('click', () => { gwlbStep = Math.max(0, gwlbStep - 1); renderGwlb(); });
+</script>

@@ -31,6 +31,17 @@ npm run preview
 
 The production build is written to `dist/`. Pagefind indexes both generated Astro pages and the preserved legacy explainers after each build.
 
+## Creating topic visuals
+
+Use the [Universal Visual Specification Generator](./guide/INFRA_ILLUSTRATED_VISUAL_SPEC_GENERATOR.md) for every new topic and substantial visual rebuild. The [repository workflow](./AGENTS.md#visual-design-workflow) explains how to research, specify, prototype, review, and integrate the result. Follow the [Writing Guide](./WRITING-GUIDE.md) for prose and the [Site Rebuild Brief](./SITE-REBUILD-BRIEF.md) for product scope, architecture, and the shared visual system.
+
+Before full integration, produce both approval artifacts under `guide/topics/<topic-slug>/`:
+
+- `<topic-slug>-visual-spec.md` — narrative order, detailed visual and interaction contracts, sources, and acceptance criteria.
+- `<topic-slug>-visual-prototype.html` — the complete representative page with working interactions and responsive, accessible behavior.
+
+These are design artifacts outside the published site. Once the direction is accepted, integrate it into canonical MDX and shared Astro/TypeScript components and run the publication checks. Existing approval or implementation authorization carries forward. Small fixes and copy edits do not require restarting this workflow.
+
 ## Current visualizations
 
 | Collection | Visualization | Format |

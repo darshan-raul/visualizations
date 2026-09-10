@@ -1,0 +1,40 @@
+---
+const principals = [
+  { id: 'human', label: 'Workforce user', source: 'Darshan signs in through IAM Identity Center', operation: 'Account assignment vends credentials', runtime: 'AWSReservedSSO_AppDeployer / darshan', arn: 'arn:aws:sts::111122223333:assumed-role/AWSReservedSSO_AppDeployer_…/darshan', credentials: 'Temporary role credentials' },
+  { id: 'workload', label: 'AWS workload', source: 'An ECS task receives its task-role credentials', operation: 'Container credential provider', runtime: 'OrdersTaskRole / task-7f3a', arn: 'arn:aws:sts::111122223333:assumed-role/OrdersTaskRole/task-7f3a', credentials: 'Rotating temporary credentials' },
+  { id: 'user', label: 'IAM user', source: 'The deploy-bot IAM user owns access keys', operation: 'Signs the request directly', runtime: 'deploy-bot', arn: 'arn:aws:iam::111122223333:user/deploy-bot', credentials: 'Long-term access keys' },
+  { id: 'service', label: 'AWS service', source: 'Lambda acts as a service principal in a trust relationship', operation: 'Service-to-service authorization', runtime: 'lambda.amazonaws.com', arn: 'lambda.amazonaws.com', credentials: 'Service-managed' },
+  { id: 'account', label: 'AWS account delegation', source: 'A policy delegates authority to account 444455556666', operation: 'That account authorizes one of its identities', runtime: 'Identity chosen in account 444455556666', arn: 'The account ARN is a delegation target, not the runtime signer', credentials: 'Depends on the chosen identity' },
+  { id: 'federated', label: 'External identity', source: 'GitHub presents an OIDC token to AWS STS', operation: 'AssumeRoleWithWebIdentity', runtime: 'GitHubDeploy / repo-main', arn: 'arn:aws:sts::111122223333:assumed-role/GitHubDeploy/repo-main', credentials: 'Temporary role credentials' },
+];
+---
+
+<figure class="iam-figure iam-principals" data-principal-explorer>
+  <figcaption><strong>Source identity → runtime principal</strong><span>Select who starts the journey, then inspect the principal that signs the service request.</span></figcaption>
+  <div class="iam-selector" role="group" aria-label="Choose an identity source">
+    {principals.map((item, i) => <button type="button" aria-pressed={i === 0 ? 'true' : 'false'} data-principal={item.id}>{item.label}</button>)}
+  </div>
+  <div class="principal-flow" aria-live="polite">
+    <article><small>Source</small><strong data-source>{principals[0].source}</strong></article>
+    <div class="iam-connector"><span data-operation>{principals[0].operation}</span></div>
+    <article><small>Runtime principal</small><strong data-runtime>{principals[0].runtime}</strong><code data-arn>{principals[0].arn}</code></article>
+  </div>
+  <dl class="iam-inspector">
+    <div><dt>Credential type</dt><dd data-credentials>{principals[0].credentials}</dd></div>
+    <div><dt>Request context</dt><dd>Account, session, tags, MFA and organization facts can affect matching conditions.</dd></div>
+  </dl>
+  <div class="iam-not-principal"><strong>These are not principals</strong><span>IAM group</span><span>Policy</span><span>Permission set</span><span>Access key</span><span>Permissions boundary</span></div>
+</figure>
+<p class="iam-visual-summary">The person or workload that starts an action may first become a role session. Authorization follows the runtime principal and its request context. An IAM group organizes user permissions; it cannot authenticate or appear in a policy’s <code>Principal</code> element.</p>
+
+<script is:inline data-principals={JSON.stringify(principals)}>
+  const principals = JSON.parse(document.currentScript.dataset.principals);
+  for (const explorer of document.querySelectorAll('[data-principal-explorer]')) {
+    for (const button of explorer.querySelectorAll('[data-principal]')) button.addEventListener('click', () => {
+      const item = principals.find((candidate) => candidate.id === button.dataset.principal);
+      explorer.querySelectorAll('[data-principal]').forEach((candidate) => candidate.setAttribute('aria-pressed', String(candidate === button)));
+      for (const [selector, key] of [['[data-source]','source'],['[data-operation]','operation'],['[data-runtime]','runtime'],['[data-arn]','arn'],['[data-credentials]','credentials']]) explorer.querySelector(selector).textContent = item[key];
+      window.dispatchEvent(new CustomEvent('iam:principal', { detail: item.runtime }));
+    });
+  }
+</script>

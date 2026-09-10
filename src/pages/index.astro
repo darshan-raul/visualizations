@@ -35,7 +35,7 @@ const featuredTopics = sortedTopics.filter((topic) => topic.data.featured);
           const format = formatLabels[topic.data.format as keyof typeof formatLabels];
 
           return (
-            <a class={`preview-item collection-${topic.data.collection}`} href={topic.data.legacyPath}>
+            <a class={`preview-item collection-${topic.data.collection}`} href={topic.data.legacyPath || `/${topic.data.slug}`}>
               <span class="preview-index">{(index + 1).toString().padStart(2, '0')}</span>
               <span class="preview-copy">
                 <strong>{topic.data.title}</strong>

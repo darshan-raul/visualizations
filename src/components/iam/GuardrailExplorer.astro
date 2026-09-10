@@ -1,0 +1,42 @@
+---
+const actions = [
+  ['s3:GetObject',true],['s3:PutObject',true],['s3:DeleteObject',false],['kms:Decrypt',true],['iam:CreateUser',false]
+];
+---
+
+<figure class="iam-figure guardrails" data-guardrails>
+  <figcaption><strong>Two guardrails, two scopes</strong><span>A boundary caps delegated IAM roles. SCPs inherit through the organization and cap member-account principals.</span></figcaption>
+  <div class="iam-selector compact" role="group" aria-label="Choose a guardrail"><button type="button" aria-pressed="true" data-guardrail="boundary">Permissions boundary</button><button type="button" aria-pressed="false" data-guardrail="scp">SCP inheritance</button></div>
+  <section data-guardrail-panel="boundary">
+    <div class="boundary-layout">
+      <div><h3>Application team’s role policy</h3><p>Select the actions the team wants to grant.</p><div class="action-list">{actions.map(([action]) => <button type="button" aria-pressed="true" data-action={action}>{action}</button>)}</div></div>
+      <div class="boundary-frame"><small>AppTeamBoundary · maximum</small><div>{actions.filter(([,inside]) => inside).map(([action]) => <code>{action}</code>)}</div><h3>Effective permissions</h3><div data-effective>{actions.filter(([,inside]) => inside).map(([action]) => <code>{action}</code>)}</div><h3>Outside the boundary</h3><div data-blocked>{actions.filter(([,inside]) => !inside).map(([action]) => <del>{action}</del>)}</div></div>
+    </div>
+    <p class="formula-note">Boundary ∩ identity policy = possible identity-policy permissions. Boundary alone = zero permissions.</p>
+  </section>
+  <section data-guardrail-panel="scp">
+    <div class="org-layout">
+      <ol class="org-tree"><li><strong>Organization root</strong><small>Deny leaving the organization</small><ol><li><strong>Management account</strong><small>Outside SCP enforcement</small></li><li><strong>Production OU</strong><small>Deny disabling CloudTrail</small><ol><li><strong>Payments OU</strong><small>Approved Regions only</small><ol><li class="selected"><strong>prod-payments account</strong><small>Member account</small></li></ol></li></ol></li></ol></li></ol>
+      <div class="inherited"><small>Inherited effective ceiling</small><h3>prod-payments account</h3><p><b>Root:</b> cannot leave the organization</p><p><b>Production OU:</b> cannot stop CloudTrail</p><p><b>Payments OU:</b> selected actions limited to approved Regions</p><p>These restrictions still apply when the principal has <code>AdministratorAccess</code>.</p><span>RCP sibling: caps permissions on supported resources.</span></div>
+    </div>
+    <p class="formula-note">SCPs affect principals in member accounts, including the member account root user. They do not restrict principals in the management account, and they never grant permissions.</p>
+  </section>
+</figure>
+<p class="iam-visual-summary">A permissions boundary follows one IAM user or role. An SCP follows the organization path to a member account. Both constrain existing grants; neither creates one.</p>
+
+<script is:inline data-actions={JSON.stringify(actions)}>
+  const actions = JSON.parse(document.currentScript.dataset.actions);
+  for (const visual of document.querySelectorAll('[data-guardrails]')) {
+    visual.querySelector('[data-guardrail-panel="scp"]').hidden = true;
+    for (const tab of visual.querySelectorAll('[data-guardrail]')) tab.addEventListener('click', () => {
+      visual.querySelectorAll('[data-guardrail]').forEach((item) => item.setAttribute('aria-pressed', String(item === tab)));
+      visual.querySelectorAll('[data-guardrail-panel]').forEach((panel) => panel.hidden = panel.dataset.guardrailPanel !== tab.dataset.guardrail);
+    });
+    const render = () => {
+      const selected = [...visual.querySelectorAll('[data-action][aria-pressed="true"]')].map((item) => item.dataset.action);
+      visual.querySelector('[data-effective]').innerHTML = selected.filter((action) => actions.find((item) => item[0] === action)[1]).map((action) => `<code>${action}</code>`).join('') || '<span>None</span>';
+      visual.querySelector('[data-blocked]').innerHTML = selected.filter((action) => !actions.find((item) => item[0] === action)[1]).map((action) => `<del>${action}</del>`).join('') || '<span>None</span>';
+    };
+    for (const action of visual.querySelectorAll('[data-action]')) action.addEventListener('click', () => { action.setAttribute('aria-pressed', String(action.getAttribute('aria-pressed') !== 'true')); render(); });
+  }
+</script>

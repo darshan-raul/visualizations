@@ -1,0 +1,93 @@
+---
+const policies = [
+  ['identity','Grant','Identity-based','User, group, or role','Yes','The attached identity is the implied principal.'],
+  ['resource','Grant','Resource-based','Supported resource','Yes','Cross-account access normally also needs caller-side permission.'],
+  ['boundary','Limiter','Permissions boundary','IAM user or role','No','Caps identity-policy permissions; it grants nothing.'],
+  ['session','Limiter','Session policy','Role or federated session request','No','Narrows the session; it cannot expand role permissions.'],
+  ['scp','Limiter','Service control policy','Organization root, OU, or member account','No','Caps principals in member accounts.'],
+  ['rcp','Limiter','Resource control policy','Organization root, OU, or member account','No','Caps permissions available on supported resources.'],
+  ['endpoint','Path control','VPC endpoint policy','VPC endpoint','No','Applies only to traffic through that endpoint.'],
+  ['acl','Service-specific','Access control list','Supported resource','Cross-account','Non-JSON and cannot grant same-account access.'],
+  ['ram','Sharing','RAM resource share','Resource share','Via managed permissions','Shares only supported resource types.'],
+];
+const identityCode = `{
+  "Version": "2012-10-17",
+  "Statement": {
+    "Sid": "PublishRelease",
+    "Effect": "Allow",
+    "Action": "s3:PutObject",
+    "Resource": "arn:aws:s3:::prod-artifacts/releases/*",
+    "Condition": {
+      "StringEquals": {
+        "aws:PrincipalTag/Environment": "prod"
+      }
+    }
+  }
+}`;
+const resourceCode = `{
+  "Version": "2012-10-17",
+  "Statement": {
+    "Sid": "AllowAppDeployer",
+    "Effect": "Allow",
+    "Principal": {
+      "AWS": "arn:aws:iam::111122223333:role/AppDeployer"
+    },
+    "Action": "s3:PutObject",
+    "Resource": "arn:aws:s3:::prod-artifacts/releases/*"
+  }
+}`;
+---
+
+<figure class="iam-figure iam-attach">
+  <figcaption><strong>An allow can enter from either side</strong><span>Identity policies grant to their attached identity. Resource policies name the principal receiving access.</span></figcaption>
+  <div class="attach-map">
+    <article><small>Identity side</small><strong>AppDeployer role policy</strong><span class="grant-chip">Allows s3:PutObject →</span></article>
+    <div class="request-wire">signed request</div>
+    <article><small>Resource side</small><strong>prod-artifacts bucket policy</strong><span class="grant-chip">← Names AppDeployer</span></article>
+  </div>
+</figure>
+<p class="iam-visual-summary">In the same account, either side can often supply a sufficient allow. Across accounts, the caller’s account and the resource-owning account normally must both authorize access.</p>
+
+<figure class="iam-figure iam-policy-map" data-policy-map>
+  <figcaption><strong>Nine policy types, three different jobs</strong><span>Filled cards can supply a grant. Outlined controls narrow a grant or govern a particular path.</span></figcaption>
+  <div class="policy-layout">
+    <div class="iam-selector policy-selector" role="group" aria-label="Choose a policy type">
+      {policies.map((p, i) => <button type="button" class:list={[p[1] !== 'Grant' && 'limiter']} aria-pressed={i === 0 ? 'true' : 'false'} data-policy={p[0]}><small>{p[1]}</small>{p[2]}</button>)}
+    </div>
+    <article class="policy-card" aria-live="polite">
+      <small data-policy-group>{policies[0][1]}</small><h3 data-policy-title>{policies[0][2]}</h3>
+      <dl><div><dt>Attached to</dt><dd data-policy-attach>{policies[0][3]}</dd></div><div><dt>Can grant?</dt><dd data-policy-grant>{policies[0][4]}</dd></div></dl>
+      <p data-policy-note>{policies[0][5]}</p>
+      <div class="policy-geometry" data-policy-geometry="grant"><span>Principal</span><b>policy</b><span>Resource</span></div>
+    </article>
+  </div>
+</figure>
+<p class="iam-visual-summary">Identity and resource policies are the ordinary grant sources. Boundaries, session policies, SCPs and RCPs reduce the available permissions. Endpoint policies, ACLs and RAM participate only for their supported path or resource model.</p>
+
+<figure class="iam-figure iam-anatomy" data-policy-anatomy>
+  <figcaption><strong>Map the statement to the request</strong><span>The same S3 request expressed from the identity side or resource side.</span></figcaption>
+  <div class="iam-selector compact" role="group" aria-label="Choose statement type"><button type="button" aria-pressed="true" data-anatomy="identity">Identity policy</button><button type="button" aria-pressed="false" data-anatomy="resource">Resource policy</button></div>
+  <div class="anatomy-layout">
+    <dl><div><dt>Effect</dt><dd>Allow or deny a matching request</dd></div><div><dt>Principal</dt><dd data-principal-note>Implied by the attached role</dd></div><div><dt>Action</dt><dd>The API operation</dd></div><div><dt>Resource</dt><dd>The target ARN</dd></div><div><dt>Condition</dt><dd>Facts that must match</dd></div></dl>
+    <pre data-policy-code><code>{identityCode}</code></pre>
+  </div>
+</figure>
+<p class="iam-visual-summary">An identity policy cannot contain <code>Principal</code>; the user, group or role it is attached to supplies that identity. A resource policy must name the principal receiving the permission.</p>
+
+<script is:inline data-policies={JSON.stringify(policies)} data-identity-code={identityCode} data-resource-code={resourceCode}>
+  const policies = JSON.parse(document.currentScript.dataset.policies);
+  const identityCode = document.currentScript.dataset.identityCode;
+  const resourceCode = document.currentScript.dataset.resourceCode;
+  for (const map of document.querySelectorAll('[data-policy-map]')) for (const button of map.querySelectorAll('[data-policy]')) button.addEventListener('click', () => {
+    const p = policies.find((item) => item[0] === button.dataset.policy);
+    map.querySelectorAll('[data-policy]').forEach((item) => item.setAttribute('aria-pressed', String(item === button)));
+    for (const [selector,index] of [['[data-policy-group]',1],['[data-policy-title]',2],['[data-policy-attach]',3],['[data-policy-grant]',4],['[data-policy-note]',5]]) map.querySelector(selector).textContent = p[index];
+    map.querySelector('[data-policy-geometry]').dataset.policyGeometry = p[1] === 'Grant' ? 'grant' : p[1] === 'Limiter' ? 'limit' : 'path';
+  });
+  for (const anatomy of document.querySelectorAll('[data-policy-anatomy]')) for (const button of anatomy.querySelectorAll('[data-anatomy]')) button.addEventListener('click', () => {
+    const resource = button.dataset.anatomy === 'resource';
+    anatomy.querySelectorAll('[data-anatomy]').forEach((item) => item.setAttribute('aria-pressed', String(item === button)));
+    anatomy.querySelector('[data-policy-code] code').textContent = resource ? resourceCode : identityCode;
+    anatomy.querySelector('[data-principal-note]').textContent = resource ? 'Named explicitly in the statement' : 'Implied by the attached role';
+  });
+</script>

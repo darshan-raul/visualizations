@@ -1,0 +1,25 @@
+<figure class="iam-figure least-privilege">
+  <figcaption><strong>Treat least privilege as a refinement loop</strong><span>A working policy is a hypothesis. Test it against the task and improve it with observed use.</span></figcaption>
+  <div class="least-layout">
+    <ol>
+      <li><b>Define the task</b><span>Name the actor, resource and trust boundary.</span></li>
+      <li><b>Start narrowly</b><span>Choose plausible actions, resources and conditions.</span></li>
+      <li><b>Validate and test</b><span>Catch syntax, unsupported resources and missing context.</span></li>
+      <li><b>Observe real use</b><span>Inspect CloudTrail and Access Analyzer evidence.</span></li>
+      <li><b>Remove and repeat</b><span>Shrink permissions as evidence improves.</span></li>
+    </ol>
+    <div>
+      <small>Before → after</small>
+      <div class="policy-diff">
+        <pre><code>{`"Action": "s3:*",
+"Resource": "*"`}</code></pre>
+        <span>→</span>
+        <pre><code>{`"Action": "s3:PutObject",
+"Resource":
+  "arn:aws:s3:::prod-artifacts/releases/*"`}</code></pre>
+      </div>
+      <div class="evidence-rail"><span>Policy validation</span><span>Policy generation</span><span>CloudTrail</span><span>Last accessed</span><span>Policy Simulator</span><span>External and unused access findings</span></div>
+    </div>
+  </div>
+</figure>
+<p class="iam-visual-summary">Begin with the task, verify the policy, observe what the principal actually uses, and remove unused access. Protect policy-management and <code>iam:PassRole</code> paths because they can expand what another principal can do.</p>
