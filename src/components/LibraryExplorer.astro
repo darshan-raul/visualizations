@@ -362,6 +362,23 @@ const filterGroups = [
     collectionSwitch?.querySelectorAll<HTMLButtonElement>('[data-collection-choice]').forEach((button) => button.addEventListener('click', () => {
       const value = button.dataset.collectionChoice || '';
       checks.filter((check) => check.dataset.filter === 'collection').forEach((check) => { check.checked = check.value === value; });
+      
+      if (tree) {
+        if (value) {
+          tree.querySelectorAll<HTMLButtonElement>('[data-tree-toggle]').forEach((toggle) => {
+            const isTarget = toggle.dataset.treeToggle === value;
+            toggle.setAttribute('aria-expanded', isTarget ? 'true' : 'false');
+            const label = toggle.querySelector('small');
+            const count = toggle.closest('[data-tree-branch]')?.querySelectorAll('[data-map-node]').length || 0;
+            if (label) label.textContent = `${count} topics · ${isTarget ? 'collapse' : 'expand'}`;
+          });
+          if (treeCamera) treeCamera.focus(`collection-${value}`);
+        } else {
+          // If "All" is clicked, zoom back out to see everything
+          if (treeCamera) treeCamera.focus(null);
+        }
+      }
+      
       void applyFilters('push');
     }));
     library.querySelectorAll<HTMLDetailsElement>('[data-filter-menu]').forEach((menu) => menu.addEventListener('toggle', () => {
@@ -379,23 +396,42 @@ const filterGroups = [
         const label = branchToggle.querySelector('small');
         const count = branchToggle.closest('[data-tree-branch]')?.querySelectorAll('[data-map-node]').length || 0;
         if (label) label.textContent = `${count} topics · ${expanded ? 'expand' : 'collapse'}`;
+        
+        // Accordion logic: collapse other branches when expanding this one
+        if (!expanded) {
+          tree?.querySelectorAll<HTMLButtonElement>('[data-tree-toggle]').forEach((otherButton) => {
+            if (otherButton !== branchToggle) {
+              otherButton.setAttribute('aria-expanded', 'false');
+              const otherLabel = otherButton.querySelector('small');
+              const otherCount = otherButton.closest('[data-tree-branch]')?.querySelectorAll('[data-map-node]').length || 0;
+              if (otherLabel) otherLabel.textContent = `${otherCount} topics · expand`;
+            }
+          });
+        }
+
         if (expanded && selectedTopic && branchToggle.closest('[data-tree-branch]')?.querySelector(`[data-map-node="${CSS.escape(selectedTopic)}"]`)) selectTopic(null);
         renderMapVisibility();
+        if (treeCamera) treeCamera.focus(!expanded && branchToggle.dataset.treeToggle ? `collection-${branchToggle.dataset.treeToggle}` : null);
         return;
       }
+
       if (allToggle) {
-        const expanded = allToggle.getAttribute('aria-expanded') !== 'false';
-        allToggle.setAttribute('aria-expanded', String(!expanded));
-        const rootLabel = allToggle.querySelector('small');
-        if (rootLabel) rootLabel.textContent = `${graph?.nodes.length || 0} visual references · ${expanded ? 'expand all' : 'collapse all'}`;
+        // Root node always resets to the 1+4 formation (collapse all)
+        allToggle.setAttribute('aria-expanded', 'false');
         tree?.querySelectorAll<HTMLButtonElement>('[data-tree-toggle]').forEach((button) => {
-          button.setAttribute('aria-expanded', String(!expanded));
+          button.setAttribute('aria-expanded', 'false');
           const label = button.querySelector('small');
           const count = button.closest('[data-tree-branch]')?.querySelectorAll('[data-map-node]').length || 0;
-          if (label) label.textContent = `${count} topics · ${expanded ? 'expand' : 'collapse'}`;
+          if (label) label.textContent = `${count} topics · expand`;
         });
-        if (expanded && selectedTopic) selectTopic(null);
-        renderMapVisibility();
+        if (selectedTopic) selectTopic(null);
+        
+        // Clear all filters so the other 3 collections actually reappear
+        input.value = '';
+        checks.forEach((check) => { check.checked = false; });
+        void applyFilters('push').then(() => {
+          if (treeCamera) treeCamera.focus(null);
+        });
         return;
       }
       const node = target.closest<HTMLButtonElement>('[data-map-node], [data-select-topic]'); if (node) selectTopic(node.dataset.mapNode || node.dataset.selectTopic || null);

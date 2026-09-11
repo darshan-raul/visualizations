@@ -1,8 +1,12 @@
 /* Full-viewport homepage shell. The tree itself stays in the reusable component. */
 body:has(.spatial-home) .ambient {
-  background: radial-gradient(ellipse at 55% 48%, rgba(31, 43, 58, .72), transparent 46%), var(--bg);
+  background:
+    radial-gradient(ellipse 80% 65% at 50% 48%, rgba(21, 30, 44, .55), transparent 62%),
+    radial-gradient(circle at 25% 30%, rgba(66,214,232,.035), transparent 35%),
+    radial-gradient(circle at 75% 65%, rgba(104,163,255,.03), transparent 32%),
+    var(--bg);
 }
-body:has(.spatial-home) .ambient::after { opacity: .38; mask-image: radial-gradient(circle at center, #000, transparent 84%); }
+body:has(.spatial-home) .ambient::after { opacity: .25; mask-image: radial-gradient(circle at center, #000, transparent 82%); }
 body:has(.spatial-home) .site-header { position: absolute; z-index: 40; top: 22px; left: 28px; border: 0; background: none; backdrop-filter: none; }
 body:has(.spatial-home) .header-inner { width: auto; min-height: 44px; }
 body:has(.spatial-home) .site-header nav,

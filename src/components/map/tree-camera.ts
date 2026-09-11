@@ -11,12 +11,31 @@ export function createTreeCamera(map: HTMLElement) {
     y: Number(element.dataset.treeY),
     z: Number(element.dataset.treeZ),
   }));
-  let yaw = 0;
-  let pitch = 0;
   let zoom = 1;
   let frame = 0;
   let drag: { id: number; x: number; y: number; moved: boolean } | null = null;
   let suppressClick = false;
+
+  let cameraX = 0;
+  let cameraY = 0;
+  let currentCameraZoom = 1;
+  let targetCameraX = 0;
+  let targetCameraY = 0;
+  let targetCameraZoom = 1;
+  let animFrame = 0;
+
+  function tickAnim() {
+    let moved = false;
+    if (Math.abs(targetCameraX - cameraX) > 0.5) { cameraX += (targetCameraX - cameraX) * 0.12; moved = true; }
+    if (Math.abs(targetCameraY - cameraY) > 0.5) { cameraY += (targetCameraY - cameraY) * 0.12; moved = true; }
+    if (Math.abs(targetCameraZoom - currentCameraZoom) > 0.005) { currentCameraZoom += (targetCameraZoom - currentCameraZoom) * 0.12; moved = true; }
+    if (moved) {
+      render();
+      animFrame = requestAnimationFrame(tickAnim);
+    } else {
+      animFrame = 0;
+    }
+  }
 
   function renderNow() {
     frame = 0;
@@ -26,35 +45,32 @@ export function createTreeCamera(map: HTMLElement) {
     world.style.cssText = `width:${width}px;height:${height}px;transform:none`;
     svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
     const compact = width < 700;
-    const baseScale = Math.max(.42, Math.min((width - (compact ? 40 : 160)) / 1050, (height - (compact ? 300 : 230)) / 1000, 1.15)) * zoom;
+    const baseScale = Math.max(.42, Math.min((width - (compact ? 40 : 160)) / 1050, (height - (compact ? 300 : 230)) / 1000, 1.15)) * zoom * currentCameraZoom;
     const centerX = compact ? width * .34 : width * .45;
     const centerY = compact ? height * .54 : height * .5;
     const projected = new Map<string, { x: number; y: number; z: number }>();
     const topicLabels: { element: HTMLElement; z: number }[] = [];
 
     for (const point of points) {
-      const x1 = point.x * Math.cos(yaw) + point.z * Math.sin(yaw);
-      const z1 = point.z * Math.cos(yaw) - point.x * Math.sin(yaw);
-      const y1 = point.y * Math.cos(pitch) - z1 * Math.sin(pitch);
-      const z2 = point.y * Math.sin(pitch) + z1 * Math.cos(pitch);
-      const perspective = 1150 / (1150 - z2);
-      const x = centerX + x1 * baseScale * perspective * (compact ? .45 : 1);
-      const y = centerY + y1 * baseScale * perspective;
-      const nodeScale = Math.max(.68, Math.min(1.22, perspective * (.83 + baseScale * .18)));
+      // Pure 2D flat layout
+      const x = centerX + cameraX + point.x * baseScale * (compact ? .45 : 1);
+      const y = centerY + cameraY + point.y * baseScale;
+      // Use point.size mapping as the 2D node scale base since it's flat
+      const nodeScale = Math.max(.7, Math.min(1.2, .75 + baseScale * .2));
       const box = point.element.matches('.tree-root') ? 92 : point.element.matches('.tree-collection') ? 70 : 46;
       point.element.style.width = `${box}px`;
       point.element.style.height = `${box}px`;
       point.element.style.left = `${x - box / 2}px`;
       point.element.style.top = `${y - box / 2}px`;
       point.element.style.transform = `scale(${nodeScale})`;
-      point.element.style.zIndex = String(Math.round(z2 + 500));
-      point.element.style.opacity = point.element.hidden ? '0' : String(.64 + (z2 + 420) / 1900);
-      projected.set(point.id, { x, y, z: z2 });
-      if (point.element.matches('.tree-topic') && !point.element.hidden) topicLabels.push({ element: point.element, z: z2 });
+      point.element.style.zIndex = String(Math.round(point.z + 500));
+      point.element.style.opacity = point.element.hidden ? '0' : '1';
+      projected.set(point.id, { x, y, z: point.z });
+      if (point.element.matches('.tree-topic') && !point.element.hidden) topicLabels.push({ element: point.element, z: point.z });
     }
 
     const occupied = [...map.querySelectorAll<HTMLElement>('.tree-root .tree-label, .tree-collection:not([hidden]) .tree-label')].map((label) => label.getBoundingClientRect());
-    topicLabels.sort((a, b) => b.z - a.z).forEach(({ element }) => {
+    topicLabels.forEach(({ element }) => {
       const label = element.querySelector<HTMLElement>('.tree-label')!;
       const bounds = label.getBoundingClientRect();
       const gap = compact ? 10 : 6;
@@ -86,8 +102,13 @@ export function createTreeCamera(map: HTMLElement) {
     if (!drag.moved && Math.hypot(dx, dy) < 5) return;
     drag.moved = true;
     viewport.setPointerCapture(event.pointerId);
-    yaw += dx * .0055;
-    pitch = Math.max(-1.05, Math.min(1.05, pitch + dy * .0055));
+    
+    // Pan in 2D instead of rotating
+    targetCameraX += dx;
+    targetCameraY += dy;
+    cameraX += dx;
+    cameraY += dy;
+    
     drag.x = event.clientX;
     drag.y = event.clientY;
     render();
@@ -107,19 +128,39 @@ export function createTreeCamera(map: HTMLElement) {
     event.stopImmediatePropagation();
   }, true);
   viewport.addEventListener('keydown', (event) => {
-    const keys: Record<string, [number, number]> = { ArrowLeft: [-.13, 0], ArrowRight: [.13, 0], ArrowUp: [0, -.13], ArrowDown: [0, .13] };
+    const keys: Record<string, [number, number]> = { ArrowLeft: [25, 0], ArrowRight: [-25, 0], ArrowUp: [0, 25], ArrowDown: [0, -25] };
     const delta = keys[event.key];
     if (!delta) return;
     event.preventDefault();
-    yaw += delta[0];
-    pitch = Math.max(-1.05, Math.min(1.05, pitch + delta[1]));
-    render();
+    targetCameraX += delta[0];
+    targetCameraY += delta[1];
+    if (!animFrame) tickAnim();
   });
   new ResizeObserver(render).observe(viewport);
 
   return {
     render,
     zoom(value: number) { zoom = value; render(); },
-    reset() { yaw = 0; pitch = 0; zoom = 1; render(); },
+    reset() { zoom = 1; targetCameraX = 0; targetCameraY = 0; targetCameraZoom = 1; if (!animFrame) tickAnim(); render(); },
+    focus(id: string | null) {
+      if (!id) {
+        targetCameraX = 0;
+        targetCameraY = 0;
+        targetCameraZoom = 1;
+      } else {
+        const pt = points.find(p => p.id === id);
+        if (pt) {
+          const width = viewport.clientWidth;
+          const compact = width < 700;
+          const currentScale = Math.max(.42, Math.min((width - (compact ? 40 : 160)) / 1050, (viewport.clientHeight - (compact ? 300 : 230)) / 1000, 1.15)) * zoom;
+          targetCameraZoom = compact ? 0.75 : 0.85;
+          
+          // Pure 2D offset calculation
+          targetCameraX = - (pt.x + (compact ? 200 : 450)) * currentScale * targetCameraZoom * (compact ? .45 : 1);
+          targetCameraY = - pt.y * currentScale * targetCameraZoom;
+        }
+      }
+      if (!animFrame) tickAnim();
+    }
   };
 }
