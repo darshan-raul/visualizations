@@ -56,3 +56,4 @@ body:has(.spatial-home) .site-footer { display: none; }
   .spatial-home .collection-switch button:first-child::before { font-size: .65rem; }
   .spatial-home .library-tools { top: 172px; }
 }
+svg [hidden], svg [data-hidden] { display: none !important; }

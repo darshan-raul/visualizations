@@ -245,7 +245,7 @@ const filterGroups = [
     }
 
     function focusSelectedNode(id: string) {
-      if (treeCamera) { treeCamera.render(); return; }
+      if (treeCamera) { treeCamera.focus(id); return; }
       if (!map || currentView !== 'map') return;
       const viewport = map.querySelector<HTMLElement>('[data-map-viewport]')!;
       const node = map.querySelector<HTMLButtonElement>(`[data-map-node="${CSS.escape(id)}"]`);
@@ -265,7 +265,15 @@ const filterGroups = [
       const previous = selectedTopic;
       selectedTopic = id && visibleIds.has(id) && nodeById.has(id) ? id : null;
       renderInspector();
-      if (selectedTopic) focusSelectedNode(selectedTopic);
+      
+      if (selectedTopic) {
+        focusSelectedNode(selectedTopic);
+      } else if (treeCamera) {
+        // When closing the inspector, pan back to the active collection
+        const expandedBranch = tree?.querySelector<HTMLButtonElement>('[data-tree-toggle][aria-expanded="true"]');
+        treeCamera.focus(expandedBranch && expandedBranch.dataset.treeToggle ? `collection-${expandedBranch.dataset.treeToggle}` : null);
+      }
+      
       if (mode === 'push') {
         if (selectedTopic) map?.querySelector<HTMLButtonElement>('[data-close-inspector]')?.focus();
         else if (previous) map?.querySelector<HTMLButtonElement>(`[data-map-node="${CSS.escape(previous)}"]`)?.focus();
@@ -288,7 +296,7 @@ const filterGroups = [
           tree.querySelector<SVGLineElement>(`[data-tree-line][data-tree-target="collection-${CSS.escape(slug)}"]`)!.toggleAttribute('hidden', !hasVisibleTopics);
           tree.querySelectorAll<SVGLineElement>(`[data-tree-line][data-tree-collection="${CSS.escape(slug)}"]`).forEach((line) => {
             const target = tree.querySelector<HTMLButtonElement>(`[data-map-node="${CSS.escape(line.dataset.treeTarget || '')}"]`);
-            line.toggleAttribute('hidden', collapsed || !target || target.hasAttribute('hidden'));
+            line.toggleAttribute('data-hidden', collapsed || !target || target.hasAttribute('hidden'));
           });
         });
       }

@@ -45,7 +45,7 @@ export function createTreeCamera(map: HTMLElement) {
     world.style.cssText = `width:${width}px;height:${height}px;transform:none`;
     svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
     const compact = width < 700;
-    const baseScale = Math.max(.42, Math.min((width - (compact ? 40 : 160)) / 1050, (height - (compact ? 300 : 230)) / 1000, 1.15)) * zoom * currentCameraZoom;
+    const baseScale = Math.max(.42, Math.min((width - (compact ? 40 : 160)) / 1400, (height - (compact ? 300 : 230)) / 1500, 1.15)) * zoom * currentCameraZoom;
     const centerX = compact ? width * .34 : width * .45;
     const centerY = compact ? height * .54 : height * .5;
     const projected = new Map<string, { x: number; y: number; z: number }>();
@@ -55,9 +55,10 @@ export function createTreeCamera(map: HTMLElement) {
       // Pure 2D flat layout
       const x = centerX + cameraX + point.x * baseScale * (compact ? .45 : 1);
       const y = centerY + cameraY + point.y * baseScale;
-      // Use point.size mapping as the 2D node scale base since it's flat
+      // Revert to original nodeScale (no artificial inflation)
       const nodeScale = Math.max(.7, Math.min(1.2, .75 + baseScale * .2));
-      const box = point.element.matches('.tree-root') ? 92 : point.element.matches('.tree-collection') ? 70 : 46;
+      // Update layout boxes to match our new CSS sizes perfectly
+      const box = point.element.matches('.tree-root') ? 92 : point.element.matches('.tree-collection') ? 68 : 46;
       point.element.style.width = `${box}px`;
       point.element.style.height = `${box}px`;
       point.element.style.left = `${x - box / 2}px`;
@@ -152,11 +153,11 @@ export function createTreeCamera(map: HTMLElement) {
         if (pt) {
           const width = viewport.clientWidth;
           const compact = width < 700;
-          const currentScale = Math.max(.42, Math.min((width - (compact ? 40 : 160)) / 1050, (viewport.clientHeight - (compact ? 300 : 230)) / 1000, 1.15)) * zoom;
+          const currentScale = Math.max(.42, Math.min((width - (compact ? 40 : 160)) / 1400, (viewport.clientHeight - (compact ? 300 : 230)) / 1500, 1.15)) * zoom;
           targetCameraZoom = compact ? 0.75 : 0.85;
           
-          // Pure 2D offset calculation
-          targetCameraX = - (pt.x + (compact ? 200 : 450)) * currentScale * targetCameraZoom * (compact ? .45 : 1);
+          // Pure 2D offset calculation (offset to 500 to slide map left out from under inspector popup)
+          targetCameraX = - (pt.x + (compact ? 0 : 500)) * currentScale * targetCameraZoom * (compact ? .45 : 1);
           targetCameraY = - pt.y * currentScale * targetCameraZoom;
         }
       }
