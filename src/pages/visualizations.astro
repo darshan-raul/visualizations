@@ -13,6 +13,6 @@ const topics = (await getCollection('topics')).sort((a, b) => a.data.title.local
     <p>Search for a mechanism or narrow the library by collection, topic, technology, and format.</p>
   </section>
   <section class="catalogue-section shell">
-    <LibraryExplorer topics={topics} />
+    <LibraryExplorer topics={topics} enableMap defaultView="map" />
   </section>
 </BaseLayout>

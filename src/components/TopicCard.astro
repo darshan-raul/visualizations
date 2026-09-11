@@ -11,6 +11,7 @@ const url = data.legacyPath || `/${data.slug}`;
 <article
   class={`topic-card collection-${data.collection}`}
   data-topic-card
+  data-slug={data.slug}
   data-collection={data.collection}
   data-format={data.format}
   data-tags={data.tags.join('|')}

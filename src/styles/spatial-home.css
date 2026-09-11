@@ -1,0 +1,54 @@
+/* Full-viewport homepage shell. The tree itself stays in the reusable component. */
+body:has(.spatial-home) .ambient {
+  background: radial-gradient(ellipse at 55% 48%, rgba(31, 43, 58, .72), transparent 46%), var(--bg);
+}
+body:has(.spatial-home) .ambient::after { opacity: .38; mask-image: radial-gradient(circle at center, #000, transparent 84%); }
+body:has(.spatial-home) .site-header { position: absolute; z-index: 40; top: 22px; left: 28px; border: 0; background: none; backdrop-filter: none; }
+body:has(.spatial-home) .header-inner { width: auto; min-height: 44px; }
+body:has(.spatial-home) .site-header nav,
+body:has(.spatial-home) .site-footer { display: none; }
+
+.spatial-home { min-height: 100svh; }
+.spatial-home .library { padding: 95px 28px 70px; }
+.spatial-home .library[data-current-view="map"] { height: 100svh; padding: 0; overflow: hidden; }
+.spatial-home .library.immersive[data-library] .topic-tree { position: absolute; inset: 0; height: 100%; margin: 0; }
+.spatial-home .library.immersive[data-library] .topic-tree .map-stage,
+.spatial-home .library.immersive[data-library] .topic-tree .map-viewport { height: 100%; min-height: 0; }
+.spatial-home .library.immersive[data-library] .topic-tree .map-viewport { border: 0; border-radius: 0; background: transparent; touch-action: pinch-zoom; }
+.spatial-home .library.immersive[data-library] .topic-tree .map-topbar { top: auto; right: auto; }
+
+.spatial-home .collection-switch { position: absolute; z-index: 40; top: 22px; right: 28px; margin: 0; gap: 3px; padding: 3px; border: 1px solid var(--border); border-radius: 999px; background: rgba(9,12,19,.86); backdrop-filter: blur(16px); }
+.spatial-home .collection-switch button { min-height: 38px; padding-inline: 12px; border-radius: 999px; font-size: .75rem; }
+.spatial-home .collection-switch button span { display: none; }
+.spatial-home .collection-switch button:first-child { font-size: 0; }
+.spatial-home .collection-switch button:first-child::before { content: 'All'; font-size: .75rem; }
+
+.spatial-home .library-tools { position: absolute; z-index: 30; top: 82px; left: 28px; display: block; width: min(300px, calc(100% - 56px)); margin: 0; padding: 0; border: 0; border-radius: 0; background: none; }
+.spatial-home .library-tools .search-field input { height: 42px; border-radius: 999px; background: rgba(9,12,19,.76); font-size: .75rem; backdrop-filter: blur(14px); }
+.spatial-home .advanced-filters { margin-top: 8px; }
+.spatial-home .advanced-filters > summary { width: max-content; padding: 8px 12px; border-radius: 8px; background: rgba(9,12,19,.78); color: var(--dim); font-size: .7rem; cursor: pointer; }
+.spatial-home .advanced-filters[open] { padding: 8px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
+.spatial-home .advanced-filters .filter-row { grid-template-columns: 1fr; }
+.spatial-home .advanced-filters fieldset { position: static; width: 100%; }
+.spatial-home .active-filters:not(:empty) { padding: 8px; border-radius: 8px; background: var(--bg); }
+
+.spatial-home .results-head { position: absolute; z-index: 20; bottom: 27px; left: 28px; padding: 0; }
+.spatial-home .results-actions { display: none; }
+.spatial-home .topic-grid { margin-top: 170px; }
+.spatial-home .spatial-catalogue { position: absolute; z-index: 30; right: 28px; bottom: 25px; padding: 8px; color: var(--muted); font-size: .75rem; text-decoration: none; }
+
+@media (max-width: 900px) {
+  body:has(.spatial-home) .site-header { top: 16px; left: 18px; }
+  .spatial-home .collection-switch { top: 72px; right: auto; left: 16px; max-width: calc(100% - 32px); flex-wrap: wrap; border-radius: 12px; }
+  .spatial-home .collection-switch button { min-height: 40px; padding-inline: 9px; font-size: .7rem; }
+  .spatial-home .library-tools { top: 130px; left: 18px; width: 230px; }
+  .spatial-home .results-head { left: 18px; }
+  .spatial-home .spatial-catalogue { right: 14px; }
+}
+
+@media (max-width: 420px) {
+  .spatial-home .collection-switch { gap: 0; }
+  .spatial-home .collection-switch button { gap: 5px; padding-inline: 7px; font-size: .65rem; }
+  .spatial-home .collection-switch button:first-child::before { font-size: .65rem; }
+  .spatial-home .library-tools { top: 172px; }
+}

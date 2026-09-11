@@ -9,8 +9,9 @@
     "build": "ASTRO_TELEMETRY_DISABLED=1 astro build && pagefind --site dist",
     "preview": "ASTRO_TELEMETRY_DISABLED=1 astro preview",
     "check": "ASTRO_TELEMETRY_DISABLED=1 astro check",
+    "check:graph": "node scripts/check-topic-graph.mjs",
     "check:links": "node scripts/check-links.mjs",
-    "verify": "npm run check && npm run build && npm run check:links"
+    "verify": "npm run check && npm run build && npm run check:graph && npm run check:links"
   },
   "dependencies": {
     "@astrojs/mdx": "^8.0.0",

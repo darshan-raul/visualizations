@@ -1,13 +1,29 @@
 ---
 import TopicCard from './TopicCard.astro';
+import TopicMap from './TopicMap.astro';
+import TopicTree from './TopicTree.astro';
 import { collections, formatLabels } from '../lib/catalog';
+import { buildTopicGraph } from '../lib/topic-graph';
 
-const { topics, compact = false } = Astro.props;
+const { topics, compact = false, enableMap = false, defaultView = 'list', immersive = false } = Astro.props;
 const tags = [...new Set<string>(topics.flatMap((topic: any): string[] => topic.data.tags))].sort();
 const technologies = [...new Set<string>(topics.flatMap((topic: any): string[] => topic.data.technologies))].sort();
+const graph = enableMap ? buildTopicGraph(topics) : null;
+const graphJson = graph ? JSON.stringify(graph).replace(/</g, '\\u003c') : '';
+const FilterContainer = immersive ? 'details' : 'div';
+const filterGroups = [
+  { key: 'collection', label: 'Collection', values: Object.entries(collections).filter(([slug]) => topics.some((topic: any) => topic.data.collection === slug)).map(([value, item]) => ({ value, label: item.label })) },
+  { key: 'tags', label: 'Topic', values: tags.map((value) => ({ value, label: value })) },
+  { key: 'technologies', label: 'Technology', values: technologies.map((value) => ({ value, label: value })) },
+  { key: 'format', label: 'Format', values: Object.entries(formatLabels).filter(([value]) => topics.some((topic: any) => topic.data.format === value)).map(([value, label]) => ({ value, label })) },
+];
 ---
 
-<section class:list={["library", { compact }]} data-library>
+<section class:list={["library", { compact, immersive }]} data-library data-default-view={defaultView === 'map' && enableMap ? 'map' : 'list'}>
+  {enableMap && <div class="collection-switch" role="group" aria-label="Filter by collection" data-collection-switch hidden>
+    <button type="button" data-collection-choice="" aria-pressed="true">All collections <span>{topics.length}</span></button>
+    {Object.entries(collections).map(([slug, collection]) => <button class={`collection-${slug}`} type="button" data-collection-choice={slug} aria-pressed="false"><i aria-hidden="true"></i>{collection.label}<span>{topics.filter((topic: any) => topic.data.collection === slug).length}</span></button>)}
+  </div>}
   <div class="library-tools" aria-label="Filter visualizations">
     <label class="search-field">
       <span class="sr-only">Search visualizations</span>
@@ -15,141 +31,418 @@ const technologies = [...new Set<string>(topics.flatMap((topic: any): string[] =
       <input type="search" placeholder="Search systems, services, or concepts…" autocomplete="off" data-search-input />
       <kbd>/</kbd>
     </label>
+    <FilterContainer class:list={[{ 'advanced-filters': immersive }]}>
+    {immersive && <summary>More filters</summary>}
     <div class="filter-row">
-      <label>
-        <span>Collection</span>
-        <select data-filter="collection">
-          <option value="">All collections</option>
-          {Object.entries(collections).map(([slug, item]) => <option value={slug}>{item.label}</option>)}
-        </select>
-      </label>
-      <label>
-        <span>Topic</span>
-        <select data-filter="tags">
-          <option value="">All topics</option>
-          {tags.map((tag) => <option value={tag}>{tag}</option>)}
-        </select>
-      </label>
-      <label>
-        <span>Technology</span>
-        <select data-filter="technologies">
-          <option value="">All technologies</option>
-          {technologies.map((technology) => <option value={technology}>{technology}</option>)}
-        </select>
-      </label>
-      <label>
-        <span>Format</span>
-        <select data-filter="format">
-          <option value="">All formats</option>
-          {Object.entries(formatLabels).map(([slug, label]) => <option value={slug}>{label}</option>)}
-        </select>
-      </label>
+      {filterGroups.map((group) => (
+        <details class="filter-menu" data-filter-menu={group.key}>
+          <summary><span>{group.label}</span><strong data-filter-count={group.key}>All</strong></summary>
+          <fieldset>
+            <legend class="sr-only">Filter by {group.label.toLowerCase()}</legend>
+            {group.values.map((item) => <label><input type="checkbox" value={item.value} data-filter={group.key} /><span>{item.label}</span></label>)}
+          </fieldset>
+        </details>
+      ))}
       <button class="reset-button" type="button" data-reset hidden>Reset</button>
     </div>
+    </FilterContainer>
     <div class="active-filters" data-active-filters aria-live="polite"></div>
   </div>
 
   <div class="results-head">
     <p data-results-status aria-live="polite">{topics.length} visualizations</p>
-    <span>Open any reference directly.</span>
+    <div class="results-actions">
+      <span>Open any reference directly.</span>
+      {enableMap && <div class="view-switch" data-view-switch hidden aria-label="Choose catalogue view"><button type="button" data-view="list" aria-pressed="true">List</button><button type="button" data-view="map" aria-pressed="false">Map</button></div>}
+    </div>
   </div>
-  <div class="topic-grid" data-topic-grid>
-    {topics.map((topic: any) => <TopicCard topic={topic} />)}
-  </div>
-  <div class="empty-state" data-empty-state hidden>
-    <span aria-hidden="true">⌁</span>
-    <h2>No matching visual yet</h2>
-    <p>Try a broader term or clear one of the filters.</p>
-  </div>
+  <div class="topic-grid" data-topic-grid>{topics.map((topic: any) => <TopicCard topic={topic} />)}</div>
+  {graph && (immersive ? <TopicTree graph={graph} immersive /> : <TopicMap graph={graph} />)}
+  {graph && <script is:inline type="application/json" data-topic-graph set:html={graphJson} />}
+  <div class="empty-state" data-empty-state hidden><span aria-hidden="true">⌁</span><h2>No matching visual yet</h2><p>Try a broader term or clear one of the filters.</p></div>
 </section>
 
 <script>
-  const libraries = document.querySelectorAll<HTMLElement>('[data-library]');
+  import { canonicalPathname } from '../lib/topic-url';
+  import { createTreeCamera } from './map/tree-camera';
 
-  for (const library of libraries) {
-    const input = library.querySelector<HTMLInputElement>('[data-search-input]');
-    const selects = [...library.querySelectorAll<HTMLSelectElement>('[data-filter]')];
+  type View = 'list' | 'map';
+  type GraphNode = { id: string; title: string; summary: string; href: string; collection: string; tags: string[]; technologies: string[]; format: string; difficulty: string; state: string };
+  type GraphEdge = { id: string; source: string; target: string; editorialSources: string[]; sharedTags: string[]; sharedTechnologies: string[]; overview: boolean };
+  type Graph = { nodes: GraphNode[]; edges: GraphEdge[] };
+  const ownedParams = ['q', 'collection', 'tags', 'technologies', 'format', 'view', 'topic'];
+  const filterLabels: Record<string, string> = { collection: 'Collection', tags: 'Topic', technologies: 'Technology', format: 'Format' };
+
+  for (const library of document.querySelectorAll<HTMLElement>('[data-library]')) {
+    if (library.dataset.ready) continue;
+    library.dataset.ready = 'true';
+    const input = library.querySelector<HTMLInputElement>('[data-search-input]')!;
+    const checks = [...library.querySelectorAll<HTMLInputElement>('[data-filter]')];
     const cards = [...library.querySelectorAll<HTMLElement>('[data-topic-card]')];
-    const status = library.querySelector<HTMLElement>('[data-results-status]');
-    const empty = library.querySelector<HTMLElement>('[data-empty-state]');
-    const reset = library.querySelector<HTMLButtonElement>('[data-reset]');
-    const chips = library.querySelector<HTMLElement>('[data-active-filters]');
-    let pagefind: any = null;
+    const status = library.querySelector<HTMLElement>('[data-results-status]')!;
+    const empty = library.querySelector<HTMLElement>('[data-empty-state]')!;
+    const reset = library.querySelector<HTMLButtonElement>('[data-reset]')!;
+    const chips = library.querySelector<HTMLElement>('[data-active-filters]')!;
+    const grid = library.querySelector<HTMLElement>('[data-topic-grid]')!;
+    const viewSwitch = library.querySelector<HTMLElement>('[data-view-switch]');
+    const map = library.querySelector<HTMLElement>('[data-topic-map]');
+    const tree = map?.matches('[data-topic-tree]') ? map : null;
+    const treeCamera = tree ? createTreeCamera(tree) : null;
+    const graphScript = library.querySelector<HTMLScriptElement>('[data-topic-graph]');
+    const graph: Graph | null = graphScript ? JSON.parse(graphScript.textContent || 'null') : null;
+    const nodeById = new Map(graph?.nodes.map((node) => [node.id, node]) || []);
+    let pagefindPromise: Promise<any> | null = null;
+    const searchCache = new Map<string, Set<string>>();
+    let generation = 0;
+    let queryTimer = 0;
+    let currentView: View = 'list';
+    let selectedTopic: string | null = null;
+    let visibleIds = new Set<string>();
+    let camera = { x: 0, y: 0, scale: 1 };
+    let observedMapWidth = 0;
+    let pointer: { id: number; x: number; y: number; originX: number; originY: number } | null = null;
+    let nodePointer: { id: number; node: HTMLButtonElement; x: number; y: number; originX: number; originY: number } | null = null;
+    if (viewSwitch) viewSwitch.hidden = false;
+    const collectionSwitch = library.querySelector<HTMLElement>('[data-collection-switch]');
+    if (collectionSwitch) collectionSwitch.hidden = false;
 
-    const cleanUrl = (url: string) => url.replace(/\.html$/, '').replace(/\/$/, '') || '/';
+    const selectedValues = (key: string) => checks.filter((check) => check.dataset.filter === key && check.checked).map((check) => check.value);
 
     async function pagefindMatches(query: string) {
       if (!query) return null;
+      if (searchCache.has(query)) return searchCache.get(query)!;
       try {
-        if (!pagefind) {
-          const loadPagefind = new Function("return import('/pagefind/pagefind.js')");
-          pagefind = await loadPagefind();
-          await pagefind.init();
-        }
+        pagefindPromise ||= (new Function("return import('/pagefind/pagefind.js')")() as Promise<any>).then(async (module) => { await module.init(); return module; });
+        const pagefind = await pagefindPromise;
         const result = await pagefind.search(query);
         const data = await Promise.all(result.results.map((item: any) => item.data()));
-        return new Set(data.map((item: any) => cleanUrl(item.url)));
-      } catch {
-        return null;
-      }
+        const matches = new Set<string>(data.map((item: any) => canonicalPathname(item.url)));
+        searchCache.set(query, matches);
+        if (searchCache.size > 20) searchCache.delete(searchCache.keys().next().value!);
+        return matches;
+      } catch { return null; }
     }
 
-    async function applyFilters(updateUrl = true) {
-      if (!input || !status || !empty || !reset || !chips) return;
-      const query = input.value.trim().toLowerCase();
-      const selected = Object.fromEntries(selects.map((select) => [select.dataset.filter!, select.value]));
-      const indexedMatches = await pagefindMatches(query);
-      let visible = 0;
+    function setUrl(mode: 'push' | 'replace' | 'none') {
+      if (mode === 'none') return;
+      const url = new URL(location.href);
+      for (const param of ownedParams) url.searchParams.delete(param);
+      const query = input.value.trim();
+      if (query) url.searchParams.set('q', query);
+      for (const key of ['collection', 'tags', 'technologies', 'format']) for (const value of selectedValues(key)) url.searchParams.append(key, value);
+      if (map) url.searchParams.set('view', currentView);
+      if (currentView === 'map' && selectedTopic) url.searchParams.set('topic', selectedTopic);
+      history[mode === 'push' ? 'pushState' : 'replaceState'](null, '', url);
+    }
 
-      for (const card of cards) {
-        const urlMatches = indexedMatches?.has(cleanUrl(card.dataset.url || ''));
-        const localMatches = (card.dataset.search || '').includes(query);
-        const queryMatches = !query || (indexedMatches ? Boolean(urlMatches) : localMatches);
-        const collectionMatches = !selected.collection || card.dataset.collection === selected.collection;
-        const formatMatches = !selected.format || card.dataset.format === selected.format;
-        const tagMatches = !selected.tags || (card.dataset.tags || '').split('|').includes(selected.tags);
-        const technologyMatches = !selected.technologies || (card.dataset.technologies || '').split('|').includes(selected.technologies);
-        const show = Boolean(queryMatches && collectionMatches && formatMatches && tagMatches && technologyMatches);
-        card.hidden = !show;
-        if (show) visible += 1;
+    function updateTools() {
+      const activeCollections = selectedValues('collection');
+      collectionSwitch?.querySelectorAll<HTMLButtonElement>('[data-collection-choice]').forEach((button) => {
+        const value = button.dataset.collectionChoice || '';
+        button.setAttribute('aria-pressed', String(value ? activeCollections.includes(value) : !activeCollections.length));
+      });
+      const items: { key: string; value: string; label: string }[] = [];
+      const query = input.value.trim();
+      if (query) items.push({ key: 'q', value: query, label: `Search: ${query}` });
+      for (const key of ['collection', 'tags', 'technologies', 'format']) {
+        const values = selectedValues(key);
+        const count = library.querySelector<HTMLElement>(`[data-filter-count="${key}"]`);
+        if (count) count.textContent = values.length ? String(values.length) : 'All';
+        for (const value of values) items.push({ key, value, label: `${filterLabels[key]}: ${value}` });
       }
-
-      status.textContent = `${visible} visualization${visible === 1 ? '' : 's'}`;
-      empty.hidden = visible !== 0;
-      const active = [query, ...Object.values(selected)].filter(Boolean);
-      reset.hidden = active.length === 0;
-      chips.replaceChildren(...active.map((value) => {
-        const chip = document.createElement('span');
-        chip.textContent = value;
-        return chip;
+      chips.replaceChildren(...items.map((item) => {
+        const button = document.createElement('button');
+        button.type = 'button'; button.textContent = `${item.label} ×`; button.setAttribute('aria-label', `Remove ${item.label} filter`);
+        button.addEventListener('click', () => { if (item.key === 'q') input.value = ''; else checks.find((check) => check.dataset.filter === item.key && check.value === item.value)!.checked = false; void applyFilters('push'); });
+        return button;
       }));
-
-      if (updateUrl) {
-        const params = new URLSearchParams();
-        if (query) params.set('q', query);
-        for (const [key, value] of Object.entries(selected)) if (value) params.set(key, value);
-        history.replaceState(null, '', `${location.pathname}${params.size ? `?${params}` : ''}`);
-      }
+      reset.hidden = items.length === 0;
     }
 
-    const params = new URLSearchParams(location.search);
-    if (input) input.value = params.get('q') || '';
-    for (const select of selects) select.value = params.get(select.dataset.filter || '') || '';
-    void applyFilters(false);
+    function setView(view: View, mode: 'push' | 'replace' | 'none' = 'push') {
+      currentView = view === 'map' && map ? 'map' : 'list';
+      library.dataset.currentView = currentView;
+      grid.hidden = currentView === 'map';
+      if (map) map.hidden = currentView !== 'map';
+      empty.hidden = visibleIds.size !== 0 || currentView === 'map';
+      viewSwitch?.querySelectorAll<HTMLButtonElement>('[data-view]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.view === currentView)));
+      if (currentView === 'map') requestAnimationFrame(() => fitMap());
+      setUrl(mode);
+    }
 
-    input?.addEventListener('input', () => void applyFilters());
-    for (const select of selects) select.addEventListener('change', () => void applyFilters());
-    reset?.addEventListener('click', () => {
-      if (input) input.value = '';
-      for (const select of selects) select.value = '';
-      void applyFilters();
-      input?.focus();
-    });
-    document.addEventListener('keydown', (event) => {
-      if (event.key === '/' && document.activeElement?.tagName !== 'INPUT') {
-        event.preventDefault();
-        input?.focus();
+    function edgeReason(edge: GraphEdge) {
+      const reasons: string[] = [];
+      if (edge.editorialSources.length) reasons.push('Editorially related');
+      if (edge.sharedTechnologies.length) reasons.push(`Shared technology: ${edge.sharedTechnologies.join(', ')}`);
+      if (edge.sharedTags.length) reasons.push(`Shared tags: ${edge.sharedTags.join(', ')}`);
+      return reasons.join(' · ');
+    }
+
+    function renderInspector() {
+      if (!map || !graph) return;
+      const inspector = map.querySelector<HTMLElement>('[data-map-inspector]')!;
+      const selected = selectedTopic ? nodeById.get(selectedTopic) : null;
+      const edges = selected ? graph.edges.filter((edge) => edge.source === selected.id || edge.target === selected.id) : [];
+      const neighbors = new Set(edges.map((edge) => edge.source === selected?.id ? edge.target : edge.source));
+      map.querySelectorAll<HTMLButtonElement>('[data-map-node]').forEach((node) => {
+        const active = node.dataset.mapNode === selected?.id;
+        node.setAttribute('aria-pressed', String(active));
+        node.classList.toggle('is-neighbor', neighbors.has(node.dataset.mapNode || ''));
+        node.classList.toggle('is-muted', Boolean(selected && !active && !neighbors.has(node.dataset.mapNode || '')));
+      });
+      map.querySelectorAll<SVGLineElement>('[data-edge]').forEach((line) => {
+        const incident = Boolean(selected && (line.dataset.source === selected.id || line.dataset.target === selected.id));
+        const endpointsVisible = visibleIds.has(line.dataset.source || '') && visibleIds.has(line.dataset.target || '');
+        line.style.display = !endpointsVisible || (selected ? !incident : line.dataset.overview !== 'true') ? 'none' : '';
+        line.classList.toggle('is-active', incident);
+      });
+      if (tree) {
+        tree.querySelectorAll<SVGLineElement>('[data-tree-line]').forEach((line) => {
+          const onTopicPath = Boolean(selected && line.dataset.treeTarget === selected.id);
+          const onCollectionPath = Boolean(selected && line.dataset.treeTarget === `collection-${selected.collection}`);
+          line.classList.toggle('is-active', onTopicPath || onCollectionPath);
+        });
+      }
+      map.querySelector<HTMLSelectElement>('[data-map-select]')!.value = selected?.id || '';
+      if (!selected) {
+        inspector.hidden = true;
+        inspector.replaceChildren();
+        return;
+      }
+      inspector.hidden = false;
+      inspector.replaceChildren();
+      const close = document.createElement('button'); close.type = 'button'; close.className = 'inspector-close'; close.dataset.closeInspector = ''; close.setAttribute('aria-label', 'Close topic details'); close.textContent = '×';
+      const kicker = document.createElement('span'); kicker.className = 'inspector-kicker'; kicker.textContent = selected.collection === 'devops-sre' ? 'DevOps & SRE' : selected.collection;
+      const title = document.createElement('h2'); title.textContent = selected.title;
+      const summary = document.createElement('p'); summary.textContent = selected.summary;
+      const meta = document.createElement('ul'); meta.className = 'inspector-meta';
+      [selected.format.replaceAll('-', ' '), selected.difficulty, selected.state].forEach((value) => { const item = document.createElement('li'); item.textContent = value; meta.append(item); });
+      const open = document.createElement('a'); open.className = 'inspector-open'; open.href = selected.href; open.textContent = 'Open visual →';
+      inspector.append(close, kicker, title, summary, meta, open);
+      const visibleEdges = edges.filter((edge) => visibleIds.has(edge.source === selected.id ? edge.target : edge.source));
+      if (visibleEdges.length) {
+        const related = document.createElement('section'); related.className = 'inspector-related';
+        const heading = document.createElement('h3'); heading.textContent = `${visibleEdges.length} connected reference${visibleEdges.length === 1 ? '' : 's'}`;
+        const list = document.createElement('ul');
+        const sortedEdges = visibleEdges.sort((a, b) => Number(Boolean(b.editorialSources.length)) - Number(Boolean(a.editorialSources.length)) || b.sharedTechnologies.length - a.sharedTechnologies.length || a.id.localeCompare(b.id));
+        const appendEdge = (edge: GraphEdge, target: HTMLUListElement) => {
+          const other = nodeById.get(edge.source === selected.id ? edge.target : edge.source)!;
+          const item = document.createElement('li'); const button = document.createElement('button'); button.type = 'button'; button.dataset.selectTopic = other.id; button.setAttribute('aria-label', `Select ${other.title}`);
+          const name = document.createElement('strong'); name.textContent = other.title; const reason = document.createElement('span'); reason.textContent = edgeReason(edge);
+          button.append(name, reason); item.append(button); target.append(item);
+        };
+        sortedEdges.slice(0, 6).forEach((edge) => appendEdge(edge, list));
+        related.append(heading, list); inspector.append(related);
+        if (sortedEdges.length > 6) {
+          const more = document.createElement('details'); more.className = 'inspector-more';
+          const moreSummary = document.createElement('summary'); moreSummary.textContent = `${sortedEdges.length - 6} more connection${sortedEdges.length - 6 === 1 ? '' : 's'}`;
+          const moreList = document.createElement('ul'); sortedEdges.slice(6).forEach((edge) => appendEdge(edge, moreList));
+          more.append(moreSummary, moreList); related.append(more);
+        }
+      }
+      const hiddenCount = edges.length - visibleEdges.length;
+      if (hiddenCount) { const note = document.createElement('p'); note.textContent = `${hiddenCount} connection${hiddenCount === 1 ? '' : 's'} hidden by current filters.`; inspector.append(note); }
+    }
+
+    function focusSelectedNode(id: string) {
+      if (treeCamera) { treeCamera.render(); return; }
+      if (!map || currentView !== 'map') return;
+      const viewport = map.querySelector<HTMLElement>('[data-map-viewport]')!;
+      const node = map.querySelector<HTMLButtonElement>(`[data-map-node="${CSS.escape(id)}"]`);
+      if (!node) return;
+      const size = Number(node.dataset.size || 0);
+      const centerX = Number(node.dataset.x || 0) + size / 2;
+      const centerY = Number(node.dataset.y || 0) + size / 2;
+      const narrow = viewport.clientWidth < 700;
+      camera.scale = narrow ? .7 : Math.max(camera.scale, .85);
+      const targetX = narrow ? viewport.clientWidth / 2 : (viewport.clientWidth - Math.min(390, viewport.clientWidth * .36)) / 2;
+      camera.x = targetX - centerX * camera.scale;
+      camera.y = viewport.clientHeight / 2 - centerY * camera.scale;
+      updateCamera();
+    }
+
+    function selectTopic(id: string | null, mode: 'push' | 'replace' | 'none' = 'push') {
+      const previous = selectedTopic;
+      selectedTopic = id && visibleIds.has(id) && nodeById.has(id) ? id : null;
+      renderInspector();
+      if (selectedTopic) focusSelectedNode(selectedTopic);
+      if (mode === 'push') {
+        if (selectedTopic) map?.querySelector<HTMLButtonElement>('[data-close-inspector]')?.focus();
+        else if (previous) map?.querySelector<HTMLButtonElement>(`[data-map-node="${CSS.escape(previous)}"]`)?.focus();
+      }
+      setUrl(mode);
+    }
+
+    function renderMapVisibility() {
+      if (!map || !graph) return;
+      map.querySelectorAll<HTMLButtonElement>('[data-map-node]').forEach((node) => { node.hidden = !visibleIds.has(node.dataset.mapNode || ''); });
+      if (tree) {
+        tree.querySelectorAll<HTMLElement>('[data-tree-branch]').forEach((branch) => {
+          const slug = branch.dataset.treeBranch || '';
+          const toggle = branch.querySelector<HTMLButtonElement>('[data-tree-toggle]')!;
+          const topicNodes = [...branch.querySelectorAll<HTMLButtonElement>('[data-map-node]')];
+          const hasVisibleTopics = topicNodes.some((node) => visibleIds.has(node.dataset.mapNode || ''));
+          toggle.hidden = !hasVisibleTopics;
+          const collapsed = toggle.getAttribute('aria-expanded') === 'false';
+          topicNodes.forEach((node) => { node.hidden = collapsed || !visibleIds.has(node.dataset.mapNode || ''); });
+          tree.querySelector<SVGLineElement>(`[data-tree-line][data-tree-target="collection-${CSS.escape(slug)}"]`)!.toggleAttribute('hidden', !hasVisibleTopics);
+          tree.querySelectorAll<SVGLineElement>(`[data-tree-line][data-tree-collection="${CSS.escape(slug)}"]`).forEach((line) => {
+            const target = tree.querySelector<HTMLButtonElement>(`[data-map-node="${CSS.escape(line.dataset.treeTarget || '')}"]`);
+            line.toggleAttribute('hidden', collapsed || !target || target.hasAttribute('hidden'));
+          });
+        });
+      }
+      map.querySelectorAll<HTMLOptionElement>('[data-map-select] option').forEach((option) => { if (option.value) option.hidden = !visibleIds.has(option.value); });
+      map.querySelector<HTMLElement>('[data-map-empty]')!.hidden = visibleIds.size !== 0;
+      renderInspector();
+      treeCamera?.render();
+    }
+
+    async function applyFilters(mode: 'push' | 'replace' | 'none' = 'push') {
+      const currentGeneration = ++generation;
+      const query = input.value.trim().toLowerCase();
+      const chosen: Record<string, string[]> = Object.fromEntries(['collection', 'tags', 'technologies', 'format'].map((key) => [key, selectedValues(key)]));
+      const indexedMatches = await pagefindMatches(query);
+      if (currentGeneration !== generation) return;
+      visibleIds = new Set();
+      for (const card of cards) {
+        const queryMatch = !query || (card.dataset.search || '').includes(query) || Boolean(indexedMatches?.has(canonicalPathname(card.dataset.url || '')));
+        const matches = (key: string, values: string[]) => !chosen[key].length || chosen[key].some((value) => values.includes(value));
+        const show = queryMatch && matches('collection', [card.dataset.collection || '']) && matches('format', [card.dataset.format || '']) && matches('tags', (card.dataset.tags || '').split('|')) && matches('technologies', (card.dataset.technologies || '').split('|'));
+        card.hidden = !show;
+        if (show) visibleIds.add(card.dataset.slug || '');
+      }
+      if (selectedTopic && !visibleIds.has(selectedTopic)) selectedTopic = null;
+      status.textContent = `${visibleIds.size} visualization${visibleIds.size === 1 ? '' : 's'}`;
+      empty.hidden = visibleIds.size !== 0 || currentView === 'map';
+      updateTools(); renderMapVisibility(); setUrl(mode);
+    }
+
+    function updateCamera() {
+      if (!map) return;
+      if (treeCamera) treeCamera.zoom(camera.scale);
+      else map.querySelector<HTMLElement>('[data-map-world]')!.style.transform = `translate(${camera.x}px, ${camera.y}px) scale(${camera.scale})`;
+      map.querySelector<HTMLOutputElement>('[data-map-scale]')!.value = `${Math.round(camera.scale * 100)}%`;
+      map.querySelector<HTMLButtonElement>('[data-camera="out"]')!.disabled = camera.scale <= .45;
+      map.querySelector<HTMLButtonElement>('[data-camera="in"]')!.disabled = camera.scale >= 1.35;
+    }
+
+    function updateNodeEdges(id: string) {
+      if (!map) return;
+      const center = (nodeId: string) => {
+        const node = map.querySelector<HTMLButtonElement>(`[data-map-node="${CSS.escape(nodeId)}"]`)!;
+        const size = Number(node.dataset.size || 0);
+        return { x: Number(node.dataset.x || 0) + size / 2, y: Number(node.dataset.y || 0) + size / 2 };
+      };
+      map.querySelectorAll<SVGLineElement>(`[data-source="${CSS.escape(id)}"], [data-target="${CSS.escape(id)}"]`).forEach((line) => {
+        const source = center(line.dataset.source || ''); const target = center(line.dataset.target || '');
+        line.setAttribute('x1', String(source.x)); line.setAttribute('y1', String(source.y)); line.setAttribute('x2', String(target.x)); line.setAttribute('y2', String(target.y));
+      });
+    }
+
+    function fitMap() {
+      if (!map) return;
+      if (treeCamera) { camera.scale = 1; treeCamera.reset(); updateCamera(); return; }
+      const viewport = map.querySelector<HTMLElement>('[data-map-viewport]')!;
+      const scale = Math.max(.65, Math.min(viewport.clientWidth / 1200, (viewport.clientHeight - 150) / 800, 1));
+      camera = { x: (viewport.clientWidth - 1200 * scale) / 2, y: (viewport.clientHeight - 800 * scale) / 2, scale }; updateCamera();
+    }
+
+    function restoreFromUrl() {
+      const params = new URLSearchParams(location.search);
+      input.value = params.get('q') || '';
+      checks.forEach((check) => { check.checked = params.getAll(check.dataset.filter || '').includes(check.value); });
+      const requestedView = params.get('view');
+      currentView = requestedView === 'map' && map ? 'map' : requestedView === 'list' ? 'list' : library.dataset.defaultView === 'map' && map ? 'map' : 'list'; selectedTopic = params.get('topic');
+      void applyFilters('none').then(() => setView(currentView, 'none'));
+    }
+
+    input.addEventListener('input', () => { clearTimeout(queryTimer); queryTimer = window.setTimeout(() => void applyFilters('replace'), 180); });
+    checks.forEach((check) => check.addEventListener('change', () => void applyFilters('push')));
+    collectionSwitch?.querySelectorAll<HTMLButtonElement>('[data-collection-choice]').forEach((button) => button.addEventListener('click', () => {
+      const value = button.dataset.collectionChoice || '';
+      checks.filter((check) => check.dataset.filter === 'collection').forEach((check) => { check.checked = check.value === value; });
+      void applyFilters('push');
+    }));
+    library.querySelectorAll<HTMLDetailsElement>('[data-filter-menu]').forEach((menu) => menu.addEventListener('toggle', () => {
+      if (menu.open) library.querySelectorAll<HTMLDetailsElement>('[data-filter-menu]').forEach((other) => { if (other !== menu) other.open = false; });
+    }));
+    reset.addEventListener('click', () => { input.value = ''; checks.forEach((check) => { check.checked = false; }); void applyFilters('push'); input.focus(); });
+    viewSwitch?.querySelectorAll<HTMLButtonElement>('[data-view]').forEach((button) => button.addEventListener('click', () => setView(button.dataset.view as View)));
+    map?.addEventListener('click', (event) => {
+      const target = event.target as HTMLElement;
+      const branchToggle = target.closest<HTMLButtonElement>('[data-tree-toggle]');
+      const allToggle = target.closest<HTMLButtonElement>('[data-tree-toggle-all]');
+      if (branchToggle) {
+        const expanded = branchToggle.getAttribute('aria-expanded') !== 'false';
+        branchToggle.setAttribute('aria-expanded', String(!expanded));
+        const label = branchToggle.querySelector('small');
+        const count = branchToggle.closest('[data-tree-branch]')?.querySelectorAll('[data-map-node]').length || 0;
+        if (label) label.textContent = `${count} topics · ${expanded ? 'expand' : 'collapse'}`;
+        if (expanded && selectedTopic && branchToggle.closest('[data-tree-branch]')?.querySelector(`[data-map-node="${CSS.escape(selectedTopic)}"]`)) selectTopic(null);
+        renderMapVisibility();
+        return;
+      }
+      if (allToggle) {
+        const expanded = allToggle.getAttribute('aria-expanded') !== 'false';
+        allToggle.setAttribute('aria-expanded', String(!expanded));
+        const rootLabel = allToggle.querySelector('small');
+        if (rootLabel) rootLabel.textContent = `${graph?.nodes.length || 0} visual references · ${expanded ? 'expand all' : 'collapse all'}`;
+        tree?.querySelectorAll<HTMLButtonElement>('[data-tree-toggle]').forEach((button) => {
+          button.setAttribute('aria-expanded', String(!expanded));
+          const label = button.querySelector('small');
+          const count = button.closest('[data-tree-branch]')?.querySelectorAll('[data-map-node]').length || 0;
+          if (label) label.textContent = `${count} topics · ${expanded ? 'expand' : 'collapse'}`;
+        });
+        if (expanded && selectedTopic) selectTopic(null);
+        renderMapVisibility();
+        return;
+      }
+      const node = target.closest<HTMLButtonElement>('[data-map-node], [data-select-topic]'); if (node) selectTopic(node.dataset.mapNode || node.dataset.selectTopic || null);
+      if (target.closest('[data-close-inspector]')) selectTopic(null);
+      if (target.closest('[data-map-clear]')) { input.value = ''; checks.forEach((check) => { check.checked = false; }); void applyFilters('push'); }
+      const control = target.closest<HTMLButtonElement>('[data-camera]');
+      if (control) {
+        if (control.dataset.camera === 'in') camera.scale = Math.min(1.35, camera.scale + .15);
+        if (control.dataset.camera === 'out') camera.scale = Math.max(.45, camera.scale - .15);
+        if (control.dataset.camera === 'fit') fitMap();
+        if (control.dataset.camera === 'reset') { selectedTopic = null; fitMap(); renderInspector(); setUrl('push'); return; }
+        updateCamera();
       }
     });
+    map?.querySelector<HTMLSelectElement>('[data-map-select]')?.addEventListener('change', (event) => selectTopic((event.currentTarget as HTMLSelectElement).value || null));
+    const viewport = map?.querySelector<HTMLElement>('[data-map-viewport]');
+    viewport?.addEventListener('pointerdown', (event) => {
+      if (treeCamera) return;
+      const node = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-map-node]');
+      if (node) {
+        nodePointer = { id: event.pointerId, node, x: event.clientX, y: event.clientY, originX: Number(node.dataset.x), originY: Number(node.dataset.y) };
+        node.setPointerCapture(event.pointerId);
+      } else {
+        pointer = { id: event.pointerId, x: event.clientX, y: event.clientY, originX: camera.x, originY: camera.y };
+        viewport.setPointerCapture(event.pointerId);
+      }
+    });
+    viewport?.addEventListener('pointermove', (event) => {
+      if (treeCamera) return;
+      if (nodePointer?.id === event.pointerId) {
+        const x = nodePointer.originX + (event.clientX - nodePointer.x) / camera.scale;
+        const y = nodePointer.originY + (event.clientY - nodePointer.y) / camera.scale;
+        nodePointer.node.dataset.x = String(x); nodePointer.node.dataset.y = String(y);
+        nodePointer.node.style.setProperty('--node-x', `${x}px`); nodePointer.node.style.setProperty('--node-y', `${y}px`); updateNodeEdges(nodePointer.node.dataset.mapNode || ''); return;
+      }
+      if (!pointer || pointer.id !== event.pointerId) return; camera.x = pointer.originX + event.clientX - pointer.x; camera.y = pointer.originY + event.clientY - pointer.y; updateCamera();
+    });
+    const release = (event: PointerEvent) => { if (pointer?.id === event.pointerId) pointer = null; if (nodePointer?.id === event.pointerId) nodePointer = null; };
+    viewport?.addEventListener('pointerup', release); viewport?.addEventListener('pointercancel', release);
+    viewport?.addEventListener('keydown', (event) => { if (event.key === 'Escape') selectTopic(null); });
+    map?.querySelector('[data-map-inspector]')?.addEventListener('keydown', (event) => { if ((event as KeyboardEvent).key === 'Escape') selectTopic(null); });
+    window.addEventListener('popstate', restoreFromUrl);
+    document.addEventListener('keydown', (event) => { const target = event.target as HTMLElement; if (event.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) && !target.isContentEditable) { event.preventDefault(); input.focus(); } });
+    new ResizeObserver(() => {
+      const width = map?.querySelector<HTMLElement>('[data-map-viewport]')?.clientWidth || 0;
+      if (currentView === 'map' && Math.abs(width - observedMapWidth) > 1) { observedMapWidth = width; fitMap(); }
+    }).observe(library);
+    restoreFromUrl();
   }
 </script>

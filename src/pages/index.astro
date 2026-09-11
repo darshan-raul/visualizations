@@ -1,65 +1,16 @@
 ---
 import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import CollectionNav from '../components/CollectionNav.astro';
 import LibraryExplorer from '../components/LibraryExplorer.astro';
-import { collections, formatLabels } from '../lib/catalog';
+import '../styles/spatial-home.css';
 
-const topics = await getCollection('topics');
-const sortedTopics = topics.sort((a, b) => Number(b.data.featured) - Number(a.data.featured) || a.data.title.localeCompare(b.data.title));
-const featuredTopics = sortedTopics.filter((topic) => topic.data.featured);
+const topics = (await getCollection('topics')).sort((a, b) => Number(b.data.featured) - Number(a.data.featured) || a.data.title.localeCompare(b.data.title));
 ---
 
 <BaseLayout>
-  <section class="hero shell">
-    <div class="hero-copy">
-      <span class="eyebrow"><i></i> Visual infrastructure reference</span>
-      <h1>See how infrastructure<br /><span>actually works.</span></h1>
-      <p>Trace the mechanisms behind AWS, Kubernetes, DevOps, SRE, and the foundations beneath them. Each visual starts with a usable mental model and follows it into the details that matter in practice.</p>
-      <div class="hero-actions">
-        <a class="primary-action" href="#library">Explore the library <span aria-hidden="true">↓</span></a>
-        <span>{topics.length} visualizations · AWS and Kubernetes first</span>
-      </div>
-    </div>
-    <aside class="library-preview" aria-labelledby="library-preview-title">
-      <div class="preview-heading">
-        <div>
-          <span>Selected references</span>
-          <h2 id="library-preview-title">Inside the library</h2>
-        </div>
-        <span>{featuredTopics.length.toString().padStart(2, '0')} featured</span>
-      </div>
-      <div class="preview-list">
-        {featuredTopics.map((topic, index) => {
-          const collection = collections[topic.data.collection as keyof typeof collections];
-          const format = formatLabels[topic.data.format as keyof typeof formatLabels];
-
-          return (
-            <a class={`preview-item collection-${topic.data.collection}`} href={topic.data.legacyPath || `/${topic.data.slug}`}>
-              <span class="preview-index">{(index + 1).toString().padStart(2, '0')}</span>
-              <span class="preview-copy">
-                <strong>{topic.data.title}</strong>
-                <small>{collection.label} · {format}</small>
-              </span>
-              <span class="preview-arrow" aria-hidden="true">↗</span>
-            </a>
-          );
-        })}
-      </div>
-      <p class="preview-note">Open the concept you need now. Each explainer stands on its own.</p>
-    </aside>
-  </section>
-
-  <CollectionNav />
-
-  <section class="catalogue-section shell" id="library">
-    <div class="section-heading catalogue-heading">
-      <div>
-        <span>Explore the library</span>
-        <h2>Find the system you need to understand.</h2>
-      </div>
-      <p>Search by mechanism, service, or the behavior you are trying to explain.</p>
-    </div>
-    <LibraryExplorer topics={sortedTopics} />
+  <section class="spatial-home" id="library">
+    <h1 class="sr-only">Infra Illustrated — explore cloud infrastructure in 3D</h1>
+    <LibraryExplorer topics={topics} enableMap defaultView="map" immersive />
+    <a class="spatial-catalogue" href="/visualizations?view=list">Browse the library <span aria-hidden="true">↗</span></a>
   </section>
 </BaseLayout>
