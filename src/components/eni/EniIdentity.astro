@@ -1,0 +1,52 @@
+---
+import EniIcon from './EniIcon.astro';
+import VisualFrame from './VisualFrame.astro';
+---
+
+<VisualFrame eyebrow="Network passport" title="One interface, one concrete VPC identity" description="The address and control fields belong to the interface; attachment connects that identity to compute." takeaway="An ENI is a subnet-scoped network identity with addresses, security associations, and attachment state.">
+  <div class="eni-boundary vpc-boundary">
+    <b class="boundary-label">VPC · 10.20.0.0/16</b>
+    <div class="eni-boundary subnet-boundary">
+      <b class="boundary-label">subnet-app-a · 10.20.1.0/24 · ap-south-1a</b>
+      <article class="passport">
+        <header><EniIcon kind="eni" label="Elastic network interface" /><div><small>OWNER · YOU</small><strong>eni-0abc123</strong><span>available · unattached</span></div></header>
+        <dl>
+          <div><dt>Primary IPv4</dt><dd>10.20.1.17</dd></div>
+          <div><dt>Secondary IPv4</dt><dd>10.20.1.18</dd></div>
+          <div><dt>IPv6</dt><dd>2001:db8:20:1::17</dd></div>
+          <div><dt>Security groups</dt><dd>sg-app · sg-observability</dd></div>
+          <div><dt>Source/dest check</dt><dd>enabled</dd></div>
+          <div><dt>MAC</dt><dd>02:7b:64:10:20:17</dd></div>
+        </dl>
+      </article>
+    </div>
+  </div>
+</VisualFrame>
+
+<VisualFrame eyebrow="Address stack" title="One ENI can carry several IP addresses" description="Private IPv4 and IPv6 addresses remain grouped under the same subnet-scoped interface." takeaway="One ENI is not limited to one IP address." class="eni-compact">
+  <div class="address-visual">
+    <div class="eni-card"><EniIcon kind="eni" /><strong>eni-0abc123</strong><small>one interface</small></div>
+    <div class="address-link" aria-hidden="true"></div>
+    <ul class="address-stack">
+      <li><span>PRIMARY IPv4</span><code>10.20.1.17</code></li>
+      <li><span>SECONDARY IPv4</span><code>10.20.1.18</code></li>
+      <li><span>SECONDARY IPv4</span><code>10.20.1.19</code></li>
+      <li><span>IPv6</span><code>2001:db8:20:1::17</code></li>
+    </ul>
+  </div>
+</VisualFrame>
+
+<VisualFrame eyebrow="Public IPv4 continuity" title="Elastic IP keeps the public address stable" description="Stop/start is the lifecycle boundary shown here; a reboot does not replace the auto-assigned public IPv4." takeaway="Use an Elastic IP when a public IPv4 must stay fixed while the address remains allocated." class="eni-compact">
+  <div class="public-compare">
+    <article>
+      <header><span class="state-changing">AUTO-ASSIGNED</span><strong>Public IPv4 changes</strong></header>
+      <div class="public-timeline"><code>198.51.100.24</code><span>stop / start</span><code class="new-address">198.51.100.91</code></div>
+      <small>Same ENI and private IPv4: eni-0abc123 · 10.20.1.17</small>
+    </article>
+    <article class="stable-public">
+      <header><span>ELASTIC IP</span><strong>Public IPv4 stays fixed</strong></header>
+      <div class="public-timeline"><code>203.0.113.42</code><span>stop / start</span><code>203.0.113.42</code></div>
+      <small>The EIP remains yours while allocated and associated.</small>
+    </article>
+  </div>
+</VisualFrame>

@@ -1,0 +1,94 @@
+---
+title: "AWS ENI: the network identity behind your workload"
+summary: See how an Elastic Network Interface binds VPC addresses, subnet placement, security, routing, service ownership, and scaling limits into one network identity.
+slug: aws-eni
+collection: aws
+tags: [Networking, Security, Containers, Kubernetes, Troubleshooting]
+technologies: [Amazon EC2, Amazon VPC, Amazon ECS, Amazon EKS, AWS Lambda, Amazon RDS, AWS PrivateLink]
+format: deep-dive
+difficulty: intermediate
+published: 2026-09-11
+reviewed: 2026-09-11
+versionScope: ENI, EC2 addressing, ECS, EKS, Lambda VPC, NAT Gateway, PrivateLink, and ELB behavior verified 2026-09-11
+legacyPath: /aws/vpc/eni
+featured: false
+state: reviewed
+sources:
+  - label: Elastic network interfaces
+    url: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html
+  - label: Multiple IP addresses for EC2 instances
+    url: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-instance-addressing.html
+  - label: How stop and start affects addresses
+    url: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/how-ec2-instance-stop-start-works.html
+  - label: Manage ENI IP addresses
+    url: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/managing-network-interface-ip-addresses.html
+  - label: Elastic IP addresses
+    url: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/working-with-eips.html
+  - label: ENI attachment and multi-interface scenarios
+    url: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/scenarios-enis.html
+  - label: Requester-managed network interfaces
+    url: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/requester-managed-eni.html
+  - label: Network ACLs
+    url: https://docs.aws.amazon.com/vpc/latest/userguide/vpc-network-acls.html
+  - label: ECS task networking with awsvpc
+    url: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-networking-awsvpc.html
+  - label: ECS ENI trunking
+    url: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/container-instance-eni.html
+  - label: EKS VPC CNI and prefix mode
+    url: https://docs.aws.amazon.com/eks/latest/best-practices/prefix-mode-linux.html
+  - label: Lambda VPC networking and Hyperplane ENIs
+    url: https://docs.aws.amazon.com/lambda/latest/dg/configuration-vpc.html
+  - label: NAT Gateway basics
+    url: https://docs.aws.amazon.com/vpc/latest/userguide/nat-gateway-basics.html
+  - label: Interface VPC endpoints
+    url: https://docs.aws.amazon.com/vpc/latest/privatelink/create-interface-endpoint.html
+  - label: VPC Flow Log examples
+    url: https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs-records-examples.html
+  - label: Elastic Fabric Adapter and ENA
+    url: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa.html
+---
+
+import './../../components/eni/eni-shared.css';
+import EniIdentity from '../../components/eni/EniIdentity.astro';
+import EniTopology from '../../components/eni/EniTopology.astro';
+import EniServices from '../../components/eni/EniServices.astro';
+import EniOperations from '../../components/eni/EniOperations.astro';
+
+## Meet the network identity
+
+An Elastic Network Interface is where VPC networking becomes concrete. It has a subnet, addresses, security-group associations, attachment state, and an owner. Compute may come and go around it; those fields still describe the network identity packets use.
+
+<EniIdentity />
+
+> [!NOTE]
+> **Do not configure an Elastic IP as a local guest address.** For public IPv4 traffic, the internet gateway maps the public address to the ENI's private IPv4. Also remember that “persistent” lasts only while the EIP remains allocated to you.
+
+## Keep the subnet and Availability Zone boundary visible
+
+An ENI is created in one subnet, and that subnet fixes its Availability Zone. Detaching the interface does not make it portable across zones. If a design crosses zones, draw a separate interface in each zone.
+
+<EniTopology />
+
+## Recognize the same primitive across services
+
+EC2 exposes a customer-managed interface directly. Other services create requester-managed interfaces, manage attachments on your behalf, or abstract a shared data-plane interface. The subnet and address model remains useful, but the available controls change with ownership.
+
+<EniServices />
+
+> [!NOTE]
+> **Requester-managed does not mean abandoned.** You can inspect these interfaces while the requesting service owns their lifecycle. Delete or change the parent service, not the interface underneath it.
+
+## Put the interface on an appliance route
+
+A firewall instance is not a router merely because two ENIs are attached. Route tables must send traffic to it, source/destination checking must permit transit traffic, and the guest OS must forward packets with a valid return path.
+
+<EniOperations />
+
+> [!NOTE]
+> The failover example is deliberately same-AZ. An ENI cannot cross an Availability Zone, and moving one does not repair Linux routes, asymmetric return paths, or application state.
+
+## Operate from the ENI outward
+
+When a connection fails, identify the source and destination interfaces before opening every security rule. That gives you the correct subnet route table, security groups, NACL boundaries, ownership model, and Flow Log dimensions. For scaling failures, count network addresses and interface slots alongside CPU and memory.
+
+The recurring question is simple: **where does this workload obtain its VPC network presence, and who controls that interface?** Answer that first, and many AWS networking diagrams collapse into a smaller set of concrete boundaries.

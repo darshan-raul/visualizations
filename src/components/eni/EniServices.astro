@@ -1,0 +1,74 @@
+---
+import EniIcon from './EniIcon.astro';
+import VisualFrame from './VisualFrame.astro';
+---
+
+<VisualFrame eyebrow="ENI morph lab" title="The primitive stays familiar; ownership and controls change" description="Choose a service to see who creates the interface and which controls remain yours." takeaway="AWS services reuse VPC interfaces without giving every interface the same lifecycle or ownership." class="morph-lab">
+  <div class="service-tabs" role="tablist" aria-label="Service scenario">
+    {['EC2','ECS task','EKS Pod','Lambda','RDS','ALB','NLB','NAT Gateway','Interface endpoint'].map((name, index) => <button type="button" role="tab" aria-selected={index === 0 ? 'true' : 'false'} data-service={name}>{name}</button>)}
+  </div>
+  <div class="morph-stage">
+    <div class="service-resource"><EniIcon kind="ec2"/><small data-resource-label>RESOURCE</small><strong data-resource>EC2 instance</strong></div>
+    <div class="ownership-link" aria-hidden="true">······</div>
+    <article class="morph-passport">
+      <header><EniIcon kind="eni"/><div><small>INTERFACE ROLE</small><strong>ENI-123</strong></div><span data-owner>YOU</span></header>
+      <dl><div><dt>Created by</dt><dd data-created>You</dd></div><div><dt>Attached to</dt><dd data-attached>EC2 instance</dd></div><div><dt>Security groups</dt><dd data-security>You select them</dd></div><div><dt>Lifecycle</dt><dd data-life>Detach or delete independently</dd></div></dl>
+    </article>
+  </div>
+  <p class="morph-note" data-note>You can create, attach, detach, modify, and delete this interface within normal EC2 constraints.</p>
+</VisualFrame>
+
+<VisualFrame eyebrow="Container networking" title="ECS awsvpc gives each task a VPC identity" takeaway="Trunking raises task density, but task networking still consumes finite interface and address capacity.">
+  <div class="evolution-grid">
+    <article><span>WITHOUT TRUNKING</span><div class="host-box"><EniIcon kind="ec2"/><strong>container instance</strong><div class="task-row"><i>primary ENI</i><i>task ENI</i><i>task ENI</i><i class="full">attachment limit</i></div></div></article>
+    <div class="evolution-arrow" aria-hidden="true">→</div>
+    <article><span>WITH ENI TRUNKING</span><div class="host-box"><EniIcon kind="ec2"/><strong>container instance</strong><div class="task-row"><i>trunk ENI</i><i>branch ENIs</i><i>more tasks</i><i>same VPC identity model</i></div></div></article>
+  </div>
+</VisualFrame>
+
+<VisualFrame eyebrow="Kubernetes networking" title="EKS turns interface slots and prefixes into Pod capacity" takeaway="The VPC CNI consumes ENI address capacity; prefix mode changes how that capacity is allocated.">
+  <div class="eks-model">
+    <div class="node-shell"><header><EniIcon kind="ec2"/><strong>EC2 worker node</strong></header><div class="eni-card"><EniIcon kind="eni"/><span><b>primary ENI</b><small>node address</small></span></div><div class="eni-card"><EniIcon kind="eni"/><span><b>secondary ENI</b><small>secondary IPs or /28 prefixes</small></span></div></div>
+    <div class="pod-pool"><span>VPC CNI assigns addresses</span>{['pod-a','pod-b','pod-c','pod-d'].map(name => <i>{name}</i>)}<p>Security Groups for Pods can use branch interfaces for Pod-level policy.</p></div>
+  </div>
+</VisualFrame>
+
+<VisualFrame eyebrow="Lambda VPC connectivity" title="Concurrency does not mean one ENI per invocation" takeaway="Lambda Hyperplane ENIs are shared managed connectivity for a subnet-and-security-group combination.">
+  <div class="lambda-model">
+    <div class="invocations">{[1,2,3,4,5,6].map(number => <i>λ{number}</i>)}</div>
+    <div class="many-arrow" aria-hidden="true">shared path →</div>
+    <div class="hyperplane"><EniIcon kind="service"/><strong>Hyperplane ENI</strong><small>AWS managed · shared</small></div>
+    <div class="many-arrow" aria-hidden="true">→</div>
+    <div class="eni-boundary subnet-boundary"><b class="boundary-label">your subnet</b><span>RDS / cache / private service</span></div>
+  </div>
+</VisualFrame>
+
+<script>
+  // @ts-nocheck
+  const serviceData = {
+    'EC2': ['EC2 instance','YOU','You','EC2 instance','You select them','Detach or delete independently','You can create, attach, detach, modify, and delete this interface within normal EC2 constraints.','ec2'],
+    'ECS task': ['ECS task','SERVICE','ECS','task using awsvpc','Set in task/service config','Follows task lifecycle','The task receives VPC-level addressing; ECS manages the task attachment.','service'],
+    'EKS Pod': ['EKS Pod','CNI / SERVICE','VPC CNI','node or branch attachment','Node or Pod policy mode','Follows CNI allocation','Pods consume secondary IP or prefix capacity; Pod security groups can use branch ENIs.','service'],
+    'Lambda': ['Lambda function','ABSTRACTED','Lambda service','Hyperplane path','Chosen VPC SG set','Shared and service managed','Hyperplane ENIs are shared for compatible subnet and security-group combinations.','service'],
+    'RDS': ['RDS database','REQUESTER-MANAGED','RDS service','database resource','Chosen on the DB','Follows database lifecycle','Inspect the interface, but let RDS manage its lifecycle.','database'],
+    'ALB': ['Application Load Balancer','AWS SERVICE','Elastic Load Balancing','load balancer node','Chosen on the load balancer','Follows load balancer lifecycle','Load balancer nodes obtain subnet-local network presence managed by the service.','service'],
+    'NLB': ['Network Load Balancer','AWS SERVICE','Elastic Load Balancing','load balancer node','Optional at creation','Follows load balancer lifecycle','NLB security-group availability depends on whether groups were attached at creation.','service'],
+    'NAT Gateway': ['NAT Gateway','AWS SERVICE','VPC service','NAT gateway','No security group','Follows gateway lifecycle','NAT gateways have interfaces but do not support security groups.','gateway'],
+    'Interface endpoint': ['Interface endpoint','REQUESTER-MANAGED','PrivateLink','endpoint in your subnet','Chosen on endpoint','Follows endpoint lifecycle','Each endpoint interface creates a private entry point to the service.','service'],
+  };
+  function initializeMorph(root) {
+    if (!(root instanceof HTMLElement) || root.dataset.ready) return;
+    root.dataset.ready = 'true';
+    const buttons = [...root.querySelectorAll('[data-service]')];
+    const set = name => {
+      const d = serviceData[name]; if (!d) return;
+      buttons.forEach(button => button.setAttribute('aria-selected', String(button.dataset.service === name)));
+      const pairs = [['[data-resource]',d[0]],['[data-owner]',d[1]],['[data-created]',d[2]],['[data-attached]',d[3]],['[data-security]',d[4]],['[data-life]',d[5]],['[data-note]',d[6]]];
+      pairs.forEach(([selector,value]) => { const node = root.querySelector(selector); if (node) node.textContent = value; });
+      const icon = root.querySelector('.service-resource .eni-icon'); if (icon) icon.className = `eni-icon eni-icon--${d[7]}`;
+    };
+    buttons.forEach(button => button.addEventListener('click', () => set(button.dataset.service)));
+  }
+  document.querySelectorAll('.morph-lab').forEach(initializeMorph);
+  document.addEventListener('astro:page-load', () => document.querySelectorAll('.morph-lab').forEach(initializeMorph));
+</script>

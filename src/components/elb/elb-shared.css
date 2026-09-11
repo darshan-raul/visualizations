@@ -197,10 +197,10 @@
     .nlb-integration-grid p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
     .nlb-integration-grid small { display: block; margin-top: 10px; color: var(--dim); font-size: 11px; line-height: 1.5; }
     .nlb-integration-grid small strong { color: var(--purple); }
-    .mini-path { display: flex; min-height: 58px; align-items: center; justify-content: center; gap: 7px; color: var(--cyan); font: 10px var(--mono); text-align: center; }
+    .mini-path { display: flex; min-height: 150px; flex-direction: column; align-items: center; justify-content: center; gap: 7px; color: var(--cyan); font: 10px var(--mono); text-align: center; }
     .mini-path span { display: flex; align-items: center; gap: 5px; color: var(--text); }
     .mini-path code { padding: 5px 6px; border: 1px solid var(--border); border-radius: 5px; color: var(--blue); font: 9px var(--mono); overflow-wrap: anywhere; }
-    .mini-path b { color: var(--cyan); font-weight: 400; }
+    .mini-path b { color: var(--cyan); font-weight: 400; transform: rotate(90deg); }
     .mini-path.wide b, .mini-path.wide code { color: var(--purple); }
 
     /* 5 — GWLB */
@@ -362,8 +362,6 @@
       .target-stack > strong { grid-column: auto; }
       .lab-controls { align-items: stretch; flex-direction: column; }
       .controls .control-button { flex: 1; }
-      .mini-path { flex-direction: column; }
-      .mini-path b { transform: rotate(90deg); }
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }

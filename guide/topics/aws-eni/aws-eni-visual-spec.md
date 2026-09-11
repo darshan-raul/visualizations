@@ -1,6 +1,6 @@
 # Infra Illustrated — AWS Elastic Network Interface (ENI) visual specification
 
-Status: approval draft 1  
+Status: integrated
 Version: 1.0  
 Verified: 2026-09-10  
 Topic: AWS Elastic Network Interfaces as the connective tissue of VPC networking  
@@ -141,7 +141,7 @@ Other visuals are lighter selectors, comparisons, or static progressive diagrams
 
 | # | Section | Core learner question | Visual form | Interaction | Required takeaway |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Meet ENI-123 | What exactly is an ENI? | Passport anatomy | light field focus | ENI carries subnet-scoped network identity and attributes |
+| 1 | Meet ENI-123 | What belongs to one ENI, and when does its public address persist? | Passport + multiple-IP visual + public-IP comparison | light passport field focus; address visuals are static | One ENI can carry several addresses; use an EIP when public IPv4 continuity matters |
 | 2 | One subnet, one AZ | Can one ENI live in two subnets? | nested boundary | static + invalid drop hint | One ENI belongs to one subnet and cannot be moved to another |
 | 3 | One EC2, two ENIs | Can a server belong to two networks? | dual-homed topology | toggle traffic lane | Multiple ENIs let one EC2 participate in multiple subnets, constrained by AZ |
 | 4 | Security around the interface | SG vs NACL vs route—who does what? | checkpoint lab | HERO | Route chooses path; NACL and SG filter at different scopes |
@@ -181,7 +181,9 @@ ENI-123 exists unattached in `subnet-app-a`, Availability Zone `ap-south-1a`.
 - `ap-south-1a`.
 - Primary private IPv4: `10.20.1.17`.
 - Secondary private IPv4: `10.20.1.18`.
-- Example IPv6: `2406:da1a:20:1::17`.
+- Example IPv6: `2001:db8:20:1::17`.
+- Auto-assigned public IPv4 examples: documentation-only `198.51.100.24` before stop and `198.51.100.91` after start.
+- Elastic IP example: documentation-only `203.0.113.42`, unchanged across stop/start.
 - MAC: illustrative `02:7b:64:10:20:17`.
 - SGs: `sg-app`, `sg-observability`.
 - source/destination check: enabled.
@@ -199,9 +201,24 @@ Large passport card centered inside a subnet frame. The VPC frame is visible aro
 
 A narrow side note reads: “The exact attributes available depend on interface type and service ownership.”
 
+#### Supporting visual 1A — One ENI, several IP addresses
+
+Use one static subnet boundary containing `eni-0abc123` beside its complete address stack. Show primary private IPv4 `10.20.1.17`, secondary private IPv4 addresses `10.20.1.18` and `10.20.1.19`, and IPv6 `2001:db8:20:1::17` simultaneously. Do not introduce public addressing into this visual.
+
+#### Supporting visual 1B — Public IPv4 continuity
+
+Use a separate two-column before/after comparison:
+
+- Auto-assigned public IPv4: `198.51.100.24 → stop/start → 198.51.100.91` with `NEW ADDRESS` called out.
+- Elastic IP: `203.0.113.42 → stop/start → 203.0.113.42` with `SAME EIP` called out.
+
+Both columns retain ENI/private IPv4 `eni-0abc123 / 10.20.1.17`. Keep the lesson narrowly focused on why an Elastic IP is used when the public IPv4 must remain stable.
+
 ### Interaction
 
 Click/focus one passport field to highlight the matching concept label in a side inspector. No animation beyond a 200 ms focus transition.
+
+The two address visuals are static. Interaction would merge two separate teaching points and make the opening harder to scan.
 
 Keyboard: fields are buttons in DOM order; Enter/Space selects; Escape returns to overview.
 
@@ -211,11 +228,15 @@ Default: unattached customer-created interface. Secondary state: attached to `i-
 
 ### Failure/edge state
 
-If the learner selects “public IP”, explain that public/Elastic IP behavior is not a universal ENI property and varies by resource/networking mode. Do not imply every interface receives public IP assignment directly.
+The public-IP comparison must not imply that rebooting changes the public address. The illustrated change is specifically a stop/start or hibernate/start lifecycle. Do not imply every interface receives an auto-assigned public IPv4.
 
 ### Required copy
 
 Takeaway: **“An ENI is a subnet-scoped network identity with addresses, security associations, and attachment state.”**
+
+Multiple-IP takeaway: **“One ENI is not limited to one IP address.”**
+
+Public-IP takeaway: **“An auto-assigned public IPv4 changes after stop/start. Use an Elastic IP when the public IPv4 must stay fixed while allocated.”**
 
 Misconception: “ENI = physical NIC.”  
 Correct model: “It is an AWS VPC network-interface resource; the guest may see a corresponding device depending on attachment and service.”
@@ -224,10 +245,16 @@ Correct model: “It is an AWS VPC network-interface resource; the guest may see
 
 - The example MAC/IPs are illustrative.
 - Service-managed interfaces may expose fewer mutable attributes.
+- Address counts depend on instance type and interface configuration.
+- SGs are associated with network interfaces, not separately with each IP address on an interface.
+- For EC2 in a VPC, the Internet Gateway performs the public-to-private IPv4 mapping; the guest uses the private address rather than configuring the EIP as a local interface address.
+- “Persistent” means the EIP remains yours while allocated. Releasing it ends that guarantee.
+- A normal reboot retains the public IPv4; the comparison specifically illustrates stop/start behavior.
+- Additional private addresses may require guest operating-system configuration before the workload uses them.
 
 ### Mobile behavior
 
-Passport quadrants stack. Side inspector becomes an inline definition panel below the selected field.
+Passport quadrants stack. Side inspector becomes an inline definition panel below the selected field. The multiple-IP stack remains a single column; each public-IP comparison timeline becomes vertical.
 
 ### Accessibility
 
@@ -236,10 +263,16 @@ All field highlights have text labels. Focus order matches reading order. No inf
 ### Source anchors
 
 - https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html
+- https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-instance-addressing.html
+- https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/how-ec2-instance-stop-start-works.html
+- https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/managing-network-interface-ip-addresses.html
+- https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/working-with-eips.html
 
 ### Acceptance checks
 
 - Reader can name subnet, IP, SG, MAC, source/destination check, and attachment as ENI attributes.
+- Reader can point to multiple simultaneous addresses on one ENI and distinguish primary IPv4, secondary IPv4, and IPv6.
+- Reader can explain that stop/start replaces an auto-assigned public IPv4 while an associated EIP remains stable.
 - Page does not imply all service-managed ENIs expose all attributes.
 
 ---
@@ -413,19 +446,25 @@ Resolve the common confusion between route table, NACL, security group, and ENI.
 
 ### Composition
 
-Horizontal circuit:
+Use a vertical packet journey inside one outer VPC boundary. The main downward spine runs:
 
-`source ENI → source SG → route decision → source NACL → VPC local path → destination NACL → destination SG → RDS`
+`EC2 workload → source ENI → source SG egress → source-subnet NACL outbound → route decision → destination-subnet NACL inbound → destination SG inbound → destination ENI → RDS`
 
-The route card is a signpost rather than a firewall gate. NACL gates have explicit `IN` and `OUT` halves. SG shield is marked `STATEFUL`.
+Nest the source ENI and its outbound gate inside the `sg-app` boundary, and nest that boundary inside `app-subnet-a`. Mirror the composition for the requester-managed destination ENI inside `sg-db` and `db-subnet-a`. Each subnet has a visible blue boundary; each security group has a distinct purple dashed boundary. ENI, EC2, route, and database actors use compact technical icons rather than anonymous boxes.
+
+A separate upward return rail sits beside the main spine. It shows destination-subnet NACL outbound and source-subnet NACL inbound as distinct gates. The rail explicitly states that security-group response traffic is statefully allowed while both stateless NACL directions still need matching rules.
+
+The route card is a signpost rather than a firewall gate. Gate cards display `PASS`, `STOP`, or `WAIT` in words so state does not depend on color.
 
 Top control bar toggles:
 
 - Route exists.
 - Source SG egress allowed.
 - Destination SG inbound allowed.
-- NACL forward direction allowed.
-- NACL return ephemeral path allowed.
+- Source-subnet NACL outbound allowed.
+- Destination-subnet NACL inbound allowed.
+- Destination-subnet NACL outbound return allowed.
+- Source-subnet NACL inbound return allowed.
 
 Result panel always shows first blocking reason and operator evidence.
 
@@ -439,7 +478,7 @@ Toggle examples:
 
 - Route off → packet stops at route decision: “No matching reachable path.”
 - DB SG inbound off → “Destination SG does not allow TCP/5432 from sg-app.”
-- NACL return off → forward may leave but connection fails because stateless return path is denied.
+- Either return NACL off → the forward request can arrive, but the connection fails at the exact subnet boundary that denies the response to client port `43122`.
 
 Reset restores healthy path.
 
@@ -451,7 +490,7 @@ Use PostgreSQL TCP/5432 as the concrete example. The service is illustrative; th
 
 ### Failure/edge state
 
-Add a mode chip `NAT Gateway exception`: replace destination with NAT Gateway and hide the SG control with text: “NAT Gateways do not support security groups; control source workloads plus subnet NACL/routing.”
+Add a mode chip `NAT Gateway exception`: replace the RDS security-group boundary and destination ENI with a requester-managed NAT Gateway interface inside a public subnet. Hide the destination SG control and show: “NAT Gateways do not support security groups; control source workloads plus subnet NACL/routing.”
 
 ### Required copy
 
@@ -468,12 +507,13 @@ Add a mode chip `NAT Gateway exception`: replace destination with NAT Gateway an
 
 ### Mobile behavior
 
-Horizontal circuit becomes numbered vertical checkpoints. Result card remains sticky within section.
+The main path remains vertical. The return rail moves below it as a compact upward-response panel. Boundary nesting, labels, icons, and gate states remain visible without horizontal scrolling; the result card follows the diagram.
 
 ### Accessibility
 
 - Every switch has visible state text.
 - Result contains first blocker in words.
+- Every gate shows `PASS`, `STOP`, or `WAIT`; the forward and return rails each expose a textual outcome.
 - Animated packet stops under `prefers-reduced-motion`; state changes remain visible.
 
 ### Source anchors
@@ -485,6 +525,8 @@ Horizontal circuit becomes numbered vertical checkpoints. Result card remains st
 ### Acceptance checks
 
 - Reader can explain why “route blocked it” differs from “SG denied it.”
+- Reader can point to the source ENI, source subnet edge, route decision, destination subnet edge, and destination ENI in order.
+- Reader can explain why an allowed forward request still fails when either return-direction NACL gate denies the response.
 - NAT mode removes the incorrect SG assumption.
 
 ---
@@ -847,7 +889,14 @@ ENI-123 is the ingress interface of `fw-ec2-a`; `eni-fw-egress` is the second in
 
 ### Composition
 
-Traffic path from workload subnet to firewall ENI A, through EC2 appliance, out ENI B. A large switch card labelled `Source/destination check` overlays the appliance.
+Draw an infrastructure topology inside a VPC boundary, not a row of workflow cards:
+
+- Left subnet frame: workload ENI plus a route-table shape showing `0.0.0.0/0 → eni-fw-in`.
+- Center: an orange EC2 appliance shape labelled `fw-ec2-a`, with distinct cyan ingress and egress ENI shapes attached to it.
+- Right subnet frame: egress route-table shape showing `0.0.0.0/0 → igw-042`, plus an Internet Gateway shape.
+- A continuous connector underneath summarizes the routed topology from workload ENI through the appliance ENIs to the gateway.
+
+Place two state badges inside the EC2 appliance: `SOURCE/DEST CHECK` and `GUEST OS FORWARDING`. They change between explicit pass/block states as the controls change. Route tables remain visible as configuration objects rather than appearing as sequential processing steps.
 
 ### Interaction
 
@@ -875,7 +924,7 @@ Source/destination check off but OS forwarding off → packet still fails. This 
 
 ### Mobile behavior
 
-Vertical path.
+The three-column topology stacks as workload subnet, EC2 appliance, and egress subnet. Route-table, ENI, EC2, and gateway icons remain visible; the topology connector becomes vertical.
 
 ### Accessibility
 
@@ -889,6 +938,7 @@ Switch state and first failure reason are textual.
 ### Acceptance checks
 
 - Learner does not leave believing ENI attachment itself performs routing.
+- Learner can identify the workload route, ingress ENI, EC2 forwarding boundary, egress ENI, and egress route as different parts of one topology.
 
 ---
 
@@ -1378,12 +1428,18 @@ Technical validation:
 
 # 12. Integration guidance for Infra Illustrated
 
-Implementation status as of 2026-09-10:
+Implementation status as of 2026-09-11:
 
 - Approval prototype: `guide/topics/aws-eni/aws-eni-visual-prototype.html` — implemented and browser-checked at desktop and 390 px mobile widths.
-- Proposed canonical published route: `/aws/vpc/eni`.
-- Production Astro/MDX integration: not started; the prototype remains an unpublished design artifact.
+- Canonical published route: `/aws/vpc/eni`.
+- Canonical content: `src/content/topics/aws-eni.mdx`.
+- Production components: `src/components/eni/`; the prototype remains an unpublished design artifact rather than a second maintained implementation.
+- Production Astro/MDX integration: completed 2026-09-11; `astro check`, static build, and internal route/anchor validation pass.
 - Accuracy refinement applied in the prototype: NAT Gateway is the explicit no-security-group exception. The NLB persona states that NLB security groups are supported when configured and does not inherit the NAT exception.
+- Interaction feedback refinement: lighter selectors now expose their controlled regions, ECS/EKS mode changes announce updated explanations, and the failover sequence reports explicit normal, interrupted, and recovered outcomes without relying on color or border changes.
+- Packet-lab composition refinement: the security hero now uses a vertical ENI-to-ENI flow nested inside VPC, subnet, and security-group boundaries, with NACL gates at each subnet edge and a separate return-traffic rail.
+- Address-model refinement: the opening now uses two separate visuals—one for multiple simultaneous private IPv4/IPv6 addresses on one ENI, and one comparing changing auto-assigned public IPv4 with persistent Elastic IP behavior across stop/start.
+- Appliance-topology refinement: the routing lesson now uses VPC/subnet boundaries, route-table shapes, two ENIs, an EC2 appliance, and an Internet Gateway instead of a workflow-style row.
 
 Preserve the established dark Infra Illustrated design system from the IAM prototype:
 
@@ -1496,6 +1552,10 @@ The page is approved only when:
 Verified 2026-09-10.
 
 - EC2 ENI concepts and attributes: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html
+- EC2 multiple-IP behavior: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-instance-addressing.html
+- EC2 stop/start public-IP persistence behavior: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/how-ec2-instance-stop-start-works.html
+- Manage network-interface IP and EIP associations: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/managing-network-interface-ip-addresses.html
+- Associate an Elastic IP with an instance or network interface: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/working-with-eips.html
 - Create ENI / subnet and AZ constraints: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/create-network-interface.html
 - Multiple ENIs / dual-homed EC2: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/scenarios-enis.html
 - ENI attachment considerations: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/network-interface-attachments.html
@@ -1515,5 +1575,6 @@ Verified 2026-09-10.
 - ALB subnet/network-interface behavior: https://docs.aws.amazon.com/elasticloadbalancing/latest/application/application-load-balancers.html
 - NLB introduction: https://docs.aws.amazon.com/elasticloadbalancing/latest/network/introduction.html
 - NLB AZ/interface behavior: https://docs.aws.amazon.com/elasticloadbalancing/latest/network/availability-zones.html
+- NLB security-group lifecycle: https://docs.aws.amazon.com/elasticloadbalancing/latest/network/load-balancer-security-groups.html
 - VPC Flow Log examples: https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs-records-examples.html
 - EFA/ENA comparison: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa.html

@@ -1,0 +1,66 @@
+---
+import EniIcon from './EniIcon.astro';
+import VisualFrame from './VisualFrame.astro';
+---
+
+<VisualFrame eyebrow="Appliance topology" title="An interface can sit on a routed path" description="The route tables choose the appliance; the EC2 source/destination check and guest OS decide whether transit traffic can cross it." takeaway="A forwarding appliance needs both AWS-side and guest-side forwarding configuration." class="appliance-lab">
+  <fieldset class="eni-controls appliance-controls"><legend class="sr-only">Appliance forwarding state</legend><label><input type="checkbox" data-src-check checked/> Source/destination check enabled</label><label><input type="checkbox" data-os-forward/> OS forwarding configured</label></fieldset>
+  <div class="appliance-vpc eni-boundary vpc-boundary">
+    <b class="boundary-label">inspection VPC</b>
+    <div class="appliance-subnets">
+      <section class="eni-boundary subnet-boundary"><b class="boundary-label">workload subnet</b><div class="route-card"><EniIcon kind="route"/><span><b>workload route table</b><code>0.0.0.0/0 → eni-inspect-in</code></span></div><div class="workload-node"><EniIcon kind="ec2"/><span>application EC2</span></div></section>
+      <div class="traffic-arrow" aria-hidden="true">→</div>
+      <section class="eni-boundary subnet-boundary appliance-zone"><b class="boundary-label">inspection subnet</b><div class="eni-card"><EniIcon kind="eni"/><span><b>ingress ENI</b><small>10.20.10.10</small></span></div><div class="appliance-node"><EniIcon kind="ec2"/><span><strong>fw-ec2-a</strong><small>guest routing + policy</small></span></div><div class="eni-card"><EniIcon kind="eni"/><span><b>egress ENI</b><small>10.20.10.11</small></span></div></section>
+      <div class="traffic-arrow" aria-hidden="true">→</div>
+      <section class="eni-boundary subnet-boundary"><b class="boundary-label">egress subnet</b><div class="route-card"><EniIcon kind="route"/><span><b>egress route table</b><code>0.0.0.0/0 → igw</code></span></div><div class="gateway-node"><EniIcon kind="gateway"/><span>internet gateway</span></div></section>
+    </div>
+  </div>
+  <output class="path-result appliance-result" aria-live="polite"><strong>BLOCKED</strong><span>Source/destination check rejects transit traffic addressed to neither appliance interface.</span></output>
+</VisualFrame>
+
+<VisualFrame eyebrow="Same-AZ continuity" title="Move network identity independently from compute" takeaway="A secondary ENI and its private addresses can be reassigned for same-AZ failover patterns.">
+  <div class="failover-model">
+    <div class="ec2-node failed-node"><EniIcon kind="ec2"/><strong>appliance-a</strong><small>failed</small></div><div class="move-arrow">detach<br/>→</div><div class="eni-card moving-eni"><EniIcon kind="eni"/><strong>eni-service</strong><small>10.20.1.50</small></div><div class="move-arrow">attach<br/>→</div><div class="ec2-node"><EniIcon kind="ec2"/><strong>appliance-b</strong><small>same Availability Zone</small></div>
+  </div>
+</VisualFrame>
+
+<VisualFrame eyebrow="Capacity lab" title="Networking can stop scaling before compute does" description="Change the demand to see which finite resource becomes the placement blocker." takeaway="Subnet addresses, ENI limits, and address slots or prefixes all participate in workload capacity." class="capacity-lab">
+  <div class="capacity-controls"><label for="eni-demand">Requested tasks or Pods <output data-demand-output>12</output></label><input id="eni-demand" data-demand type="range" min="1" max="40" value="12"/><div class="mode-buttons"><button type="button" aria-pressed="true" data-cap-mode="secondary">secondary IPs</button><button type="button" aria-pressed="false" data-cap-mode="prefix">prefix delegation</button></div></div>
+  <div class="capacity-grid"><article><span>SUBNET FREE IPv4</span><strong data-free-ip>24</strong><meter min="0" max="24" value="12" data-ip-meter>12 of 24</meter><small>Every workload address comes from the subnet.</small></article><article><span>AVAILABLE WORKLOAD SLOTS</span><strong data-slots>16</strong><meter min="0" max="32" value="12" data-slot-meter>12 of 32</meter><small data-mode-note>Secondary-IP mode is bounded by ENIs and IP slots.</small></article><article class="capacity-verdict"><span>PLACEMENT</span><strong data-cap-result>12 can start</strong><small data-cap-reason>12 addresses and 12 slots are available.</small></article></div>
+</VisualFrame>
+
+<VisualFrame eyebrow="Evidence path" title="Follow the ENI, then follow the packet" takeaway="Start from the source interface and stop at the first missing fact or failed control.">
+  <ol class="diagnostic-path">
+    <li><span>01</span><div><strong>Source identity</strong><small>ENI, IP, subnet, AZ, attachment, owner</small></div></li>
+    <li><span>02</span><div><strong>Route decision</strong><small>source subnet route table and next hop</small></div></li>
+    <li><span>03</span><div><strong>Security gates</strong><small>SG stateful rules and NACL rules in both directions</small></div></li>
+    <li><span>04</span><div><strong>Destination identity</strong><small>resolved IP, destination ENI, listener and return path</small></div></li>
+    <li><span>05</span><div><strong>Observed evidence</strong><small>VPC Flow Logs, service health, guest routes and counters</small></div></li>
+  </ol>
+</VisualFrame>
+
+<VisualFrame eyebrow="Name collision" title="ENI, ENA, and EFA answer different questions" takeaway="ENI is VPC network identity; ENA and EFA describe networking device or fabric capabilities.">
+  <div class="term-compare"><article><EniIcon kind="eni"/><span>VPC RESOURCE</span><strong>ENI</strong><p>Addresses, subnet, security groups, attachment and observable flows.</p></article><article><EniIcon kind="service"/><span>DEVICE TECHNOLOGY</span><strong>ENA</strong><p>Enhanced Networking adapter and driver used by supported EC2 instances.</p></article><article><EniIcon kind="service"/><span>HPC / ML FABRIC</span><strong>EFA</strong><p>Low-latency device with OS-bypass capabilities for tightly coupled workloads.</p></article></div>
+</VisualFrame>
+
+<VisualFrame eyebrow="Architecture map" title="Find the interfaces hiding across a VPC" takeaway="The ENI is a common VPC primitive; ownership and supported controls still belong to each service." class="architecture-map">
+  <div class="eni-boundary vpc-boundary"><b class="boundary-label">production VPC · 10.20.0.0/16</b><div class="architecture-grid">{['ALB node','EC2 instance','ECS task','EKS node + Pods','Lambda Hyperplane','RDS database','NAT Gateway','Interface endpoint'].map((name,index) => <article class={index > 3 ? 'managed-service' : ''}><EniIcon kind={index === 5 ? 'database' : index === 6 ? 'gateway' : index === 1 ? 'ec2' : 'service'}/><strong>{name}</strong><span><i><EniIcon kind="eni"/></i>{index > 3 ? 'service-managed network presence' : 'ENI-backed VPC presence'}</span></article>)}</div></div>
+</VisualFrame>
+
+<script>
+  // @ts-nocheck
+  function initAppliance(root) {
+    if (!(root instanceof HTMLElement) || root.dataset.ready) return; root.dataset.ready = 'true';
+    const check = root.querySelector('[data-src-check]'); const os = root.querySelector('[data-os-forward]'); const output = root.querySelector('.appliance-result');
+    const update = () => { const enabled = check?.checked; const forwarded = os?.checked; let title = 'ALLOWED'; let text = 'The AWS check is disabled and the guest is configured to forward.'; if (enabled) { title = 'BLOCKED'; text = 'Source/destination check rejects transit traffic addressed to neither appliance interface.'; } else if (!forwarded) { title = 'BLOCKED'; text = 'AWS permits transit, but the guest OS is not forwarding packets.'; } root.classList.toggle('path-allowed', !enabled && forwarded); if (output) output.innerHTML = `<strong>${title}</strong><span>${text}</span>`; };
+    [check,os].forEach(input => input?.addEventListener('change',update)); update();
+  }
+  function initCapacity(root) {
+    if (!(root instanceof HTMLElement) || root.dataset.ready) return; root.dataset.ready = 'true';
+    const demand = root.querySelector('[data-demand]'); const buttons = [...root.querySelectorAll('[data-cap-mode]')]; let mode = 'secondary';
+    const update = () => { const requested = Number(demand?.value || 0); const slots = mode === 'prefix' ? 32 : 16; const ips = 24; const available = Math.min(slots,ips); root.querySelector('[data-demand-output]').textContent = String(requested); root.querySelector('[data-slots]').textContent = String(slots); const im = root.querySelector('[data-ip-meter]'); const sm = root.querySelector('[data-slot-meter]'); if (im) im.value = Math.min(requested,ips); if (sm) { sm.max = slots; sm.value = Math.min(requested,slots); } const ok = requested <= available; root.querySelector('.capacity-verdict')?.classList.toggle('is-blocked',!ok); root.querySelector('[data-cap-result]').textContent = ok ? `${requested} can start` : `${requested - available} cannot start`; root.querySelector('[data-cap-reason]').textContent = ok ? `${requested} addresses and workload slots are available.` : mode === 'secondary' && slots < ips ? `ENI/IP slots stop placement at ${slots}.` : `The subnet runs out after ${ips} workload addresses.`; root.querySelector('[data-mode-note]').textContent = mode === 'prefix' ? 'Prefix delegation increases address slots; subnet space still matters.' : 'Secondary-IP mode is bounded by ENIs and IP slots.'; buttons.forEach(button => button.setAttribute('aria-pressed',String(button.dataset.capMode === mode))); };
+    demand?.addEventListener('input',update); buttons.forEach(button => button.addEventListener('click',()=>{mode=button.dataset.capMode;update();})); update();
+  }
+  document.querySelectorAll('.appliance-lab').forEach(initAppliance); document.querySelectorAll('.capacity-lab').forEach(initCapacity);
+  document.addEventListener('astro:page-load',()=>{document.querySelectorAll('.appliance-lab').forEach(initAppliance);document.querySelectorAll('.capacity-lab').forEach(initCapacity);});
+</script>

@@ -1,0 +1,77 @@
+---
+import EniIcon from './EniIcon.astro';
+import VisualFrame from './VisualFrame.astro';
+---
+
+<VisualFrame eyebrow="Placement boundary" title="An ENI belongs to one subnet and one Availability Zone" takeaway="You can detach an ENI, but you cannot move it to another subnet or Availability Zone.">
+  <div class="az-grid">
+    <div class="eni-boundary az-boundary"><b class="boundary-label">ap-south-1a</b><div class="eni-boundary subnet-boundary"><b class="boundary-label">subnet-app-a</b><div class="eni-card"><EniIcon kind="eni"/><strong>ENI-123</strong><small>10.20.1.17</small></div></div></div>
+    <div class="invalid-move"><span aria-hidden="true">×</span><strong>cannot move</strong><small>create another ENI here</small></div>
+    <div class="eni-boundary az-boundary muted-boundary"><b class="boundary-label">ap-south-1b</b><div class="eni-boundary subnet-boundary"><b class="boundary-label">subnet-app-b</b><span class="empty-slot">new interface boundary</span></div></div>
+  </div>
+</VisualFrame>
+
+<VisualFrame eyebrow="Multi-homed compute" title="One EC2 instance can use more than one ENI" description="Each interface keeps the subnet identity and security groups of its own network." takeaway="Multiple ENIs let one instance participate in multiple subnets in the same Availability Zone.">
+  <div class="multi-topology eni-boundary az-boundary">
+    <b class="boundary-label">ap-south-1a</b>
+    <div class="network-side app-network"><span>application subnet</span><div class="eni-card"><EniIcon kind="eni"/><strong>eth0 · primary ENI</strong><small>10.20.1.17 · sg-app</small></div></div>
+    <div class="ec2-node"><EniIcon kind="ec2" label="Amazon EC2"/><strong>i-0web123</strong><small>policy routing decides the egress interface</small></div>
+    <div class="network-side mgmt-network"><span>management subnet</span><div class="eni-card"><EniIcon kind="eni"/><strong>eth1 · secondary ENI</strong><small>10.20.2.17 · sg-admin</small></div></div>
+  </div>
+</VisualFrame>
+
+<VisualFrame eyebrow="Packet checkpoint lab" title="Trace the packet from source ENI to destination ENI" description="Disable a gate to reveal the first blocker. The diagram is ordered by responsibility, not literal internal implementation." takeaway="Routes choose the path; subnet NACLs and interface security groups filter traffic at different boundaries." class="checkpoint-lab">
+  <fieldset class="eni-controls" data-checkpoint-controls>
+    <legend class="sr-only">Packet gate state</legend>
+    <label><input type="checkbox" data-gate="source" checked /> Source SG egress</label>
+    <label><input type="checkbox" data-gate="route" checked /> Route exists</label>
+    <label><input type="checkbox" data-gate="forward" checked /> NACL forward</label>
+    <label><input type="checkbox" data-gate="inbound" checked /> DB SG inbound</label>
+    <label><input type="checkbox" data-gate="return" checked /> NACL return</label>
+  </fieldset>
+  <div class="vertical-path" data-checkpoint-path>
+    <div class="endpoint source-endpoint"><EniIcon kind="eni"/><div><small>SOURCE ENI</small><strong>10.20.1.17:43122</strong><span>eni-app · sg-app</span></div></div>
+    <div class="path-arrow" aria-hidden="true"></div>
+    <div class="gate interface-gate" data-stage="source"><EniIcon kind="shield"/><div><small>INTERFACE GATE</small><strong>Source SG · egress</strong><span>stateful policy</span></div><b>ALLOW</b></div>
+    <div class="path-arrow" aria-hidden="true"></div>
+    <div class="gate route-gate" data-stage="route"><EniIcon kind="route"/><div><small>SUBNET DECISION</small><strong>Route table</strong><span>selects the next hop</span></div><b>ROUTE</b></div>
+    <div class="path-arrow" aria-hidden="true"></div>
+    <div class="subnet-crossing">
+      <div class="gate" data-stage="forward"><EniIcon kind="shield"/><div><small>SOURCE SUBNET EDGE</small><strong>NACL · forward tuple</strong><span>stateless allow</span></div><b>ALLOW</b></div>
+      <div class="transit"><span>VPC data plane</span><code>flow-42 · TCP/5432</code></div>
+      <div class="gate" data-stage="return"><EniIcon kind="shield"/><div><small>RETURN REQUIREMENT</small><strong>NACL · ephemeral port</strong><span>separate stateless rule</span></div><b>ALLOW</b></div>
+    </div>
+    <div class="path-arrow" aria-hidden="true"></div>
+    <div class="gate interface-gate" data-stage="inbound"><EniIcon kind="shield"/><div><small>DESTINATION INTERFACE GATE</small><strong>DB SG · inbound 5432</strong><span>stateful policy</span></div><b>ALLOW</b></div>
+    <div class="path-arrow" aria-hidden="true"></div>
+    <div class="endpoint destination-endpoint"><EniIcon kind="database"/><div><small>DESTINATION ENI</small><strong>10.20.3.25:5432</strong><span>RDS PostgreSQL · eni-db</span></div></div>
+  </div>
+  <output class="path-result" data-checkpoint-result aria-live="polite"><strong>ALLOWED</strong><span>flow-42 reaches PostgreSQL.</span></output>
+</VisualFrame>
+
+<script>
+  // @ts-nocheck
+  function initializeCheckpoint(root) {
+    if (!(root instanceof HTMLElement) || root.dataset.ready) return;
+    root.dataset.ready = 'true';
+    const inputs = [...root.querySelectorAll('input[data-gate]')];
+    const result = root.querySelector('[data-checkpoint-result]');
+    const order = ['source', 'route', 'forward', 'inbound', 'return'];
+    const names = { source: 'Source SG egress', route: 'Route table', forward: 'Forward NACL', inbound: 'DB SG inbound', return: 'Return NACL' };
+    const update = () => {
+      const failed = order.find(key => !inputs.find(input => input.dataset.gate === key)?.checked);
+      root.querySelectorAll('[data-stage]').forEach(stage => {
+        const isFailed = stage.dataset.stage === failed;
+        stage.classList.toggle('is-blocked', isFailed);
+        const badge = stage.querySelector(':scope > b');
+        if (badge) badge.textContent = isFailed ? 'BLOCK' : stage.dataset.stage === 'route' ? 'ROUTE' : 'ALLOW';
+      });
+      root.classList.toggle('has-block', Boolean(failed));
+      if (result) result.innerHTML = failed ? `<strong>BLOCKED</strong><span>${names[failed]} is the first failing checkpoint.</span>` : '<strong>ALLOWED</strong><span>flow-42 reaches PostgreSQL.</span>';
+    };
+    inputs.forEach(input => input.addEventListener('change', update));
+    update();
+  }
+  document.querySelectorAll('.checkpoint-lab').forEach(initializeCheckpoint);
+  document.addEventListener('astro:page-load', () => document.querySelectorAll('.checkpoint-lab').forEach(initializeCheckpoint));
+</script>
