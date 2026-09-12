@@ -122,26 +122,26 @@ const pods = [
   .service-endpoint-source { border-color: rgba(183,154,255,.42); }
   .service-endpoint-slice { border-color: rgba(104,163,255,.42); }
   .service-endpoint-consumer { border-color: rgba(73,214,163,.38); }
-  .service-endpoint-map small, .service-pod-grid small { color: var(--purple); font: .59rem var(--mono); text-transform: uppercase; }
+  .service-endpoint-map small, .service-pod-grid small { color: var(--purple); font: .75rem var(--mono); text-transform: uppercase; }
   .service-endpoint-map strong { font-size: .78rem; }
-  .service-endpoint-map code { overflow-wrap: anywhere; font-size: .58rem; }
+  .service-endpoint-map code { overflow-wrap: anywhere; font-size: .75rem; }
   .service-endpoint-arrow { display: grid; align-content: center; justify-items: center; color: var(--purple); font: 1rem var(--mono); }
-  .service-endpoint-arrow span { max-width: 75px; color: var(--dim); font-size: .5rem; line-height: 1.4; text-align: center; }
+  .service-endpoint-arrow span { max-width: 75px; color: var(--dim); font-size: .75rem; line-height: 1.4; text-align: center; }
   [data-slice-endpoints], [data-eligible-endpoints] { display: grid; gap: 6px; }
   :global(.endpoint-chip) { display: grid; min-width: 0; gap: 3px; padding: 8px; border: 1px solid var(--border); border-radius: 6px; }
-  :global(.endpoint-chip b) { font-size: .65rem; white-space: nowrap; }
-  :global(.endpoint-chip code) { white-space: normal; overflow-wrap: anywhere; font-size: .54rem; }
-  :global(.endpoint-chip-with-state em) { color: var(--green); font: normal .52rem var(--mono); }
+  :global(.endpoint-chip b) { font-size: .75rem; white-space: nowrap; }
+  :global(.endpoint-chip code) { white-space: normal; overflow-wrap: anywhere; font-size: .75rem; }
+  :global(.endpoint-chip-with-state em) { color: var(--green); font: normal .75rem var(--mono); }
   :global(.endpoint-chip-with-state[data-ready='false']) { border-color: rgba(246,199,99,.35); }
   :global(.endpoint-chip-with-state[data-ready='false'] em) { color: var(--amber); }
-  .service-endpoint-map p { margin: 0; font-size: .65rem; }
+  .service-endpoint-map p { margin: 0; font-size: .75rem; }
   .service-pod-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 16px 0; }
   .service-pod-grid article { display: grid; gap: 6px; padding: 13px; border: 1px solid var(--green); border-radius: 8px; background: var(--surface); }
   .service-pod-grid article[data-membership='unready'] { border-color: var(--amber); }
   .service-pod-grid article[data-membership='excluded'] { border-color: var(--border); background: rgba(255,255,255,.01); }
   .service-pod-grid article[data-membership='excluded'] > strong { color: var(--dim); }
   .service-pod-grid strong { font-size: .72rem; }
-  .service-pod-grid span { color: var(--muted); font-size: .62rem; }
+  .service-pod-grid span { color: var(--muted); font-size: .75rem; }
   @media (max-width: 760px) {
     .service-endpoint-controls, .service-pod-grid { grid-template-columns: 1fr; }
     .service-endpoint-map { grid-template-columns: 1fr; }

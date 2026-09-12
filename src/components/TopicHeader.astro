@@ -5,9 +5,10 @@ const { topic } = Astro.props;
 const data = topic.data;
 const collection = collections[data.collection as keyof typeof collections];
 const formatter = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
+const titleSize = data.title.length > 46 ? 'title-long' : data.title.length > 32 ? 'title-medium' : 'title-short';
 ---
 
-<header class={`topic-hero collection-${data.collection}`}>
+<header class={`topic-hero collection-${data.collection} ${titleSize}`}>
   <nav class="breadcrumbs" aria-label="Breadcrumb">
     <a href="/">Library</a><span aria-hidden="true">/</span><a href={`/${data.collection}`}>{collection.label}</a>
   </nav>

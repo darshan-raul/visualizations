@@ -108,9 +108,9 @@ const filterGroups = [
 
     const selectedValues = (key: string) => checks.filter((check) => check.dataset.filter === key && check.checked).map((check) => check.value);
 
-    async function pagefindMatches(query: string) {
-      if (!query) return null;
-      if (searchCache.has(query)) return searchCache.get(query)!;
+    async function pagefindMatches(query: string): Promise<{ matches: Set<string> | null; fallback: boolean }> {
+      if (!query) return { matches: null, fallback: false };
+      if (searchCache.has(query)) return { matches: searchCache.get(query)!, fallback: false };
       try {
         pagefindPromise ||= (new Function("return import('/pagefind/pagefind.js')")() as Promise<any>).then(async (module) => { await module.init(); return module; });
         const pagefind = await pagefindPromise;
@@ -119,8 +119,8 @@ const filterGroups = [
         const matches = new Set<string>(data.map((item: any) => canonicalPathname(item.url)));
         searchCache.set(query, matches);
         if (searchCache.size > 20) searchCache.delete(searchCache.keys().next().value!);
-        return matches;
-      } catch { return null; }
+        return { matches, fallback: false };
+      } catch { return { matches: null, fallback: true }; }
     }
 
     function setUrl(mode: 'push' | 'replace' | 'none') {
@@ -317,7 +317,9 @@ const filterGroups = [
       const currentGeneration = ++generation;
       const query = input.value.trim().toLowerCase();
       const chosen: Record<string, string[]> = Object.fromEntries(['collection', 'tags', 'technologies', 'format'].map((key) => [key, selectedValues(key)]));
-      const indexedMatches = await pagefindMatches(query);
+      if (query) status.textContent = 'Searching…';
+      const searchResult = await pagefindMatches(query);
+      const indexedMatches = searchResult.matches;
       if (currentGeneration !== generation) return;
       visibleIds = new Set();
       for (const card of cards) {
@@ -328,7 +330,9 @@ const filterGroups = [
         if (show) visibleIds.add(card.dataset.slug || '');
       }
       if (selectedTopic && !visibleIds.has(selectedTopic)) selectedTopic = null;
-      status.textContent = `${visibleIds.size} visualization${visibleIds.size === 1 ? '' : 's'}`;
+      status.textContent = searchResult.fallback && query
+        ? `${visibleIds.size} visualization${visibleIds.size === 1 ? '' : 's'} - matching titles and metadata`
+        : `${visibleIds.size} visualization${visibleIds.size === 1 ? '' : 's'}`;
       empty.hidden = visibleIds.size !== 0 || currentView === 'map';
       updateTools(); renderMapVisibility(); setUrl(mode);
     }

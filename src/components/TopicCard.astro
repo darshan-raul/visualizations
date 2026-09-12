@@ -6,10 +6,11 @@ const data = topic.data;
 const collection = collections[data.collection as keyof typeof collections];
 const searchText = [data.title, data.summary, collection.label, ...data.tags, ...data.technologies].join(' ').toLowerCase();
 const url = data.legacyPath || `/${data.slug}`;
+const formatter = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', timeZone: 'UTC' });
 ---
 
 <article
-  class={`topic-card collection-${data.collection}`}
+  class:list={[`topic-card collection-${data.collection}`, { 'is-featured': data.featured }]}
   data-topic-card
   data-slug={data.slug}
   data-collection={data.collection}
@@ -24,16 +25,13 @@ const url = data.legacyPath || `/${data.slug}`;
       <span class="collection-label">{collection.label}</span>
       <span class="format-label">{formatLabels[data.format as keyof typeof formatLabels]}</span>
     </div>
-    <div class="card-glyph" aria-hidden="true">
-      <span></span><span></span><span></span>
-    </div>
     <h3>{data.title}</h3>
     <p>{data.summary}</p>
     <ul class="tag-list" aria-label="Tags">
       {data.tags.slice(0, 3).map((tag: string) => <li>{tag}</li>)}
     </ul>
     <div class="card-foot">
-      <span>{data.difficulty}</span>
+      <span>{data.difficulty}{data.reviewed && ` · Reviewed ${formatter.format(data.reviewed)}`}</span>
       <span class="open-label">Explore <span aria-hidden="true">→</span></span>
     </div>
   </a>

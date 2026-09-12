@@ -10,7 +10,7 @@
 .network-controls, .network-nodes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 16px 0; }
 .network-nodes article { min-width: 0; padding: 16px; border: 1px solid var(--border-strong); border-radius: 9px; background: var(--surface); }
 .network-nodes h4 { margin: 5px 0 12px; font-size: .9rem; }
-.network-nodes small { color: var(--purple); font: .65rem var(--mono); }
+.network-nodes small { color: var(--purple); font: .75rem var(--mono); }
 .network-node { display: grid; gap: 8px; padding: 14px; border: 1px solid var(--cyan); border-radius: 7px; font-size: .78rem; }
 .network-node code { overflow-wrap: anywhere; }
 .network-node[data-state='blocked'] { border-color: var(--red); }

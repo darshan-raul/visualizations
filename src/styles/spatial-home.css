@@ -12,9 +12,9 @@ body:has(.spatial-home) .header-inner { width: auto; min-height: 44px; }
 body:has(.spatial-home) .site-header nav,
 body:has(.spatial-home) .site-footer { display: none; }
 
-.spatial-home { min-height: 100svh; }
+.spatial-home { min-height: 100dvh; }
 .spatial-home .library { padding: 95px 28px 70px; }
-.spatial-home .library[data-current-view="map"] { height: 100svh; padding: 0; overflow: hidden; }
+.spatial-home .library[data-current-view="map"] { height: 100dvh; padding: 0; overflow: hidden; }
 .spatial-home .library.immersive[data-library] .topic-tree { position: absolute; inset: 0; height: 100%; margin: 0; }
 .spatial-home .library.immersive[data-library] .topic-tree .map-stage,
 .spatial-home .library.immersive[data-library] .topic-tree .map-viewport { height: 100%; min-height: 0; }
@@ -43,17 +43,22 @@ body:has(.spatial-home) .site-footer { display: none; }
 
 @media (max-width: 900px) {
   body:has(.spatial-home) .site-header { top: 16px; left: 18px; }
-  .spatial-home .collection-switch { top: 72px; right: auto; left: 16px; max-width: calc(100% - 32px); flex-wrap: wrap; border-radius: 12px; }
-  .spatial-home .collection-switch button { min-height: 40px; padding-inline: 9px; font-size: .7rem; }
-  .spatial-home .library-tools { top: 130px; left: 18px; width: 230px; }
-  .spatial-home .results-head { left: 18px; }
-  .spatial-home .spatial-catalogue { right: 14px; }
+  .spatial-home { min-height: 100dvh; padding: 72px 16px 18px; }
+  .spatial-home .library[data-current-view="map"] { display: grid; height: auto; min-height: calc(100dvh - 122px); grid-template-rows: auto auto minmax(470px, 1fr) auto; gap: 10px; overflow: visible; }
+  .spatial-home .collection-switch { position: static; grid-row: 1; max-width: 100%; flex-wrap: nowrap; overflow-x: auto; margin: 0; border-radius: 12px; scrollbar-width: none; }
+  .spatial-home .collection-switch button { min-height: 44px; flex: 0 0 auto; padding-inline: 10px; font-size: .75rem; }
+  .spatial-home .library-tools { position: static; grid-row: 2; width: 100%; }
+  .spatial-home .library-tools .search-field input { height: 46px; font-size: .875rem; }
+  .spatial-home .library.immersive[data-library] .topic-tree { position: relative; grid-row: 3; min-height: 470px; height: auto; }
+  .spatial-home .library.immersive[data-library] .topic-tree .map-stage,
+  .spatial-home .library.immersive[data-library] .topic-tree .map-viewport { min-height: 430px; height: auto; }
+  .spatial-home .results-head { position: static; grid-row: 4; padding: 2px; }
+  .spatial-home .spatial-catalogue { position: static; display: block; margin-top: 8px; padding: 8px 2px; text-align: right; }
 }
 
 @media (max-width: 420px) {
-  .spatial-home .collection-switch { gap: 0; }
-  .spatial-home .collection-switch button { gap: 5px; padding-inline: 7px; font-size: .65rem; }
-  .spatial-home .collection-switch button:first-child::before { font-size: .65rem; }
-  .spatial-home .library-tools { top: 172px; }
+  .spatial-home .collection-switch { gap: 2px; }
+  .spatial-home .collection-switch button { gap: 6px; padding-inline: 9px; font-size: .75rem; }
+  .spatial-home .collection-switch button:first-child::before { font-size: .75rem; }
 }
 svg [hidden], svg [data-hidden] { display: none !important; }

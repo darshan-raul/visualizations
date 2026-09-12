@@ -69,7 +69,7 @@ export function createTreeCamera(map: HTMLElement) {
     const compact = isCompact();
     const baseScale = fittedScale() * zoom * currentCameraZoom;
     const focusedBranch = map.classList.contains('has-selection');
-    const centerX = compact ? width * .4 : width * .5;
+    const centerX = width * .5;
     const centerY = compact ? height * .5 : height * (focusedBranch ? .58 : .72);
     const projected = new Map<string, { x: number; y: number; radius: number }>();
     const topicLabels: HTMLElement[] = [];
