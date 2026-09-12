@@ -12,8 +12,8 @@ const grouped = collectionEntries.map(([slug, collection]) => ({
   topics: graph.nodes.filter((node) => node.collection === slug).sort((a, b) => a.title.localeCompare(b.title)),
 }));
 const total = graph.nodes.length;
-const positions = new Map<string, { x: number; y: number; z: number; size: number }>();
-const collectionPositions = new Map<string, { x: number; y: number; z: number }>();
+const positions = new Map<string, { x: number; y: number; size: number }>();
+const collectionPositions = new Map<string, { x: number; y: number }>();
 
 const shortTitles: Record<string, string> = {
   'AWS IAM: From Principal to Decision': 'AWS IAM',
@@ -29,43 +29,35 @@ const shortTitles: Record<string, string> = {
 };
 
 const collectionCount = grouped.length;
-const collectionSpread = 1300; // Balanced vertical spread to guarantee no collection overlap
+const collectionSpread = 1020;
 
 for (const [groupIndex, group] of grouped.entries()) {
-  // Evenly space the collections vertically
-  const collectionY = collectionCount === 1 ? 0 : (groupIndex / (collectionCount - 1) - .5) * collectionSpread;
-  const collZ = [-100, 120, -145, 135][groupIndex] ?? 0;
+  const collectionX = collectionCount === 1 ? 0 : (groupIndex / (collectionCount - 1) - .5) * collectionSpread;
   
   collectionPositions.set(group.slug, {
-    x: -160,
-    y: collectionY,
-    z: collZ,
+    x: collectionX,
+    y: -80,
   });
 
   const topicCount = group.topics.length;
-  // Calculate how many rows this group needs (2 columns for a classic branching tree)
-  const rows = Math.ceil(topicCount / 2);
-  // Spread topics vertically around the collectionY (160px per row prevents overlap even at small scales)
-  const topicSpread = Math.max(0, (rows - 1) * 160); 
+  const topRowCount = Math.ceil(topicCount / 2);
   
   for (const [index, topic] of group.topics.entries()) {
-    const topicRow = Math.floor(index / 2);
-    const col = index % 2; 
-    
-    // Center the rows around collectionY
-    const rowYOffset = rows === 1 ? 0 : (topicRow / (rows - 1) - .5) * topicSpread;
+    const topicRow = index < topRowCount ? 0 : 1;
+    const rowIndex = topicRow === 0 ? index : index - topRowCount;
+    const topicsInRow = topicRow === 0 ? topRowCount : topicCount - topRowCount;
+    const columnOffset = (rowIndex - (topicsInRow - 1) / 2) * 320;
     
     positions.set(topic.id, {
-      x: 240 + col * 420, // Wide column spacing prevents text label overlap
-      y: collectionY + rowYOffset,
-      z: collZ + (col === 0 ? 40 : -40) + ((index % 3) * 20),
+      x: collectionX + columnOffset,
+      y: 260 + topicRow * 240,
       size: Math.min(92, 62 + (degree.get(topic.id) || 0) * 2.2),
     });
   }
 }
 ---
 
-<section class:list={["topic-map", "topic-tree", { immersive }]} data-topic-map data-topic-tree hidden aria-label="Interactive 3D topic tree">
+<section class:list={["topic-map", "topic-tree", { immersive }]} data-topic-map data-topic-tree hidden aria-label="Interactive topic tree">
   <div class="map-topbar">
     <label>
       <span>Find a topic</span>
@@ -84,37 +76,43 @@ for (const [groupIndex, group] of grouped.entries()) {
   </div>
   
   <div class="map-stage">
-    <div class="map-viewport" data-map-viewport tabindex="0" aria-label="3D topic tree. Drag or use arrow keys to rotate. Collection nodes expand and collapse their topic branches.">
+    <div class="map-viewport" data-map-viewport tabindex="0" aria-describedby="tree-instructions" aria-label="Topic tree. Drag or use arrow keys to pan. Collection nodes expand and collapse their topic branches.">
       <div class="map-world tree-world" data-map-world>
         <svg class="map-connectors tree-connectors" aria-hidden="true">
+          <defs>
+            <marker id="tree-arrow" markerWidth="6" markerHeight="6" refX="5.5" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M 0 0 L 6 3 L 0 6 Z"></path>
+            </marker>
+          </defs>
           {grouped.map((group) => {
             const point = collectionPositions.get(group.slug)!;
             return (
               <g class={`tree-branch collection-${group.slug}`}>
-                <line data-tree-line data-tree-source="tree-root" data-tree-target={`collection-${group.slug}`} data-tree-collection={group.slug} x1="-480" y1="0" x2={point.x} y2={point.y} />
+                <line data-tree-line data-tree-source="tree-root" data-tree-target={`collection-${group.slug}`} data-tree-collection={group.slug} marker-end="url(#tree-arrow)" x1="0" y1="-430" x2={point.x} y2={point.y} />
                 {group.topics.map((topic) => {
                   const target = positions.get(topic.id)!;
-                  return <line data-tree-line data-tree-source={`collection-${group.slug}`} data-tree-target={topic.id} data-tree-collection={group.slug} x1={point.x} y1={point.y} x2={target.x} y2={target.y} data-hidden />;
+                  return <line data-tree-line data-tree-source={`collection-${group.slug}`} data-tree-target={topic.id} data-tree-collection={group.slug} marker-end="url(#tree-arrow)" x1={point.x} y1={point.y} x2={target.x} y2={target.y} data-hidden />;
                 })}
               </g>
             );
           })}
         </svg>
 
-        <button class="tree-node tree-root" type="button" data-tree-point="tree-root" data-tree-x="-480" data-tree-y="0" data-tree-z="0" data-tree-toggle-all aria-expanded="false">
+        <button class="tree-node tree-root" type="button" data-tree-point="tree-root" data-tree-x="0" data-tree-y="-430" data-tree-toggle-all aria-label="Reset the topic tree">
           <span class="tree-orb" aria-hidden="true"></span>
-          <span class="tree-label"><strong>Dive into what you want to</strong><small>{total} visual references · reset map</small></span>
+          <span class="tree-label"><strong>Infrastructure, mapped.</strong><small>{total} visual references · select to reset</small></span>
         </button>
 
         {grouped.map((group) => {
           const point = collectionPositions.get(group.slug)!;
+          const topRowCount = Math.ceil(group.topics.length / 2);
           return (
             <div class={`tree-branch collection-${group.slug}`} data-tree-branch={group.slug}>
-              <button class="tree-node tree-collection" type="button" data-tree-point={`collection-${group.slug}`} data-tree-x={point.x} data-tree-y={point.y} data-tree-z={point.z} data-tree-toggle={group.slug} aria-expanded="false">
+              <button class="tree-node tree-collection" type="button" data-tree-point={`collection-${group.slug}`} data-tree-x={point.x} data-tree-y={point.y} data-tree-toggle={group.slug} aria-expanded="false">
                 <span class="tree-orb" aria-hidden="true"></span>
                 <span class="tree-label"><strong>{group.collection.label}</strong><small>{group.topics.length} topics · expand</small></span>
               </button>
-              {group.topics.map((topic) => {
+              {group.topics.map((topic, index) => {
                 const position = positions.get(topic.id)!;
                 return (
                   <button
@@ -125,7 +123,7 @@ for (const [groupIndex, group] of grouped.entries()) {
                     data-collection={topic.collection}
                     data-tree-x={position.x}
                     data-tree-y={position.y}
-                    data-tree-z={position.z}
+                    data-label-position={index < topRowCount ? 'above' : 'below'}
                     data-size={position.size}
                     aria-label={topic.title}
                     aria-pressed="false"
@@ -145,60 +143,70 @@ for (const [groupIndex, group] of grouped.entries()) {
         <button type="button" data-map-clear>Clear filters</button>
       </div>
     </div>
-    <aside class="map-inspector" data-map-inspector hidden aria-live="polite"></aside>
+    <aside class="map-inspector" data-map-inspector hidden aria-label="Topic summary" aria-live="polite"></aside>
   </div>
-  <p class="map-note">Drag to pan · Dive into a collection to explore its topics · Select a topic for details</p>
+  <p class="sr-only" id="tree-instructions">Drag or use arrow keys to pan. Choose a collection to reveal its topics. Select a topic for a summary.</p>
 </section>
 
 <style>
   .topic-tree[hidden] { display: none; }
   .topic-tree, .map-stage { position: relative; }
-  .map-viewport { position: relative; min-height: 650px; overflow: hidden; background: var(--bg); cursor: grab; user-select: none; }
+  .map-stage { display: grid; min-height: 650px; grid-template-columns: minmax(0, 1fr) 0; }
+  .map-stage:has(.map-inspector:not([hidden])) { grid-template-columns: minmax(0, 1fr) minmax(340px, 390px); }
+  .map-viewport { position: relative; min-width: 0; min-height: 650px; overflow: hidden; contain: layout paint; background: var(--bg); cursor: grab; user-select: none; }
   .map-viewport:active { cursor: grabbing; }
   .tree-world { position: absolute; inset: 0; transform-origin: 0 0; }
   .tree-connectors { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-  .tree-connectors line { stroke: rgba(151,163,184,.2); stroke-width: .7; stroke-dasharray: 2 6; vector-effect: non-scaling-stroke; transition: stroke .2s ease, opacity .2s ease; }
-  .tree-connectors line[data-tree-source="tree-root"] { stroke: rgba(151,163,184,.25); stroke-dasharray: none; stroke-width: 1; }
-  .tree-connectors line.is-active { stroke: var(--cyan); stroke-width: 1.2; stroke-dasharray: none; opacity: .85; filter: drop-shadow(0 0 3px rgba(66,214,232,.25)); }
+  .tree-connectors marker path { fill: context-stroke; }
+  .tree-connectors line { stroke: color-mix(in srgb, var(--collection-accent) 32%, #657289); stroke-width: 1; opacity: .068; vector-effect: non-scaling-stroke; transition: stroke .2s ease, opacity .2s ease; }
+  .tree-connectors line[data-tree-source="tree-root"] { stroke: rgba(151,163,184,.34); stroke-width: 1; }
+  .tree-connectors line.is-active { stroke: var(--cyan); stroke-width: 1.2; stroke-dasharray: none; opacity: .17; filter: drop-shadow(0 0 3px rgba(66,214,232,.05)); }
+  .tree-connectors line.is-context-hidden { display: none; }
   .tree-node { position: absolute; display: block; padding: 0; border: 0; background: transparent; color: var(--text); cursor: pointer; transform-origin: center; }
-  .tree-orb { position: absolute; top: 50%; left: 50%; width: 42px; height: 42px; border: 1px solid color-mix(in srgb, var(--collection-accent) 55%, #303949); border-radius: 50%; background: radial-gradient(circle at 35% 28%, color-mix(in srgb, var(--collection-accent) 50%, #26303c), color-mix(in srgb, var(--collection-accent) 10%, #0e141d) 78%); box-shadow: inset 0 -3px 8px rgba(0,0,0,.2), inset 0 2px 5px color-mix(in srgb, var(--collection-accent) 10%, transparent), 0 4px 14px #0005, 0 0 0 1px color-mix(in srgb, var(--collection-accent) 4%, transparent); transform: translate(-50%, -50%); transition: box-shadow .2s ease, width .2s ease, height .2s ease, border-color .2s ease; }
-  .tree-node:hover .tree-orb, .tree-node:focus-visible .tree-orb { width: 48px; height: 48px; border-color: color-mix(in srgb, var(--collection-accent) 68%, #303949); box-shadow: inset 0 -3px 8px rgba(0,0,0,.2), inset 0 2px 6px color-mix(in srgb, var(--collection-accent) 15%, transparent), 0 0 16px color-mix(in srgb, var(--collection-accent) 15%, transparent), 0 8px 22px #0006; }
+  .topic-tree.has-selection .tree-root,
+  .topic-tree.has-selection .tree-collection:not(.is-active-collection) { opacity: 0 !important; pointer-events: none; }
+  .tree-orb { position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; border: 1px solid color-mix(in srgb, var(--collection-accent) 58%, #364052); border-radius: 11px; background: color-mix(in srgb, var(--collection-accent) 8%, var(--surface)); box-shadow: inset 0 0 0 5px var(--bg), inset 0 0 0 6px color-mix(in srgb, var(--collection-accent) 22%, transparent), 0 8px 24px rgba(1,5,12,.26); transform: translate(-50%, -50%) rotate(45deg); transition: border-color .2s ease, background .2s ease, box-shadow .2s ease, transform .2s ease; }
+  .tree-orb::after { position: absolute; inset: 50% auto auto 50%; width: 6px; height: 6px; border-radius: 50%; background: var(--collection-accent); box-shadow: 0 0 12px color-mix(in srgb, var(--collection-accent) 46%, transparent); content: ''; transform: translate(-50%, -50%); }
+  .tree-node:hover .tree-orb, .tree-node:focus-visible .tree-orb { border-color: var(--collection-accent); background: color-mix(in srgb, var(--collection-accent) 14%, var(--surface)); box-shadow: inset 0 0 0 5px var(--bg), inset 0 0 0 6px color-mix(in srgb, var(--collection-accent) 32%, transparent), 0 10px 30px rgba(1,5,12,.36); transform: translate(-50%, -50%) rotate(45deg) scale(1.08); }
   .tree-label { position: absolute; top: 50%; left: calc(50% + 35px); display: grid; width: max-content; max-width: 220px; gap: 3px; transform: translateY(-50%); text-align: left; text-shadow: 0 1px 5px var(--bg), 0 0 18px var(--bg), 0 0 40px var(--bg); pointer-events: none; }
   .tree-label strong { font-size: .85rem; font-weight: 500; line-height: 1.22; letter-spacing: -.01em; }
   .tree-label small { color: var(--dim); font: .55rem/1.3 var(--mono); text-transform: capitalize; }
   
   .tree-root { --collection-accent: var(--cyan); }
-  .tree-root .tree-orb { width: 88px; height: 88px; border-color: rgba(66,214,232,.3); box-shadow: inset 0 -5px 12px rgba(0,0,0,.25), inset 0 3px 8px rgba(66,214,232,.12), 0 0 32px rgba(66,214,232,.06), 0 0 0 2px rgba(66,214,232,.04), 0 8px 28px #0005; }
-  .tree-root:hover .tree-orb, .tree-root:focus-visible .tree-orb { width: 96px; height: 96px; box-shadow: inset 0 -5px 12px rgba(0,0,0,.25), inset 0 3px 10px rgba(66,214,232,.16), 0 0 40px rgba(66,214,232,.1), 0 0 0 3px rgba(66,214,232,.06), 0 10px 32px #0006; }
-  .tree-root .tree-label { left: auto !important; right: calc(50% + 55px) !important; text-align: right; max-width: 300px; }
+  .tree-root .tree-orb { width: 76px; height: 76px; border-radius: 22px; background: color-mix(in srgb, var(--cyan) 10%, var(--surface)); box-shadow: inset 0 0 0 8px var(--bg), inset 0 0 0 9px rgba(66,214,232,.26), 0 12px 38px rgba(1,5,12,.35); }
+  .tree-root:hover .tree-orb, .tree-root:focus-visible .tree-orb { box-shadow: inset 0 0 0 8px var(--bg), inset 0 0 0 9px rgba(66,214,232,.46), 0 14px 42px rgba(1,5,12,.42); }
+  .tree-root .tree-label { top: auto; bottom: calc(50% + 62px); left: 50%; width: 300px; max-width: min(300px, 70vw); transform: translateX(-50%); text-align: center; }
   .tree-root .tree-label strong { font-size: 1.15rem; font-weight: 600; }
   .tree-root .tree-label small { font-size: .75rem; }
   
-  .tree-collection .tree-orb { width: 64px; height: 64px; box-shadow: inset 0 -4px 10px rgba(0,0,0,.22), inset 0 2px 6px color-mix(in srgb, var(--collection-accent) 12%, transparent), 0 0 20px color-mix(in srgb, var(--collection-accent) 06%, transparent), 0 6px 20px #0005; }
-  .tree-collection:hover .tree-orb, .tree-collection:focus-visible .tree-orb { width: 72px; height: 72px; box-shadow: inset 0 -4px 10px rgba(0,0,0,.22), inset 0 2px 8px color-mix(in srgb, var(--collection-accent) 16%, transparent), 0 0 28px color-mix(in srgb, var(--collection-accent) 1%, transparent), 0 8px 24px #0006; }
-  .tree-collection .tree-label { left: calc(50% + 45px); }
+  .tree-collection .tree-orb { width: 56px; height: 56px; border-radius: 16px; box-shadow: inset 0 0 0 7px var(--bg), inset 0 0 0 8px color-mix(in srgb, var(--collection-accent) 27%, transparent), 0 10px 30px rgba(1,5,12,.3); }
+  .tree-collection .tree-label { top: auto; bottom: calc(50% + 46px); left: 50%; width: 190px; transform: translateX(-50%); text-align: center; }
   .tree-collection .tree-label strong { color: var(--collection-accent); font-size: .95rem; font-weight: 600; }
   .tree-collection .tree-label small { font-size: .7rem; }
   
-  .tree-topic[aria-pressed="true"] .tree-orb { width: 50px; height: 50px; border: 2px solid var(--cyan); box-shadow: inset 0 -3px 8px rgba(0,0,0,.2), inset 0 2px 6px rgba(66,214,232,.12), 0 0 0 6px rgba(66,214,232,.08), 0 0 20px rgba(66,214,232,.12), 0 8px 22px #0006; }
+  .tree-topic[aria-pressed="true"] .tree-orb { border: 2px solid var(--cyan); background: rgba(66,214,232,.13); box-shadow: inset 0 0 0 5px var(--bg), inset 0 0 0 6px rgba(66,214,232,.35), 0 0 0 6px rgba(66,214,232,.08), 0 10px 30px rgba(1,5,12,.38); }
+  .tree-topic .tree-label { left: 50%; width: 180px; transform: translateX(-50%); text-align: center; }
+  .tree-topic[data-label-position="above"] .tree-label { top: auto; bottom: calc(50% + 35px); }
+  .tree-topic[data-label-position="below"] .tree-label { top: calc(50% + 35px); }
   .tree-topic:hover .tree-label, .tree-topic:focus-visible .tree-label, .tree-topic[aria-pressed="true"] .tree-label { visibility: visible !important; }
   .tree-topic.is-muted { opacity: .3; }
-  .tree-topic.is-neighbor .tree-orb { box-shadow: inset 0 -3px 8px rgba(0,0,0,.2), inset 0 2px 5px color-mix(in srgb, var(--collection-accent) 10%, transparent), 0 0 12px color-mix(in srgb, var(--collection-accent) 10%, transparent), 0 4px 14px #0005; }
+  .tree-topic.is-neighbor .tree-orb { border-color: color-mix(in srgb, var(--collection-accent) 72%, #364052); }
   .tree-topic[hidden], .tree-connectors line[hidden] { display: none; }
-  .map-topbar { position: absolute; z-index: 8; bottom: 26px; left: 28px; display: flex; align-items: end; gap: 10px; pointer-events: none; }
+  .map-topbar { position: absolute; z-index: 8; bottom: 26px; left: 160px; display: flex; align-items: end; gap: 10px; pointer-events: none; }
   .map-topbar > * { pointer-events: auto; }
   .map-topbar label { display: grid; width: 235px; gap: 5px; }
   .map-topbar label span { display: none; }
-  .map-topbar select { width: 100%; height: 40px; padding: 0 32px 0 12px; border: 1px solid var(--border-strong); border-radius: 999px; background: rgba(9,14,23,.9); backdrop-filter: blur(14px); color: var(--text); font-size: .7rem; }
-  .map-camera { display: flex; align-items: center; gap: 3px; padding: 3px; border: 1px solid var(--border); border-radius: 999px; background: rgba(9,14,23,.88); backdrop-filter: blur(14px); }
-  .map-camera button, .map-empty button { min-height: 34px; padding: 0 10px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); cursor: pointer; }
+  .map-topbar select { width: 100%; height: 40px; padding: 0 32px 0 12px; border: 1px solid var(--border-strong); border-radius: 10px; background: rgba(9,14,23,.9); backdrop-filter: blur(14px); color: var(--text); font-size: .7rem; }
+  .map-camera { display: flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid var(--border); border-radius: 10px; background: rgba(9,14,23,.88); backdrop-filter: blur(14px); }
+  .map-camera button, .map-empty button { min-height: 34px; padding: 0 10px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); cursor: pointer; transition: background .2s ease, color .2s ease, transform .2s ease; }
   .map-camera button:hover { color: var(--text); background: rgba(255,255,255,.06); }
+  .map-camera button:active, .map-empty button:active { transform: translateY(1px); }
   .map-camera output { min-width: 38px; color: var(--dim); font: .55rem var(--mono); text-align: center; }
   .map-empty { position: absolute; z-index: 12; inset: 0; display: grid; place-content: center; gap: 8px; background: rgba(8,13,21,.9); text-align: center; }
   .map-empty[hidden] { display: none; }
   .map-empty span { color: var(--muted); font-size: .8rem; }
   .map-empty button { margin-top: 7px; border: 1px solid var(--border); color: var(--cyan); }
-  .map-inspector { position: absolute; z-index: 20; top: 92px; right: 28px; width: min(370px, calc(100% - 56px)); height: calc(100% - 166px); overflow: auto; padding: 27px; border: 1px solid var(--border-strong); border-radius: 16px; background: rgba(12,17,26,.96); box-shadow: 0 16px 60px rgba(0,0,0,.35); backdrop-filter: blur(18px); }
+  .map-inspector { position: relative; z-index: 20; min-width: 0; min-height: 0; margin: 92px 28px 76px 0; overflow: auto; padding: 27px; border: 1px solid var(--border-strong); border-radius: 16px 4px 16px 16px; background: rgba(12,17,26,.96); box-shadow: -18px 18px 55px rgba(1,5,12,.3), inset 1px 1px rgba(255,255,255,.025); backdrop-filter: blur(18px); }
   .map-inspector[hidden] { display: none; }
   .map-inspector :global(.inspector-close) { position: sticky; z-index: 2; top: 0; float: right; width: 38px; height: 38px; border: 1px solid var(--border-strong); border-radius: 50%; background: var(--surface); color: var(--muted); cursor: pointer; }
   .map-inspector :global(.inspector-kicker) { display: block; padding-top: 8px; color: var(--cyan); font: .58rem var(--mono); letter-spacing: .1em; text-transform: uppercase; }
@@ -206,7 +214,9 @@ for (const [groupIndex, group] of grouped.entries()) {
   .map-inspector :global(p) { color: var(--muted); font-size: .9rem; line-height: 1.65; }
   .map-inspector :global(.inspector-meta) { display: flex; flex-wrap: wrap; gap: 6px; margin: 18px 0; padding: 0; list-style: none; }
   .map-inspector :global(.inspector-meta li) { padding: 5px 8px; border: 1px solid var(--border); border-radius: 999px; color: var(--dim); font: .55rem var(--mono); text-transform: capitalize; }
-  .map-inspector :global(.inspector-open) { display: inline-flex; min-height: 44px; align-items: center; margin: 4px 0 24px; padding: 0 18px; border: 1px solid #42d6e850; border-radius: 10px; background: #42d6e815; color: var(--cyan); font-size: .78rem; font-weight: 600; text-decoration: none; }
+  .map-inspector :global(.inspector-open) { display: inline-flex; min-height: 44px; align-items: center; margin: 4px 0 24px; padding: 0 18px; border: 1px solid #42d6e850; border-radius: 8px; background: #42d6e815; color: var(--cyan); font-size: .78rem; font-weight: 600; text-decoration: none; transition: background .2s ease, border-color .2s ease, transform .2s ease; }
+  .map-inspector :global(.inspector-open:hover) { border-color: #42d6e880; background: #42d6e822; }
+  .map-inspector :global(.inspector-open:active) { transform: translateY(1px); }
   .map-inspector :global(.inspector-related) { margin-top: 8px; padding-top: 21px; border-top: 1px solid var(--border); }
   .map-inspector :global(.inspector-related h3) { margin: 0 0 12px; color: var(--dim); font: .58rem var(--mono); letter-spacing: .08em; text-transform: uppercase; }
   .map-inspector :global(.inspector-related ul) { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
@@ -215,12 +225,13 @@ for (const [groupIndex, group] of grouped.entries()) {
   .map-inspector :global(.inspector-related button strong) { font-size: .67rem; font-weight: 500; }
   .map-inspector :global(.inspector-related button span) { display: block; margin-top: 5px; color: var(--muted); font: .6rem/1.5 var(--mono); }
   .map-inspector :global(.inspector-more summary) { padding: 8px 0; color: var(--cyan); font: .6rem var(--mono); cursor: pointer; }
-  .map-note { position: absolute; z-index: 5; bottom: 33px; left: 50%; width: max-content; max-width: 43%; margin: 0; transform: translateX(-50%); color: var(--dim); font: .63rem/1.5 var(--sans); text-align: center; pointer-events: none; }
-  @media (max-width: 700px) {
+  @media (max-width: 860px) {
+    .map-stage:has(.map-inspector:not([hidden])) { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(210px, 34%) minmax(0, 66%); }
+    .map-stage:has(.map-inspector:not([hidden])) .map-viewport { min-height: 0; }
+    .topic-tree:has(.map-inspector:not([hidden])) > .map-topbar { display: none; }
     .map-topbar { bottom: 64px; left: 16px; align-items: flex-start; flex-direction: column; }
     .map-topbar label { width: min(235px, calc(100vw - 32px)); }
-    .map-note { display: none; }
-    .map-inspector { top: 220px; right: 16px; width: calc(100% - 32px); height: calc(100% - 290px); padding: 20px; }
+    .map-inspector { grid-row: 2; margin: 8px 16px 74px; padding: 20px; border-radius: 14px 4px 14px 14px; }
   }
   @media (prefers-reduced-motion: reduce) { .tree-orb, .tree-connectors line { transition: none; } }
 </style>

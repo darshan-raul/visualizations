@@ -2,22 +2,22 @@
 
 Topic: Catalogue topic mesh  
 Status: Integrated  
-Version: 1.0  
-Verified: 2026-09-11  
+Version: 1.1
+Verified: 2026-09-12
 Target audience: Working developers using Infra Illustrated to recall, compare, or discover infrastructure concepts.  
 Page promise: Find one useful reference and understand why nearby references may help without turning the library into a prescribed course.  
 Persistent scenario: A reader searches for VPC Packet Flow, inspects its Networking relationships, follows a connected Kubernetes topic, and opens the reference they need.  
 Scope: Discovery across existing catalogue entries on `/visualizations`, with shared search and filters.  
 Non-goals: Technical dependency mapping, prerequisites, progress tracking, automatic recommendations, a graph database, or a replica of the reference site's implementation.  
-Visual thesis: A dark constellation of independently useful references whose visible gravity comes from their connections.
+Visual thesis: A dark, top-down branching index that moves from the library root to collections and then to independently useful references.
 
 ## Semantic color and diagram grammar
 
 - The page retains the established dark background and surfaces.
 - AWS uses amber, Kubernetes blue, DevOps & SRE green, and Foundations purple for collection identity.
 - Cyan marks active controls, the selected node, and selected connections.
-- Dashed undirected lines mean “related reference.” They never mean runtime traffic, dependency, or reading order.
-- Collection frames are orientation regions, not infrastructure boundaries.
+- Faint solid arrows mean catalogue membership and hierarchy: root to collection, then collection to topic. They stop at node boundaries and never mean runtime traffic, prerequisite dependency, or prescribed reading order.
+- Collection color orients the branch, while labels and hierarchy carry the same meaning without color.
 - A solid outline and `aria-pressed` state identify selection; color is not the only state cue.
 - Motion is limited to short camera transitions and direct drag feedback. Reduced-motion users receive immediate updates.
 
@@ -25,11 +25,11 @@ Visual thesis: A dark constellation of independently useful references whose vis
 
 | # | Section | Core learner question | Visual form | Interaction | Required takeaway |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Constellation overview | What kinds of references exist here? | Organic topic mesh | Map/List switch, selection, node drag, pan and zoom | The library is a connected reference space with independently useful topics. |
+| 1 | Tree overview | What kinds of references exist here? | Top-down branching tree | Collection expansion, topic selection, pan and zoom | The library has four broad collections whose topics remain independently useful. |
 | 2 | Topic neighborhood | Why is this topic connected to those topics? | Selected node plus semantic inspector | Select a node or connected reference | Every visible connection has an explicit metadata or editorial reason. |
 | 3 | Focused discovery | How do I narrow this without losing context? | Shared filters with map/list results | Search, multi-select filters, chips, history | Map and List are two views of one stable matching set. |
 
-## Visual 1 — The collection constellation
+## Visual 1 — The collection tree
 
 ### Purpose
 
@@ -47,14 +47,14 @@ The reader has opened the complete catalogue and is looking for a packet-flow re
 
 - One node per catalogue entry.
 - Collection identity shown through subtle node accents and inspector metadata.
-- Sparse overview relationships generated from explicit `related` metadata and the strongest shared tag/technology candidates.
+- One direct membership branch from the root to each collection and from each collection to its topics.
 - A full-title selector, Map/List controls, camera controls, legend, and result count.
 
 Catalogue metadata is authored configuration. Nodes and connectors are a build-time projection of that metadata; they are not stored runtime objects.
 
 ### Composition
 
-On wide screens, an organic node field fills the map canvas. Highly connected topics receive larger circles and start nearer the visual center; less connected topics spread outward through a deterministic radial distribution. Lines render behind labels and nodes. Selecting a topic opens a roughly 390 px drawer over the right edge, keeping the highlighted neighborhood visible behind it. The homepage search and Map/List control float over the canvas.
+On wide screens, the root anchors the top and four collection nodes form the second row with their titles above. An expanded collection reveals its topic leaves in two balanced rows below it: the first-row titles sit above their nodes and the bottom-row titles sit below. Branch lines render behind labels and nodes. Selecting a topic gives the summary a dedicated column of up to 390 px; the viewport contracts and enters focused-branch mode, removing the root and inactive collections from the canvas before fitting the complete active branch. Neither node controls nor labels can render under the summary. Closing the summary restores the full hierarchy. The homepage search and collection controls float over the remaining canvas, and the bottom control rail stays clear of topic labels.
 
 The homepage defaults to Map, with List available beside it. The complete catalogue defaults to List and `/visualizations?view=map` opens its map. The world surface retains stable node positions through selection and filtering.
 
@@ -64,7 +64,7 @@ The homepage defaults to Map, with List available beside it. The complete catalo
 - The full-title selector selects any visible topic on the catalogue map; homepage search provides the primary find action.
 - Zoom in, Zoom out, Fit results, and Reset view are native buttons.
 - Pointer drag on empty canvas pans; controls never capture normal wheel scrolling or browser zoom.
-- Pointer drag on a node moves it and updates its incident connectors.
+- Pointer drag on empty canvas pans the whole tree. Nodes remain on their deterministic branches.
 - Reset view clears map selection and resets the camera. Filter Reset remains separate.
 - Keyboard users can reach every topic through native node buttons and the selector.
 
@@ -84,11 +84,11 @@ An isolated topic still appears and can be opened. If map initialization fails o
 
 ### Accuracy caveats
 
-Node size reflects connection count only as a visual emphasis; it does not mean importance. Exact spatial distance has no semantic meaning. The sparse overview omits weaker candidate connections to control density.
+Node shape and size distinguish root, collection, and topic levels; they do not mean importance. Exact spatial distance has no semantic meaning. Related-reference reasoning remains in the selected topic summary rather than adding cross-branch lines that would obscure the hierarchy.
 
 ### Mobile behavior
 
-Below approximately 760 px, controls and inspector stack. The viewport remains clipped to its own world surface and never causes page-level horizontal scrolling. The full-title selector supplies a readable baseline when overview labels are small.
+Below approximately 860 px, the viewport and summary occupy separate grid rows. The viewport remains clipped to its own region and never causes page-level horizontal scrolling. The full-title selector supplies a readable baseline when overview labels are small.
 
 ### Accessibility
 
@@ -103,7 +103,8 @@ Use native buttons and a select, visible focus, full-title accessible names, `ar
 
 - All current catalogue topics appear once.
 - Collection color does not replace readable collection labels.
-- Lines remain aligned during pan, zoom, and resize.
+- Lines remain aligned during pan, zoom, focus changes, and resize.
+- No node or label occupies the summary panel's grid region at desktop or narrow widths.
 - List remains usable without JavaScript.
 - The page does not gain horizontal overflow at 320 px.
 
@@ -158,7 +159,7 @@ Shared metadata suggests topical adjacency, not equivalent scope or operational 
 
 ### Mobile behavior
 
-The overlay inspector becomes a normal block below the map. Connected-reference controls wrap long titles. Additional relationships use a native disclosure instead of extending the first screen indefinitely.
+The summary occupies a separate row below the tree viewport. Connected-reference controls wrap long titles. Additional relationships use a native disclosure instead of extending the first screen indefinitely.
 
 ### Accessibility
 
@@ -273,7 +274,8 @@ Acceptance for this pass: desktop and 320/375 px layouts, default Map, selecting
 - Canonical data: `src/content/topics/*.{json,mdx}`.
 - Graph derivation and relationship validation: `src/lib/topic-graph.ts`.
 - Shared URL normalization: `src/lib/topic-url.ts`.
-- Map structure and scoped visuals: `src/components/TopicMap.astro`.
+- Tree structure and scoped visuals: `src/components/TopicTree.astro`.
+- Panning, fitting, focusing, label collision handling, and responsive projection: `src/components/map/tree-camera.ts`.
 - Shared state and filters: `src/components/LibraryExplorer.astro`.
 - Canonical discovery surfaces: `/` via `src/pages/index.astro` and `/visualizations` via `src/pages/visualizations.astro`.
 - Integration status: Implemented; final verification results belong in the delivery report.
@@ -282,7 +284,7 @@ The prototype is an approval/history artifact. Future content changes update the
 
 ## Deep-dive handoffs
 
-No topic deep dive is created by this interface. Potential future product work includes authored relationship types or a true 3D renderer, but neither has a published target and neither should be linked as content.
+No topic deep dive is created by this interface. Potential future product work includes richer authored relationship types, but it has no published target and should not be linked as content.
 
 ## Page-level acceptance criteria
 
@@ -302,13 +304,13 @@ No topic deep dive is created by this interface. Potential future product work i
 - [AI Coding Dictionary reference](https://www.aicodingdictionary.com/)
 - [Pagefind search API](https://pagefind.app/docs/api/)
 
-## Landing-page refinement — 2026-09-11
+## Landing-page refinement — 2026-09-12
 
-The user's clarified direction keeps the two-dimensional map as the main homepage surface and retains click-to-open summaries on the right. This is a refinement of the integrated constellation, not a replacement discovery model. Canonical implementation remains `src/pages/index.astro`, `src/components/LibraryExplorer.astro`, and `src/components/TopicMap.astro`; the original prototype is a frozen historical design artifact.
+The user's clarified direction uses a two-dimensional tree as the main homepage surface and retains click-to-open summaries on the right. Canonical implementation is `src/pages/index.astro`, `src/components/LibraryExplorer.astro`, `src/components/TopicTree.astro`, and `src/components/map/tree-camera.ts`; the original prototype remains a frozen historical design artifact under the brief's direct-integration authorization.
 
 - Four always-visible collection buttons select AWS, Kubernetes, DevOps & SRE, or Foundations exclusively. All collections clears the collection selection while preserving other filters. Counts represent collection inventory. The existing advanced collection filter still permits OR selections.
 - Buttons, advanced filters, removable chips, URL history, list cards, nodes, and edges share the same selection state. Excluded nodes and their connections disappear; an excluded selection closes its summary.
-- The landing-page heading is compact and neutral. Flat collection-colored nodes replace glossy spheres. The summary appears in a floating right-hand panel on desktop and below the map on mobile.
+- Root, collection, and topic nodes use distinct, restrained geometric forms instead of glossy spheres. The summary occupies its own right-hand grid column on desktop and a separate row on narrow screens; the clipped tree viewport never sits beneath it.
 - Secondary filters are disclosed through More filters on the homepage. The map's dashed-line caption describes related references, not runtime dependencies.
 - Mobile fit preserves a minimum readable scale; panning and the full-title selector reach offscreen topics. Opening a summary focuses its close button; closing it restores node focus. Escape also closes the summary.
 

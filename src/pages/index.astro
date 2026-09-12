@@ -9,7 +9,7 @@ const topics = (await getCollection('topics')).sort((a, b) => Number(b.data.feat
 
 <BaseLayout>
   <section class="spatial-home" id="library">
-    <h1 class="sr-only">Infra Illustrated — explore cloud infrastructure in 3D</h1>
+    <h1 class="sr-only">Infra Illustrated — explore cloud infrastructure by topic</h1>
     <LibraryExplorer topics={topics} enableMap defaultView="map" immersive />
     <a class="spatial-catalogue" href="/visualizations?view=list">Browse the library <span aria-hidden="true">↗</span></a>
   </section>

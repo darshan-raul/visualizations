@@ -1,4 +1,4 @@
-type Point = { element: HTMLElement; id: string; x: number; y: number; z: number };
+type Point = { element: HTMLElement; id: string; x: number; y: number };
 
 export function createTreeCamera(map: HTMLElement) {
   const viewport = map.querySelector<HTMLElement>('[data-map-viewport]')!;
@@ -9,7 +9,6 @@ export function createTreeCamera(map: HTMLElement) {
     id: element.dataset.treePoint!,
     x: Number(element.dataset.treeX),
     y: Number(element.dataset.treeY),
-    z: Number(element.dataset.treeZ),
   }));
   let zoom = 1;
   let frame = 0;
@@ -23,6 +22,18 @@ export function createTreeCamera(map: HTMLElement) {
   let targetCameraY = 0;
   let targetCameraZoom = 1;
   let animFrame = 0;
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  const isCompact = () => viewport.clientWidth < 860;
+  const axisScale = () => isCompact() ? .58 : 1;
+  const fittedScale = () => {
+    const width = viewport.clientWidth;
+    const height = viewport.clientHeight;
+    const horizontalRoom = width - (isCompact() ? 36 : 140);
+    const verticalRoom = height - (isCompact() ? 120 : 190);
+    const focusedBranch = map.classList.contains('has-selection') && !isCompact();
+    return Math.max(.4, Math.min(horizontalRoom / (focusedBranch ? 1320 : 1650), verticalRoom / (focusedBranch ? 860 : 930), 1.08));
+  };
 
   function tickAnim() {
     let moved = false;
@@ -37,6 +48,17 @@ export function createTreeCamera(map: HTMLElement) {
     }
   }
 
+  function moveCamera() {
+    if (reducedMotion.matches) {
+      cameraX = targetCameraX;
+      cameraY = targetCameraY;
+      currentCameraZoom = targetCameraZoom;
+      render();
+      return;
+    }
+    if (!animFrame) tickAnim();
+  }
+
   function renderNow() {
     frame = 0;
     const width = viewport.clientWidth;
@@ -44,37 +66,40 @@ export function createTreeCamera(map: HTMLElement) {
     if (!width || !height) return;
     world.style.cssText = `width:${width}px;height:${height}px;transform:none`;
     svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-    const compact = width < 700;
-    const baseScale = Math.max(.42, Math.min((width - (compact ? 40 : 160)) / 1400, (height - (compact ? 300 : 230)) / 1500, 1.15)) * zoom * currentCameraZoom;
-    const centerX = compact ? width * .34 : width * .45;
-    const centerY = compact ? height * .54 : height * .5;
-    const projected = new Map<string, { x: number; y: number; z: number }>();
-    const topicLabels: { element: HTMLElement; z: number }[] = [];
+    const compact = isCompact();
+    const baseScale = fittedScale() * zoom * currentCameraZoom;
+    const focusedBranch = map.classList.contains('has-selection');
+    const centerX = compact ? width * .4 : width * .5;
+    const centerY = compact ? height * .5 : height * (focusedBranch ? .58 : .72);
+    const projected = new Map<string, { x: number; y: number; radius: number }>();
+    const topicLabels: HTMLElement[] = [];
 
     for (const point of points) {
       // Pure 2D flat layout
-      const x = centerX + cameraX + point.x * baseScale * (compact ? .45 : 1);
+      const x = centerX + cameraX + point.x * baseScale * axisScale();
       const y = centerY + cameraY + point.y * baseScale;
-      // Revert to original nodeScale (no artificial inflation)
-      const nodeScale = Math.max(.7, Math.min(1.2, .75 + baseScale * .2));
-      // Update layout boxes to match our new CSS sizes perfectly
+      const nodeScale = Math.max(.78, Math.min(1.08, .82 + baseScale * .16));
       const box = point.element.matches('.tree-root') ? 92 : point.element.matches('.tree-collection') ? 68 : 46;
       point.element.style.width = `${box}px`;
       point.element.style.height = `${box}px`;
       point.element.style.left = `${x - box / 2}px`;
       point.element.style.top = `${y - box / 2}px`;
       point.element.style.transform = `scale(${nodeScale})`;
-      point.element.style.zIndex = String(Math.round(point.z + 500));
+      point.element.style.zIndex = point.element.matches('.tree-root') ? '4' : point.element.matches('.tree-collection') ? '3' : '2';
       point.element.style.opacity = point.element.hidden ? '0' : '1';
-      projected.set(point.id, { x, y, z: point.z });
-      if (point.element.matches('.tree-topic') && !point.element.hidden) topicLabels.push({ element: point.element, z: point.z });
+      projected.set(point.id, { x, y, radius: box * nodeScale * .5 });
+      if (point.element.matches('.tree-topic') && !point.element.hidden) topicLabels.push(point.element);
     }
 
     const occupied = [...map.querySelectorAll<HTMLElement>('.tree-root .tree-label, .tree-collection:not([hidden]) .tree-label')].map((label) => label.getBoundingClientRect());
-    topicLabels.forEach(({ element }) => {
+    topicLabels.forEach((element) => {
       const label = element.querySelector<HTMLElement>('.tree-label')!;
+      if (!compact) {
+        label.style.visibility = 'visible';
+        return;
+      }
       const bounds = label.getBoundingClientRect();
-      const gap = compact ? 10 : 6;
+      const gap = 10;
       const overlaps = occupied.some((other) => bounds.left < other.right + gap && bounds.right + gap > other.left && bounds.top < other.bottom + gap && bounds.bottom + gap > other.top);
       label.style.visibility = overlaps ? 'hidden' : 'visible';
       if (!overlaps) occupied.push(bounds);
@@ -84,10 +109,15 @@ export function createTreeCamera(map: HTMLElement) {
       const source = projected.get(line.dataset.treeSource!);
       const target = projected.get(line.dataset.treeTarget!);
       if (!source || !target) return;
-      line.setAttribute('x1', String(source.x));
-      line.setAttribute('y1', String(source.y));
-      line.setAttribute('x2', String(target.x));
-      line.setAttribute('y2', String(target.y));
+      const dx = target.x - source.x;
+      const dy = target.y - source.y;
+      const distance = Math.hypot(dx, dy) || 1;
+      const unitX = dx / distance;
+      const unitY = dy / distance;
+      line.setAttribute('x1', String(source.x + unitX * source.radius));
+      line.setAttribute('y1', String(source.y + unitY * source.radius));
+      line.setAttribute('x2', String(target.x - unitX * (target.radius + 7)));
+      line.setAttribute('y2', String(target.y - unitY * (target.radius + 7)));
     });
   }
 
@@ -104,7 +134,6 @@ export function createTreeCamera(map: HTMLElement) {
     drag.moved = true;
     viewport.setPointerCapture(event.pointerId);
     
-    // Pan in 2D instead of rotating
     targetCameraX += dx;
     targetCameraY += dy;
     cameraX += dx;
@@ -135,14 +164,14 @@ export function createTreeCamera(map: HTMLElement) {
     event.preventDefault();
     targetCameraX += delta[0];
     targetCameraY += delta[1];
-    if (!animFrame) tickAnim();
+    moveCamera();
   });
   new ResizeObserver(render).observe(viewport);
 
   return {
     render,
     zoom(value: number) { zoom = value; render(); },
-    reset() { zoom = 1; targetCameraX = 0; targetCameraY = 0; targetCameraZoom = 1; if (!animFrame) tickAnim(); render(); },
+    reset() { zoom = 1; targetCameraX = 0; targetCameraY = 0; targetCameraZoom = 1; moveCamera(); render(); },
     focus(id: string | null) {
       if (!id) {
         targetCameraX = 0;
@@ -151,17 +180,19 @@ export function createTreeCamera(map: HTMLElement) {
       } else {
         const pt = points.find(p => p.id === id);
         if (pt) {
-          const width = viewport.clientWidth;
-          const compact = width < 700;
-          const currentScale = Math.max(.42, Math.min((width - (compact ? 40 : 160)) / 1400, (viewport.clientHeight - (compact ? 300 : 230)) / 1500, 1.15)) * zoom;
-          targetCameraZoom = compact ? 0.75 : 0.85;
-          
-          // Pure 2D offset calculation (offset to 500 to slide map left out from under inspector popup)
-          targetCameraX = - (pt.x + (compact ? 0 : 500)) * currentScale * targetCameraZoom * (compact ? .45 : 1);
-          targetCameraY = - pt.y * currentScale * targetCameraZoom;
+          const compact = isCompact();
+          const currentScale = fittedScale() * zoom;
+          targetCameraZoom = compact ? .82 : 1;
+          const collection = pt.element.dataset.collection;
+          const branchPoint = collection ? points.find((point) => point.id === `collection-${collection}`) : null;
+          const focusPoint = branchPoint || pt;
+          targetCameraX = -focusPoint.x * currentScale * targetCameraZoom * axisScale();
+          const desiredY = branchPoint ? viewport.clientHeight * .22 : pt.element.matches('.tree-collection') ? viewport.clientHeight * .38 : viewport.clientHeight * .46;
+          const projectionCenterY = compact ? viewport.clientHeight * .5 : viewport.clientHeight * (map.classList.contains('has-selection') ? .58 : .72);
+          targetCameraY = desiredY - projectionCenterY - focusPoint.y * currentScale * targetCameraZoom;
         }
       }
-      if (!animFrame) tickAnim();
+      moveCamera();
     }
   };
 }

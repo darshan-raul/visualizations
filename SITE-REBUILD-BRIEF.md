@@ -94,7 +94,7 @@ Technology-specific tags such as RDS, EKS, IAM, CoreDNS, and OpenTelemetry are a
 
 ### Discovery
 
-Homepage direction confirmed on 2026-09-11 and refined during implementation: use a full-viewport, user-rotatable 3D topic tree. The root opens into four collection branches and every topic leaf is visible initially. Collection nodes expand and collapse their leaves; the brand stays at the top left, clickable collection filters stay at the top right, and topic summaries open on the right. Preserve the dark palette, accessible topic selection and list fallback, and shared search/filter state. The user explicitly authorized direct homepage integration without another approval prototype; the scrolling-document default continues to apply to topic explainers.
+Homepage direction confirmed on 2026-09-11 and revised on 2026-09-12: use a full-viewport, pannable 2D topic tree. The root opens into four collection branches; selecting a collection reveals its topic leaves while keeping the overall hierarchy legible. Collection nodes expand and collapse their leaves; the brand stays at the top left, clickable collection filters stay at the top right, and topic summaries open in a dedicated right-hand region that the tree canvas never occupies. On narrow screens, the tree and summary stack in separate rows. Preserve the dark palette, accessible topic selection and list fallback, and shared search/filter state. The user explicitly authorized direct homepage integration without another approval prototype; the scrolling-document default continues to apply to topic explainers.
 
 The homepage should become a library discovery interface rather than a course landing page. It should provide:
 

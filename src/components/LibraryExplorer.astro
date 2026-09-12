@@ -166,7 +166,7 @@ const filterGroups = [
       if (map) map.hidden = currentView !== 'map';
       empty.hidden = visibleIds.size !== 0 || currentView === 'map';
       viewSwitch?.querySelectorAll<HTMLButtonElement>('[data-view]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.view === currentView)));
-      if (currentView === 'map') requestAnimationFrame(() => fitMap());
+      if (currentView === 'map') requestAnimationFrame(() => selectedTopic ? focusSelectedNode(selectedTopic) : fitMap());
       setUrl(mode);
     }
 
@@ -197,19 +197,26 @@ const filterGroups = [
         line.classList.toggle('is-active', incident);
       });
       if (tree) {
+        tree.classList.toggle('has-selection', Boolean(selected));
+        tree.querySelectorAll<HTMLButtonElement>('[data-tree-toggle]').forEach((toggle) => {
+          toggle.classList.toggle('is-active-collection', toggle.dataset.treeToggle === selected?.collection);
+        });
         tree.querySelectorAll<SVGLineElement>('[data-tree-line]').forEach((line) => {
           const onTopicPath = Boolean(selected && line.dataset.treeTarget === selected.id);
           const onCollectionPath = Boolean(selected && line.dataset.treeTarget === `collection-${selected.collection}`);
           line.classList.toggle('is-active', onTopicPath || onCollectionPath);
+          line.classList.toggle('is-context-hidden', Boolean(selected && (line.dataset.treeSource === 'tree-root' || line.dataset.treeCollection !== selected.collection)));
         });
       }
       map.querySelector<HTMLSelectElement>('[data-map-select]')!.value = selected?.id || '';
       if (!selected) {
         inspector.hidden = true;
+        delete inspector.dataset.collection;
         inspector.replaceChildren();
         return;
       }
       inspector.hidden = false;
+      inspector.dataset.collection = selected.collection;
       inspector.replaceChildren();
       const close = document.createElement('button'); close.type = 'button'; close.className = 'inspector-close'; close.dataset.closeInspector = ''; close.setAttribute('aria-label', 'Close topic details'); close.textContent = '×';
       const kicker = document.createElement('span'); kicker.className = 'inspector-kicker'; kicker.textContent = selected.collection === 'devops-sre' ? 'DevOps & SRE' : selected.collection;
@@ -294,7 +301,7 @@ const filterGroups = [
           const collapsed = toggle.getAttribute('aria-expanded') === 'false';
           topicNodes.forEach((node) => { node.hidden = collapsed || !visibleIds.has(node.dataset.mapNode || ''); });
           tree.querySelector<SVGLineElement>(`[data-tree-line][data-tree-target="collection-${CSS.escape(slug)}"]`)!.toggleAttribute('hidden', !hasVisibleTopics);
-          tree.querySelectorAll<SVGLineElement>(`[data-tree-line][data-tree-collection="${CSS.escape(slug)}"]`).forEach((line) => {
+          tree.querySelectorAll<SVGLineElement>(`[data-tree-line][data-tree-collection="${CSS.escape(slug)}"][data-tree-source^="collection-"]`).forEach((line) => {
             const target = tree.querySelector<HTMLButtonElement>(`[data-map-node="${CSS.escape(line.dataset.treeTarget || '')}"]`);
             line.toggleAttribute('data-hidden', collapsed || !target || target.hasAttribute('hidden'));
           });
