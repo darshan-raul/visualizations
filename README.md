@@ -6,6 +6,8 @@ Infra Illustrated is a static visual reference library focused on AWS, Kubernete
 
 The confirmed product and migration decisions live in [SITE-REBUILD-BRIEF.md](./SITE-REBUILD-BRIEF.md).
 
+Topic visuals now follow one persistent console with a grouped concept index, active canvas, right/bottom explanation, and bottom takeaway. The [console migration checklist](./guide/CONSOLE-MIGRATION-CHECKLIST.md) tracks the remaining page work. Discovery pages retain their own layout.
+
 ## Current architecture
 
 - Astro with static output
@@ -44,34 +46,11 @@ These are design artifacts outside the published site. Once the direction is acc
 
 ## Current visualizations
 
-| Collection | Visualization | Format |
-|---|---|---|
-| AWS | RDS Backup Retention | Visual Brief |
-| AWS | VPC Packet Flow | Flow Explorer |
-| Kubernetes | Kubernetes Networking | Deep Dive |
-| Kubernetes | Pod Networking and CNI | Deep Dive |
-| Kubernetes | Kubernetes Services and Traffic Distribution | Deep Dive |
-| Kubernetes | Kubernetes DNS | Deep Dive |
-| Kubernetes | Kubernetes Gateway API and Ingress | Deep Dive |
-| DevOps & SRE | OpenTelemetry | Deep Dive |
-| DevOps & SRE | GitHub Actions Cheatsheet | Operational Reference |
-| DevOps & SRE | DevSecOps Pipeline | Flow Explorer |
-| Foundations | Docker Multi-Architecture | Deep Dive |
-| Foundations | OAuth 2.0 & OIDC | Flow Explorer |
+The catalogue is generated from `src/content/topics/`; use `/visualizations` to see the current published library. The [migration checklist](./guide/CONSOLE-MIGRATION-CHECKLIST.md) records each topic's implementation state and route.
 
 ## Migration status
 
-Stage 1 established the shared shell, design system, metadata, collection pages, catalogue, filters, and search while preserving all public routes. RDS Backup Retention and VPC Packet Flow are rebuilt in Astro/MDX. Kubernetes Networking is now an integrated system-map hub with focused companion explainers for CNI, Services, DNS, and Gateway API.
-
-The first editorial rebuilds are:
-
-1. ~~RDS Backup Retention~~ — rebuilt
-2. ~~VPC Packet Flow~~ — rebuilt
-3. ~~Kubernetes Networking~~ — rebuilt as the system-map hub
-4. ~~Pod Networking and CNI~~ — companion deep dive
-5. ~~Kubernetes Services and Traffic Distribution~~ — companion deep dive
-6. ~~Kubernetes DNS~~ — companion deep dive
-7. ~~Kubernetes Gateway API and Ingress~~ — companion deep dive
+Stage 1 established the shared shell, metadata, collection pages, catalogue, filters, and search while preserving public routes. RDS Backup Retention and VPC Packet Flow were the first Astro/MDX editorial migrations. RDS and ENI are the integrated console pilots; Linux Foundations is now a multi-route Foundations topic with a map and eight pillar consoles. The remaining canonical articles, the Auto Scaling draft, and five standalone HTML explainers have not yet adopted the locked console contract; their exact status is recorded in the checklist.
 
 Existing pages must be technically revalidated during migration rather than mechanically wrapped in the new shell.
 

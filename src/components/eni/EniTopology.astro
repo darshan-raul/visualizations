@@ -3,7 +3,7 @@ import EniIcon from './EniIcon.astro';
 import VisualFrame from './VisualFrame.astro';
 ---
 
-<VisualFrame eyebrow="Placement boundary" title="An ENI belongs to one subnet and one Availability Zone" takeaway="You can detach an ENI, but you cannot move it to another subnet or Availability Zone.">
+<VisualFrame id="eni-placement" eyebrow="Placement boundary" title="An ENI belongs to one subnet and one Availability Zone" takeaway="You can detach an ENI, but you cannot move it to another subnet or Availability Zone.">
   <div class="az-grid">
     <div class="eni-boundary az-boundary"><b class="boundary-label">ap-south-1a</b><div class="eni-boundary subnet-boundary"><b class="boundary-label">subnet-app-a</b><div class="eni-card"><EniIcon kind="eni"/><strong>ENI-123</strong><small>10.20.1.17</small></div></div></div>
     <div class="invalid-move"><span aria-hidden="true">×</span><strong>cannot move</strong><small>create another ENI here</small></div>
@@ -11,16 +11,21 @@ import VisualFrame from './VisualFrame.astro';
   </div>
 </VisualFrame>
 
-<VisualFrame eyebrow="Multi-homed compute" title="One EC2 instance can use more than one ENI" description="Each interface keeps the subnet identity and security groups of its own network." takeaway="Multiple ENIs let one instance participate in multiple subnets in the same Availability Zone.">
-  <div class="multi-topology eni-boundary az-boundary">
+<VisualFrame id="eni-multi-homing" eyebrow="Multi-homed compute" title="One EC2 instance can use more than one ENI" description="Each interface keeps the subnet identity and security groups of its own network." takeaway="Multiple ENIs let one instance participate in multiple subnets in the same Availability Zone.">
+  <div class="eni-lane-controls" data-eni-enhancement hidden role="group" aria-label="Choose the EC2 interface flow"><button type="button" data-eni-lane="both" aria-pressed="true">Both flows</button><button type="button" data-eni-lane="app" aria-pressed="false">Trace app · eth0</button><button type="button" data-eni-lane="admin" aria-pressed="false">Trace admin · eth1</button><button type="button" data-eni-lane-replay>↻ Replay arrows</button></div>
+  <div class="multi-topology eni-boundary az-boundary eni-multi-diagram" data-eni-multi data-lane="both">
     <b class="boundary-label">ap-south-1a</b>
-    <div class="network-side app-network"><span>application subnet</span><div class="eni-card"><EniIcon kind="eni"/><strong>eth0 · primary ENI</strong><small>10.20.1.17 · sg-app</small></div></div>
-    <div class="ec2-node"><EniIcon kind="ec2" label="Amazon EC2"/><strong>i-0web123</strong><small>policy routing decides the egress interface</small></div>
-    <div class="network-side mgmt-network"><span>management subnet</span><div class="eni-card"><EniIcon kind="eni"/><strong>eth1 · secondary ENI</strong><small>10.20.2.17 · sg-admin</small></div></div>
+    <div class="network-side app-network eni-multi-side" data-eni-side="app"><span>subnet-app-a</span><div class="eni-card"><EniIcon kind="eni"/><div><strong>primary ENI</strong><small>eth0 · 10.20.1.17</small></div></div><code>sg-app · app traffic</code></div>
+    <div class="eni-multi-cable eni-multi-cable-app" aria-hidden="true"><small>TCP/443</small><div><i></i><b>→</b><em></em></div></div>
+    <div class="ec2-node eni-multi-instance"><EniIcon kind="ec2" label="Amazon EC2"/><strong>i-0web123</strong><span><i>eth0</i><i>eth1</i></span><small>one running instance</small></div>
+    <div class="eni-multi-cable eni-multi-cable-admin" aria-hidden="true"><small>TCP/22</small><div><b>←</b><i></i><em></em></div></div>
+    <div class="network-side mgmt-network eni-multi-side" data-eni-side="admin"><span>subnet-admin-a</span><div class="eni-card"><EniIcon kind="eni"/><div><strong>secondary ENI</strong><small>eth1 · 10.20.2.17</small></div></div><code>sg-admin · admin traffic</code></div>
   </div>
+  <output class="eni-lane-result" data-eni-lane-result aria-live="polite">Two packet paths reach the same EC2 instance through different ENIs. Each interface keeps its own subnet address and security groups.</output>
+  <p class="eni-model-caveat">Both ENIs attach in ap-south-1a. The arrows illustrate incoming flows; egress and return traffic still depend on the guest's route and policy configuration.</p>
 </VisualFrame>
 
-<VisualFrame eyebrow="Packet checkpoint lab" title="Trace the packet from source ENI to destination ENI" description="Disable a gate to reveal the first blocker. The diagram is ordered by responsibility, not literal internal implementation." takeaway="Routes choose the path; subnet NACLs and interface security groups filter traffic at different boundaries." class="checkpoint-lab">
+<VisualFrame id="eni-packet" eyebrow="Packet checkpoint lab" title="Trace the packet from source ENI to destination ENI" description="Disable a gate to reveal the first blocker. The diagram is ordered by responsibility, not literal internal implementation." takeaway="Routes choose the path; subnet NACLs and interface security groups filter traffic at different boundaries." class="checkpoint-lab">
   <fieldset class="eni-controls" data-checkpoint-controls>
     <legend class="sr-only">Packet gate state</legend>
     <label><input type="checkbox" data-gate="source" checked /> Source SG egress</label>
@@ -74,4 +79,24 @@ import VisualFrame from './VisualFrame.astro';
   }
   document.querySelectorAll('.checkpoint-lab').forEach(initializeCheckpoint);
   document.addEventListener('astro:page-load', () => document.querySelectorAll('.checkpoint-lab').forEach(initializeCheckpoint));
+  function initializeMultiHoming(root) {
+    if (!(root instanceof HTMLElement) || root.dataset.multiReady) return;
+    root.dataset.multiReady = 'true';
+    const diagram = root.querySelector('[data-eni-multi]');
+    const buttons = [...root.querySelectorAll('[data-eni-lane]')];
+    const output = root.querySelector('[data-eni-lane-result]');
+    const messages = {
+      both: 'Two packet paths reach the same EC2 instance through different ENIs. Each interface keeps its own subnet address and security groups.',
+      app: 'The application flow arrives through eth0 at 10.20.1.17 in subnet-app-a, with sg-app on that ENI.',
+      admin: 'The administration flow arrives through eth1 at 10.20.2.17 in subnet-admin-a, with sg-admin on that ENI.',
+    };
+    let lane = 'both';
+    const replay = () => { diagram.classList.remove('replaying'); void diagram.offsetWidth; diagram.classList.add('replaying'); };
+    const select = (next) => { if (!messages[next]) return; lane = next; diagram.dataset.lane = lane; output.textContent = messages[lane]; buttons.forEach(button => button.setAttribute('aria-pressed',String(button.dataset.eniLane === lane))); replay(); };
+    buttons.forEach(button => button.addEventListener('click',() => select(button.dataset.eniLane)));
+    root.querySelector('[data-eni-lane-replay]')?.addEventListener('click',replay);
+    select('both');
+  }
+  document.querySelectorAll('#eni-multi-homing').forEach(initializeMultiHoming);
+  document.addEventListener('astro:page-load', () => document.querySelectorAll('#eni-multi-homing').forEach(initializeMultiHoming));
 </script>

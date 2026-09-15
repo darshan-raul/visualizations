@@ -1,10 +1,12 @@
 # Infra Illustrated — Writing Guide
 
-Status: Style agreed on 2026-09-08 and applied across the current canonical pages.
+Status: Style agreed on 2026-09-08; console copy placement confirmed on 2026-09-15.
 
 Use this guide alongside `SITE-REBUILD-BRIEF.md`, which remains the source of truth for product, content, accuracy, and design decisions.
 
 For new topic visuals and substantial visual rebuilds, use the [Universal Visual Specification Generator](guide/INFRA_ILLUSTRATED_VISUAL_SPEC_GENERATOR.md) and the [repository workflow](AGENTS.md#visual-design-workflow) to establish the narrative, visual contracts, and working prototype. Apply this writing guide to required copy in specifications, prototype labels and feedback, and the final page. The generator's misconception markers and example sequences are illustrative; express corrections naturally where the mechanism is explained and retain material caveats without repeating a fixed callout formula.
+
+The confirmed topic layout is one console with a grouped index, one active visual canvas, a contextual inspector, and a bottom explanation. The [migration checklist](guide/CONSOLE-MIGRATION-CHECKLIST.md) tracks existing pages that still use earlier layouts. This guide governs what those surfaces say, while the brief governs where they go.
 
 ## Voice
 
@@ -30,7 +32,7 @@ Include operational failures when they materially help the topic. Do not force e
 
 ### Let the visuals teach
 
-Use prose to frame the question, connect mechanisms, and explain what the eye might miss. Give diagrams meaningful captions and enough accompanying text to make the core explanation accessible. Avoid narrating every node and arrow again in a paragraph.
+Use prose to frame the question, connect mechanisms, and explain what the eye might miss. Give diagrams meaningful captions and enough accompanying text to make the core explanation accessible. Avoid narrating every node and arrow again in a paragraph. In a console view, keep the heading and essential actor/state labels inside or above the canvas. Put explanation, caveats, evidence, and practical implications in the right inspector or below the diagram. The bottom takeaway should state a reusable relationship rather than repeat the heading. Without JavaScript, the same copy should follow its visual in the stacked reading order.
 
 Different surfaces need different writing:
 
@@ -40,6 +42,9 @@ Different surfaces need different writing:
 | Diagram labels | Short, specific actors and actions; fragments are fine |
 | Captions | Explain the relationship or takeaway worth noticing |
 | Controls | Say what the action changes |
+| Grouped index | Short concept names on one line; use the active view title and inspector for detail |
+| Context inspector | Explain the selected view's cause, result, caveat, and observable evidence |
+| Bottom takeaway | One reusable conclusion or decision cue for the active view |
 | Reference tables | Consistent terminology and concise facts |
 
 “Request denied” is a useful diagram label. It does not need a conversational rewrite. Apply this guide to introductions, summaries, headings, captions, callouts, and interactive component text as well as ordinary paragraphs.
@@ -66,7 +71,7 @@ For example:
 
 Choose headings that help the reader find an answer. Both “How CoreDNS learns Service names” and “Resolver configuration” can work. Question headings are optional, and descriptive headings do not need to be made playful.
 
-The brief's content contract specifies what to cover, not a mandatory sequence of section titles. Do not force every topic into the same mental-model, mechanism, misconceptions, and troubleshooting scaffold.
+The brief's content contract specifies what to cover, not a mandatory sequence of view titles. Group index entries around concepts readers will revisit. A short Visual Brief may use fewer groups than a broad Deep Dive, while both use the same console. Do not force every topic into the same mental-model, mechanism, misconceptions, and troubleshooting scaffold.
 
 Correct misconceptions by explaining the mechanism. Explain why a misconception is tempting when that helps understanding; a short correction or comparison is sometimes sufficient.
 
@@ -131,6 +136,8 @@ The previous “human” examples are superseded. In addition to the corrections
 - [ ] Is it clear who or what acts, what happens next, and why?
 - [ ] Do sentences connect ideas without becoming crowded or repetitive?
 - [ ] Does the prose help the visual rather than repeat it?
+- [ ] Do group labels stay short, with the selected view's cause, result, caveat, and evidence explained beside or below the canvas?
+- [ ] Does each bottom takeaway state a reusable relationship instead of echoing the view title?
 - [ ] Are labels, controls, and reference entries appropriately concise?
 - [ ] Does the explanation show a useful implication without forcing drama?
 - [ ] Have scope, conditions, uncertainty, and technical meaning survived the rewrite?

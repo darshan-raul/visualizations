@@ -1,0 +1,15 @@
+---
+import { getEntry } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import LinuxPillarConsole from '../../components/linux/LinuxPillarConsole.astro';
+import { getLinuxPillar, linuxPillarIds } from '../../components/linux/linux-data';
+import '../../styles/linux.css';
+
+export function getStaticPaths() { return linuxPillarIds.map((pillar) => ({ params: { pillar } })); }
+const id = Astro.params.pillar ?? '';
+const pillar = getLinuxPillar(id);
+if (!pillar) throw new Error(`Unknown Linux pillar: ${id}`);
+const topic = await getEntry('topics', 'linux');
+if (!topic) throw new Error('Linux foundation topic metadata is missing.');
+---
+<BaseLayout title={`Linux ${pillar.name}`} description={pillar.promise} chrome={false}><LinuxPillarConsole pillar={pillar} /></BaseLayout>

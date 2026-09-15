@@ -2,7 +2,7 @@
 
 Status: Confirmed
 
-Confirmed on: 2026-09-05
+Confirmed on: 2026-09-05; topic console design language confirmed on 2026-09-15
 
 This document is the persistent source of truth for the planned transformation of this repository. It records the decisions reached during the product grilling session. Future work should follow this brief unless the user explicitly changes a decision.
 
@@ -13,6 +13,20 @@ Adopted on 2026-09-10: use [Infra Illustrated — Universal Visual Specification
 The specification and HTML prototype are pre-integration design artifacts, stored under `guide/topics/<topic-slug>/`. Review the completed direction before full integration when approval is still needed; existing user authorization carries forward. After integration, one MDX topic and its components remain the canonical published content.
 
 Apply the generator's existing-project rule: preserve this brief's audience, focused topic formats, static Astro/MDX architecture, shared visual semantics, progressive enhancement, and publication gates. Its overview size and example diagram grammar adapt to the topic and existing system. Routine corrections do not require a fresh prototype.
+
+## Confirmed topic console design language
+
+Confirmed after the RDS Backup Retention and AWS ENI pilots on 2026-09-15. Every topic visualization, whether a Visual Brief, Deep Dive, Flow Explorer, or Operational Reference, should present its teaching journey inside **one persistent console**. This applies to new topics and to existing topics as they migrate. The homepage, catalogue, collection pages, and spatial topic tree remain discovery surfaces rather than topic consoles.
+
+The console contains the topic title and metadata, internal site navigation, a compact grouped view index, one active visual canvas, a contextual inspector, a bottom takeaway, sources, related visuals, and the footer. The reader should recognize one environment while moving between views. Use the RDS pilot for the time and recovery model and the ENI pilot for the grouped index and ownership/packet model; extract their shared shell and tokens into neutral reusable components before scaling migration. Topic-specific diagrams and interaction logic remain distinct.
+
+Group views by the concepts readers need to find, not by an arbitrary count. A focused brief may have two or three short groups; a deep dive may need more. Use native disclosure groups with short, single-line view labels, a visible `current / total` counter, and one group expanded after view selection. An index must remain usable at 320 px and 200% zoom without overlapping text or consuming the visual canvas. Preserve every major view's stable fragment, browser history behavior, and older section anchors during migration. Previous/current/next controls may sit below the canvas when they help the reader follow a sequence; avoid a duplicate row of every view number.
+
+The active view's title and concise diagram labels may sit above or inside the canvas. Explanation, caveats, operational evidence, and sources belong in the right inspector or below the visual. Prose should clarify what the diagram leaves implicit rather than restate each node. On narrower screens, move the inspector below the canvas; keep the index compact and its groups operable by touch and keyboard. If JavaScript fails, render all views in the same console in narrative order with their explanations below each visual, and keep index anchors and sources reachable.
+
+Use arrows and motion to teach direction, causality, timing, state change, or a failure boundary. Animate the changed actor or path, and keep unchanged context stable. Give readers manual steps, replay, or pause for a sequence that is difficult to inspect in real time. Show the meaning in text and connector style as well as color. Respect reduced motion by retaining the selected state and readable path without movement. The three-or-fewer hero interaction budget continues to apply; the console itself is a common frame, not a reason to turn every view into a simulator.
+
+The [console migration checklist](guide/CONSOLE-MIGRATION-CHECKLIST.md) records the shared shell work, topic inventory, per-topic gates, and remaining gaps in the two pilots. Its status is planning information; this brief governs the design decision.
 
 ## Product identity
 
@@ -94,7 +108,7 @@ Technology-specific tags such as RDS, EKS, IAM, CoreDNS, and OpenTelemetry are a
 
 ### Discovery
 
-Homepage direction confirmed on 2026-09-11 and revised on 2026-09-12: use a full-viewport, pannable 2D topic tree. The root opens into four collection branches; selecting a collection reveals its topic leaves while keeping the overall hierarchy legible. Collection nodes expand and collapse their leaves; the brand stays at the top left, clickable collection filters stay at the top right, and topic summaries open in a dedicated right-hand region that the tree canvas never occupies. On narrow screens, the tree and summary stack in separate rows. Preserve the dark palette, accessible topic selection and list fallback, and shared search/filter state. The user explicitly authorized direct homepage integration without another approval prototype; the scrolling-document default continues to apply to topic explainers.
+Homepage direction confirmed on 2026-09-11 and revised on 2026-09-12: use a full-viewport, pannable 2D topic tree. The root opens into four collection branches; selecting a collection reveals its topic leaves while keeping the overall hierarchy legible. Collection nodes expand and collapse their leaves; the brand stays at the top left, clickable collection filters stay at the top right, and topic summaries open in a dedicated right-hand region that the tree canvas never occupies. On narrow screens, the tree and summary stack in separate rows. Preserve the dark palette, accessible topic selection and list fallback, and shared search/filter state. The user explicitly authorized direct homepage integration without another approval prototype; topic explainers follow the console design language above.
 
 The homepage should become a library discovery interface rather than a course landing page. It should provide:
 
@@ -204,32 +218,31 @@ The next topic may be chosen according to current need or curiosity; this backlo
 
 ## Topic-page experience
 
-### Shared shell
+### Shared console
 
-Standardize the page shell while keeping the explanatory canvas flexible. Each topic page should provide:
+Standardize the topic console while keeping each explanatory canvas suited to its mechanism. Each topic page should provide, inside that console:
 
 - Breadcrumb and back-to-collection navigation
 - Title and concise summary
 - Primary collection, tags, technology labels, format, and difficulty
 - Published and last-reviewed dates
-- Table of contents or section navigation
+- Grouped view index with current/total progress
+- One active visual canvas and contextual explanation to its right or below
 - Related Visuals
 - Sources
 - Shared footer
 
-### Sections and deep links
+### Views and deep links
 
-Use a scrolling document with a sticky section navigator as the default structure.
+Use the console's grouped disclosure index as the default topic structure. A selected view occupies the central canvas; its explanation follows in the inspector or bottom strip. Use tabs only for genuine alternate states or comparisons inside a view. The index is ordinary anchor navigation enhanced by JavaScript, not a tab strip.
 
-Do not use tabs merely as chapter navigation. Reserve tabs for genuine alternate views, comparisons, or states.
-
-Every major section must have a stable fragment or route. Section changes should work with browser history, refresh, back/forward navigation, and direct sharing.
+Every major view must have a stable fragment or route. View changes should work with browser history, refresh, back/forward navigation, and direct sharing. Preserve published section fragments as aliases when migrating an article or legacy page. Without JavaScript, the same views should remain readable in order inside the console.
 
 ### Interaction
 
 Interactivity is optional and must have a teaching purpose. Use it when changing state, stepping through time, comparing scenarios, or inspecting a flow teaches something that a static diagram cannot.
 
-Interactive animation is explicitly allowed when motion materially clarifies sequence, causality, data movement, state transitions, or changes over time. A visualization may use animation, direct manipulation, playback, or step-by-step controls when those are the clearest way to teach the mechanism; it does not need to remain static merely because the surrounding page is a scrolling document.
+Interactive animation is explicitly allowed when motion materially clarifies sequence, causality, data movement, state transitions, or changes over time. A visualization may use animation, direct manipulation, playback, or step-by-step controls when those are the clearest way to teach the mechanism inside its console view.
 
 Animated explanations must remain understandable and operable without precise timing. Provide pause, replay, or manual step controls when the sequence would otherwise be difficult to inspect, and honor reduced-motion preferences by replacing nonessential movement with immediate state changes or an equivalent static presentation.
 
@@ -417,27 +430,13 @@ Temporary coexistence between rebuilt and legacy page designs is acceptable.
 - Preserve all current public slugs.
 - Keep unconverted pages reachable and functional.
 
-### Stage 2: First proving pages
+### Stage 2: Proving pages and console language
 
-Rebuild these first:
+RDS Backup Retention and VPC Packet Flow established the first Astro/MDX editorial migrations. The later RDS and AWS ENI console pilots established the confirmed topic design language above: one console, an active canvas, contextual explanation, meaningful motion, and a compact grouped index. Finish the shared shell extraction and pilot alignment recorded in the checklist before repeating this structure across the catalogue.
 
-1. **RDS Backup Retention** — proves the focused visual explainer, timeline behavior, and technical-correction workflow.
-2. **VPC Packet Flow** — proves the interactive flow explorer and more complex visualization primitives.
+### Stage 3: Topic console migration
 
-Use these two pages to refine the architecture and visual system before scaling migration.
-
-### Stage 3: Remaining pages
-
-Migrate the remaining six pages individually:
-
-- Kubernetes Networking
-- GitHub Actions Cheatsheet
-- OAuth 2.0 and OIDC
-- DevSecOps Pipeline
-- Docker Multi-Architecture
-- OpenTelemetry
-
-The exact order may follow current interest and what the first two migrations reveal.
+Migrate each existing canonical Astro/MDX article and the five still-synced legacy HTML pages individually. The EC2 Auto Scaling topic remains a draft until its factual and interaction scope is resolved. [The checklist](guide/CONSOLE-MIGRATION-CHECKLIST.md) holds the current route inventory and topic-specific gates; catalogue metadata and published URLs remain canonical. The exact order may follow topic dependencies and current interest, but the shared console shell should be extracted before broad repetition.
 
 ## Repository and publishing governance
 

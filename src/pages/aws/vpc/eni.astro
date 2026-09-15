@@ -1,13 +1,15 @@
 ---
 import { getEntry, render } from 'astro:content';
-import TopicLayout from '../../../layouts/TopicLayout.astro';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import '../../../components/eni/eni-shared.css';
+import '../../../styles/rds-workbench.css';
+import '../../../styles/eni-workbench.css';
 
 const topic = await getEntry('topics', 'aws-eni');
 if (!topic) throw new Error('AWS ENI topic content was not found.');
-const { Content, headings } = await render(topic);
-const sections = headings.filter((heading) => heading.depth === 2).map(({ slug, text }) => ({ id: slug, label: text }));
+const { Content } = await render(topic);
 ---
 
-<TopicLayout topic={topic} sections={sections}>
+<BaseLayout title={topic.data.title} description={topic.data.summary} chrome={false}>
   <Content />
-</TopicLayout>
+</BaseLayout>

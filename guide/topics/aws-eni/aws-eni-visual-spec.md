@@ -1,8 +1,8 @@
 # Infra Illustrated — AWS Elastic Network Interface (ENI) visual specification
 
-Status: integrated
-Version: 1.0  
-Verified: 2026-09-10  
+Status: single-console pilot integrated; grouped-index design language confirmed for all topic visuals; neutral shared-shell extraction and browser visual QA remain
+Version: 1.1
+Verified: 2026-09-15
 Topic: AWS Elastic Network Interfaces as the connective tissue of VPC networking  
 Target audience: cloud engineers, DevOps engineers, SREs, platform engineers, and solutions architects who know VPC basics but want a reusable mental model that connects EC2, containers, Kubernetes, Lambda, databases, load balancers, NAT, PrivateLink, security, scaling, and troubleshooting.
 
@@ -33,11 +33,7 @@ A secondary persistent packet is:
 
 `flow-42: 10.20.1.17:43122 → 10.20.3.25:5432/TCP`
 
-Use `flow-42` in the security, routing, failure, and troubleshooting sections. The page header includes a compact ribbon:
-
-`ENI-123 | owner: customer/service | subnet: app-a | IP: 10.20.1.17 | SG: sg-app | flow-42: idle/allowed/blocked`
-
-As the scenario morphs, the ribbon updates. On mobile it collapses to two rows.
+Use `flow-42` in the packet and troubleshooting views. The console header keeps the persona and packet visible; the right inspector changes its evidence, explanation, and caveat with the selected view. In the service morph view, the selected resource and ownership badge change together. This is a role comparison, never a claim that one literal ENI attaches to multiple services.
 
 ## 3. Scope and non-goals
 
@@ -78,7 +74,7 @@ The overview links out rather than exhaustively teaching:
 
 ## 4. Visual thesis
 
-Use a **“network passport + morphing interface”** visual language.
+Use a **“network passport + morphing interface”** visual language inside one persistent console.
 
 ENI-123 is drawn as a compact rounded network-interface card containing:
 
@@ -89,7 +85,7 @@ ENI-123 is drawn as a compact rounded network-interface card containing:
 - security-group badge where applicable.
 - attachment/service badge.
 
-The card physically moves or morphs between resources. The page should feel like one interface touring the AWS network rather than a collection of independent architecture diagrams.
+The card changes role in the service view. Each of the 16 views occupies the same central canvas, while the rail, inspector, bottom explanation, sources, and site navigation stay inside the console. Labels and short titles frame the canvas; explanatory prose sits to the right or below it. The service card's change animation signals a different ownership model, not movement of one real interface.
 
 The first act establishes the passport. The second act makes ENI-123 appear around AWS services. The third act uses ENI-123 to explain routing, scale, failure, and troubleshooting.
 
@@ -135,30 +131,34 @@ Only three visuals receive rich interaction:
 2. **Packet Checkpoint Lab** — move `flow-42` through route, NACL, SG, and destination while toggling failure conditions; show first blocking reason.
 3. **Capacity Lab** — vary subnet free IPs and workload networking mode to show scaling failure from subnet/ENI/IP pressure.
 
-Other visuals are lighter selectors, comparisons, or static progressive diagrams.
+The same-AZ failover view adds a light three-step sequence. Other views use brief motion only for packet flow, address relationships, service change, failure, or capacity state. Motion has manual controls where timing matters and disappears under reduced motion.
 
 ## 7. Narrative sequence
 
-| # | Section | Core learner question | Visual form | Interaction | Required takeaway |
+| # | Console view | Core learner question | Visual form | Interaction | Required takeaway |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Meet ENI-123 | What belongs to one ENI, and when does its public address persist? | Passport + multiple-IP visual + public-IP comparison | light passport field focus; address visuals are static | One ENI can carry several addresses; use an EIP when public IPv4 continuity matters |
-| 2 | One subnet, one AZ | Can one ENI live in two subnets? | nested boundary | static + invalid drop hint | One ENI belongs to one subnet and cannot be moved to another |
-| 3 | One EC2, two ENIs | Can a server belong to two networks? | dual-homed topology | toggle traffic lane | Multiple ENIs let one EC2 participate in multiple subnets, constrained by AZ |
-| 4 | Security around the interface | SG vs NACL vs route—who does what? | checkpoint lab | HERO | Route chooses path; NACL and SG filter at different scopes |
-| 5 | I am everywhere | How does ENI behavior differ by AWS service? | service morph inspector | HERO | Common primitive, different ownership and controls |
-| 6 | Containers consume networking | Why can ECS task density hit an ENI limit? | host/trunk evolution | light before/after | `awsvpc` gives task-level VPC identity; trunking changes density |
-| 7 | Kubernetes turns ENIs into Pod capacity | How do EKS Pods receive VPC addresses? | progressive node anatomy | mode selector | CNI consumes ENI IP/prefix slots; branch ENIs enable Pod SGs |
-| 8 | Lambda myth buster | Does concurrency create one ENI per invocation? | many-to-shared interface | static animated aggregation | Hyperplane ENIs are shared managed VPC connectivity, not per-invocation ENIs |
-| 9 | ENI as part of the route | When may traffic pass through an EC2 instance? | appliance path | source/dest-check toggle | Appliances can forward traffic; source/destination check and OS routing matter |
-| 10 | Address + attachment continuity | Can network identity move independently from compute? | failover before/after | step toggle | Secondary ENI/IP movement can support same-AZ failover patterns |
-| 11 | Networking is capacity | Why can workloads fail to scale with spare CPU? | depletion simulator | HERO | Subnet addresses + ENI limits + slots/prefixes constrain placement |
-| 12 | Follow the ENI | How do I troubleshoot a broken connection? | evidence-driven decision tree | step-through | Start with source ENI and work through route/security to destination ENI |
-| 13 | ENI vs ENA vs EFA | Aren’t these the same thing? | three-column comparison | static | Separate VPC interface identity from networking device/fabric technologies |
-| 14 | Final network map | Where are ENIs hiding in a real VPC? | full architecture reveal | hover/focus highlight | ENIs unify many VPC concepts without making all services identical |
+| 1 | Network passport | What belongs to one ENI? | ENI card nested in subnet/VPC | static | Identity, address, security, and attachment belong to a subnet-scoped interface |
+| 2 | Address stack | Can one ENI hold several addresses? | one-to-many address arrow | short reveal | One interface can carry multiple private IPv4 and IPv6 addresses |
+| 3 | Public continuity | What changes after EC2 stop/start? | two public-IP timelines | changed-address reveal | Auto-assigned IPv4 changes; an allocated EIP persists |
+| 4 | Subnet boundary | Can the interface cross an AZ? | invalid move between boundaries | static | Create another ENI for another subnet/AZ |
+| 5 | Two interfaces | Can one EC2 join two networks? | two subnet/ENI cards → two packet lanes → eth0/eth1 on one EC2 | app/admin/both trace and replay | Both ENIs attach within the instance's AZ; guest routing still matters |
+| 6 | Packet checkpoints | Where is `flow-42` blocked? | source ENI → route → NACL/SG → DB ENI | **Hero:** five gate toggles | Show the first failing gate and the return NACL rule |
+| 7 | Service ownership | Who creates and controls this interface? | resource ⇢ ENI role passport | **Hero:** nine service choices | Same primitive, different ownership and lifecycle |
+| 8 | ECS task networking | How does trunking change density? | before/after host | short arrow reveal | Task VPC identity still consumes finite capacity |
+| 9 | EKS Pod capacity | Where do Pod addresses come from? | node ENIs → Pod pool | short address reveal | VPC CNI allocation uses ENI address/prefix slots |
+| 10 | Lambda sharing | Is there one ENI per invocation? | many invocations → shared Hyperplane ENI | shared-path reveal | Hyperplane VPC connectivity is shared |
+| 11 | Appliance route | Why might transit fail? | route → two appliance ENIs → IGW | two light toggles | AWS source/dest check and guest forwarding both matter |
+| 12 | Same-AZ failover | What survives a failed host? | serving → detached → reattached | three native step buttons | Attachment moves within the AZ; application recovery remains separate |
+| 13 | Capacity lab | Why can placement fail with spare CPU? | address/slot meters | **Hero:** demand and allocation mode | Subnet IPs and workload slots can stop placement |
+| 14 | Evidence path | Where should troubleshooting begin? | five numbered checkpoints | static | Follow source ENI, route, security, destination, evidence |
+| 15 | ENI / ENA / EFA | Are these the same thing? | three-part comparison | static | Resource identity differs from device/fabric technology |
+| 16 | Network map | Where do services gain VPC presence? | VPC interface inventory | short reveal | Ownership and supported controls still differ by service |
 
 ---
 
 # 8. Detailed visual specifications
+
+The detailed contracts below retain the original technical research and accuracy boundaries. The 16-view console sequence in section 7 governs the current composition and working controls where an older contract mentions an article layout, additional selector, or overlay. Supporting address and public-IP visuals each occupy their own console view. The current production acceptance checks are in section 15.
 
 ## Visual 1 — “My network passport”
 
@@ -361,25 +361,23 @@ ENI-123 becomes the primary application interface on `i-0web123`; a second inter
 - EC2 `i-0web123` in `ap-south-1a`.
 - `eth0 → eni-0abc123 → app-subnet-a`.
 - `eth1 → eni-0mgmt456 → mgmt-subnet-a`.
-- ALB traffic lane to app ENI.
-- VPN/DX/admin lane to mgmt ENI.
+- Illustrative incoming app flow on TCP/443 and administration flow on TCP/22.
 - Distinct SGs.
-- OS route table icon.
+- Guest route/policy caveat below the topology.
 
 ### Composition
 
-EC2 centered, two ENI passport cards below-left/below-right, each contained in a different subnet tile but under the same `ap-south-1a` banner. Traffic lanes enter from opposite sides.
-
-Secondary mini-panel: “Advanced: secondary ENI can be from another VPC you own in the same account if the AZ matches.” Keep collapsed by default.
+One EC2 instance sits between two subnet/ENI cards under a shared `ap-south-1a` boundary. Separate solid, labeled packet arrows point from each ENI toward its corresponding `eth0` or `eth1` port. The two private IPv4 addresses and SG names remain visible when the other lane is dimmed. A bottom note says the arrows depict incoming flows and that egress/return traffic depends on guest routing.
 
 ### Interaction
 
-Two toggle buttons: `App traffic` and `Management traffic`; activating one animates the matching lane and highlights the SG applied to that interface.
+Native buttons select `Both flows`, `Trace app · eth0`, or `Trace admin · eth1`; a replay button restarts a one-pass packet trace. Selection highlights the matching subnet, ENI, SG, EC2 port, and arrow. The inspector and live output name the selected path. Reduced motion removes moving packet dots while keeping arrows and text.
 
 ### Data/content states
 
-- App: ALB → `eni-0abc123:443`.
-- Mgmt: VPN → `eni-0mgmt456:22` or `443` for admin agent; use generic “management” if avoiding SSH preference.
+- App: illustrative TCP/443 arrival through `eth0` / `10.20.1.17` / `sg-app`.
+- Admin: illustrative TCP/22 arrival through `eth1` / `10.20.2.17` / `sg-admin`.
+- Both: two separate incoming paths reach the same EC2 instance. The diagram makes no claim about where the remote sources are located.
 
 ### Failure/edge state
 
@@ -401,7 +399,7 @@ Correct model: “Attachment count is not a simple bandwidth multiplier.”
 
 ### Mobile behavior
 
-EC2 first, then app interface/subnet, then management interface/subnet. Traffic-lane toggles remain above the diagram.
+App interface/subnet → downward app arrow → EC2 → upward admin arrow ← admin interface/subnet. Controls stay above the diagram, and the live path text stays below it.
 
 ### Accessibility
 
@@ -414,7 +412,8 @@ EC2 first, then app interface/subnet, then management interface/subnet. Traffic-
 
 ### Acceptance checks
 
-- Same-AZ constraint is visible without opening a note.
+- Same-AZ constraint, two subnet addresses, two SGs, two EC2 ports, and both incoming directions are visible without opening a note.
+- App/admin selection dims only the other lane, replay never changes the selected lane, and reduced motion keeps all path information readable.
 - Cross-VPC support is not generalized beyond documented same-account/same-AZ behavior.
 
 ---
@@ -1342,23 +1341,15 @@ Use the complete source index below.
 
 # 9. Persistent page elements
 
-## ENI state ribbon
+## Console identity and inspector
 
-Desktop sticky ribbon, max ~12% viewport height:
-
-`ENI persona | service | owner | subnet/AZ | address | SG support | flow state`
-
-Examples:
-
-- `ENI-123 | EC2 secondary | YOU | app-a / 1a | 10.20.1.17 | sg-app | flow-42 allowed`
-- `ENI-123 | NAT Gateway | REQUESTER-MANAGED | public-a / 1a | 10.20.0.5 | SG: N/A | egress`
-- `ENI-123 | Lambda Hyperplane | ABSTRACTED | app-a / 1a | managed | sg-lambda combination | shared`
+The full console contains the brand/navigation bar, title and `ENI-123` persona, left view rail, central canvas, right inspector, bottom takeaway, sources, related visuals, and footer. `flow-42` stays labeled in its packet view. The inspector updates with each selected view and with results from the packet, morph, appliance, failover, and capacity labs. Its caveats distinguish the teaching persona from a literal reusable AWS object.
 
 ## Progress navigation
 
-`Passport → Scope → Multi-ENI → Security → Everywhere → Containers → EKS → Lambda → Routing → Failover → Capacity → Troubleshoot → ENA/EFA → Map`
+`Passport → Addresses → Public IP → Scope → Multi-ENI → Packet → Services → ECS → EKS → Lambda → Routing → Failover → Capacity → Troubleshoot → ENA/EFA → Map`
 
-Ordinary anchors without JavaScript; active section enhancement with JavaScript.
+The rail is a five-chapter disclosure index: Basics, Network path, Workloads, Operations, and Reference. It shows the active chapter's short single-line view links and a `current / 16` counter; other chapters stay collapsed. Ordinary anchors resolve to all 16 readable figures without JavaScript. With JavaScript, selecting a view opens its chapter, closes the others, updates browser history, and leaves previous/current/next in the bottom bar. The old five section anchors remain valid aliases.
 
 ## Ownership legend
 
@@ -1401,14 +1392,14 @@ Create `aws-eni-visual-prototype.html` as a single self-contained file.
 
 It must include:
 
-- Complete 14-section narrative order.
+- Complete 16-view console sequence, with readable stacked figures without JavaScript.
 - Representative content for every major visual.
 - Three working hero interactions:
   1. ENI Morph Lab.
   2. Packet Checkpoint Lab.
   3. Capacity Lab.
 - At least four meaningful failure states across the page.
-- Sticky chapter navigation and ENI state ribbon.
+- Grouped five-chapter console index, contextual inspector, bottom takeaways, sources, and internal site navigation.
 - Responsive layouts.
 - Reduced-motion handling.
 - Accessible controls and live result regions.
@@ -1428,26 +1419,27 @@ Technical validation:
 
 # 12. Integration guidance for Infra Illustrated
 
-Implementation status as of 2026-09-11:
+Implementation status as of 2026-09-15:
 
-- Approval prototype: `guide/topics/aws-eni/aws-eni-visual-prototype.html` — implemented and browser-checked at desktop and 390 px mobile widths.
+- Approval prototype: `guide/topics/aws-eni/aws-eni-visual-prototype.html` — standalone snapshot of the current single-console implementation, outside the published site.
 - Canonical published route: `/aws/vpc/eni`.
 - Canonical content: `src/content/topics/aws-eni.mdx`.
 - Production components: `src/components/eni/`; the prototype remains an unpublished design artifact rather than a second maintained implementation.
-- Production Astro/MDX integration: completed 2026-09-11; `astro check`, static build, and internal route/anchor validation pass.
+- Production Astro/MDX integration: single-console pilot completed 2026-09-15; `npm run verify` passes. The canonical MDX embeds `EniWorkbench`; the public slug and five older section anchors remain stable. Console and grouped-index direction is confirmed repository-wide; remaining shared-shell/visual-QA work is tracked in the [migration checklist](../../CONSOLE-MIGRATION-CHECKLIST.md).
+- Visual QA limit: static desktop/mobile CSS and HTML checks were completed, but Firefox headless crashed in this environment, so representative screenshots could not be inspected here.
 - Accuracy refinement applied in the prototype: NAT Gateway is the explicit no-security-group exception. The NLB persona states that NLB security groups are supported when configured and does not inherit the NAT exception.
-- Interaction feedback refinement: lighter selectors now expose their controlled regions, ECS/EKS mode changes announce updated explanations, and the failover sequence reports explicit normal, interrupted, and recovered outcomes without relying on color or border changes.
+- Interaction feedback refinement: packet, service, and capacity labs remain the three hero interactions; same-AZ failover has three native steps with explicit serving, detached, and reattached outcomes. The inspector follows each view and live lab result.
 - Packet-lab composition refinement: the security hero now uses a vertical ENI-to-ENI flow nested inside VPC, subnet, and security-group boundaries, with NACL gates at each subnet edge and a separate return-traffic rail.
 - Address-model refinement: the opening now uses two separate visuals—one for multiple simultaneous private IPv4/IPv6 addresses on one ENI, and one comparing changing auto-assigned public IPv4 with persistent Elastic IP behavior across stop/start.
 - Appliance-topology refinement: the routing lesson now uses VPC/subnet boundaries, route-table shapes, two ENIs, an EC2 appliance, and an Internet Gateway instead of a workflow-style row.
 
-Preserve the established dark Infra Illustrated design system from the IAM prototype:
+Preserve the established dark Infra Illustrated design system and the RDS single-console pilot:
 
 - dark navy page background;
 - raised blue/slate panels;
 - high-contrast semantic accent colors;
-- compact sticky chapter nav;
-- rounded diagram panels;
+- one five-group disclosure index with only the active group expanded, a current/total indicator, and one persistent central canvas;
+- explanatory copy to the right or bottom of the current visual;
 - bold short section headings;
 - monospace for IDs/IPs/flow evidence;
 - responsive two-column → single-column reflow around ~760 px.
@@ -1458,13 +1450,7 @@ Recommended page slug:
 
 `/aws/vpc/eni`
 
-Recommended title:
-
-`I'm an AWS ENI. Look What I Can Do.`
-
-SEO/technical subtitle:
-
-`Elastic Network Interfaces: the hidden primitive behind AWS VPC networking`
+Published title: `AWS ENI: the network identity behind your workload`.
 
 # 13. Deep-dive page handoffs
 
@@ -1529,6 +1515,14 @@ Dangerous shortcuts to call out:
 
 The page is approved only when:
 
+- All 16 visuals occupy one persistent console; brand, navigation, inspector, bottom takeaway, sources, related visuals, and footer remain inside it.
+- Visual labels stay in the canvas, while explanation and material caveats sit in the inspector or below the diagram.
+- Deep links work for all 16 views and the five older section anchors; browser back/forward changes the active view.
+- The index has five native disclosure chapters, only one open after a view selection, 16 reachable links, no overlapping labels, and no duplicate 16-step button row.
+- Packet gate toggles reveal the first failure; service choices update ownership; capacity demand exposes subnet/slot pressure; same-AZ failover shows an unavailable detached interval.
+- Motion marks packet flow, a changed address, role change, attachment change, or capacity denial; reduced motion removes it.
+- Without JavaScript, all figures remain readable in order, sources remain reachable, and the hero visuals show a meaningful default or failure state.
+
 - The first visual establishes ENI identity and subnet scope.
 - The same ENI persona remains recognizable across the narrative.
 - The teaching-morph caveat prevents literal misinterpretation.
@@ -1549,7 +1543,7 @@ The page is approved only when:
 
 # 16. Primary source index
 
-Verified 2026-09-10.
+Reviewed against current AWS primary documentation 2026-09-15.
 
 - EC2 ENI concepts and attributes: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html
 - EC2 multiple-IP behavior: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-instance-addressing.html

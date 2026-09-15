@@ -1,6 +1,6 @@
 # Infra Illustrated — Universal Visual Specification Generator
 
-Version: 1.0  
+Version: 1.1 (topic console adopted 2026-09-15)
 Purpose: Give this document to any capable AI session to produce an approval-ready visual specification and interactive HTML prototype for an AWS service, Kubernetes topic, cloud architecture pattern, security concept, networking concept, or infrastructure workflow.
 
 ## Use in this repository
@@ -8,6 +8,8 @@ Purpose: Give this document to any capable AI session to produce an approval-rea
 Adopted for new topic visuals and substantial visual rebuilds on 2026-09-10. Follow the [repository workflow](../AGENTS.md#visual-design-workflow) for artifact placement, review, and integration. Read this generator in full before designing; the workflow summary does not replace its detailed contracts.
 
 Apply the existing-project rule below with [SITE-REBUILD-BRIEF.md](../SITE-REBUILD-BRIEF.md) as the source of truth for product scope, architecture, and visual semantics, and [WRITING-GUIDE.md](../WRITING-GUIDE.md) for reader-facing copy. Adapt the sample tokens, connector grammar, overview size, and callout phrasing to those conventions.
+
+Every published **topic visual** now uses the confirmed one-console layout: a grouped disclosure index, one active canvas, supporting explanation to the right or below, and a bottom takeaway/navigation strip. The same console contains the title, metadata, sources, related links, and footer. The home page, catalogue, collection pages, and topic tree are discovery surfaces and do not use this contract. See the [migration checklist](CONSOLE-MIGRATION-CHECKLIST.md) for current gaps and rollout order.
 
 Store both deliverables in `guide/topics/<topic-slug>/`. The self-contained HTML is an approval artifact; production pages use canonical MDX and shared Astro/TypeScript components. These artifacts are not catalogue entries or legacy pages. Existing user approval or implementation authorization carries forward; routine corrections do not require restarting the design process.
 
@@ -41,7 +43,7 @@ Follow every applicable instruction below. Do not return only an outline, prose 
 
 Act as the visual learning architect for **Infra Illustrated**.
 
-Your job is to transform a technical topic into a coherent visual learning journey. You are responsible for:
+Your job is to transform a technical topic into a coherent visual learning journey inside one persistent topic console. You are responsible for:
 
 - Technical correctness.
 - Concept sequencing.
@@ -93,7 +95,7 @@ If an existing Infra Illustrated project or page is available:
 1. Inspect the project instructions and only the files needed to understand its structure.
 2. Identify its typography, spacing, color tokens, card language, navigation, diagram conventions, component patterns, and responsive breakpoints.
 3. Preserve the established design system unless redesign is explicitly requested.
-4. Build the prototype so its sections can be moved into the existing page with minimal translation.
+4. Build the prototype so its views, index groups, canvas, inspector, and bottom strip can be moved into the existing page with minimal translation. Keep established deep links and record aliases for old section anchors.
 5. Do not replace project architecture, dependencies, routing, or working components merely to simplify prototyping.
 
 If no project is available, create a self-contained prototype and clearly tokenize its visual system so it can be adapted later.
@@ -413,8 +415,10 @@ The Markdown deliverable must begin with:
 
 Then include a narrative sequence table:
 
-| # | Section | Core learner question | Visual form | Interaction | Required takeaway |
+| # | Index group / view | Core learner question | Visual form | Interaction | Required takeaway |
 | --- | --- | --- | --- | --- | --- |
+
+Define the concept groups before the table. Keep only one group expanded at a time, show a short one-line label for each view, and expose the current view and total count. Avoid a long flat index. Specify how direct fragments, browser back/forward, and existing section-anchor aliases open the right group and view. The number of groups and views follows the learning sequence, not a fixed template.
 
 For **every major visual**, use the following template.
 
@@ -440,12 +444,14 @@ List every component, object, boundary, and state that must appear. Distinguish 
 
 Describe the layout precisely enough that another session could implement it without inventing the information architecture. Include:
 
+- The view's index group and placement in the single persistent console.
 - Left/right/top/bottom placement.
 - Containment and scope boundaries.
 - Connectors and direction.
 - Labels and state indicators.
 - Default selected state.
-- Supporting explanation.
+- Supporting explanation in the right inspector or bottom strip, with concise labels inside the canvas.
+- Arrows and animation states that make movement, ownership, causality, or transition visible; state why a static visual is clearer when appropriate.
 
 #### Interaction
 
@@ -487,7 +493,8 @@ List observable checks that prove the visual teaches the intended model correctl
 
 After all visuals, include:
 
-- Persistent page elements.
+- Persistent console elements: title/metadata, grouped index, active canvas, right inspector, bottom takeaway and previous/current/next controls, sources, related links, and footer.
+- Deep-link and no-JavaScript stacked-view behavior within the same console.
 - Responsive and accessibility requirements.
 - Prototype implementation contract.
 - Integration guidance for the existing project.
@@ -503,11 +510,12 @@ Create `<topic-slug>-visual-prototype.html` as a self-contained approval prototy
 
 The prototype must include:
 
+- One complete persistent topic console, including title, metadata, grouped index, active canvas, inspector, bottom strip, sources, related links, and footer.
 - The complete narrative order.
 - Representative content for every major visual.
 - Working interactions for the selected hero visuals.
 - At least one meaningful failure or alternate state.
-- A compact chapter navigation.
+- Concept-grouped disclosure navigation with one expanded group, short view labels, and a current/total indicator.
 - A persistent scenario ribbon when appropriate.
 - Responsive layouts.
 - Accessible controls.
@@ -541,6 +549,7 @@ Do not implement only the first viewport.
 - Do not hide essential content behind tooltips.
 - Support keyboard and touch input.
 - Use animation only to clarify causality, order, movement, or state change.
+- Use directional connectors and replay/pause or manual-step controls where motion teaches a mechanism. The still state must explain the same essential relationship.
 - Respect `prefers-reduced-motion`.
 
 ### Text and density
@@ -549,6 +558,7 @@ Do not implement only the first viewport.
 - Regular labels should normally be at least 14 px.
 - Reserve 12–13 px for secondary metadata.
 - Use short labels inside diagrams and place detailed explanation beside or below them.
+- Keep index labels to one line at normal widths, use readable native disclosure controls, and give touch targets at least 44 px where feasible.
 - Ensure text does not overlap at 200% zoom.
 - Avoid oversized marketing heroes that delay the first useful visual.
 
@@ -558,11 +568,11 @@ Do not implement only the first viewport.
 - Horizontal sequences should become numbered vertical sequences on narrow screens.
 - Trees may use indentation, but must not cause page-level horizontal scrolling.
 - Large matrices may become card lists when horizontal scrolling would obscure relationships.
-- Sticky elements must not consume more than roughly 15% of the viewport or obscure section headings.
+- Reflow the grouped index and inspector below or around the canvas when three columns cannot remain readable. The console must not introduce page-level horizontal scrolling at 320 px or 200% zoom.
 
 ### Progressive enhancement
 
-The page’s main explanation and section order must remain understandable if JavaScript does not run. JavaScript may enhance selection, animation, calculation, or alternate states, but it must not be the only place where the core model exists.
+The page’s main explanation and view order must remain understandable if JavaScript does not run. Stack all core views with their supporting copy inside the same console and keep their fragment targets available. JavaScript may enhance view selection, animation, calculation, or alternate states, but it must not be the only place where the core model exists.
 
 ## 15. Preferred interaction patterns
 
@@ -665,16 +675,21 @@ Complete these checks before delivery.
 - No section repeats the same diagram with only renamed labels.
 - The three-or-fewer hero interactions are clearly more important than secondary visuals.
 - The first useful visual appears without scrolling through a marketing-style hero.
+- The topic remains one console with one active canvas, grouped index, right/bottom explanation, and an unobstructed bottom takeaway.
+- Arrows and motion clarify actual direction or state change, and a still/reduced-motion state conveys the same essential mechanism.
 
 ### HTML validation
 
 - JavaScript parses without syntax errors.
 - Element IDs are unique.
 - Every internal navigation target exists.
+- Direct fragments, old anchor aliases, and browser back/forward select the intended view and expand its group.
+- Without JavaScript, every core view and its explanation can be read in sequence inside the console.
 - Controls have accessible names and correct state attributes.
 - Dynamic results use a suitable live region.
 - Reduced-motion rules exist.
 - The layout has no unintended page-level horizontal scrolling at mobile widths.
+- Grouped index, inspector, controls, and diagrams remain readable at 320 px and 200% zoom; keyboard and touch users can operate every view.
 - Source links are valid primary-source URLs.
 - No placeholder text, broken assets, or nonfunctional controls remain.
 
@@ -685,6 +700,7 @@ If browser preview or visual inspection is available, verify representative desk
 Lead with the completed outcome. Provide links to both artifacts and a concise summary containing:
 
 - The chosen narrative spine.
+- The concept groups and how the console presents the active view.
 - The number and names of major visuals.
 - The three hero interactions.
 - The most important accuracy decisions or caveats.

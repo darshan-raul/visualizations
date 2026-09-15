@@ -1,0 +1,352 @@
+.linux-console, .linux-hub { width: min(calc(100% - 28px), 1550px); margin: 16px auto 40px; border: 1px solid var(--border-strong); border-radius: 18px; background: #0d1824; color: var(--text); box-shadow: 0 18px 70px rgba(0,0,0,.23); overflow: clip; }
+.linux-console a, .linux-hub a { text-decoration: none; }
+.linux-topbar { display:flex; justify-content:space-between; align-items:center; gap:20px; padding:15px 26px; border-bottom:1px solid var(--border-strong); }
+.linux-brand { font-weight:700; letter-spacing:-.04em; font-size:1.1rem; white-space:nowrap; }
+.linux-brand span { color:var(--cyan); margin-right:8px; }
+.linux-brand em { color:var(--cyan); font-style:normal; }
+.linux-topbar nav { display:flex; gap:22px; flex-wrap:wrap; }
+.linux-topbar nav a { color:var(--muted); font-size:.85rem; font-weight:600; }
+.linux-topbar nav a:hover, .linux-console a:hover, .linux-hub a:hover { color:var(--cyan); }
+.linux-console-head, .linux-hub-head { display:flex; justify-content:space-between; align-items:end; gap:30px; padding:24px 30px 29px; border-bottom:1px solid var(--border-strong); }
+.linux-crumb { display:flex; align-items:center; gap:8px; flex-wrap:wrap; color:var(--muted); font-size:.78rem; margin-bottom:14px; }
+.linux-kicker, .linux-index-head, .linux-toolbar span, .linux-command-head, .linux-inspector-facts span, .linux-takeaway span, .linux-view-heading > span, .linux-diagram-scope, .linux-special > span, .linux-special > label, .linux-head-context > span { font: .76rem var(--mono); letter-spacing:.11em; }
+.linux-kicker { color:var(--cyan); }
+.linux-console-head h1, .linux-hub-head h1 { font-size:clamp(2rem,4.2vw,3.2rem); letter-spacing:-.055em; line-height:1.07; margin:8px 0 10px; }
+.linux-console-head p, .linux-hub-head p { color:var(--muted); font-size:1.05rem; max-width:730px; line-height:1.5; margin:0; }
+.linux-head-context { display:grid; gap:9px; min-width:220px; color:var(--muted); }
+.linux-map-back { display:inline-flex; justify-content:center; align-items:center; min-height:44px; padding:7px 13px; border:1px solid rgba(66,214,232,.45); border-radius:9px; color:var(--cyan); font-weight:700; width:max-content; }
+.linux-console-grid { display:grid; grid-template-columns:minmax(210px,245px) minmax(0,1fr) minmax(245px,315px); min-height:650px; }
+.linux-index { border-right:1px solid var(--border-strong); background:#101c28; padding:16px 12px; min-width:0; }
+.linux-index-menu { border:0 !important; }
+.linux-index-menu > summary { display:none !important; }
+.linux-index-menu > .linux-index-head { display:flex; padding:4px 8px 17px; }
+.linux-index-head { display:flex; justify-content:space-between; gap:10px; color:var(--muted); padding:4px 8px 17px; }
+.linux-index-head strong { color:var(--cyan); white-space:nowrap; }
+.linux-index details { border-top:1px solid var(--border); }
+.linux-index summary { display:flex; align-items:center; justify-content:space-between; min-height:52px; padding:8px 9px; cursor:pointer; gap:8px; color:var(--text); }
+.linux-index summary::marker { color:var(--cyan); }
+.linux-index summary span { color:var(--muted); font:.7rem var(--mono); white-space:nowrap; }
+.linux-index details > div { padding:0 0 10px; }
+.linux-index details a { display:grid; grid-template-columns:27px minmax(0,1fr); align-items:center; min-height:44px; padding:5px 9px; gap:5px; color:var(--muted); border-radius:8px; font-size:.91rem; }
+.linux-index details a strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.linux-index details a span { color:var(--dim); font:.72rem var(--mono); }
+.linux-index details a[aria-current] { color:var(--cyan); background:rgba(66,214,232,.1); border:1px solid rgba(66,214,232,.4); }
+.linux-index-reference { display:block; min-height:44px; padding:13px 9px; border-top:1px solid var(--border); color:var(--cyan); font:.78rem var(--mono); }
+.linux-main { min-width:0; background:repeating-linear-gradient(0deg,transparent,transparent 41px,rgba(255,255,255,.023) 42px),#0e1925; }
+.linux-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 22px; border-bottom:1px solid var(--border-strong); }
+.linux-toolbar > div { display:grid; gap:5px; }
+.linux-toolbar span { color:var(--cyan); }
+.linux-toolbar strong { font-size:1.04rem; }
+.linux-toolbar-object { color:var(--muted) !important; font:.76rem var(--mono) !important; }
+.linux-view { padding:26px 25px 30px; min-height:560px; border-bottom:1px solid var(--border-strong); scroll-margin-top:16px; }
+.linux-view-heading > span { color:var(--cyan); }
+.linux-view-heading h2 { font-size:clamp(1.7rem,3vw,2.65rem); line-height:1.12; letter-spacing:-.045em; margin:8px 0; }
+.linux-view-heading p { color:var(--muted); margin:0 0 25px; font-size:1rem; }
+.linux-diagram { margin:0; padding:18px; border:1px solid rgba(104,163,255,.35); border-radius:16px; background:rgba(16,29,43,.9); }
+.linux-diagram-scope { display:flex; justify-content:space-between; gap:10px; color:var(--blue); margin-bottom:19px; font-size:.7rem; }
+.linux-diagram-scope span:last-child { color:var(--cyan); text-align:right; }
+.linux-actors { display:flex; align-items:stretch; gap:28px; min-height:145px; }
+.linux-actor { position:relative; display:grid; align-content:center; justify-items:start; gap:8px; flex:1; min-width:0; padding:18px 13px; border:1px solid var(--border-strong); border-radius:10px; background:#142436; transition:background .25s,border-color .25s,transform .25s; }
+.linux-actor:disabled { opacity:1; cursor:default; }
+.linux-console.is-enhanced .linux-actor { cursor:pointer; text-align:left; }
+.linux-actor:not(:last-child)::after { content:'→'; position:absolute; top:50%; right:-25px; transform:translateY(-50%); color:var(--cyan); font:1.35rem var(--mono); }
+.linux-actor > span { color:var(--cyan); font:.69rem var(--mono); }
+.linux-actor strong { font-size:1rem; line-height:1.2; overflow-wrap:anywhere; }
+.linux-actor small { color:var(--muted); font:.75rem var(--mono); line-height:1.4; overflow-wrap:anywhere; }
+.linux-actor.is-current { background:rgba(66,214,232,.16); border-color:var(--cyan); transform:translateY(-3px); }
+.linux-actor.is-current:not(:last-child)::after { animation:linux-arrow .8s ease-in-out infinite alternate; }
+.linux-actor.is-blocked { border-color:rgba(251,126,133,.7); background:rgba(251,126,133,.1); }
+.linux-console:not(.is-enhanced) .linux-actor[data-blocked="true"] { border-color:rgba(251,126,133,.7); background:rgba(251,126,133,.1); }
+.linux-actor.is-blocked > span, .linux-actor.is-blocked:not(:last-child)::after { color:var(--red); }
+.linux-console:not(.is-enhanced) .linux-actor[data-blocked="true"] > span { color:var(--red); }
+.linux-actor.is-blocked:not(:last-child)::after { content:'×'; }
+.linux-console:not(.is-enhanced) .linux-actor[data-blocked="true"]:not(:last-child)::after { content:'×'; color:var(--red); }
+.linux-kind-tree .linux-actors { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+.linux-kind-tree .linux-actor:not(:last-child)::after { content:'↳'; right:-15px; }
+.linux-kind-layers .linux-actors { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+.linux-kind-layers .linux-actor:not(:last-child)::after { content:'↓'; top:auto; bottom:-29px; right:50%; transform:translateX(50%); }
+.linux-kind-split .linux-actors { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+.linux-kind-split .linux-actor:not(:last-child)::after { content:'↔'; }
+.linux-kind-evidence .linux-actors { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+.linux-kind-evidence .linux-actor:not(:last-child)::after { content:'›'; }
+.linux-diagram figcaption { margin-top:18px; padding-top:13px; border-top:1px solid var(--border); color:var(--text); line-height:1.5; }
+.linux-special { display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-top:17px; padding:13px; border:1px solid var(--border); border-radius:10px; background:#142230; }
+.linux-special > span, .linux-special > label { width:100%; color:var(--cyan); }
+.linux-special button, .linux-special select, .linux-command-actions button, .linux-sequence button { min-height:44px; border:1px solid var(--border-strong); background:#192b3e; color:var(--text); border-radius:8px; padding:7px 11px; cursor:pointer; }
+.linux-special button:hover, .linux-special button[aria-pressed="true"] { border-color:var(--cyan); color:var(--cyan); }
+.linux-special p { width:100%; margin:3px 0 0; color:var(--muted); line-height:1.45; }
+.linux-failure > span { color:var(--amber); }
+.linux-failure button { border-color:rgba(246,199,99,.55); }
+.linux-view-copy { margin-top:21px; color:var(--muted); line-height:1.6; }
+.linux-view-copy p { margin:8px 0; }
+.linux-view-copy a { display:inline-block; margin-top:9px; color:var(--cyan); font:.78rem var(--mono); }
+.linux-static-terminal { margin-top:16px; padding:15px; border:1px solid var(--border); border-radius:9px; background:#0a141e; }
+.linux-static-terminal span { display:block; color:var(--green); font:.72rem var(--mono); margin:6px 0; }
+.linux-static-terminal pre { white-space:pre-wrap; overflow-wrap:anywhere; font:.78rem/1.55 var(--mono); color:var(--text); margin:0 0 10px; }
+.linux-console:not(.is-enhanced) .linux-command-actions, .linux-console:not(.is-enhanced) .linux-special button, .linux-console:not(.is-enhanced) .linux-special select, .linux-console:not(.is-enhanced) .linux-special label { display:none; }
+.linux-console.is-enhanced .linux-view-copy { display:none; }
+.linux-sequence { display:flex; align-items:center; justify-content:center; gap:14px; padding:15px; border-top:1px solid var(--border-strong); }
+.linux-sequence > div { display:grid; gap:4px; text-align:center; min-width:180px; }
+.linux-sequence > div span { color:var(--muted); font:.7rem var(--mono); }
+.linux-sequence button { font-size:1.15rem; width:44px; }
+.linux-inspector { padding:22px 18px; border-left:1px solid var(--border-strong); background:#101c29; min-width:0; }
+.linux-inspector h2 { font-size:1.38rem; line-height:1.2; margin:13px 0 12px; }
+.linux-inspector > p { color:var(--muted); font-size:.96rem; line-height:1.6; }
+.linux-inspector-facts { display:grid; gap:10px; border-top:1px solid var(--border); border-bottom:1px solid var(--border); padding:17px 0; margin:20px 0; }
+.linux-inspector-facts div { display:flex; justify-content:space-between; gap:10px; }
+.linux-inspector-facts span { color:var(--dim); font-size:.69rem; }
+.linux-inspector-facts strong { font:.75rem var(--mono); text-align:right; overflow-wrap:anywhere; }
+.linux-command-panel { border:1px solid rgba(73,214,163,.25); border-radius:10px; background:#0b1720; overflow:hidden; }
+.linux-command-head { display:flex; justify-content:space-between; gap:8px; padding:12px; color:var(--green); font-size:.68rem; border-bottom:1px solid var(--border); }
+.linux-command-actions { display:grid; gap:6px; padding:12px; }
+.linux-command-actions button { text-align:left; white-space:normal; overflow-wrap:anywhere; font:.7rem/1.35 var(--mono); }
+.linux-command-panel pre { white-space:pre-wrap; overflow-wrap:anywhere; color:var(--text); font:.76rem/1.5 var(--mono); padding:3px 13px 13px; margin:0; min-height:84px; }
+.linux-command-panel > p { padding:0 13px 12px; color:var(--muted); font-size:.8rem; margin:0; }
+.linux-inspector-caveat { margin-top:18px; padding:15px; border:1px solid rgba(246,199,99,.25); border-radius:10px; background:rgba(246,199,99,.05); }
+.linux-inspector-caveat span { color:var(--amber); font:.68rem var(--mono); }
+.linux-inspector-caveat p { color:var(--muted); line-height:1.5; font-size:.86rem; margin:8px 0 0; }
+.linux-console-bottom { border-top:1px solid var(--border-strong); }
+.linux-takeaway { display:grid; grid-template-columns:190px minmax(0,1fr); gap:15px; padding:22px 28px; border-bottom:1px solid var(--border-strong); }
+.linux-takeaway span { color:var(--green); }
+.linux-takeaway p { margin:0; font-size:1.06rem; color:var(--muted); line-height:1.5; }
+.linux-bridge { display:grid; grid-template-columns:190px minmax(0,1fr); gap:15px; padding:17px 28px; border-bottom:1px solid var(--border); }
+.linux-bridge span { color:var(--cyan); font:.73rem var(--mono); letter-spacing:.11em; }
+.linux-bridge p { margin:0; color:var(--muted); line-height:1.5; }
+.linux-pillar-pager { display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; padding:16px 28px; border-bottom:1px solid var(--border); }
+.linux-pillar-pager a { min-height:44px; display:flex; align-items:center; color:var(--cyan); font:.8rem var(--mono); }
+.linux-sources summary { display:flex; justify-content:space-between; align-items:center; min-height:60px; padding:12px 28px; cursor:pointer; font-weight:700; }
+.linux-sources > div { display:grid; gap:12px; padding:18px 28px 30px; border-top:1px solid var(--border); }
+.linux-sources h2 { margin:0; font-size:1.2rem; }
+.linux-sources ul { margin:0; padding-left:20px; columns:2; }
+.linux-sources li { break-inside:avoid; margin:5px 0; }
+.linux-sources a { color:var(--cyan); font:.8rem var(--mono); overflow-wrap:anywhere; }
+.linux-sources p { color:var(--muted); line-height:1.5; }
+.linux-sitefoot { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:16px 28px; border-top:1px solid var(--border); color:var(--muted); font-size:.78rem; }
+.linux-sitefoot a { color:var(--cyan); }
+/* ══════════════════════════════════════════════════════════════════════════
+   LINUX DIAGRAM ENGINE & ANIMATIONS
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Actor Diagram Conduits & Moving Packet Dots */
+.actor-packet-dot { position:absolute; bottom:6px; right:10px; width:6px; height:6px; border-radius:50%; background:var(--cyan); opacity:0; }
+.linux-actor.is-current .actor-packet-dot { opacity:1; animation:pulse-glow 1.2s infinite; }
+
+/* ── 1. Pipeline Walkthrough ── */
+.linux-pipeline-canvas { display:flex; align-items:center; gap:0; padding:18px 8px; overflow-x:auto; margin-bottom:14px; }
+.linux-pipeline-stage { display:flex; align-items:center; flex:1; min-width:140px; }
+.linux-stage-node { position:relative; width:100%; display:grid; gap:4px; padding:14px 12px; border:1px solid var(--border-strong); border-radius:10px; background:#142436; cursor:pointer; text-align:left; transition:all .25s ease; }
+.linux-stage-node:hover { border-color:var(--cyan); transform:translateY(-2px); }
+.linux-pipeline-stage.is-active .linux-stage-node { border-color:var(--cyan); background:rgba(66,214,232,.14); box-shadow:0 0 16px rgba(66,214,232,.25); transform:translateY(-3px); }
+.stage-badge { color:var(--cyan); font:.68rem var(--mono); }
+.stage-cmd { font-size:.92rem; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.stage-sub { color:var(--muted); font:.72rem var(--mono); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.stage-flow-dot { position:absolute; top:8px; right:8px; width:7px; height:7px; border-radius:50%; background:var(--cyan); opacity:0; }
+.linux-pipeline-stage.is-active .stage-flow-dot { opacity:1; animation:pulse-glow 1s infinite; }
+.linux-pipeline-conduit { display:flex; align-items:center; padding:0 8px; color:var(--cyan); font-weight:bold; }
+.conduit-track { width:24px; height:2px; background:rgba(66,214,232,.3); position:relative; overflow:hidden; }
+.linux-pipeline-stage.is-active .conduit-track::after { content:''; position:absolute; inset:0; background:var(--cyan); animation:flow-pulse 1.2s infinite; }
+.conduit-arrow { margin-left:4px; font:.9rem var(--mono); }
+.linux-walkthrough-showcase { margin-top:14px; }
+.linux-wt-terminal { padding:14px; border:1px solid rgba(73,214,163,.3); border-radius:9px; background:#0b1720; }
+.linux-wt-terminal span { color:var(--green); font:.74rem var(--mono); display:block; margin-bottom:6px; }
+.linux-wt-terminal pre { white-space:pre-wrap; font:.78rem/1.55 var(--mono); color:var(--text); margin:0; }
+.linux-wt-annotation { padding:12px 16px; margin:10px 0 0; background:rgba(66,214,232,.06); border-left:3px solid var(--cyan); border-radius:0 8px 8px 0; color:var(--muted); font-size:.92rem; line-height:1.55; }
+
+/* ── 2. Recipe Runbook State Machine ── */
+.linux-runbook-canvas { display:grid; gap:8px; padding:16px 0; }
+.linux-runbook-step { position:relative; }
+.linux-runbook-card { display:grid; grid-template-columns:36px minmax(0,1fr) auto; align-items:center; gap:14px; width:100%; padding:12px 16px; border:1px solid var(--border-strong); border-radius:10px; background:#132232; cursor:pointer; text-align:left; transition:all .25s ease; }
+.linux-runbook-card:hover { border-color:var(--cyan); transform:translateX(3px); }
+.linux-runbook-step.is-active .linux-runbook-card { border-color:var(--cyan); background:rgba(66,214,232,.12); box-shadow:0 0 14px rgba(66,214,232,.2); }
+.runbook-num { width:32px; height:32px; display:grid; place-items:center; border:1px solid var(--cyan); border-radius:50%; color:var(--cyan); font:.75rem var(--mono); }
+.runbook-title { font-size:.93rem; }
+.runbook-cmd { color:var(--green); font:.74rem var(--mono); padding:3px 8px; border-radius:5px; background:rgba(0,0,0,.3); }
+.runbook-status-badge { font:.68rem var(--mono); padding:3px 8px; border-radius:4px; border:1px solid rgba(66,214,232,.4); color:var(--cyan); }
+.linux-runbook-step.is-active .runbook-status-badge { background:rgba(66,214,232,.25); }
+.runbook-conduit { display:flex; flex-direction:column; align-items:center; height:18px; margin-left:31px; color:var(--cyan); font:.8rem var(--mono); }
+.conduit-line { width:2px; height:10px; background:rgba(66,214,232,.3); }
+.linux-recipe-showcase { margin-top:14px; }
+.linux-recipe-terminal { padding:14px; border:1px solid rgba(73,214,163,.3); border-radius:9px; background:#0b1720; }
+.linux-recipe-terminal span { color:var(--green); font:.74rem var(--mono); display:block; margin-bottom:6px; }
+.linux-recipe-terminal pre { white-space:pre-wrap; font:.78rem/1.55 var(--mono); color:var(--text); margin:0; }
+.linux-recipe-note { margin:10px 0 0; padding:12px 16px; border-left:3px solid var(--amber); background:rgba(246,199,99,.06); border-radius:0 8px 8px 0; color:var(--muted); font-size:.9rem; line-height:1.55; }
+
+/* ── 3. Gotcha Security Sandbox Lab ── */
+.gotcha-lab-switcher { display:flex; gap:10px; flex-wrap:wrap; margin:16px 0; }
+.gotcha-mode-btn { min-height:44px; padding:8px 16px; border-radius:8px; cursor:pointer; font-weight:700; font-size:.88rem; transition:all .25s ease; border:1px solid var(--border-strong); background:#152536; color:var(--text); }
+.gotcha-mode-btn.is-bad[aria-pressed="true"] { border-color:var(--red); background:rgba(251,126,133,.18); color:var(--red); box-shadow:0 0 16px rgba(251,126,133,.25); }
+.gotcha-mode-btn.is-good[aria-pressed="true"] { border-color:var(--green); background:rgba(73,214,163,.18); color:var(--green); box-shadow:0 0 16px rgba(73,214,163,.25); }
+.gotcha-status-bad { color:var(--red) !important; font-weight:bold; }
+.gotcha-status-good { color:var(--green) !important; font-weight:bold; }
+.security-barrier { padding:20px; border-radius:14px; margin-bottom:14px; transition:all .3s ease; }
+.security-barrier.is-breached { border:2px dashed rgba(251,126,133,.7); background:rgba(251,126,133,.08); animation:red-pulse 2s infinite; }
+.security-barrier.is-secured { border:2px solid rgba(73,214,163,.6); background:rgba(73,214,163,.06); }
+.barrier-header { display:grid; gap:4px; margin-bottom:16px; }
+.barrier-icon { font-size:1.5rem; }
+.barrier-flow { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:16px; }
+.security-actor, .security-target { flex:1; min-width:180px; padding:14px; border-radius:9px; background:#101c2a; border:1px solid var(--border-strong); display:grid; gap:4px; }
+.actor-tag { font:.68rem var(--mono); color:var(--muted); }
+.actor-intruder .actor-tag { color:var(--red); }
+.actor-legit .actor-tag { color:var(--green); }
+.breach-arrow { display:grid; place-items:center; gap:6px; color:var(--muted); font:.74rem var(--mono); }
+.arrow-beam { width:80px; height:3px; position:relative; overflow:hidden; }
+.arrow-beam.is-breached { background:var(--red); box-shadow:0 0 8px var(--red); }
+.arrow-beam.is-secured { background:var(--green); box-shadow:0 0 8px var(--green); }
+.barrier-warning { padding:10px 14px; border-radius:7px; background:rgba(251,126,133,.16); color:var(--red); font-size:.88rem; line-height:1.45; }
+.barrier-secured { padding:10px 14px; border-radius:7px; background:rgba(73,214,163,.16); color:var(--green); font-size:.88rem; line-height:1.45; }
+.linux-gotcha-terminal { margin-top:12px; padding:12px; border-radius:8px; background:#0b1720; border:1px solid var(--border); }
+.linux-gotcha-terminal.is-wrong span { color:var(--red); font:.72rem var(--mono); }
+.linux-gotcha-terminal.is-right span { color:var(--green); font:.72rem var(--mono); }
+.linux-gotcha-terminal pre { white-space:pre-wrap; font:.76rem/1.5 var(--mono); margin:4px 0 0; }
+.gotcha-why-box, .gotcha-fix-box { margin-top:12px; padding:12px 16px; border-radius:8px; line-height:1.55; font-size:.9rem; }
+.gotcha-why-box { background:rgba(246,199,99,.06); border-left:3px solid var(--amber); color:var(--muted); }
+.gotcha-fix-box { background:rgba(73,214,163,.06); border-left:3px solid var(--green); color:var(--muted); }
+
+/* ── 4. Comparison Schematics ── */
+.linux-comp-schematics { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px; margin:16px 0; }
+.linux-comp-card { padding:16px; border:1px solid var(--border-strong); border-radius:12px; background:#142436; display:grid; gap:8px; }
+.linux-comp-card.linux-comp-good { border-color:rgba(73,214,163,.5); }
+.linux-comp-card.linux-comp-bad { border-color:rgba(251,126,133,.5); }
+.comp-card-head { display:flex; justify-content:space-between; align-items:center; }
+.comp-card-index { font:.7rem var(--mono); color:var(--cyan); }
+.comp-mini-graphic { display:flex; align-items:center; justify-content:space-between; padding:10px; border-radius:7px; background:#0e1a26; margin:4px 0; }
+.graphic-node { font:.72rem var(--mono); color:var(--cyan); padding:2px 6px; border:1px solid rgba(66,214,232,.3); border-radius:4px; }
+.graphic-connector { color:var(--green); font:.8rem var(--mono); }
+.comp-card-detail { color:var(--muted); font-size:.87rem; line-height:1.5; margin:0; }
+.comp-card-terminal { padding:8px 10px; border-radius:6px; background:#0b1720; border:1px solid var(--border); font:.72rem var(--mono); }
+.comp-card-terminal span { color:var(--green); display:block; margin-bottom:2px; }
+.comp-card-terminal pre { white-space:pre-wrap; margin:0; }
+
+/* ── 5. Reference: Kernel Signal Dispatcher Lab ── */
+.linux-signal-dispatcher { padding:18px; border:1px solid rgba(183,154,255,.35); border-radius:14px; background:rgba(183,154,255,.05); margin:16px 0; }
+.dispatcher-top { display:grid; grid-template-columns:minmax(220px,280px) minmax(0,1fr); gap:16px; align-items:center; margin-bottom:16px; }
+.dispatcher-process { position:relative; display:flex; align-items:center; gap:12px; padding:16px; border:2px solid var(--cyan); border-radius:12px; background:#13263a; transition:all .3s ease; }
+.dispatcher-process.proc-term { border-color:var(--blue); background:rgba(104,163,255,.15); }
+.dispatcher-process.proc-kill { border-color:var(--red); background:rgba(251,126,133,.2); animation:red-pulse .6s 3; }
+.dispatcher-process.proc-hup { border-color:var(--green); background:rgba(73,214,163,.15); }
+.dispatcher-process.proc-stop { border-color:var(--amber); background:rgba(246,199,99,.15); }
+.dispatcher-process.proc-cont { border-color:var(--cyan); background:rgba(66,214,232,.15); }
+.proc-icon { font-size:1.8rem; }
+.proc-meta { display:grid; gap:3px; }
+.proc-badge { font:.68rem var(--mono); color:var(--cyan); }
+.proc-pulse-ring { position:absolute; inset:-4px; border-radius:14px; border:1px solid var(--cyan); opacity:.4; animation:pulse-glow 2s infinite; pointer-events:none; }
+.dispatcher-event-log { padding:12px 16px; border-radius:10px; background:#0a131c; border:1px solid var(--border); min-height:85px; }
+.event-log-label { font:.68rem var(--mono); color:var(--purple, #b79aff); display:block; margin-bottom:4px; }
+.dispatcher-event-log pre { font:.76rem/1.5 var(--mono); color:var(--text); white-space:pre-wrap; margin:0; }
+.dispatcher-triggers > span { font:.72rem var(--mono); color:var(--cyan); display:block; margin-bottom:8px; }
+.trigger-buttons { display:flex; gap:8px; flex-wrap:wrap; }
+.sig-btn { display:grid; gap:2px; text-align:left; padding:8px 12px; border-radius:8px; border:1px solid var(--border-strong); background:#152536; color:var(--text); cursor:pointer; font-weight:700; transition:all .2s; }
+.sig-btn small { font:.68rem var(--mono); color:var(--muted); font-weight:normal; }
+.sig-term:hover { border-color:var(--blue); color:var(--blue); }
+.sig-kill:hover { border-color:var(--red); color:var(--red); }
+.sig-hup:hover { border-color:var(--green); color:var(--green); }
+.sig-stop:hover { border-color:var(--amber); color:var(--amber); }
+.sig-cont:hover { border-color:var(--cyan); color:var(--cyan); }
+
+/* ── 6. Stream Lab ── */
+.linux-stream-lab { padding:18px; border:1px solid rgba(73,214,163,.3); border-radius:14px; background:rgba(73,214,163,.04); margin:16px 0; }
+.stream-header { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:14px; font:.74rem var(--mono); color:var(--green); }
+.stream-pipeline { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+.stream-box { flex:1; min-width:180px; padding:12px; border-radius:8px; background:#0b1720; border:1px solid var(--border); }
+.stream-box span { font:.68rem var(--mono); color:var(--muted); display:block; margin-bottom:4px; }
+.stream-box pre { font:.74rem/1.5 var(--mono); color:var(--text); white-space:pre-wrap; margin:0; }
+.stream-conduit { color:var(--cyan); font:.74rem var(--mono); }
+.stream-tool-node { padding:12px 18px; border:2px solid var(--cyan); border-radius:10px; background:#13263a; text-align:center; display:grid; gap:3px; }
+.stream-tool-node span { font:.66rem var(--mono); color:var(--cyan); }
+.stream-tool-node strong { font-size:.92rem; color:var(--green); font-family:var(--mono); }
+.stream-selectors > span { font:.7rem var(--mono); color:var(--cyan); display:block; margin-bottom:8px; }
+.stream-buttons { display:flex; gap:8px; flex-wrap:wrap; }
+.stream-buttons button { padding:7px 14px; border-radius:7px; border:1px solid var(--border-strong); background:#152536; color:var(--text); font-family:var(--mono); font-size:.78rem; cursor:pointer; }
+.stream-buttons button.is-active { border-color:var(--cyan); background:rgba(66,214,232,.18); color:var(--cyan); }
+
+/* ── 7. Decision Flowchart Tree ── */
+.linux-decision-canvas { padding:18px 0; }
+.decision-tree-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px; max-height:480px; overflow-y:auto; padding:4px; }
+.decision-card { padding:16px; border-radius:12px; border:1px solid var(--border-strong); background:#132232; display:grid; gap:10px; transition:all .3s ease; }
+.decision-card.is-active { border-color:var(--cyan); background:rgba(66,214,232,.12); box-shadow:0 0 16px rgba(66,214,232,.22); transform:translateY(-2px); }
+.decision-node-top { display:flex; justify-content:space-between; align-items:center; }
+.decision-type-tag { font:.68rem var(--mono); color:var(--cyan); }
+.card-question .decision-type-tag { color:var(--amber); }
+.card-action .decision-type-tag { color:var(--blue); }
+.card-result .decision-type-tag { color:var(--green); }
+.decision-id { font:.68rem var(--mono); color:var(--muted); }
+.decision-label { font-size:.92rem; line-height:1.4; }
+.decision-actions { display:flex; gap:6px; flex-wrap:wrap; }
+.btn-branch { padding:6px 12px; border-radius:6px; font-size:.78rem; font-weight:600; cursor:pointer; border:1px solid var(--border-strong); background:#1a2b3d; color:var(--text); transition:all .2s; }
+.btn-yes:hover { border-color:var(--green); color:var(--green); }
+.btn-no:hover { border-color:var(--red); color:var(--red); }
+.btn-next:hover { border-color:var(--cyan); color:var(--cyan); }
+.decision-footer { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:14px; padding-top:12px; border-top:1px solid var(--border); font:.76rem var(--mono); color:var(--muted); }
+.btn-reset-tree { padding:6px 12px; border-radius:6px; border:1px solid var(--border-strong); background:#152536; color:var(--cyan); cursor:pointer; font-size:.78rem; }
+
+/* Hide fallback copy when enhanced */
+.linux-console.is-enhanced .linux-view-copy { display:none; }
+
+@keyframes linux-arrow { to { transform:translateY(-50%) translateX(5px); opacity:.45; } }
+
+@media (max-width:1150px) { .linux-console-grid { grid-template-columns:210px minmax(0,1fr); } .linux-inspector { grid-column:2; border-left:0; border-top:1px solid var(--border-strong); } }
+@media (max-width:760px) { .linux-console, .linux-hub { margin:8px auto 24px; width:min(calc(100% - 16px),1550px); } .linux-topbar { padding:13px 15px; } .linux-topbar nav { gap:10px; } .linux-topbar nav a:not(:last-child) { display:none; } .linux-console-head,.linux-hub-head { display:grid; padding:22px 17px; } .linux-head-context { min-width:0; } .linux-console-grid { display:block; } .linux-index { border-right:0; border-bottom:1px solid var(--border-strong); padding:7px 12px; } .linux-index-menu { display:block !important; width:100% !important; } .linux-index-menu > summary { display:flex !important; justify-content:space-between; align-items:center; min-height:44px; gap:8px; color:var(--cyan); font:.72rem var(--mono); letter-spacing:.04em; } .linux-index-menu > summary strong { white-space:nowrap; } .linux-index-menu > .linux-index-head { display:none; } .linux-index details:not(.linux-index-menu) { display:inline-block; vertical-align:top; width:calc(50% - 4px); } .linux-index details:not(.linux-index-menu):nth-of-type(even) { margin-left:4px; } .linux-index details > div { position:static; } .linux-index summary { font-size:.85rem; } .linux-view { padding:21px 14px; } .linux-inspector { border-top:1px solid var(--border-strong); } .linux-takeaway { display:block; padding:20px 17px; } .linux-takeaway p { margin-top:9px; } .linux-sources summary,.linux-sources > div,.linux-pillar-pager,.linux-sitefoot { padding-inline:17px; } }
+@media (max-width:520px) { .linux-index details:not(.linux-index-menu) { display:block; width:100%; margin:0 !important; } .linux-toolbar { padding:13px; } .linux-toolbar-object { display:none; } .linux-actors,.linux-kind-tree .linux-actors,.linux-kind-layers .linux-actors,.linux-kind-split .linux-actors,.linux-kind-evidence .linux-actors { display:grid; grid-template-columns:1fr; gap:28px; } .linux-actor { min-height:88px; } .linux-actor:not(:last-child)::after,.linux-kind-tree .linux-actor:not(:last-child)::after,.linux-kind-layers .linux-actor:not(:last-child)::after,.linux-kind-split .linux-actor:not(:last-child)::after,.linux-kind-evidence .linux-actor:not(:last-child)::after { content:'↓'; top:auto; bottom:-28px; left:50%; right:auto; transform:translateX(-50%); } .linux-diagram-scope { display:grid; } .linux-sources ul { columns:1; } }
+@media (prefers-reduced-motion: reduce) { .linux-console *, .linux-hub * { animation-duration:.01ms !important; transition-duration:.01ms !important; scroll-behavior:auto !important; } }
+@media (max-width:760px) { .linux-bridge { display:block; padding:17px; } .linux-bridge p { margin-top:9px; } }
+
+.linux-map-section { border-bottom:1px solid var(--border-strong); padding:26px 30px 30px; }
+.linux-hub-head { padding:16px 30px 18px; }
+.linux-hub-head h1 { font-size:clamp(2rem,3.5vw,2.6rem); }
+.linux-hub-head .linux-crumb { margin-bottom:8px; }
+.linux-hub .linux-map-section { padding:14px 30px 20px; }
+.linux-map-heading { display:flex; align-items:end; justify-content:space-between; gap:18px; }
+.linux-map-heading h2 { font-size:clamp(1.5rem,2.6vw,1.95rem); letter-spacing:-.04em; margin:5px 0 0; }
+.linux-map-mode { display:flex; flex-wrap:wrap; gap:5px; padding:4px; border:1px solid var(--border); border-radius:10px; }
+.linux-map-mode button { min-height:44px; border:0; border-radius:7px; background:transparent; color:var(--muted); padding:8px 13px; cursor:pointer; }
+.linux-map-mode button[aria-pressed="true"] { color:var(--cyan); background:rgba(66,214,232,.12); }
+.linux-map { position:relative; height:520px; max-width:1140px; margin:16px auto 0; border:1px solid rgba(104,163,255,.24); border-radius:18px; background:radial-gradient(circle at center,rgba(66,214,232,.1),transparent 34%),repeating-linear-gradient(90deg,transparent,transparent 70px,rgba(255,255,255,.027) 71px),repeating-linear-gradient(0deg,transparent,transparent 70px,rgba(255,255,255,.027) 71px),#0d1c29; overflow:hidden; }
+.linux-map::before, .linux-map::after { content:''; position:absolute; inset:50% 12%; height:1px; border-top:1px dashed rgba(66,214,232,.34); transform:rotate(29deg); pointer-events:none; }
+.linux-map::after { transform:rotate(-29deg); }
+.linux-map-core { position:absolute; z-index:2; top:50%; left:50%; width:230px; min-height:145px; transform:translate(-50%,-50%); display:grid; align-content:center; justify-items:center; gap:8px; border:1px solid var(--cyan); border-radius:16px; background:#152d3d; text-align:center; box-shadow:0 0 0 14px rgba(66,214,232,.04); }
+.linux-map-core span, .linux-map-core small { color:var(--cyan); font:.7rem var(--mono); }
+.linux-map-core strong { font-size:1.1rem; letter-spacing:.05em; }
+.linux-map-core a { color:var(--green); font:.73rem var(--mono); min-height:32px; display:grid; place-items:center; }
+.linux-map-node { position:absolute; z-index:3; width:190px; min-height:100px; display:grid; align-content:center; gap:6px; padding:11px 14px; border:1px solid rgba(104,163,255,.34); border-radius:11px; background:#152538; transition:border-color .25s,transform .25s,box-shadow .25s; }
+.linux-map-node:hover, .linux-map-node:focus-visible { transform:translateY(-5px); border-color:var(--cyan); box-shadow:0 10px 24px rgba(0,0,0,.28); }
+.linux-map-node > span { color:var(--cyan); font:.7rem var(--mono); }
+.linux-map-node strong { font-size:.98rem; line-height:1.15; }
+.linux-map-node small { color:var(--muted); font:.7rem/1.25 var(--mono); }
+.linux-map-node b { position:absolute; right:12px; top:12px; color:var(--cyan); }
+.linux-map-node-identity { top:8%; left:20%; } .linux-map-node-processes { top:8%; right:20%; }
+.linux-map-node-storage { top:27%; left:3%; } .linux-map-node-networking { top:27%; right:3%; }
+.linux-map-node-packages { bottom:25%; left:3%; } .linux-map-node-security { bottom:25%; right:3%; }
+.linux-map-node-shell { bottom:7%; left:20%; } .linux-map-node-troubleshooting { bottom:7%; right:20%; }
+.linux-map[data-map-mode="path"] .linux-map-node { border-color:rgba(73,214,163,.65); }
+.linux-map[data-map-mode="path"] .linux-map-node > span { color:var(--green); }
+.linux-map-caption { display:flex; justify-content:space-between; align-items:center; gap:20px; color:var(--muted); }
+.linux-map-caption p { line-height:1.5; max-width:800px; }
+.linux-map-caption span { color:var(--green); font:.7rem var(--mono); white-space:nowrap; }
+.linux-machine-basics { padding:30px; }
+.linux-basics-head h2 { font-size:clamp(1.7rem,3vw,2.45rem); letter-spacing:-.04em; margin:9px 0; }
+.linux-basics-head p, .linux-basics-caveat { color:var(--muted); line-height:1.6; max-width:830px; }
+.linux-basic-layers { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:32px; align-items:center; position:relative; margin-top:23px; }
+.linux-basic-layers > div { display:grid; gap:7px; min-height:118px; align-content:center; padding:15px; border:1px solid var(--border-strong); border-radius:12px; background:#142638; }
+.linux-basic-layers > div:nth-of-type(2) { border-color:var(--cyan); }
+.linux-basic-layers > div span { color:var(--cyan); font:.73rem var(--mono); }
+.linux-basic-layers > div strong { font-size:1.03rem; }
+.linux-basic-layers > div small { color:var(--muted); }
+.linux-basic-layers > i { position:absolute; font-style:normal; color:var(--cyan); font:.69rem var(--mono); text-align:center; width:100px; }
+.linux-basic-layers > i:nth-of-type(1) { left:calc(33.333% - 50px); } .linux-basic-layers > i:nth-of-type(2) { left:calc(66.666% - 50px); }
+.linux-orientation-pair { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; margin-top:30px; }
+.linux-orientation-pair > div { padding:22px; border:1px solid var(--border); border-radius:12px; background:#132231; }
+.linux-orientation-pair h3 { margin:0 0 16px; }
+.linux-orientation-pair ol { display:flex; align-items:center; flex-wrap:wrap; gap:7px; padding:0; margin:0; list-style:none; }
+.linux-orientation-pair li { border:1px solid var(--border-strong); border-radius:7px; padding:10px; color:var(--text); font:.75rem var(--mono); }
+.linux-orientation-pair li:not(:last-child)::after { content:'→'; color:var(--cyan); margin-left:12px; }
+.linux-orientation-pair p { color:var(--muted); line-height:1.5; }
+.linux-root-path { display:flex; flex-wrap:wrap; gap:7px; }
+.linux-root-path code, .linux-root-path span { border:1px solid var(--border-strong); border-radius:7px; padding:10px; font:.77rem var(--mono); }
+.linux-root-path code { color:var(--cyan); }
+.linux-hub-bottom { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:10px; border-top:1px solid var(--border-strong); padding:24px 30px 0; }
+.linux-hub-bottom p { color:var(--muted); line-height:1.55; }
+.linux-hub-bottom > a { min-height:44px; display:grid; place-items:center; color:var(--cyan); font:.78rem var(--mono); }
+.linux-hub-bottom .linux-sitefoot { grid-column:1/-1; margin:12px -30px 0; }
+@media (max-width:950px) { .linux-map-node { width:160px; } .linux-map-node-identity,.linux-map-node-shell { left:13%; } .linux-map-node-processes,.linux-map-node-troubleshooting { right:13%; } .linux-map-node-storage,.linux-map-node-packages { left:1%; } .linux-map-node-networking,.linux-map-node-security { right:1%; } }
+@media (max-width:520px) { .linux-index-reference { display:none; } }
+@media (max-width:760px) { .linux-console-head,.linux-hub-head { padding:17px; gap:14px; } .linux-crumb { margin-bottom:10px; } .linux-console-head h1,.linux-hub-head h1 { font-size:clamp(2rem,8vw,2.5rem); margin:5px 0 8px; } .linux-head-context { gap:4px; } .linux-head-context span:nth-child(2) { display:none; } .linux-map-section,.linux-machine-basics { padding:22px 17px; } .linux-map-heading,.linux-map-caption { display:grid; } .linux-map-caption span { white-space:normal; } .linux-map { height:auto; padding:16px; display:grid; gap:9px; overflow:visible; } .linux-map::before,.linux-map::after { display:none; } .linux-map-core,.linux-map-node { position:static; width:100%; min-height:75px; transform:none !important; box-shadow:none !important; } .linux-map-core { min-height:125px; order:0; } .linux-map-node { grid-template-columns:30px minmax(0,1fr) 20px; align-items:center; gap:6px; } .linux-map-node > span { grid-row:1/3; } .linux-map-node strong { grid-column:2; } .linux-map-node small { grid-column:2; } .linux-map-node b { position:static; grid-column:3; grid-row:1/3; } .linux-map-node-identity { order:1; }.linux-map-node-storage { order:2; }.linux-map-node-processes { order:3; }.linux-map-node-networking { order:4; }.linux-map-node-packages { order:5; }.linux-map-node-shell { order:6; }.linux-map-node-security { order:7; }.linux-map-node-troubleshooting { order:8; } .linux-basic-layers { grid-template-columns:1fr; gap:26px; } .linux-basic-layers > i { position:static; width:auto; margin:-19px 0; } .linux-orientation-pair { grid-template-columns:1fr; } .linux-hub-bottom { grid-template-columns:1fr; padding:20px 17px 0; } .linux-hub-bottom .linux-sitefoot { margin-inline:-17px; } }

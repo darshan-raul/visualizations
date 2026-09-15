@@ -1,0 +1,937 @@
+---
+import { getCollection, getEntry } from 'astro:content';
+import RelatedVisuals from '../RelatedVisuals.astro';
+import TopicConsoleShell from '../TopicConsoleShell.astro';
+import type { LinuxPillar } from './linux-data';
+import { linuxPillars, actorKinds } from './linux-data';
+
+interface Props { pillar: LinuxPillar; }
+const { pillar } = Astro.props;
+const topic = await getEntry('topics', 'linux');
+if (!topic) throw new Error('Linux foundation topic metadata is missing.');
+const topics = await getCollection('topics');
+const index = linuxPillars.findIndex((item) => item.id === pillar.id);
+const previous = index > 0 ? linuxPillars[index - 1] : undefined;
+const next = index < linuxPillars.length - 1 ? linuxPillars[index + 1] : undefined;
+const date = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
+const active = pillar.views[0];
+const isActor = (kind: string) => actorKinds.includes(kind);
+const kindLabel = (kind: string) =>
+  kind === 'evidence' ? 'EVIDENCE BOARD' :
+  kind === 'split' ? 'COMPARISON MODEL' :
+  kind === 'walkthrough' ? 'PIPELINE WALKTHROUGH' :
+  kind === 'comparison' ? 'ARCHITECTURAL COMPARISON' :
+  kind === 'recipe' ? 'RUNBOOK STATE MACHINE' :
+  kind === 'reference' ? 'KERNEL DISPATCHER & REFERENCE' :
+  kind === 'gotcha' ? 'SECURITY ACCESS LAB' :
+  kind === 'decision' ? 'DIAGNOSTIC DECISION TREE' : 'SYSTEM MODEL';
+---
+
+<TopicConsoleShell consoleId={pillar.id} className="linux-console" prefix="linux" collectionHref="/foundations" collectionLabel="Foundations" crumbs={[{ label: 'Library', href: '/' }, { label: 'Foundations', href: '/foundations' }, { label: 'Linux', href: '/linux' }, { label: pillar.short }]} kicker={`LINUX FOUNDATION · ${pillar.short.toUpperCase()} CONSOLE`} title={pillar.name} summary={pillar.promise} referenceLabel="REFERENCE HOST · devbox-01" formatLabel="DEEP DIVE · FOUNDATIONAL" dates={`Published ${date.format(topic.data.published)} · Reviewed ${date.format(topic.data.reviewed ?? topic.data.published)}`} backHref="/linux" backLabel="← Back to Linux Map">
+    <a slot="topbar-link" href="/linux">Linux Map</a>
+    <nav slot="index" class="linux-index" aria-label={`${pillar.name} view index`}><details class="linux-index-menu" data-linux-index-menu open><summary><span>EXPLORE VIEWS · {pillar.short.toUpperCase()}</span><strong data-linux-menu-count>01 / {String(pillar.views.length).padStart(2, '0')}</strong></summary><div class="linux-index-head"><span>FOLLOW THE SYSTEM</span><strong data-linux-count>01 / {String(pillar.views.length).padStart(2, '0')}</strong></div>
+      {pillar.groups.map((group, groupIndex) => <details data-linux-group={groupIndex} open={groupIndex === 0}><summary><strong>{group.label}</strong><span>{String(group.viewIds.length).padStart(2, '0')} views</span></summary><div>{group.viewIds.map((id) => { const viewIndex = pillar.views.findIndex((view) => view.id === id); const view = pillar.views[viewIndex]; return <a href={`#${view.id}`} data-linux-view-link={view.id} aria-current={viewIndex === 0 ? 'step' : undefined}><span>{String(viewIndex + 1).padStart(2, '0')}</span><strong>{view.label}</strong></a>; })}</div></details>)}
+      <a class="linux-index-reference" href="#linux-sources">↗ Sources</a></details>
+    </nav>
+    <div slot="main" class="linux-main"><div class="linux-toolbar"><div><span>ACTIVE VIEW</span><strong data-linux-view-title>{active.label}</strong></div><span class="linux-toolbar-object">devbox-01 · nginx</span></div>
+      <div class="linux-stage">
+        {pillar.views.map((view, viewIndex) => <section class={`linux-view linux-kind-${view.kind}`} id={view.id} data-linux-view={view.id} data-view-kind={view.kind} data-view-explanation={view.explanation} data-view-takeaway={view.takeaway} data-view-caveat={view.caveat} data-view-command={view.command || ''} data-view-output={view.output || ''} data-view-probe={view.probe || ''} data-view-probe-output={view.probeOutput || ''} aria-labelledby={`${view.id}-title`}><div class="linux-view-heading"><span>{String(viewIndex + 1).padStart(2, '0')} / {pillar.short.toUpperCase()} · {kindLabel(view.kind)}</span><h2 id={`${view.id}-title`}>{view.title}</h2><p>{view.question}</p></div>
+
+          {/* ═══════════════════════════════════════════════════════════════════════
+              1. ACTOR-DIAGRAM VIEWS (path, tree, layers, split, evidence)
+             ═══════════════════════════════════════════════════════════════════════ */}
+          {isActor(view.kind) && view.actors && (
+            <figure class="linux-diagram linux-diagram-actors" aria-label={`${view.title} on devbox-01`}>
+              <div class="linux-diagram-scope">
+                <span>DEVBOX-01 · {kindLabel(view.kind)}</span>
+                <span data-linux-visual-status>{view.failure ? 'BLOCKED FIXTURE' : 'READY TO INSPECT'}</span>
+              </div>
+              <div class="linux-actors" data-linux-actors>
+                {view.actors.map((actor, actorIndex) => (
+                  <button type="button" disabled class="linux-actor" data-linux-actor={actorIndex} data-linux-original-label={actor.label} data-linux-original-detail={actor.detail} data-blocked={view.failure?.blocked === actorIndex ? 'true' : undefined} aria-label={`Inspect ${actor.label}: ${actor.detail}`}>
+                    <span class="actor-index">{String(actorIndex + 1).padStart(2, '0')}</span>
+                    <strong>{actor.label}</strong>
+                    <small>{actor.detail}</small>
+                    <span class="actor-packet-dot" aria-hidden="true"></span>
+                  </button>
+                ))}
+              </div>
+              {view.kind === 'path' && (
+                <div class="linux-special linux-path-controls" data-linux-path-controls={view.id}>
+                  <span>TRACE THE SYSTEM PATH</span>
+                  <button type="button" data-linux-step="prev">← Step back</button>
+                  <button type="button" data-linux-step="play">▶ Play flow</button>
+                  <button type="button" data-linux-step="next">Next step →</button>
+                  <p data-linux-step-result>All steps are visible. Advance to inspect one transition.</p>
+                </div>
+              )}
+              {view.id === 'listener' && pillar.id === 'networking' && (
+                <div class="linux-special" data-linux-listener>
+                  <span>LISTENER SCOPE FIXTURE</span>
+                  <button type="button" data-linux-bind="loopback" aria-pressed="true">127.0.0.1 (Local loopback only)</button>
+                  <button type="button" data-linux-bind="wildcard" aria-pressed="false">0.0.0.0 (All interfaces)</button>
+                  <button type="button" data-linux-bind="eth0" aria-pressed="false">10.0.1.17 (eth0 specific)</button>
+                  <p data-linux-bind-result>Only clients in this network namespace can use the loopback listener.</p>
+                </div>
+              )}
+              {view.id === 'scenarios' && pillar.id === 'troubleshooting' && (
+                <div class="linux-special" data-linux-scenarios>
+                  <label for="linux-scenario">INCIDENT SIMULATION MATRIX</label>
+                  <select id="linux-scenario" data-linux-scenario>
+                    <option value="loopback">Loopback-only listener</option>
+                    <option value="stopped">Service stopped</option>
+                    <option value="firewall">Local firewall DROP</option>
+                    <option value="dns">DNS unavailable</option>
+                    <option value="disk">Data blocks full</option>
+                    <option value="inodes">Inodes full</option>
+                    <option value="oom">OOM killed worker</option>
+                    <option value="permission">Config permission denied</option>
+                  </select>
+                  <p data-linux-scenario-result>Service active; socket bound to 127.0.0.1:443. Remote connections cannot reach that bind address.</p>
+                </div>
+              )}
+              {view.failure && (
+                <div class="linux-special linux-failure">
+                  <span>FAILURE / ALTERNATE STATE SIMULATION</span>
+                  <button type="button" data-linux-failure-toggle={view.id} data-linux-alternate-result={view.failure.result} data-linux-alternate-output={view.failure.output} data-linux-after-actors={JSON.stringify(view.failure.afterActors)} aria-pressed="false">{view.failure.label} →</button>
+                  <p data-linux-failure-result={view.id}>Default fixture: {view.explanation}</p>
+                </div>
+              )}
+              <figcaption>{view.takeaway}</figcaption>
+            </figure>
+          )}
+
+          {/* ═══════════════════════════════════════════════════════════════════════
+              2. COMMAND WALKTHROUGH (Visual Pipeline + Interactive Stepper)
+             ═══════════════════════════════════════════════════════════════════════ */}
+          {view.kind === 'walkthrough' && view.steps && (
+            <figure class="linux-diagram linux-diagram-walkthrough" data-walkthrough-root={view.id}>
+              <div class="linux-diagram-scope">
+                <span>DEVBOX-01 · EXECUTION PIPELINE</span>
+                <span data-wt-status>STAGE 01 / {String(view.steps.length).padStart(2, '0')} ACTIVE</span>
+              </div>
+              <div class="linux-pipeline-canvas">
+                {view.steps.map((st, sIndex, arr) => (
+                  <div class={`linux-pipeline-stage${sIndex === 0 ? ' is-active' : ''}`} data-pipeline-stage={sIndex}>
+                    <button type="button" class="linux-stage-node" data-stage-btn={sIndex} aria-label={`Inspect Stage ${sIndex + 1}`}>
+                      <span class="stage-badge">{String(sIndex + 1).padStart(2, '0')}</span>
+                      <strong class="stage-cmd">{st.command.split(' ')[0] || `Stage ${sIndex + 1}`}</strong>
+                      <small class="stage-sub">{st.command.split(' ').slice(1, 3).join(' ') || 'action'}</small>
+                      <span class="stage-flow-dot" aria-hidden="true"></span>
+                    </button>
+                    {sIndex < arr.length - 1 && (
+                      <div class="linux-pipeline-conduit" aria-hidden="true">
+                        <div class="conduit-track"></div>
+                        <div class="conduit-arrow">→</div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div class="linux-special linux-path-controls" data-wt-controls={view.id}>
+                <span>INTERACTIVE STAGE STEPPER</span>
+                <button type="button" data-wt-step="prev">← Previous Stage</button>
+                <button type="button" data-wt-step="play">▶ Auto-Play</button>
+                <button type="button" data-wt-step="next">Next Stage →</button>
+                <p data-wt-result>Stage 01: {view.steps[0].annotation}</p>
+              </div>
+              <div class="linux-walkthrough-showcase">
+                {view.steps.map((st, sIndex) => (
+                  <div class="linux-wt-card" data-wt-card={sIndex} hidden={sIndex !== 0}>
+                    <div class="linux-wt-terminal">
+                      <span>$ {st.command}</span>
+                      <pre>{st.output}</pre>
+                    </div>
+                    <p class="linux-wt-annotation">{st.annotation}</p>
+                  </div>
+                ))}
+              </div>
+              <figcaption>{view.takeaway}</figcaption>
+            </figure>
+          )}
+
+          {/* ═══════════════════════════════════════════════════════════════════════
+              3. RECIPE (Visual Runbook State Machine + Animated Stepper)
+             ═══════════════════════════════════════════════════════════════════════ */}
+          {view.kind === 'recipe' && view.recipeSteps && (
+            <figure class="linux-diagram linux-diagram-recipe" data-recipe-root={view.id}>
+              <div class="linux-diagram-scope">
+                <span>DEVBOX-01 · RUNBOOK STATE MACHINE</span>
+                <span data-recipe-status>ACTION 01 / {String(view.recipeSteps.length).padStart(2, '0')} ACTIVE</span>
+              </div>
+              <div class="linux-runbook-canvas">
+                {view.recipeSteps.map((rs, rIndex, arr) => (
+                  <div class={`linux-runbook-step${rIndex === 0 ? ' is-active' : ''}`} data-recipe-node={rIndex}>
+                    <button type="button" class="linux-runbook-card" data-recipe-btn={rIndex} aria-label={`Inspect Action ${rIndex + 1}`}>
+                      <span class="runbook-num">{String(rIndex + 1).padStart(2, '0')}</span>
+                      <strong class="runbook-title">{rs.step}</strong>
+                      {rs.command && <code class="runbook-cmd">$ {rs.command.split('\n')[0].slice(0, 32)}</code>}
+                      <span class="runbook-status-badge">READY</span>
+                    </button>
+                    {rIndex < arr.length - 1 && (
+                      <div class="runbook-conduit" aria-hidden="true">
+                        <span class="conduit-line"></span>
+                        <span class="conduit-pulse"></span>
+                        <span class="conduit-arrow">↓</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div class="linux-special" data-recipe-controls={view.id}>
+                <span>RUNBOOK ACTION STEPPER</span>
+                <button type="button" data-rc-step="prev">← Previous Action</button>
+                <button type="button" data-rc-step="play">▶ Auto-Run</button>
+                <button type="button" data-rc-step="next">Next Action →</button>
+                <p data-rc-result>Action 01: {view.recipeSteps[0].step}</p>
+              </div>
+              <div class="linux-recipe-showcase">
+                {view.recipeSteps.map((rs, rIndex) => (
+                  <div class="linux-recipe-detail" data-recipe-detail={rIndex} hidden={rIndex !== 0}>
+                    {rs.command && (
+                      <div class="linux-recipe-terminal">
+                        <span>$ {rs.command}</span>
+                        <pre>{rs.output}</pre>
+                      </div>
+                    )}
+                    {rs.note && <p class="linux-recipe-note"><strong>Field Note:</strong> {rs.note}</p>}
+                  </div>
+                ))}
+              </div>
+              <figcaption>{view.takeaway}</figcaption>
+            </figure>
+          )}
+
+          {/* ═══════════════════════════════════════════════════════════════════════
+              4. GOTCHA (Visual Security Sandbox: Trap vs Hardened State)
+             ═══════════════════════════════════════════════════════════════════════ */}
+          {view.kind === 'gotcha' && (
+            <figure class="linux-diagram linux-diagram-gotcha" data-gotcha-root={view.id}>
+              <div class="linux-diagram-scope">
+                <span>DEVBOX-01 · SECURITY BOUNDARY LAB</span>
+                <span data-gotcha-status class="gotcha-status-bad">SECURITY COMPROMISED (TRAP ACTIVE)</span>
+              </div>
+              <div class="gotcha-lab-switcher" role="group" aria-label="Toggle Gotcha Simulation State">
+                <button type="button" class="gotcha-mode-btn is-bad" data-gotcha-mode="bad" aria-pressed="true">
+                  <span class="mode-icon">❌</span> The Dangerous Trap (chmod 777)
+                </button>
+                <button type="button" class="gotcha-mode-btn is-good" data-gotcha-mode="good" aria-pressed="false">
+                  <span class="mode-icon">✓</span> The Hardened Fix (Least Privilege)
+                </button>
+              </div>
+              <div class="gotcha-sandbox" data-gotcha-sandbox>
+                <div class="gotcha-view-state gotcha-state-bad" data-gotcha-state="bad">
+                  <div class="security-barrier is-breached">
+                    <div class="barrier-header">
+                      <span class="barrier-icon">🔓</span>
+                      <strong>WORLD-ACCESSIBLE PERMISSION (0777)</strong>
+                      <small>rwxrwxrwx — DAC Protection Completely Disabled</small>
+                    </div>
+                    <div class="barrier-flow">
+                      <div class="security-actor actor-intruder">
+                        <span class="actor-tag">UNTRUSTED ACTOR</span>
+                        <strong>Rogue Process / Attacker</strong>
+                        <small>UID 1000 / other</small>
+                      </div>
+                      <div class="breach-arrow" aria-hidden="true">
+                        <span>UNCONSTRAINED ACCESS</span>
+                        <div class="arrow-beam is-breached"></div>
+                        <b>→</b>
+                      </div>
+                      <div class="security-target is-compromised">
+                        <span class="actor-tag">COMPROMISED ASSET</span>
+                        <strong>/srv/app/config.json</strong>
+                        <small>World-readable & world-writable</small>
+                      </div>
+                    </div>
+                    <div class="barrier-warning">
+                      ⚠ <strong>Critical Risk:</strong> Any unprivileged local user or breached container process can read secrets or overwrite configuration.
+                    </div>
+                  </div>
+                  {view.wrongCommand && (
+                    <div class="linux-gotcha-terminal is-wrong">
+                      <span>$ {view.wrongCommand}</span>
+                      <pre>{view.wrongOutput}</pre>
+                    </div>
+                  )}
+                  <div class="gotcha-why-box">
+                    <strong>Why this is dangerous:</strong>
+                    <p>{view.why}</p>
+                  </div>
+                </div>
+                <div class="gotcha-view-state gotcha-state-good" data-gotcha-state="good" hidden>
+                  <div class="security-barrier is-secured">
+                    <div class="barrier-header">
+                      <span class="barrier-icon">🛡</span>
+                      <strong>TARGETED GROUP PERMISSION (0640)</strong>
+                      <small>rw-r----- — root:appgroup</small>
+                    </div>
+                    <div class="barrier-flow">
+                      <div class="security-actor actor-legit">
+                        <span class="actor-tag">AUTHORIZED WORKER</span>
+                        <strong>nginx worker (UID 33)</strong>
+                        <small>Member of appgroup (GID 1001)</small>
+                      </div>
+                      <div class="breach-arrow" aria-hidden="true">
+                        <span>KEY MATCHED (r--)</span>
+                        <div class="arrow-beam is-secured"></div>
+                        <b>→</b>
+                      </div>
+                      <div class="security-target is-secured">
+                        <span class="actor-tag">PROTECTED ASSET</span>
+                        <strong>/srv/app/config.json</strong>
+                        <small>Read granted strictly to appgroup</small>
+                      </div>
+                    </div>
+                    <div class="barrier-secured">
+                      ✓ <strong>Least Privilege:</strong> Only the application worker has read access. Other users receive instant <code>EACCES Permission denied</code>.
+                    </div>
+                  </div>
+                  {view.rightCommand && (
+                    <div class="linux-gotcha-terminal is-right">
+                      <span>$ {view.rightCommand}</span>
+                      <pre>{view.rightOutput}</pre>
+                    </div>
+                  )}
+                  <div class="gotcha-fix-box">
+                    <strong>The proper hardened fix:</strong>
+                    <p>{view.fix}</p>
+                  </div>
+                </div>
+              </div>
+              <figcaption>{view.takeaway}</figcaption>
+            </figure>
+          )}
+
+          {/* ═══════════════════════════════════════════════════════════════════════
+              5. COMPARISON (Visual Entity Schematics & State Board)
+             ═══════════════════════════════════════════════════════════════════════ */}
+          {view.kind === 'comparison' && view.items && (
+            <figure class="linux-diagram linux-diagram-comparison" data-comparison-root={view.id}>
+              <div class="linux-diagram-scope">
+                <span>DEVBOX-01 · ARCHITECTURAL COMPARISON</span>
+                <span data-comp-status>{String(view.items.length)} ENTITIES COMPARED</span>
+              </div>
+              <div class="linux-comp-schematics">
+                {view.items.map((item, cIndex) => (
+                  <div class={`linux-comp-card linux-comp-${item.highlight || 'neutral'}`} data-comp-card={cIndex}>
+                    <div class="comp-card-head">
+                      <span class="comp-card-index">{String(cIndex + 1).padStart(2, '0')}</span>
+                      <strong>{item.label}</strong>
+                    </div>
+                    <div class="comp-card-diagram" aria-hidden="true">
+                      <div class="comp-mini-graphic">
+                        <span class="graphic-node source-node">{item.label.split(' ')[0]}</span>
+                        <div class="graphic-connector">
+                          <span class="conn-pulse"></span>
+                          <i>→</i>
+                        </div>
+                        <span class="graphic-node target-node">{item.detail.split('.')[0].slice(0, 24)}</span>
+                      </div>
+                    </div>
+                    <p class="comp-card-detail">{item.detail}</p>
+                    {item.command && (
+                      <div class="comp-card-terminal">
+                        <span>$ {item.command}</span>
+                        <pre>{item.output}</pre>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <figcaption>{view.takeaway}</figcaption>
+            </figure>
+          )}
+
+          {/* ═══════════════════════════════════════════════════════════════════════
+              6. REFERENCE & INTERACTIVE DISPATCHER LAB
+             ═══════════════════════════════════════════════════════════════════════ */}
+          {view.kind === 'reference' && view.headers && view.rows && (
+            <figure class="linux-diagram linux-diagram-reference" data-reference-root={view.id}>
+              <div class="linux-diagram-scope">
+                <span>DEVBOX-01 · {view.id === 'signals' ? 'KERNEL SIGNAL DISPATCHER LAB' : view.id === 'text-tools' ? 'PIPELINE STREAM LAB' : 'SYSTEM REFERENCE'}</span>
+                <span data-ref-status>DISPATCH CONTROLS READY</span>
+              </div>
+
+              {/* Signals Interactive Playground */}
+              {view.id === 'signals' && (
+                <div class="linux-signal-dispatcher" data-signal-dispatcher>
+                  <div class="dispatcher-top">
+                    <div class="dispatcher-process" data-dispatcher-proc>
+                      <div class="proc-icon">⚙</div>
+                      <div class="proc-meta">
+                        <span class="proc-badge">PID 421</span>
+                        <strong>nginx: worker process</strong>
+                        <small data-proc-state>State: S (sleeping / listening on :443)</small>
+                      </div>
+                      <div class="proc-pulse-ring" aria-hidden="true"></div>
+                    </div>
+                    <div class="dispatcher-event-log">
+                      <span class="event-log-label">KERNEL SIGNAL MONITOR</span>
+                      <pre data-proc-log>[kernel scheduler] PID 421 active. Ready to receive signal...</pre>
+                    </div>
+                  </div>
+                  <div class="dispatcher-triggers">
+                    <span>DISPATCH SIGNAL TO PID 421:</span>
+                    <div class="trigger-buttons">
+                      <button type="button" data-signal="SIGTERM" class="sig-btn sig-term">⚡ SIGTERM (15)<small>Polite stop</small></button>
+                      <button type="button" data-signal="SIGKILL" class="sig-btn sig-kill">☠ SIGKILL (9)<small>Force kill</small></button>
+                      <button type="button" data-signal="SIGHUP" class="sig-btn sig-hup">↺ SIGHUP (1)<small>Reload config</small></button>
+                      <button type="button" data-signal="SIGSTOP" class="sig-btn sig-stop">⏸ SIGSTOP (19)<small>Freeze</small></button>
+                      <button type="button" data-signal="SIGCONT" class="sig-btn sig-cont">▶ SIGCONT (18)<small>Resume</small></button>
+                      <button type="button" data-signal="RESET" class="sig-btn sig-reset">↺ Reset</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Text-tools Interactive Stream Pipeline */}
+              {view.id === 'text-tools' && (
+                <div class="linux-stream-lab" data-stream-lab>
+                  <div class="stream-header">
+                    <span>DATA STREAM PIPELINE LAB</span>
+                    <small>Watch stream records transform through classic Unix filters</small>
+                  </div>
+                  <div class="stream-pipeline">
+                    <div class="stream-box stream-in">
+                      <span>RAW STDIN (FD 0)</span>
+                      <pre>10.0.1.17 - 200 GET
+192.168.1.5 - 404 GET
+10.0.1.17 - 500 POST
+192.168.1.5 - 200 GET</pre>
+                    </div>
+                    <div class="stream-conduit" aria-hidden="true">
+                      <span class="stream-arrow">→ PIPE →</span>
+                    </div>
+                    <div class="stream-tool-node" data-stream-tool-node>
+                      <span>ACTIVE TOOL</span>
+                      <strong data-stream-tool-name>grep "200"</strong>
+                      <small>Pattern match filter</small>
+                    </div>
+                    <div class="stream-conduit" aria-hidden="true">
+                      <span class="stream-arrow">→ STDOUT →</span>
+                    </div>
+                    <div class="stream-box stream-out">
+                      <span>FILTERED STDOUT (FD 1)</span>
+                      <pre data-stream-output>10.0.1.17 - 200 GET
+192.168.1.5 - 200 GET</pre>
+                    </div>
+                  </div>
+                  <div class="stream-selectors">
+                    <span>SELECT STREAM FILTER TO TEST:</span>
+                    <div class="stream-buttons">
+                      <button type="button" data-tool="grep" class="is-active" aria-pressed="true">grep "200"</button>
+                      <button type="button" data-tool="awk" aria-pressed="false">awk '&#123;print $1&#125;'</button>
+                      <button type="button" data-tool="sort" aria-pressed="false">sort | uniq -c</button>
+                      <button type="button" data-tool="wc" aria-pressed="false">wc -l</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Reference Lookup Table */}
+              <div class="linux-ref-scroll">
+                <table>
+                  <thead>
+                    <tr>{view.headers.map((h) => <th>{h}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {view.rows.map((row) => <tr>{row.map((cell) => <td>{cell}</td>)}</tr>)}
+                  </tbody>
+                </table>
+              </div>
+              {view.tableNote && <p class="linux-ref-note">{view.tableNote}</p>}
+              <figcaption>{view.takeaway}</figcaption>
+            </figure>
+          )}
+
+          {/* ═══════════════════════════════════════════════════════════════════════
+              7. DECISION (Interactive Diagnostic Tree)
+             ═══════════════════════════════════════════════════════════════════════ */}
+          {view.kind === 'decision' && view.decisions && (
+            <figure class="linux-diagram linux-diagram-decision" data-decision-root={view.id}>
+              <div class="linux-diagram-scope">
+                <span>DEVBOX-01 · DIAGNOSTIC DECISION TREE</span>
+                <span data-decision-status>NAVIGATE DIAGNOSTIC BRANCHES</span>
+              </div>
+              <div class="linux-decision-canvas" data-decision-canvas>
+                <div class="decision-tree-grid">
+                  {view.decisions.map((node, dIndex) => (
+                    <div class={`decision-card card-${node.type}${dIndex === 0 ? ' is-active' : ''}`} data-decision-node={node.id}>
+                      <div class="decision-node-top">
+                        <span class="decision-type-tag">{node.type.toUpperCase()}</span>
+                        <span class="decision-id">{node.id}</span>
+                      </div>
+                      <strong class="decision-label">{node.label}</strong>
+                      {(node.yes || node.no || node.next) && (
+                        <div class="decision-actions">
+                          {node.yes && <button type="button" class="btn-branch btn-yes" data-goto={node.yes}>✓ Yes → {node.yes}</button>}
+                          {node.no && <button type="button" class="btn-branch btn-no" data-goto={node.no}>✗ No → {node.no}</button>}
+                          {node.next && <button type="button" class="btn-branch btn-next" data-goto={node.next}>Proceed → {node.next}</button>}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div class="decision-footer">
+                  <button type="button" class="btn-reset-tree" data-reset-tree>↺ Restart Decision Tree</button>
+                  <span class="tree-trail" data-decision-trail>Currently at root: {view.decisions[0].label}</span>
+                </div>
+              </div>
+              <figcaption>{view.takeaway}</figcaption>
+            </figure>
+          )}
+
+          {/* Fallback Copy (no-JS + inspector data source) */}
+          <div class="linux-view-copy">
+            <p>{view.explanation}</p>
+            <p><strong>Model scope.</strong> {view.caveat}</p>
+            {(view.command || view.probe) && (
+              <div class="linux-static-terminal">
+                {view.command && (
+                  <fragment>
+                    <span>INSPECT · {view.command}</span>
+                    <pre>{view.output}</pre>
+                  </fragment>
+                )}
+                {view.probe && (
+                  <fragment>
+                    <span>NEXT PROBE · {view.probe}</span>
+                    <pre>{view.probeOutput}</pre>
+                  </fragment>
+                )}
+              </div>
+            )}
+            <a href={view.source} target="_blank" rel="noopener noreferrer">Primary source ↗</a>
+          </div>
+        </section>)}
+      </div>
+      <div class="linux-sequence" data-linux-enhancement hidden><button type="button" data-linux-prev aria-label="Previous console view">←</button><div><span>NOW INSPECTING</span><strong data-linux-progress>01 / {active.label}</strong></div><button type="button" data-linux-next aria-label="Next console view">→</button></div>
+    </div>
+    <aside slot="inspector" class="linux-inspector" aria-label="Context and command inspector"><span class="linux-kicker">SYSTEM INSPECTOR</span><h2 data-linux-inspector-title>{active.title}</h2><p data-linux-inspector-copy>{active.explanation}</p><div class="linux-inspector-facts"><div><span>HOST</span><strong>devbox-01</strong></div><div><span>WORKLOAD</span><strong>nginx · TCP/443</strong></div><div><span>LENS</span><strong>{pillar.short}</strong></div></div><div class="linux-command-panel"><div class="linux-command-head"><span>SIMULATED TERMINAL</span><span>LOCAL FIXTURE</span></div><div class="linux-command-actions"><button type="button" data-linux-command="primary">$ {active.command || 'No command for this view'}</button><button type="button" data-linux-command="probe">$ {active.probe || 'No probe for this view'}</button></div><pre data-linux-terminal-output aria-live="polite">{active.output || 'Select a command above.'}</pre><p data-linux-terminal-result>Command evidence highlights the first object in the active diagram.</p></div><div class="linux-inspector-caveat"><span>MODEL NOTE</span><p data-linux-caveat>{active.caveat}</p></div></aside>
+    <div slot="bottom"><div class="linux-takeaway"><span>THE POINT TO KEEP</span><p data-linux-takeaway>{active.takeaway}</p></div><div class="linux-bridge"><span>IN CLOUD AND CONTAINERS</span><p>{pillar.bridge}</p></div><div class="linux-pillar-pager"><a href={previous ? `/linux/${previous.id}` : '/linux'}>← {previous ? previous.short : 'Linux Map'}</a><a href="/linux">Linux Map</a><a href={next ? `/linux/${next.id}` : '/foundations'}>{next ? next.short : 'Foundations'} →</a></div><details id="linux-sources" class="linux-sources"><summary>Sources, scope & related visuals <span aria-hidden="true">↗</span></summary><div><h2>Primary references</h2><ul>{[...new Map(pillar.views.map((view) => [view.source, view.source])).values()].map((source) => <li><a href={source} target="_blank" rel="noopener noreferrer">{new URL(source).hostname} · {new URL(source).pathname.split('/').filter(Boolean).at(-1)} ↗</a></li>)}</ul><p>Linux examples use a generic modern host. systemd and package-tool behavior are labelled where applicable; exact commands and defaults vary by distribution, configuration, and installed utilities.</p><RelatedVisuals currentTopic={topic} topics={topics} /></div></details><div class="linux-sitefoot"><span>Infra, Illustrated. · One Linux machine through eight lenses.</span><a href="/visualizations">Browse all visuals ↗</a></div></div>
+</TopicConsoleShell>
+
+<script>
+  const incidents: Record<string, { result: string; output: string; blocked: number; actors: [string, string][] }> = {
+    loopback: { result: 'Service active; socket bound to 127.0.0.1:443. Remote connections cannot reach that bind address.', output: 'ss: LISTEN 127.0.0.1:443\nsystemctl: active', blocked: 2, actors: [['DNS', 'resolved'], ['service', 'active'], ['socket', '127.0.0.1:443'], ['client', 'remote timeout']] },
+    stopped: { result: 'The service is inactive; no worker or listening socket exists. Inspect unit status and journal.', output: 'systemctl: inactive\nss: no TCP/443 listener', blocked: 1, actors: [['DNS', 'resolved'], ['service', 'stopped'], ['socket', 'absent'], ['client', 'connection fails']] },
+    firewall: { result: 'The socket listens on eth0, but a local DROP fixture rejects the path. Inspect guest firewall policy.', output: 'ss: LISTEN 10.0.1.17:443\nnft: tcp dport 443 drop', blocked: 2, actors: [['service', 'active'], ['socket', '10.0.1.17:443'], ['guest firewall', 'DROP fixture'], ['client', 'timeout']] },
+    dns: { result: 'Name lookup failed before a destination address was selected. Check resolver and name evidence.', output: 'getent hosts devbox-01: no result', blocked: 0, actors: [['DNS', 'no answer'], ['destination', 'not selected'], ['socket', 'not attempted'], ['client', 'lookup failure']] },
+    disk: { result: 'Data blocks are full; a write can fail even while the process is alive. Compare df and application log.', output: 'df -h /srv: 100% used; 0 available', blocked: 2, actors: [['service', 'active'], ['filesystem', '/srv'], ['data blocks', '0 free'], ['application', 'write fails']] },
+    inodes: { result: 'Data blocks remain, but no free inodes can create another file. Check df -i.', output: 'df -h /srv: 36% used\ndf -i /srv: 100% used', blocked: 2, actors: [['service', 'active'], ['filesystem', '/srv'], ['free inodes', '0 remaining'], ['new file', 'ENOSPC']] },
+    oom: { result: 'The worker was killed under memory pressure. Check kernel messages and service restart evidence.', output: 'journalctl -k: Out of memory; killed process 421 (nginx)', blocked: 1, actors: [['memory', 'pressure'], ['worker PID 421', 'OOM killed'], ['socket', 'absent'], ['client', 'connection fails']] },
+    permission: { result: 'The service cannot read configuration. Inspect process credentials, path traversal, file mode, and policy.', output: 'journalctl -u nginx: open config failed (EACCES)', blocked: 2, actors: [['worker', 'UID 33'], ['config path', '/etc/nginx'], ['access check', 'EACCES'], ['service', 'fails start']] },
+  };
+
+  for (const root of document.querySelectorAll<HTMLElement>('[data-console-id]')) {
+    const views = [...root.querySelectorAll<HTMLElement>('[data-linux-view]')];
+    const links = [...root.querySelectorAll<HTMLAnchorElement>('[data-linux-view-link]')];
+    const groups = [...root.querySelectorAll<HTMLDetailsElement>('[data-linux-group]')];
+    const menu = root.querySelector<HTMLDetailsElement>('[data-linux-index-menu]')!;
+    const get = (selector: string) => root.querySelector<HTMLElement>(selector)!;
+    let stage = Math.max(0, views.findIndex((view) => view.id === location.hash.slice(1)));
+    let alternative = false;
+    let step = -1;
+    let timer: number | undefined;
+
+    function stopPlayback() {
+      if (timer !== undefined) window.clearInterval(timer);
+      timer = undefined;
+      root.querySelectorAll<HTMLButtonElement>('[data-linux-step="play"], [data-wt-step="play"], [data-rc-step="play"]').forEach((btn) => {
+        if (btn.textContent?.includes('Pause')) btn.textContent = '▶ Auto-Play';
+      });
+    }
+
+    function diagram(visual: HTMLElement) {
+      const actors = [...visual.querySelectorAll<HTMLElement>('[data-linux-actor]')];
+      actors.forEach((actor, index) => {
+        actor.classList.toggle('is-current', index === step || (alternative && step < 0 && index === actors.length - 1));
+        if (alternative && actor.dataset.blocked === 'true') actor.classList.remove('is-blocked');
+        else actor.classList.toggle('is-blocked', actor.dataset.blocked === 'true');
+      });
+    }
+
+    function render() {
+      views.forEach((view, index) => { view.hidden = index !== stage; });
+      links.forEach((link, index) => {
+        if (index === stage) link.setAttribute('aria-current', 'step');
+        else link.removeAttribute('aria-current');
+      });
+      groups.forEach((group) => {
+        group.open = !!group.querySelector(`[data-linux-view-link="${views[stage].id}"]`);
+      });
+
+      const current = views[stage];
+      const data = current.dataset;
+      const title = current.querySelector('h2')!.textContent || '';
+      const label = links[stage].querySelector('strong')!.textContent || '';
+
+      get('[data-linux-count]').textContent = `${String(stage + 1).padStart(2, '0')} / ${String(views.length).padStart(2, '0')}`;
+      get('[data-linux-menu-count]').textContent = `${String(stage + 1).padStart(2, '0')} / ${String(views.length).padStart(2, '0')}`;
+      get('[data-linux-progress]').textContent = `${String(stage + 1).padStart(2, '0')} / ${label}`;
+      get('[data-linux-view-title]').textContent = label;
+      get('[data-linux-inspector-title]').textContent = title;
+      get('[data-linux-inspector-copy]').textContent = data.viewExplanation || '';
+      get('[data-linux-caveat]').textContent = data.viewCaveat || '';
+      get('[data-linux-takeaway]').textContent = data.viewTakeaway || '';
+
+      const cmdPrimary = data.viewCommand || '';
+      const cmdProbe = data.viewProbe || '';
+      const buttons = [...root.querySelectorAll<HTMLButtonElement>('[data-linux-command]')];
+      buttons[0].textContent = cmdPrimary ? `$ ${cmdPrimary}` : '—';
+      buttons[1].textContent = cmdProbe ? `$ ${cmdProbe}` : '—';
+      get('[data-linux-terminal-output]').textContent = data.viewOutput || 'No terminal output for this view.';
+      get('[data-linux-terminal-result]').textContent = 'Command evidence highlights the active object in the diagram.';
+
+      alternative = false;
+      step = -1;
+      stopPlayback();
+
+      if (current.querySelector('[data-linux-actors]')) {
+        diagram(current);
+      }
+    }
+
+    function select(index: number, history = true) {
+      stage = Math.max(0, Math.min(views.length - 1, index));
+      render();
+      if (window.matchMedia('(max-width: 760px)').matches) menu.open = false;
+      if (history) window.history.pushState(null, '', `#${views[stage].id}`);
+    }
+
+    links.forEach((link, index) => link.addEventListener('click', (event) => {
+      event.preventDefault();
+      select(index);
+    }));
+
+    window.addEventListener('popstate', () => select(Math.max(0, views.findIndex((view) => view.id === location.hash.slice(1))), false));
+    window.addEventListener('hashchange', () => select(Math.max(0, views.findIndex((view) => view.id === location.hash.slice(1))), false));
+
+    root.querySelector<HTMLButtonElement>('[data-linux-prev]')?.addEventListener('click', () => select(stage - 1));
+    root.querySelector<HTMLButtonElement>('[data-linux-next]')?.addEventListener('click', () => select(stage + 1));
+
+    // Inspector terminal toggle
+    root.querySelectorAll<HTMLButtonElement>('[data-linux-command]').forEach((button) => button.addEventListener('click', () => {
+      const current = views[stage];
+      const data = current.dataset;
+      const isProbe = button.dataset.linuxCommand === 'probe';
+      get('[data-linux-terminal-output]').textContent = isProbe ? (data.viewProbeOutput || '') : (data.viewOutput || '');
+      get('[data-linux-terminal-result]').textContent = isProbe ? 'The probe command inspects the target boundary in the system.' : 'The primary command inspects the core source state.';
+      if (current.querySelector('[data-linux-actors]')) {
+        step = isProbe ? Math.min(2, current.querySelectorAll('[data-linux-actor]').length - 1) : 0;
+        diagram(current);
+      }
+    }));
+
+    // Actor clicks
+    root.querySelectorAll<HTMLButtonElement>('[data-linux-actor]').forEach((actor) => {
+      actor.disabled = false;
+      actor.addEventListener('click', () => {
+        const current = views[stage];
+        if (!current.contains(actor)) return;
+        step = Number(actor.dataset.linuxActor ?? 0);
+        diagram(current);
+        const label = actor.querySelector('strong')?.textContent || '';
+        const detail = actor.querySelector('small')?.textContent || '';
+        get('[data-linux-inspector-copy]').textContent = `${label}: ${detail}. ${current.dataset.viewExplanation || ''}`;
+        get('[data-linux-terminal-output]').textContent = step < 2 ? (current.dataset.viewOutput || '') : (current.dataset.viewProbeOutput || '');
+        get('[data-linux-terminal-result]').textContent = `Inspecting ${label}.`;
+      });
+    });
+
+    // Path Stepper (Actor views)
+    root.querySelectorAll<HTMLElement>('[data-linux-path-controls]').forEach((controls) => {
+      controls.querySelectorAll<HTMLButtonElement>('[data-linux-step]').forEach((btn) => btn.addEventListener('click', () => {
+        const current = views[stage];
+        if (controls.dataset.linuxPathControls !== current.id) return;
+        const actors = [...current.querySelectorAll<HTMLElement>('[data-linux-actor]')];
+        const action = btn.dataset.linuxStep;
+        const report = controls.querySelector<HTMLElement>('[data-linux-step-result]')!;
+        function advance() {
+          step = Math.min(actors.length - 1, step + 1);
+          diagram(current);
+          report.textContent = `Step ${step + 1} / ${actors.length}: ${actors[step].querySelector('strong')?.textContent} — ${actors[step].querySelector('small')?.textContent}`;
+        }
+        if (action === 'prev') { stopPlayback(); step = Math.max(0, step - 1); diagram(current); report.textContent = `Step ${step + 1} / ${actors.length}: ${actors[step].querySelector('strong')?.textContent}`; }
+        if (action === 'next') { stopPlayback(); advance(); }
+        if (action === 'play') {
+          if (timer !== undefined) { stopPlayback(); btn.textContent = '▶ Play flow'; return; }
+          step = -1; advance();
+          btn.textContent = '⏸ Pause';
+          timer = window.setInterval(() => {
+            if (step >= actors.length - 1) { stopPlayback(); btn.textContent = '▶ Play flow'; return; }
+            advance();
+          }, 1100);
+        }
+      }));
+    });
+
+    // Walkthrough Pipeline Stepper
+    root.querySelectorAll<HTMLElement>('[data-walkthrough-root]').forEach((wtRoot) => {
+      let wtIndex = 0;
+      const stages = [...wtRoot.querySelectorAll<HTMLElement>('[data-pipeline-stage]')];
+      const cards = [...wtRoot.querySelectorAll<HTMLElement>('[data-wt-card]')];
+      const status = wtRoot.querySelector<HTMLElement>('[data-wt-status]');
+      const report = wtRoot.querySelector<HTMLElement>('[data-wt-result]');
+
+      function setWtStage(idx: number) {
+        wtIndex = Math.max(0, Math.min(stages.length - 1, idx));
+        stages.forEach((st, i) => st.classList.toggle('is-active', i === wtIndex));
+        cards.forEach((cd, i) => cd.hidden = i !== wtIndex);
+        if (status) status.textContent = `STAGE ${String(wtIndex + 1).padStart(2, '0')} / ${String(stages.length).padStart(2, '0')} ACTIVE`;
+        const activeCard = cards[wtIndex];
+        const annotation = activeCard?.querySelector('.linux-wt-annotation')?.textContent || '';
+        if (report) report.textContent = `Stage ${wtIndex + 1}: ${annotation}`;
+        const termOutput = activeCard?.querySelector('pre')?.textContent || '';
+        get('[data-linux-terminal-output]').textContent = termOutput;
+      }
+
+      stages.forEach((st, i) => st.querySelector('button')?.addEventListener('click', () => {
+        stopPlayback();
+        setWtStage(i);
+      }));
+
+      wtRoot.querySelectorAll<HTMLButtonElement>('[data-wt-step]').forEach((btn) => btn.addEventListener('click', () => {
+        const action = btn.dataset.wtStep;
+        if (action === 'prev') { stopPlayback(); setWtStage(wtIndex - 1); }
+        if (action === 'next') { stopPlayback(); setWtStage(wtIndex + 1); }
+        if (action === 'play') {
+          if (timer !== undefined) { stopPlayback(); btn.textContent = '▶ Auto-Play'; return; }
+          setWtStage(0);
+          btn.textContent = '⏸ Pause';
+          timer = window.setInterval(() => {
+            if (wtIndex >= stages.length - 1) { stopPlayback(); btn.textContent = '▶ Auto-Play'; return; }
+            setWtStage(wtIndex + 1);
+          }, 1400);
+        }
+      }));
+    });
+
+    // Recipe Stepper
+    root.querySelectorAll<HTMLElement>('[data-recipe-root]').forEach((rcRoot) => {
+      let rcIndex = 0;
+      const nodes = [...rcRoot.querySelectorAll<HTMLElement>('[data-recipe-node]')];
+      const details = [...rcRoot.querySelectorAll<HTMLElement>('[data-recipe-detail]')];
+      const status = rcRoot.querySelector<HTMLElement>('[data-recipe-status]');
+      const report = rcRoot.querySelector<HTMLElement>('[data-rc-result]');
+
+      function setRcStep(idx: number) {
+        rcIndex = Math.max(0, Math.min(nodes.length - 1, idx));
+        nodes.forEach((n, i) => {
+          n.classList.toggle('is-active', i === rcIndex);
+          const badge = n.querySelector('.runbook-status-badge');
+          if (badge) badge.textContent = i < rcIndex ? 'COMPLETED' : i === rcIndex ? 'EXECUTING' : 'PENDING';
+        });
+        details.forEach((d, i) => d.hidden = i !== rcIndex);
+        if (status) status.textContent = `ACTION ${String(rcIndex + 1).padStart(2, '0')} / ${String(nodes.length).padStart(2, '0')} ACTIVE`;
+        const title = nodes[rcIndex]?.querySelector('.runbook-title')?.textContent || '';
+        if (report) report.textContent = `Action ${rcIndex + 1}: ${title}`;
+        const termOutput = details[rcIndex]?.querySelector('pre')?.textContent || '';
+        if (termOutput) get('[data-linux-terminal-output]').textContent = termOutput;
+      }
+
+      nodes.forEach((n, i) => n.querySelector('button')?.addEventListener('click', () => {
+        stopPlayback();
+        setRcStep(i);
+      }));
+
+      rcRoot.querySelectorAll<HTMLButtonElement>('[data-rc-step]').forEach((btn) => btn.addEventListener('click', () => {
+        const action = btn.dataset.rcStep;
+        if (action === 'prev') { stopPlayback(); setRcStep(rcIndex - 1); }
+        if (action === 'next') { stopPlayback(); setRcStep(rcIndex + 1); }
+        if (action === 'play') {
+          if (timer !== undefined) { stopPlayback(); btn.textContent = '▶ Auto-Run'; return; }
+          setRcStep(0);
+          btn.textContent = '⏸ Pause';
+          timer = window.setInterval(() => {
+            if (rcIndex >= nodes.length - 1) { stopPlayback(); btn.textContent = '▶ Auto-Run'; return; }
+            setRcStep(rcIndex + 1);
+          }, 1400);
+        }
+      }));
+    });
+
+    // Gotcha Security Sandbox Toggle
+    root.querySelectorAll<HTMLElement>('[data-gotcha-root]').forEach((gRoot) => {
+      const switcher = gRoot.querySelectorAll<HTMLButtonElement>('[data-gotcha-mode]');
+      const states = gRoot.querySelectorAll<HTMLElement>('[data-gotcha-state]');
+      const status = gRoot.querySelector<HTMLElement>('[data-gotcha-status]');
+
+      switcher.forEach((btn) => btn.addEventListener('click', () => {
+        const mode = btn.dataset.gotchaMode || 'bad';
+        switcher.forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+        states.forEach((st) => {
+          st.hidden = st.dataset.gotchaState !== mode;
+        });
+        if (status) {
+          status.className = mode === 'bad' ? 'gotcha-status-bad' : 'gotcha-status-good';
+          status.textContent = mode === 'bad' ? 'SECURITY COMPROMISED (TRAP ACTIVE)' : 'SYSTEM HARDENED (LEAST PRIVILEGE)';
+        }
+        const activeTerminal = gRoot.querySelector<HTMLElement>(`.gotcha-state-${mode} .linux-gotcha-terminal pre`);
+        if (activeTerminal) get('[data-linux-terminal-output]').textContent = activeTerminal.textContent || '';
+      }));
+    });
+
+    // Kernel Signal Dispatcher Playground
+    root.querySelectorAll<HTMLElement>('[data-signal-dispatcher]').forEach((disp) => {
+      const proc = disp.querySelector<HTMLElement>('[data-dispatcher-proc]')!;
+      const stateEl = disp.querySelector<HTMLElement>('[data-proc-state]')!;
+      const logEl = disp.querySelector<HTMLElement>('[data-proc-log]')!;
+
+      disp.querySelectorAll<HTMLButtonElement>('[data-signal]').forEach((btn) => btn.addEventListener('click', () => {
+        const sig = btn.dataset.signal;
+        proc.className = 'dispatcher-process';
+        if (sig === 'SIGTERM') {
+          proc.classList.add('proc-term');
+          stateEl.textContent = 'State: Terminating gracefully (flushing buffers)...';
+          logEl.textContent = '[kernel] Sent signal 15 (SIGTERM) to PID 421.\n[nginx:421] Caught SIGTERM. Closing worker connections...\n[nginx:421] Clean process exit status 0.';
+          get('[data-linux-terminal-output]').textContent = 'kill -s SIGTERM 421\n# PID 421 gracefully acknowledged signal and exited (status 0)';
+        } else if (sig === 'SIGKILL') {
+          proc.classList.add('proc-kill');
+          stateEl.textContent = 'State: FORCED PURGE (Instant termination)';
+          logEl.textContent = '[kernel] Sent signal 9 (SIGKILL) to PID 421.\n[kernel scheduler] Process unconditionally deleted from task queue!\n[audit] No cleanup handlers executed. Exit 137.';
+          get('[data-linux-terminal-output]').textContent = 'kill -9 421\nKilled\n# Process evaporated immediately; uncatchable';
+        } else if (sig === 'SIGHUP') {
+          proc.classList.add('proc-hup');
+          stateEl.textContent = 'State: Reloading /etc/nginx/nginx.conf';
+          logEl.textContent = '[kernel] Sent signal 1 (SIGHUP) to PID 421.\n[nginx:421] Configuration re-read. Worker threads updated.\n[nginx:421] Continuing uninterrupted.';
+          get('[data-linux-terminal-output]').textContent = 'kill -HUP 421\n# Worker re-parsed configuration without dropping TCP sockets';
+        } else if (sig === 'SIGSTOP') {
+          proc.classList.add('proc-stop');
+          stateEl.textContent = 'State: T (Stopped / Frozen by kernel)';
+          logEl.textContent = '[kernel] Sent signal 19 (SIGSTOP) to PID 421.\n[scheduler] Process paused. Not scheduled for CPU slices.';
+          get('[data-linux-terminal-output]').textContent = 'kill -STOP 421\n# PID 421 paused; send SIGCONT to resume';
+        } else if (sig === 'SIGCONT') {
+          proc.classList.add('proc-cont');
+          stateEl.textContent = 'State: R (Running / Resumed)';
+          logEl.textContent = '[kernel] Sent signal 18 (SIGCONT) to PID 421.\n[scheduler] Process resumed. Returning to active queue.';
+          get('[data-linux-terminal-output]').textContent = 'kill -CONT 421\n# Process execution resumed';
+        } else {
+          stateEl.textContent = 'State: S (sleeping / listening on :443)';
+          logEl.textContent = '[kernel scheduler] PID 421 active. Ready to receive signal...';
+        }
+      }));
+    });
+
+    // Stream Lab Tool Selector
+    root.querySelectorAll<HTMLElement>('[data-stream-lab]').forEach((slab) => {
+      const toolName = slab.querySelector<HTMLElement>('[data-stream-tool-name]')!;
+      const outPre = slab.querySelector<HTMLElement>('[data-stream-output]')!;
+      const toolButtons = slab.querySelectorAll<HTMLButtonElement>('[data-tool]');
+
+      const toolConfigs: Record<string, { name: string; output: string }> = {
+        grep: { name: 'grep "200"', output: '10.0.1.17 - 200 GET\n192.168.1.5 - 200 GET' },
+        awk: { name: 'awk \'{print $1}\'', output: '10.0.1.17\n192.168.1.5\n10.0.1.17\n192.168.1.5' },
+        sort: { name: 'sort | uniq -c', output: '  2 10.0.1.17\n  2 192.168.1.5' },
+        wc: { name: 'wc -l', output: '4' }
+      };
+
+      toolButtons.forEach((btn) => btn.addEventListener('click', () => {
+        const key = btn.dataset.tool || 'grep';
+        toolButtons.forEach((b) => {
+          b.classList.toggle('is-active', b === btn);
+          b.setAttribute('aria-pressed', String(b === btn));
+        });
+        const conf = toolConfigs[key] || toolConfigs.grep;
+        toolName.textContent = conf.name;
+        outPre.textContent = conf.output;
+      }));
+    });
+
+    // Decision Tree Flowchart Navigation
+    root.querySelectorAll<HTMLElement>('[data-decision-root]').forEach((dRoot) => {
+      const nodes = [...dRoot.querySelectorAll<HTMLElement>('[data-decision-node]')];
+      const trail = dRoot.querySelector<HTMLElement>('[data-decision-trail]');
+
+      function showNode(id: string) {
+        const target = nodes.find((n) => n.dataset.decisionNode === id);
+        if (!target) return;
+        nodes.forEach((n) => n.classList.remove('is-active'));
+        target.classList.add('is-active');
+        target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        const label = target.querySelector('.decision-label')?.textContent || id;
+        if (trail) trail.textContent = `Active: ${label}`;
+      }
+
+      dRoot.querySelectorAll<HTMLButtonElement>('[data-goto]').forEach((btn) => btn.addEventListener('click', () => {
+        const nextId = btn.dataset.goto;
+        if (nextId) showNode(nextId);
+      }));
+
+      dRoot.querySelector<HTMLButtonElement>('[data-reset-tree]')?.addEventListener('click', () => {
+        if (nodes[0]) showNode(nodes[0].dataset.decisionNode || '');
+      });
+    });
+
+    // Failure Toggle (Actor Views)
+    root.querySelectorAll<HTMLButtonElement>('[data-linux-failure-toggle]').forEach((button) => button.addEventListener('click', () => {
+      const current = views[stage];
+      if (current.id !== button.dataset.linuxFailureToggle) return;
+      alternative = !alternative;
+      button.setAttribute('aria-pressed', String(alternative));
+      const target = current.querySelector<HTMLElement>('[data-linux-failure-result]')!;
+      const alternate = button.dataset.linuxAlternateResult || '';
+      target.textContent = alternative ? alternate : `Default fixture: ${current.dataset.viewExplanation || ''}`;
+      const afterActors = JSON.parse(button.dataset.linuxAfterActors || '[]') as { label: string; detail: string }[];
+      current.querySelectorAll<HTMLElement>('[data-linux-actor]').forEach((actor, index) => {
+        const label = alternative ? afterActors[index]?.label : actor.dataset.linuxOriginalLabel;
+        const detail = alternative ? afterActors[index]?.detail : actor.dataset.linuxOriginalDetail;
+        actor.querySelector('strong')!.textContent = label || '';
+        actor.querySelector('small')!.textContent = detail || '';
+      });
+      const statusEl = current.querySelector<HTMLElement>('[data-linux-visual-status]');
+      if (statusEl) statusEl.textContent = alternative ? 'ALTERNATE FIXTURE' : 'BLOCKED FIXTURE';
+      if (alternative) get('[data-linux-terminal-output]').textContent = button.dataset.linuxAlternateOutput || '';
+      else get('[data-linux-terminal-output]').textContent = current.dataset.viewOutput || '';
+      get('[data-linux-inspector-copy]').textContent = alternative ? alternate : current.dataset.viewExplanation || '';
+      diagram(current);
+    }));
+
+    // Listener Bind Scope Toggle (Networking)
+    const binding = root.querySelector<HTMLElement>('[data-linux-listener]');
+    binding?.querySelectorAll<HTMLButtonElement>('[data-linux-bind]').forEach((button) => button.addEventListener('click', () => {
+      binding.querySelectorAll<HTMLButtonElement>('[data-linux-bind]').forEach((other) => other.setAttribute('aria-pressed', String(other === button)));
+      const mode = button.dataset.linuxBind;
+      const output = mode === 'loopback' ? 'Only clients in this network namespace can use the loopback listener.' : mode === 'wildcard' ? 'Potentially reachable via all local IPv4 addresses; firewall, routing, and cloud controls still apply.' : 'Potentially reachable via 10.0.1.17 only; firewall, routing, and cloud controls still apply.';
+      binding.querySelector<HTMLElement>('[data-linux-bind-result]')!.textContent = output;
+      const actorsEl = views[stage].querySelectorAll<HTMLElement>('[data-linux-actor]');
+      if (actorsEl.length > 0) {
+        step = mode === 'loopback' ? 0 : mode === 'wildcard' ? 1 : 2;
+        diagram(views[stage]);
+      }
+      get('[data-linux-terminal-output]').textContent = `LISTEN 0 511 ${mode === 'loopback' ? '127.0.0.1' : mode === 'wildcard' ? '0.0.0.0' : '10.0.1.17'}:443`;
+      get('[data-linux-inspector-copy]').textContent = output;
+    }));
+
+    // Troubleshooting Incident Matrix Selector
+    root.querySelector<HTMLSelectElement>('[data-linux-scenario]')?.addEventListener('change', (event) => {
+      const key = (event.currentTarget as HTMLSelectElement).value;
+      const incident = incidents[key];
+      alternative = false;
+      const recovery = views[stage].querySelector<HTMLButtonElement>('[data-linux-failure-toggle]');
+      if (recovery) {
+        recovery.disabled = key !== 'loopback';
+        recovery.setAttribute('aria-pressed', 'false');
+        views[stage].querySelector<HTMLElement>('[data-linux-failure-result]')!.textContent = key === 'loopback' ? 'Default fixture: socket bound only to loopback.' : 'Recovery control applies to the loopback fixture. Select Loopback-only listener to use it.';
+      }
+      get('[data-linux-scenario-result]').textContent = incident.result;
+      get('[data-linux-terminal-output]').textContent = incident.output;
+      get('[data-linux-inspector-copy]').textContent = incident.result;
+      const statusEl = views[stage].querySelector<HTMLElement>('[data-linux-visual-status]');
+      if (statusEl) statusEl.textContent = key.toUpperCase() + ' FIXTURE';
+      views[stage].querySelectorAll<HTMLElement>('[data-linux-actor]').forEach((actor, index) => {
+        actor.querySelector('strong')!.textContent = incident.actors[index][0];
+        actor.querySelector('small')!.textContent = incident.actors[index][1];
+        actor.dataset.blocked = String(index === incident.blocked);
+      });
+      step = incident.blocked;
+      diagram(views[stage]);
+    });
+
+    root.classList.add('is-enhanced');
+    root.querySelectorAll<HTMLElement>('[data-linux-enhancement]').forEach((element) => element.hidden = false);
+    if (window.matchMedia('(max-width: 760px)').matches) menu.open = false;
+    render();
+  }
+</script>

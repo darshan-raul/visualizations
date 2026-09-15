@@ -11,6 +11,8 @@ The Authorization Decision Explorer should be the flagship rebuild. Identity and
 
 `SITE-REBUILD-BRIEF.md` remains the confirmed source of truth. This document records the implementation plan for bringing the IAM topics up to the standard established by the Kubernetes Networking and EC2 Auto Scaling rebuilds.
 
+Console migration update (2026-09-15): both topics are published MDX articles, but their topic surfaces still need the confirmed one-console layout. Use the grouped concept index, active canvas, right/bottom inspector, bottom takeaway, and a neutral shared console shell described in `SITE-REBUILD-BRIEF.md` and `guide/CONSOLE-MIGRATION-CHECKLIST.md`. This plan's technical sequence remains valid; its old article-column assumption is superseded.
+
 ## Problem statement
 
 The current IAM pages contain useful technical material, but their presentation is shallower than the newer explainers:
@@ -20,7 +22,7 @@ The current IAM pages contain useful technical material, but their presentation 
 - Policy types read as a list; grant sources, limiters, account boundaries, and explicit denies are not spatially clear.
 - Tables carry too much of the teaching.
 - Edge cases appear as isolated diagrams rather than variations of the main model.
-- IAM CSS relies on viewport breakpoints, creating the same article-column layout risk previously found on Kubernetes Networking.
+- IAM CSS relies on viewport breakpoints, creating a cramped canvas/inspector risk during console migration.
 
 ## Phase 1: establish the IAM visual model
 
@@ -52,7 +54,7 @@ Use a consistent visual grammar:
 
 ## Phase 2: rebuild Authorization Decision Explorer
 
-Restructure `src/content/topics/aws-authorization-decision-explorer.mdx` around this sequence:
+Restructure `src/content/topics/aws-authorization-decision-explorer.mdx` around this sequence as views in one console. Group the short view labels by request construction, decision trace, and diagnosis; keep one group expanded and preserve existing fragment targets:
 
 | Section | Primary teaching visual |
 | --- | --- |
@@ -174,4 +176,5 @@ The rebuild is complete when:
 - Interactive scenarios reveal cause and effect instead of merely swapping static outcomes.
 - The two pages share a coherent visual language without duplicating an encyclopedic IAM overview.
 - Both pages remain technically rigorous, accessible, mobile-readable, and useful without JavaScript.
+- Both pages use one console each, with grouped indexes, visible causal arrows/step motion where useful, inspector copy beside or below the canvas, and readable stacked views without JavaScript.
 - All repository verification and representative browser checks pass.

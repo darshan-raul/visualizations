@@ -10,7 +10,7 @@ Proposed slug: `/ec2-auto-scaling/`. Tags: EC2, Auto Scaling, Compute, Availabil
 
 Scope: Amazon EC2 Auto Scaling groups and the dependencies that determine their behavior.
 
-This is the canonical implementation specification for this topic. It follows `SITE-REBUILD-BRIEF.md` and `WRITING-GUIDE.md`; it selects no technology stack. The future published topic should consolidate its explanatory content into one canonical content source. This specification does not change the site's migration order.
+This is the canonical implementation specification for this topic. It follows `SITE-REBUILD-BRIEF.md` and `WRITING-GUIDE.md`; it selects no technology stack. The future published topic should consolidate its explanatory content into one canonical content source. Its draft MDX is not a completed console migration; see `guide/CONSOLE-MIGRATION-CHECKLIST.md`.
 
 ## 1. Product promise and coverage boundary
 
@@ -55,11 +55,11 @@ Sources: [lifecycle flow](https://docs.aws.amazon.com/autoscaling/ec2/userguide/
 
 ## 3. Page experience
 
-Use a scrolling document with a sticky section navigator. Every lab, reference family, scenario, and major trace has a stable deep link. The opening fleet map is followed by independently useful labs; learners can enter through a scenario or a setting name without completing earlier sections.
+Use one persistent topic console with a concept-grouped disclosure index, one active fleet/trace canvas, a setting/event inspector to the right or below, and a bottom takeaway with previous/current/next navigation. Every lab, reference family, scenario, and major trace retains a stable deep link. The opening fleet map is followed by independently useful views; learners can enter through a scenario or setting name without completing earlier views. Without JavaScript, stack the core views and explanations inside the same console.
 
-Suggested navigation labels: Fleet · Lifecycle · Timing · Health · Scaling · Scheduling · Forecasting · Warm pools · Placement · Mixed instances · Spot · Refresh · Termination · Operations · Troubleshooting · Settings · Sources.
+Suggested index groups: Fleet & lifecycle (Fleet, Lifecycle, Timing, Health) · Scaling decisions (Scaling, Scheduling, Forecasting) · Capacity & placement (Warm pools, Placement, Mixed instances, Spot) · Maintenance (Refresh, Termination, Operations) · Diagnosis & reference (Troubleshooting, Settings, Sources). Keep one group open, short view labels, and a current/total indicator; retain individual view anchors.
 
-Each lab contains a readable initial diagram, a short framing paragraph, one default worked example, controls that change the mechanism, an inspectable trace, and a compact related-settings reference. Alternate views may use tabs when they compare actual states. Chapter navigation does not use tabs.
+Each lab contains a readable initial diagram in the canvas, one default worked example, controls that change the mechanism, an inspectable trace, and a compact related-settings reference in the inspector or bottom area. Use arrows and animated transitions to reveal causality where they help; include manual steps, pause/replay, and a still reduced-motion state. Alternate views may use tabs when they compare actual states. The grouped index does not use tabs.
 
 ### Shared interaction contract
 

@@ -1,0 +1,137 @@
+---
+import { getCollection, getEntry } from 'astro:content';
+import RelatedVisuals from '../RelatedVisuals.astro';
+import EniIdentity from './EniIdentity.astro';
+import EniTopology from './EniTopology.astro';
+import EniServices from './EniServices.astro';
+import EniOperations from './EniOperations.astro';
+
+const topic = await getEntry('topics', 'aws-eni');
+if (!topic) throw new Error('AWS ENI content is missing');
+const topics = await getCollection('topics');
+const data = topic.data;
+const stages = [
+  { id: 'eni-passport', label: 'Network passport', short: 'Inspect identity' },
+  { id: 'eni-addresses', label: 'Address stack', short: 'One ENI, many IPs' },
+  { id: 'eni-public-ip', label: 'Public continuity', short: 'Stop / start' },
+  { id: 'eni-placement', label: 'Subnet boundary', short: 'One AZ' },
+  { id: 'eni-multi-homing', label: 'Two interfaces', short: 'One EC2' },
+  { id: 'eni-packet', label: 'Packet checkpoints', short: 'Follow flow-42' },
+  { id: 'eni-services', label: 'Service ownership', short: 'Morph the role' },
+  { id: 'eni-ecs', label: 'ECS task networking', short: 'Trunk + branch' },
+  { id: 'eni-eks', label: 'EKS Pod capacity', short: 'IPs + prefixes' },
+  { id: 'eni-lambda', label: 'Lambda sharing', short: 'Hyperplane ENI' },
+  { id: 'eni-appliance', label: 'Appliance route', short: 'Permit transit' },
+  { id: 'eni-failover', label: 'Same-AZ failover', short: 'Move attachment' },
+  { id: 'eni-capacity', label: 'Capacity lab', short: 'Find the blocker' },
+  { id: 'eni-troubleshoot', label: 'Evidence path', short: 'Inspect in order' },
+  { id: 'eni-terms', label: 'ENI / ENA / EFA', short: 'Separate the names' },
+  { id: 'eni-map', label: 'Network map', short: 'Find interfaces' },
+];
+const indexGroups = [
+  { label: 'Basics', range: '01–03', start: 0, end: 3 },
+  { label: 'Network path', range: '04–06', start: 3, end: 6 },
+  { label: 'Workloads', range: '07–10', start: 6, end: 10 },
+  { label: 'Operations', range: '11–14', start: 10, end: 14 },
+  { label: 'Reference', range: '15–16', start: 14, end: 16 },
+];
+const formatter = new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+---
+
+<article class="rds-workbench eni-workbench" data-eni-workbench aria-labelledby="eni-page-title">
+  <div class="rds-workbench-topbar"><a class="rds-workbench-brand" href="/" aria-label="Infra Illustrated home"><span aria-hidden="true">▥</span> Infra, <em>Illustrated.</em></a><nav aria-label="Library navigation"><a href="/visualizations">All visuals</a><a href="/aws">AWS collection</a><a href="/">Topic library</a></nav></div>
+  <header class="rds-workbench-head">
+    <div class="rds-workbench-title"><nav class="rds-workbench-crumb" aria-label="Breadcrumb"><a href="/">Library</a><span>/</span><a href="/aws">AWS</a><span>/</span><span>Deep Dive</span></nav><span class="rds-kicker">AMAZON VPC · NETWORK INTERFACE CONSOLE</span><h1 id="eni-page-title">{data.title}</h1><p>{data.summary}</p></div>
+    <div class="rds-workbench-context" aria-label="Topic metadata"><span class="rds-model-light"><i aria-hidden="true"></i> TEACHING PERSONA · ENI-123</span><span>INTERMEDIATE · DEEP DIVE</span><span>Published {formatter.format(data.published)} · Reviewed {formatter.format(data.reviewed!)}</span><span>flow-42 · 10.20.1.17 → 10.20.3.25</span></div>
+  </header>
+  <div class="rds-workbench-grid">
+    <nav class="rds-workbench-rail eni-index" aria-label="ENI console view index"><div class="eni-index-head"><span>VIEW INDEX</span><strong data-eni-index-count>01 / 16</strong></div>{indexGroups.map((group,groupIndex) => <details class="eni-index-group" data-eni-index-group={groupIndex} data-start={group.start} data-end={group.end} open={groupIndex === 0}><summary><span>{group.range}</span><strong>{group.label}</strong><i aria-hidden="true">⌄</i></summary><div>{stages.slice(group.start,group.end).map((stage,localIndex) => <a href={`#${stage.id}`} data-eni-stage-link={stage.id} aria-current={groupIndex === 0 && localIndex === 0 ? 'step' : undefined}><span>{String(group.start + localIndex + 1).padStart(2,'0')}</span><strong>{stage.label}</strong></a>)}</div></details>)}<a class="rds-rail-reference" href="#sources">↗ Sources</a></nav>
+    <div class="rds-workbench-main">
+      <div class="rds-workbench-toolbar"><div><span class="rds-kicker">ACTIVE VIEW</span><strong data-eni-view-title>Network passport</strong></div><div class="rds-toolbar-legend"><span><i class="flow"></i> packet / direct path</span><span><i class="reference"></i> attachment / conceptual</span></div><span class="rds-toolbar-object">ENI-123 · ap-south-1a</span></div>
+      <div class="eni-stage-canvas">
+        <span id="meet-the-network-identity" class="eni-anchor" aria-hidden="true"></span><EniIdentity />
+        <span id="keep-the-subnet-and-availability-zone-boundary-visible" class="eni-anchor" aria-hidden="true"></span><EniTopology />
+        <span id="recognize-the-same-primitive-across-services" class="eni-anchor" aria-hidden="true"></span><EniServices />
+        <span id="put-the-interface-on-an-appliance-route" class="eni-anchor" aria-hidden="true"></span><EniOperations />
+        <span id="operate-from-the-eni-outward" class="eni-anchor" aria-hidden="true"></span>
+      </div>
+      <div class="rds-workbench-timeline" data-eni-enhancement hidden><button type="button" data-eni-prev aria-label="Previous console view">←</button><div><span>NOW INSPECTING</span><strong data-eni-progress>01 / Network passport</strong></div><button type="button" data-eni-next aria-label="Next console view">→</button></div>
+    </div>
+    <aside class="rds-workbench-inspector" aria-label="Contextual explanation"><span class="rds-kicker">INTERFACE INSPECTOR</span><h2 data-eni-inspector-title>One interface, one concrete VPC identity</h2><p data-eni-inspector-copy aria-live="polite">The address and control fields belong to the interface; attachment connects that identity to compute.</p><div class="rds-inspector-facts"><div><span>PERSONA</span><strong>ENI-123</strong></div><div><span>SUBNET / AZ</span><strong>app-a / 1a</strong></div><div><span>ADDRESS</span><strong>10.20.1.17</strong></div></div><div class="rds-inspector-evidence"><span>OPERATOR EVIDENCE</span><code data-eni-inspector-evidence>eni-0abc123<br>subnet-app-a<br>sg-app</code></div><div class="rds-inspector-caveat"><span>MODEL NOTE</span><p data-eni-inspector-caveat>ENI-123 represents an interface role across scenarios, not one literal interface moving between AWS services.</p></div></aside>
+  </div>
+  <footer class="rds-workbench-bottom"><div class="rds-bottom-explainer"><span>THE POINT TO KEEP</span><p data-eni-bottom-copy aria-live="polite">An ENI is a subnet-scoped network identity with addresses, security associations, and attachment state.</p></div><details class="rds-bottom-reference" id="sources"><summary>Sources, scope & related visuals <span aria-hidden="true">↗</span></summary><div class="rds-reference-body"><div><h2>Authoritative sources</h2><ul>{data.sources?.map((source) => <li><a href={source.url} target="_blank" rel="noopener noreferrer">{source.label} ↗</a></li>)}</ul><p>Verified {formatter.format(data.reviewed!)}. ENI-123 is a teaching persona; each service view shows a different real ownership model. Address counts and interface limits depend on workload and instance type.</p></div><RelatedVisuals currentTopic={topic} topics={topics} /></div></details><div class="rds-workbench-sitefoot"><span>Infra, Illustrated. · Visual deep dives into cloud infrastructure.</span><a href="/visualizations">Browse all visuals ↗</a></div></footer>
+</article>
+
+<script>
+  const eniIds = ['eni-passport','eni-addresses','eni-public-ip','eni-placement','eni-multi-homing','eni-packet','eni-services','eni-ecs','eni-eks','eni-lambda','eni-appliance','eni-failover','eni-capacity','eni-troubleshoot','eni-terms','eni-map'];
+  const eniLabels = ['Network passport','Address stack','Public continuity','Subnet boundary','Two interfaces','Packet checkpoints','Service ownership','ECS task networking','EKS Pod capacity','Lambda sharing','Appliance route','Same-AZ failover','Capacity lab','Evidence path','ENI / ENA / EFA','Network map'];
+  const eniAliases: Record<string,number> = {'meet-the-network-identity':0,'keep-the-subnet-and-availability-zone-boundary-visible':3,'recognize-the-same-primitive-across-services':6,'put-the-interface-on-an-appliance-route':10,'operate-from-the-eni-outward':13};
+  function eniStageFromHash() { const hash = location.hash.slice(1); const index = eniIds.indexOf(hash); return index >= 0 ? index : eniAliases[hash] ?? 0; }
+  for (const consoleElement of document.querySelectorAll<HTMLElement>('[data-eni-workbench]')) {
+    const figures = eniIds.map((id) => consoleElement.querySelector<HTMLElement>(`#${id}`)!);
+    const links = [...consoleElement.querySelectorAll<HTMLAnchorElement>('[data-eni-stage-link]')];
+    const indexGroups = [...consoleElement.querySelectorAll<HTMLDetailsElement>('[data-eni-index-group]')];
+    let stage = eniStageFromHash();
+    const get = (selector: string) => consoleElement.querySelector<HTMLElement>(selector)!;
+    function inspect() {
+      const figure = figures[stage];
+      const title = figure.querySelector<HTMLElement>('.eni-cap h3')?.textContent || eniLabels[stage];
+      const description = figure.querySelector<HTMLElement>('.eni-description')?.textContent || figure.querySelector<HTMLElement>('.eni-takeaway')?.textContent || '';
+      const bottom = figure.querySelector<HTMLElement>('.eni-takeaway')?.textContent?.replace(/^Keep this model:\s*/, '') || '';
+      const result = figure.querySelector<HTMLElement>('[data-eni-lane-result], [data-checkpoint-result], .appliance-result, [data-cap-reason], [data-note], [data-failover-result]');
+      const specific = result?.textContent?.trim();
+      get('[data-eni-inspector-title]').textContent = title;
+      get('[data-eni-inspector-copy]').textContent = specific && [4,5,6,10,11,12].includes(stage) ? specific : description;
+      get('[data-eni-bottom-copy]').textContent = bottom;
+      const evidence = [
+        'eni-0abc123 / subnet-app-a / sg-app','PrivateIpAddresses / Ipv6Addresses','Association.PublicIp / Elastic IP','SubnetId / AvailabilityZone','Attachment.DeviceIndex / guest routes','eni-app → route → NACL → sg-db','RequesterId / service resource','task ENI / trunk + branch','node ENI / IP or prefix slots','Hyperplane ENI / subnet + SG set','route target / source-dest check','Attachment.InstanceId / same AZ','free IPs / ENI slots','Flow Logs / routes / SG + NACL','ENI resource / ENA driver / EFA fabric','DescribeNetworkInterfaces',
+      ];
+      get('[data-eni-inspector-evidence]').textContent = evidence[stage];
+      const caveats = [
+        'The example addresses are illustrative. A service-managed interface may expose fewer mutable fields.',
+        'One interface can have multiple IPs, but the available counts depend on interface and instance limits.',
+        'Stop/start releases an auto-assigned public IPv4. An Elastic IP stays allocated until you release it; the guest uses the private IPv4.',
+        'Detaching an ENI does not move it across subnets or Availability Zones.',
+        'Both interfaces must attach to an instance in the same Availability Zone; guest policy routing still matters.',
+        'The checkpoint order teaches responsibility; it does not claim a literal AWS processing pipeline. Flow Logs are metadata, not packet captures.',
+        'The persona changes role. These are separate real interfaces with service-specific ownership. Change the parent service for requester-managed ENIs.',
+        'ECS task density depends on instance type, trunking support, address supply, and task configuration.',
+        'Prefix mode changes slot allocation; it does not create addresses outside the subnet.',
+        'Lambda Hyperplane ENIs are shared for compatible subnet and security-group combinations, not one per invocation.',
+        'Disabling source/destination check alone does not configure guest forwarding or the return route.',
+        'An ENI can reattach only within its Availability Zone. Guest routes, return paths, and application state still need recovery.',
+        'The numbers illustrate finite limits, not a quota for every instance type or subnet.',
+        'Start from the source and destination ENIs; VPC Flow Logs give traffic metadata, not packet contents.',
+        'ENI is the VPC resource. ENA and EFA are device or fabric technologies.',
+        'Each illustrated service has its own real interfaces and ownership rules; this is a conceptual map.',
+      ];
+      get('[data-eni-inspector-caveat]').textContent = caveats[stage];
+    }
+    function render() {
+      figures.forEach((figure,index) => { figure.hidden = index !== stage; });
+      links.forEach((link,index) => { if(index === stage) link.setAttribute('aria-current','step'); else link.removeAttribute('aria-current'); });
+      indexGroups.forEach((group) => { group.open = stage >= Number(group.dataset.start) && stage < Number(group.dataset.end); });
+      get('[data-eni-index-count]').textContent = `${String(stage + 1).padStart(2,'0')} / 16`;
+      get('[data-eni-view-title]').textContent = eniLabels[stage];
+      get('[data-eni-progress]').textContent = `${String(stage + 1).padStart(2,'0')} / ${eniLabels[stage]}`;
+      consoleElement.querySelector<HTMLButtonElement>('[data-eni-prev]')!.disabled = stage === 0;
+      consoleElement.querySelector<HTMLButtonElement>('[data-eni-next]')!.disabled = stage === eniIds.length - 1;
+      inspect();
+    }
+    function go(index: number, updateHash = true) { stage = Math.max(0,Math.min(eniIds.length - 1,index)); if(updateHash) history.pushState(null,'',`#${eniIds[stage]}`); render(); consoleElement.scrollIntoView({block:'start',behavior:'auto'}); }
+    links.forEach((link,index) => link.addEventListener('click',(event) => { event.preventDefault(); go(index); }));
+    indexGroups.forEach((group) => group.addEventListener('toggle',() => { if(group.open) indexGroups.filter((other) => other !== group).forEach((other) => { other.open = false; }); }));
+    consoleElement.querySelector<HTMLButtonElement>('[data-eni-prev]')!.addEventListener('click',() => go(stage - 1));
+    consoleElement.querySelector<HTMLButtonElement>('[data-eni-next]')!.addEventListener('click',() => go(stage + 1));
+    consoleElement.addEventListener('change',() => queueMicrotask(inspect));
+    consoleElement.addEventListener('input',() => queueMicrotask(inspect));
+    consoleElement.addEventListener('click',(event) => { if((event.target as Element).closest('[data-eni-lane],[data-service],[data-cap-mode],[data-failover-step]')) queueMicrotask(inspect); });
+    addEventListener('popstate',() => go(eniStageFromHash(),false));
+    addEventListener('hashchange',() => { if(location.hash === '#sources') { consoleElement.querySelector<HTMLDetailsElement>('#sources')!.open = true; return; } go(eniStageFromHash(),false); });
+    consoleElement.querySelectorAll<HTMLElement>('[data-eni-enhancement]').forEach((item) => { item.hidden = false; });
+    consoleElement.classList.add('enhanced');
+    render();
+    if(location.hash === '#sources') consoleElement.querySelector<HTMLDetailsElement>('#sources')!.open = true;
+    else if(location.hash) consoleElement.scrollIntoView({block:'start',behavior:'auto'});
+  }
+</script>

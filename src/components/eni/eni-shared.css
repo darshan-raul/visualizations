@@ -2,7 +2,8 @@
 .eni-cap { padding: 19px 21px; border-bottom: 1px solid var(--border); }
 .eni-cap > span { color: var(--eni); font: 700 .75rem var(--mono); letter-spacing: .1em; text-transform: uppercase; }
 .eni-cap h3 { margin: 5px 0 3px; color: var(--text); font-size: 1.1rem; line-height: 1.35; }
-.eni-cap p,.eni-takeaway { margin: 0; color: var(--muted); font-size: .76rem; line-height: 1.6; }
+.eni-description,.eni-takeaway { margin: 0; color: var(--muted); font-size: .76rem; line-height: 1.6; }
+.eni-description { padding: 11px 21px; }
 .eni-canvas { padding: 22px; }
 .eni-takeaway { padding: 15px 21px; border-top: 1px solid var(--border); background: rgba(66,214,232,.045); }
 .eni-takeaway strong { color: var(--text); }

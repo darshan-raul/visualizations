@@ -4,11 +4,13 @@ import '../styles/global.css';
 interface Props {
   title?: string;
   description?: string;
+  chrome?: boolean;
 }
 
 const {
   title = 'Infra Illustrated',
   description = 'Visual deep dives into cloud infrastructure.',
+  chrome = true,
 } = Astro.props;
 
 const pageTitle = title === 'Infra Illustrated' ? title : `${title} · Infra Illustrated`;
@@ -29,7 +31,7 @@ const pageTitle = title === 'Infra Illustrated' ? title : `${title} · Infra Ill
   <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
     <div class="ambient" aria-hidden="true"></div>
-    <header class="site-header">
+    {chrome && <header class="site-header">
       <div class="shell header-inner">
         <a class="brand" href="/" aria-label="Infra Illustrated home">
           <span class="brand-mark" aria-hidden="true">
@@ -45,11 +47,11 @@ const pageTitle = title === 'Infra Illustrated' ? title : `${title} · Infra Ill
           <a href="/foundations">Foundations</a>
         </nav>
       </div>
-    </header>
+    </header>}
     <main id="main-content">
       <slot />
     </main>
-    <footer class="site-footer">
+    {chrome && <footer class="site-footer">
       <div class="shell footer-inner">
         <div>
           <a class="brand footer-brand" href="/">Infra, <em>Illustrated.</em></a>
@@ -57,6 +59,6 @@ const pageTitle = title === 'Infra Illustrated' ? title : `${title} · Infra Ill
         </div>
         <a href="/visualizations">Browse all visuals <span aria-hidden="true">↗</span></a>
       </div>
-    </footer>
+    </footer>}
   </body>
 </html>

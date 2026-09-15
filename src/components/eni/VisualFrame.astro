@@ -1,13 +1,13 @@
 ---
-interface Props { eyebrow: string; title: string; description?: string; takeaway: string; class?: string; }
-const { eyebrow, title, description, takeaway, class: className = '' } = Astro.props;
+interface Props { id?: string; eyebrow: string; title: string; description?: string; takeaway: string; class?: string; }
+const { id, eyebrow, title, description, takeaway, class: className = '' } = Astro.props;
 ---
-<figure class={`eni-visual ${className}`}>
+<figure id={id} class={`eni-visual ${className}`}>
   <figcaption class="eni-cap">
     <span>{eyebrow}</span>
     <h3>{title}</h3>
-    {description && <p>{description}</p>}
   </figcaption>
   <div class="eni-canvas"><slot /></div>
+  {description && <p class="eni-description">{description}</p>}
   <p class="eni-takeaway"><strong>Keep this model:</strong> {takeaway}</p>
 </figure>

@@ -641,7 +641,7 @@ Use ordered lists, explicit decision-owner labels, and descriptive link text. Th
 
 ## Page elements
 
-- Compact sticky chapter navigation linking `#choose`, `#envelope`, `#alb`, `#nlb`, `#gwlb`, `#global-accelerator`, `#health`, `#operate`, and `#sources`.
+- Migration target: one topic console with a grouped disclosure index linking `#choose`, `#envelope`, `#alb`, `#nlb`, `#gwlb`, `#global-accelerator`, `#health`, `#operate`, and `#sources`. Use short view labels, one expanded group, and current/total status; preserve those fragment targets.
 - Legend near the first diagram defining solid/dashed/double/broken connectors and semantic state colors with text labels.
 - “Verified 2026-09-10” markers beside NLB’s current listener protocols/rules and Global Accelerator client-IP restrictions.
 - Sources section with primary AWS links grouped by service.
@@ -672,7 +672,7 @@ Use ordered lists, explicit decision-owner labels, and descriptive link text. Th
 - Canonical slug: `/aws-load-balancers`.
 - Canonical content: `src/content/topics/aws-load-balancers.mdx`, with metadata `collection: aws`, `format: Deep Dive`, and `difficulty: intermediate`.
 - Reusable visual components are colocated under `src/components/elb/`; their shared production styles live in `src/components/elb/elb-shared.css`.
-- The page reuses `TopicHeader`, `SectionNav`, `SourcesList`, `RelatedVisuals`, global tokens, and topic typography.
+- The current published page reuses `TopicHeader`, `SectionNav`, `SourcesList`, `RelatedVisuals`, global tokens, and topic typography. Its next migration should move the same eight visual contracts into the neutral shared console shell, with the grouped index, one active canvas, right/bottom explanation, and bottom takeaway. Do not treat the older prototype as an updated console prototype.
 - Preserve the section IDs listed above. The approval files stay under `guide/topics/` and are not added to content collections, Pagefind, legacy sync, or public routes.
 - **Integration status:** Integrated on 2026-09-10 in the canonical MDX topic and `/aws-load-balancers` Astro route. The prototype remains an approval artifact, not a second published implementation.
 - **Post-integration revision:** On 2026-09-10, the canonical page was reordered and rewritten around direct selection rules and deployable examples. The prototype preserves the earlier approval snapshot; the MDX topic is the maintained reader-facing source.

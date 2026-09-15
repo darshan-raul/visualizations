@@ -1,0 +1,238 @@
+---
+import { getCollection, getEntry } from 'astro:content';
+import RelatedVisuals from '../RelatedVisuals.astro';
+
+const topic = await getEntry('topics', 'rds-backup-retention');
+if (!topic) throw new Error('RDS Backup Retention content is missing');
+const topics = await getCollection('topics');
+const data = topic.data;
+const stages = [
+  { id: 'window', label: 'Recovery window', short: 'Watch time move' },
+  { id: 'restore', label: 'Restore path', short: 'Snapshot + logs' },
+  { id: 'blocks', label: 'Snapshot blocks', short: 'Follow a delta' },
+  { id: 'types', label: 'Backup choices', short: 'Compare lifecycles' },
+  { id: 'delete', label: 'Delete source', short: 'Choose survivors' },
+  { id: 'limits', label: 'Boundaries', short: 'Know the limits' },
+  { id: 'cost', label: 'Storage & cost', short: 'See the drivers' },
+  { id: 'practice', label: 'Operating loop', short: 'Test recovery' },
+];
+const days = Array.from({ length: 9 }, (_, index) => index + 1);
+const blocks = [
+  { day: 1, label: 'Baseline · +6', map: ['A1', 'B1', 'C1', 'D1', 'E1', 'F1'], fresh: ['A1', 'B1', 'C1', 'D1', 'E1', 'F1'] },
+  { day: 2, label: 'C, E · +2', map: ['A1', 'B1', 'C2', 'D1', 'E2', 'F1'], fresh: ['C2', 'E2'] },
+  { day: 3, label: 'B · +1', map: ['A1', 'B3', 'C2', 'D1', 'E2', 'F1'], fresh: ['B3'] },
+  { day: 4, label: 'C · +1', map: ['A1', 'B3', 'C4', 'D1', 'E2', 'F1'], fresh: ['C4'] },
+  { day: 5, label: 'E · +1', map: ['A1', 'B3', 'C4', 'D1', 'E5', 'F1'], fresh: ['E5'] },
+  { day: 6, label: 'F · +1', map: ['A1', 'B3', 'C4', 'D1', 'E5', 'F6'], fresh: ['F6'] },
+  { day: 7, label: 'D · +1', map: ['A1', 'B3', 'C4', 'D7', 'E5', 'F6'], fresh: ['D7'] },
+  { day: 8, label: 'D · +1, expiry', map: ['A1', 'B3', 'C4', 'D8', 'E5', 'F6'], fresh: ['D8'] },
+];
+const formatter = new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+---
+
+<article class="rds-workbench" data-rds-workbench aria-labelledby="rds-page-title">
+  <div class="rds-workbench-topbar"><a class="rds-workbench-brand" href="/" aria-label="Infra Illustrated home"><span aria-hidden="true">▥</span> Infra, <em>Illustrated.</em></a><nav aria-label="Library navigation"><a href="/visualizations">All visuals</a><a href="/aws">AWS collection</a><a href="/">Topic library</a></nav></div>
+  <header class="rds-workbench-head">
+    <div class="rds-workbench-title">
+      <nav class="rds-workbench-crumb" aria-label="Breadcrumb"><a href="/">Library</a><span>/</span><a href="/aws">AWS</a><span>/</span><span>Visual Brief</span></nav>
+      <span class="rds-kicker">AMAZON RDS · RECOVERY CONSOLE</span>
+      <h1 id="rds-page-title">{data.title}</h1>
+      <p>{data.summary}</p>
+    </div>
+    <div class="rds-workbench-context" aria-label="Topic metadata">
+      <span class="rds-model-light"><i aria-hidden="true"></i> TEACHING MODEL · orders-db</span>
+      <span>INTERMEDIATE · VISUAL BRIEF</span>
+      <span>Published {formatter.format(data.published)} · Reviewed {formatter.format(data.reviewed!)}</span>
+      <span>{data.versionScope}</span>
+    </div>
+  </header>
+
+  <div class="rds-workbench-grid">
+    <nav class="rds-workbench-rail" aria-label="RDS recovery console stages">
+      <span class="rds-rail-label">EXPLORE THE SYSTEM</span>
+      {stages.map((stage, index) => <a href={`#stage-${stage.id}`} data-rds-stage-link={stage.id} aria-current={index === 0 ? 'step' : undefined}><span>{String(index + 1).padStart(2, '0')}</span><strong>{stage.label}</strong><small>{stage.short}</small></a>)}
+      <a class="rds-rail-reference" href="#sources">↗ Sources</a>
+    </nav>
+
+    <div class="rds-workbench-main">
+      <div class="rds-workbench-toolbar"><div><span class="rds-kicker">ACTIVE VIEW</span><strong data-rds-view-title>Recovery window</strong></div><div class="rds-toolbar-legend"><span><i class="flow"></i> direct flow</span><span><i class="reference"></i> reused / conceptual</span></div><span class="rds-toolbar-object">orders-db · 7-day retention</span></div>
+
+      <section class="rds-stage-panel" id="stage-window" data-rds-panel="window" aria-labelledby="window-title">
+        <span id="the-mental-model" aria-hidden="true"></span><span id="a-moving-recovery-window" aria-hidden="true"></span>
+        <div class="rds-panel-heading"><span>01 / TIME</span><h2 id="window-title">The recovery window moves.</h2></div>
+        <div class="rds-window-visual"><div class="rds-window-now"><span data-rds-clock>DAY 8 · NOW</span><strong>Seven days of illustrated recovery</strong></div><div class="rds-window-track" role="img" aria-label="At Day 8, Days 2 through 8 illustrate the seven-day recovery window. At Day 9, Day 2 ages out and Days 3 through 9 illustrate the window.">{days.map((day) => <div data-rds-day={day} data-state={day === 1 ? 'expired' : day === 9 ? 'future' : 'available'}><strong>Day {day}</strong><small>{day === 1 ? 'Aged out' : day === 9 ? 'Not yet' : 'Available'}</small></div>)}</div><div class="rds-window-boundary"><span data-rds-early>EARLIEST ILLUSTRATED · DAY 2</span><b aria-hidden="true">→</b><span data-rds-late>CURRENT EXAMPLE · DAY 8</span></div></div>
+        <div class="rds-window-actions" data-rds-enhancement hidden><button type="button" data-rds-day-back disabled>← Return to Day 8</button><button type="button" data-rds-day-forward>Advance one day →</button></div>
+        <p class="rds-static-note">At Day 9, Day 2 leaves the illustrated window and Day 3 becomes the earliest illustrated day. For a real restore, use the earliest and latest times RDS reports.</p>
+      </section>
+
+      <section class="rds-stage-panel" id="stage-restore" data-rds-panel="restore" aria-labelledby="restore-title">
+        <span id="what-rds-keeps" aria-hidden="true"></span>
+        <div class="rds-panel-heading"><span>02 / RECOVERY PATH</span><h2 id="restore-title">A restore starts a new instance.</h2></div>
+        <div class="rds-restore-path"><div class="rds-restore-node"><span>01 · BASELINE</span><strong>System snapshot</strong><small>Stored database state</small></div><div class="rds-restore-arrow" aria-hidden="true"><span>+</span><i></i></div><div class="rds-restore-node logs"><span>02 · CONTINUE</span><strong>Transaction logs</strong><small>Move toward chosen time</small></div><div class="rds-restore-arrow" aria-hidden="true"><span>→</span><i></i></div><div class="rds-restore-node result"><span>03 · RESULT</span><strong>New DB instance</strong><small>Source unchanged</small></div></div>
+        <div class="rds-restore-target" data-rds-restore-target><span>SELECTED TIME · DAY 2</span><b data-rds-restore-state>AVAILABLE IN THE DAY 8 EXAMPLE</b><p data-rds-restore-copy>Use RDS’s reported range to choose an actual timestamp; this day label is only a teaching marker.</p></div>
+      </section>
+
+      <section class="rds-stage-panel" id="stage-blocks" data-rds-panel="blocks" aria-labelledby="blocks-title">
+        <span id="how-the-ebs-delta-snapshot-works" aria-hidden="true"></span>
+        <div class="rds-panel-heading"><span>03 / STORAGE LAYER</span><h2 id="blocks-title">Only changed blocks are newly stored.</h2></div>
+        <div class="rds-block-controls" role="group" aria-label="Choose illustrative EBS snapshot state">{blocks.map((state, index) => <button type="button" data-rds-block-button={state.day} aria-pressed={index === 0}>{`Day ${state.day}`}<small>{state.label}</small></button>)}</div>
+        <div class="rds-block-playback" data-rds-enhancement hidden role="group" aria-label="Snapshot animation controls"><button type="button" data-rds-block-prev>← Previous</button><button type="button" data-rds-block-play aria-label="Play the eight-day snapshot sequence">▶ Play sequence</button><button type="button" data-rds-block-next>Next →</button><span data-rds-block-progress aria-live="polite">DAY 1 / 8 · 6 NEW</span></div>
+        <div class="rds-block-diagram"><div class="rds-block-source"><span>VOLUME STATE</span><strong data-rds-block-day>Day 1 · full baseline</strong><small data-rds-block-change>Six written blocks are stored.</small></div><div class="rds-block-arrow" aria-hidden="true"><i></i><b>→</b></div><div class="rds-block-result"><span>RESTORABLE VOLUME</span><div class="rds-block-grid">{['A','B','C','D','E','F'].map((letter, index) => <div data-rds-block-cell={letter} data-origin="stored"><small>BLOCK {letter}</small><strong>{blocks[0].map[index]}</strong><span>Stored now</span></div>)}</div></div></div>
+        <div class="rds-block-legend"><span><i class="solid"></i> newly stored block</span><span><i class="dashed"></i> references an earlier stored version</span></div>
+        <div class="rds-block-history" aria-label="Eight-day snapshot block history"><div class="rds-block-history-heading"><strong>SNAPSHOT HISTORY</strong><span>Solid = stored that day · dashed = reused</span></div><div class="rds-block-history-scroll"><table><thead><tr><th scope="col">DAY / NEW</th>{['A','B','C','D','E','F'].map((letter) => <th scope="col">{letter}</th>)}</tr></thead><tbody>{blocks.map((state) => <tr data-rds-history-day={state.day} data-state={state.day === 1 ? 'current' : 'future'}><th scope="row"><strong>{`Day ${state.day}`}</strong><small>{state.day === 1 ? '6 new' : `${state.fresh.length} new`}</small></th>{state.map.map((version) => <td data-origin={state.fresh.includes(version) ? 'stored' : 'reference'}><span>{version}</span></td>)}</tr>)}</tbody></table></div></div>
+        <div class="rds-block-cleanup" data-rds-block-cleanup><strong>Day 1 can expire without breaking later restore points.</strong><p>In this model, C1 and E1 are no longer referenced and can be removed. A1, B1, D1, and F1 remain because later restore points still need them.</p></div>
+        <p class="rds-model-caveat">These are documented EBS snapshot rules used to illustrate RDS incrementality. RDS manages its real backup dependencies internally; this block graph is not exposed by RDS.</p>
+      </section>
+
+      <section class="rds-stage-panel" id="stage-types" data-rds-panel="types" aria-labelledby="types-title">
+        <span id="four-things-that-sound-similar" aria-hidden="true"></span><span id="keep-the-four-backup-types-separate" aria-hidden="true"></span><span id="what-expires-and-what-does-not" aria-hidden="true"></span>
+        <div class="rds-panel-heading"><span>04 / LIFECYCLES</span><h2 id="types-title">Four names, different clocks.</h2></div>
+        <div class="rds-type-map"><div class="rds-type-central"><span>orders-db</span><strong>DAY 2 · RECOVERY QUESTION</strong></div><div class="rds-type-branches"><article><span>AUTOMATED BACKUP</span><strong>Rolling range</strong><small>RDS manages snapshots + logs; Day 2 can age out.</small></article><article class="manual"><span>MANUAL SNAPSHOT</span><strong>Saved state</strong><small>You create and delete it; one captured state persists.</small></article><article class="final"><span>FINAL SNAPSHOT</span><strong>Manual at deletion</strong><small>Created on request when the source is deleted.</small></article><article class="retained"><span>RETAINED AUTOMATED</span><strong>Temporary set</strong><small>Existing data ages out; nothing new is added.</small></article></div></div>
+      </section>
+
+      <section class="rds-stage-panel" id="stage-delete" data-rds-panel="delete" aria-labelledby="delete-title">
+        <span id="deleting-the-instance" aria-hidden="true"></span>
+        <div class="rds-panel-heading"><span>05 / DELETE DECISIONS</span><h2 id="delete-title">Two choices, three survivors.</h2></div>
+        <div class="rds-delete-root"><span>SOURCE</span><strong>Delete orders-db</strong></div><div class="rds-delete-options"><label><input type="checkbox" data-rds-final checked> Create final snapshot</label><label><input type="checkbox" data-rds-retain checked> Retain automated backups</label></div><div class="rds-delete-arrows" aria-hidden="true"><span>↙</span><span>↓</span><span>↘</span></div><div class="rds-delete-results"><article><span>FINAL SNAPSHOT</span><strong data-rds-final-result>Saved until you delete it</strong><small>One restorable state</small></article><article><span>AUTOMATED SET</span><strong data-rds-retain-result>Kept temporarily</strong><small>Old range continues to expire</small></article><article><span>EXISTING MANUAL</span><strong>Unaffected</strong><small>Independent of source deletion</small></article></div>
+      </section>
+
+      <section class="rds-stage-panel" id="stage-limits" data-rds-panel="limits" aria-labelledby="limits-title">
+        <span id="operational-boundaries" aria-hidden="true"></span><span id="limits-that-change-the-answer" aria-hidden="true"></span>
+        <div class="rds-panel-heading"><span>06 / SERVICE BOUNDARIES</span><h2 id="limits-title">Check what the setting really controls.</h2></div>
+        <div class="rds-limit-scale"><div><span>0 DAYS</span><strong>Automated backups off</strong></div><i aria-hidden="true">→</i><div class="active"><span>1–35 DAYS</span><strong>Configurable DB instance range</strong></div></div><div class="rds-limit-signals"><div><span>LOG UPLOAD</span><strong>Every five minutes</strong><small>Latest restorable time can still lag now.</small></div><div><span>INSTANCE STATE</span><strong>Available required</strong><small>Automated backups pause in states such as storage_full.</small></div><div><span>STOPPED INSTANCE</span><strong>Clock pauses</strong><small>Stopped time does not count toward retention.</small></div><div><span>RESTORE RESULT</span><strong>New instance</strong><small>Source is not rewound in place.</small></div></div>
+      </section>
+
+      <section class="rds-stage-panel" id="stage-cost" data-rds-panel="cost" aria-labelledby="cost-title">
+        <span id="cost-without-false-precision" aria-hidden="true"></span>
+        <div class="rds-panel-heading"><span>07 / STORAGE DRIVERS</span><h2 id="cost-title">Retention is not a copy count.</h2></div>
+        <div class="rds-cost-visual"><div class="rds-cost-inputs"><div><span>CHANGED BLOCKS</span><strong>Data churn</strong></div><div><span>MANUAL / FINAL</span><strong>Saved snapshots</strong></div><div><span>AFTER DELETION</span><strong>Retained backups</strong></div></div><div class="rds-cost-arrow" aria-hidden="true">→</div><div class="rds-cost-output"><span>REGIONAL BACKUP STORAGE</span><strong>Measure actual usage</strong><small>Allowance and charges depend on running storage and current RDS pricing.</small></div></div><p class="rds-model-caveat">The console shows cost drivers, not an estimate. Check billing metrics and current AWS pricing for your Region and workload.</p>
+      </section>
+
+      <section class="rds-stage-panel" id="stage-practice" data-rds-panel="practice" aria-labelledby="practice-title">
+        <span id="practical-checklist" aria-hidden="true"></span><span id="before-you-rely-on-the-backup" aria-hidden="true"></span>
+        <div class="rds-panel-heading"><span>08 / OPERATING LOOP</span><h2 id="practice-title">Prove the recovery path before you need it.</h2></div>
+        <ol class="rds-practice-path"><li><span>01</span><strong>Choose retention</strong><small>Start from the oldest recovery time your system needs.</small></li><li><span>02</span><strong>Observe the range</strong><small>Read earliest and latest restorable times from RDS.</small></li><li><span>03</span><strong>Preserve a point</strong><small>Take a manual snapshot when one state must last longer.</small></li><li><span>04</span><strong>Decide before deletion</strong><small>Final snapshot and retained automated backups are separate.</small></li><li><span>05</span><strong>Test a restore</strong><small>Create a new instance and verify the application can use it.</small></li></ol>
+      </section>
+
+      <div class="rds-workbench-timeline" data-rds-enhancement hidden><button type="button" data-rds-prev aria-label="Previous console view">←</button><div><span>NOW INSPECTING</span><strong data-rds-progress>01 / Recovery window</strong></div><div class="rds-workbench-steps">{stages.map((stage, index) => <button type="button" data-rds-step={stage.id} aria-label={`Open ${stage.label}`} aria-pressed={index === 0}>{index + 1}</button>)}</div><button type="button" data-rds-next aria-label="Next console view">→</button></div>
+    </div>
+
+    <aside class="rds-workbench-inspector" aria-label="Contextual explanation"><span class="rds-kicker">RECOVERY INSPECTOR</span><h2 data-rds-inspector-title>Day 2 is still available</h2><p data-rds-inspector-copy aria-live="polite">At Day 8, Day 2 is the oldest day in the seven-day teaching window. One day later, it leaves the illustrated range.</p><div class="rds-inspector-facts"><div><span>CONFIGURED</span><strong>7 days</strong></div><div><span>EARLIEST ILLUSTRATED</span><strong data-rds-inspector-early>Day 2</strong></div><div><span>ACTUAL RESTORE RANGE</span><strong>Read from RDS</strong></div></div><div class="rds-inspector-evidence"><span>OPERATOR EVIDENCE</span><code data-rds-inspector-code>EarliestRestorableTime<br>LatestRestorableTime</code></div><div class="rds-inspector-caveat"><span>MODEL NOTE</span><p data-rds-inspector-caveat>Colored days show movement, not exact restorable timestamps.</p></div></aside>
+  </div>
+
+  <footer class="rds-workbench-bottom"><div class="rds-bottom-explainer"><span>THE POINT TO KEEP</span><p data-rds-bottom-copy aria-live="polite">Seven-day retention is a moving boundary. RDS reports the actual times available for point-in-time restore.</p></div><details class="rds-bottom-reference" id="sources"><summary>Sources, scope & related visuals <span aria-hidden="true">↗</span></summary><div class="rds-reference-body"><div><h2>Authoritative sources</h2><ul>{data.sources?.map((source) => <li><a href={source.url} target="_blank" rel="noopener noreferrer">{source.label} ↗</a></li>)}</ul><p>Verified {formatter.format(data.reviewed!)}. This model covers RDS DB instances; Aurora and Multi-AZ DB clusters differ. EBS block lineage is an illustration of documented snapshot rules, not an exposed RDS dependency graph.</p></div><RelatedVisuals currentTopic={topic} topics={topics} /></div></details><div class="rds-workbench-sitefoot"><span>Infra, Illustrated. · Visual deep dives into cloud infrastructure.</span><a href="/visualizations">Browse all visuals ↗</a></div></footer>
+</article>
+
+<script>
+  const stageNames = ['window','restore','blocks','types','delete','limits','cost','practice'];
+  const stageTitles = ['Recovery window','Restore path','Snapshot blocks','Backup choices','Delete source','Boundaries','Storage & cost','Operating loop'];
+  const anchorStages: Record<string,number> = {
+    'the-mental-model':0,'a-moving-recovery-window':0,'what-rds-keeps':1,
+    'how-the-ebs-delta-snapshot-works':2,'four-things-that-sound-similar':3,
+    'keep-the-four-backup-types-separate':3,'what-expires-and-what-does-not':3,
+    'deleting-the-instance':4,'operational-boundaries':5,'limits-that-change-the-answer':5,
+    'cost-without-false-precision':6,'practical-checklist':7,'before-you-rely-on-the-backup':7,
+  };
+  function stageFromHash() { const hash = location.hash.slice(1); const index = stageNames.indexOf(hash.replace('stage-','')); return index >= 0 ? index : anchorStages[hash] ?? 0; }
+  const blockStates = {
+    1: { title: 'Day 1 · full baseline', change: 'Six written blocks are stored.', map: ['A1','B1','C1','D1','E1','F1'], fresh: ['A1','B1','C1','D1','E1','F1'] },
+    2: { title: 'Day 2 · two changes', change: 'C2 and E2 are new; four block versions are reused.', map: ['A1','B1','C2','D1','E2','F1'], fresh: ['C2','E2'] },
+    3: { title: 'Day 3 · B changes', change: 'B3 is new; five earlier block versions are reused.', map: ['A1','B3','C2','D1','E2','F1'], fresh: ['B3'] },
+    4: { title: 'Day 4 · C changes again', change: 'C4 is new; the other five versions are reused.', map: ['A1','B3','C4','D1','E2','F1'], fresh: ['C4'] },
+    5: { title: 'Day 5 · E changes again', change: 'E5 is new; the other five versions are reused.', map: ['A1','B3','C4','D1','E5','F1'], fresh: ['E5'] },
+    6: { title: 'Day 6 · F changes', change: 'F6 is new; the other five versions are reused.', map: ['A1','B3','C4','D1','E5','F6'], fresh: ['F6'] },
+    7: { title: 'Day 7 · D changes', change: 'D7 is new; the other five versions are reused.', map: ['A1','B3','C4','D7','E5','F6'], fresh: ['D7'] },
+    8: { title: 'Day 8 · older point expires', change: 'D8 is new; the later state still references earlier block versions.', map: ['A1','B3','C4','D8','E5','F6'], fresh: ['D8'] },
+  } as const;
+  for (const workbench of document.querySelectorAll<HTMLElement>('[data-rds-workbench]')) {
+    const links = [...workbench.querySelectorAll<HTMLAnchorElement>('[data-rds-stage-link]')];
+    const panels = [...workbench.querySelectorAll<HTMLElement>('[data-rds-panel]')];
+    const steps = [...workbench.querySelectorAll<HTMLButtonElement>('[data-rds-step]')];
+    const days = [...workbench.querySelectorAll<HTMLElement>('[data-rds-day]')];
+    const blockButtons = [...workbench.querySelectorAll<HTMLButtonElement>('[data-rds-block-button]')];
+    const blockCells = [...workbench.querySelectorAll<HTMLElement>('[data-rds-block-cell]')];
+    const historyRows = [...workbench.querySelectorAll<HTMLTableRowElement>('[data-rds-history-day]')];
+    const final = workbench.querySelector<HTMLInputElement>('[data-rds-final]')!;
+    const retain = workbench.querySelector<HTMLInputElement>('[data-rds-retain]')!;
+    let stage = stageFromHash();
+    let now = 8;
+    let blockDay: keyof typeof blockStates = 1;
+    let blockPlayback: number | undefined;
+    const get = (selector: string) => workbench.querySelector<HTMLElement>(selector)!;
+    function inspect() {
+      const insights = [
+        now === 8 ? ['Day 2 is still available','At Day 8, Day 2 is the oldest day in this seven-day teaching window. One day later it leaves.','EarliestRestorableTime / LatestRestorableTime','Colored days show movement, not exact restorable timestamps.','Seven-day retention is a moving boundary. RDS reports the actual times available for point-in-time restore.'] : ['Day 2 has aged out','At Day 9, the oldest illustrated day moves to Day 3. Day 2 is outside automated recovery.','EarliestRestorableTime / LatestRestorableTime','Actual RDS boundaries may not line up with these whole-day labels.','The same seven-day setting can no longer recover the former Day 2 time.'],
+        now === 8 ? ['Restore creates another instance','A system snapshot supplies a baseline and transaction logs carry it to an available time. The source remains unchanged.','RestoreDBInstanceToPointInTime','The latest restorable time may lag the present.','Point-in-time restore uses backup data to create a new DB instance; it does not rewind the source.'] : ['Automated Day 2 restore unavailable','Day 2 has left this illustrated range. A manual Day 2 snapshot restores only its captured state.','EarliestRestorableTime','Do not infer an actual restore timestamp from this model.','Once Day 2 ages out, choose a time RDS still reports or a separate manual snapshot.'],
+        ['An incremental snapshot is complete',`Day ${blockDay} represents a whole volume. ${blockStates[blockDay].fresh.join(' and ')} ${blockDay === 1 ? 'are the baseline blocks' : blockStates[blockDay].fresh.length === 1 ? 'is the only newly stored block' : 'are the newly stored blocks'}; the other versions are reused.`,'EBS block references','This is an EBS illustration. RDS does not expose its internal backup graph.',blockDay === 8 ? 'Day 1 expires, but later restore points still need A1, B1, D1, and F1. Unreferenced C1 and E1 can be removed.' : 'Each new restore point represents a complete volume while storing only changed blocks.'],
+        ['Each backup has its own lifecycle','Automated recovery rolls. Manual and final snapshots last until deleted. Retained automated data expires.','Automated / manual / final / retained','A manual snapshot is one state, not a point-in-time range.','Choose the backup by the recovery question: a range of times or one durable captured state.'],
+        ['Deletion choices are independent',`${final.checked ? 'A final snapshot remains.' : 'No final snapshot is made.'} ${retain.checked ? 'Automated data is retained until expiry.' : 'Same-Region automated data is removed.'} Existing manual snapshots remain.`, 'DeleteDBInstance options','The visual assumes a DB instance state that permits a final snapshot.','Final snapshot and retained automated backups answer separate questions; existing manual snapshots survive.'],
+        ['Read service state as well as retention','DB instances allow 0–35 days. Backups require an available instance; stopped time does not count toward retention.','BackupRetentionPeriod / DBInstanceStatus','Aurora and Multi-AZ DB clusters have different constraints.','A retention setting is only one part of recoverability; inspect status and reported restore times.'],
+        ['Measure instead of multiplying copies','Changed data, manual snapshots, retained backups, running storage, and Region affect backup charges.','Regional backup storage / billing','This panel is not a price calculation.','Retention does not imply a fixed number of fully billed copies. Measure actual storage and current pricing.'],
+        ['Test the new instance','Restore into a new DB instance and verify the application can use it before an incident.','Restore procedure / application checks','A listed recovery point is not a completed recovery test.','Choose, observe, preserve, decide, and test the recovery path repeatedly.'],
+      ];
+      const [title,copy,code,caveat,bottom] = insights[stage];
+      get('[data-rds-inspector-title]').textContent = title;
+      get('[data-rds-inspector-copy]').textContent = copy;
+      get('[data-rds-inspector-code]').textContent = code;
+      get('[data-rds-inspector-caveat]').textContent = caveat;
+      get('[data-rds-bottom-copy]').textContent = bottom;
+    }
+    function render() {
+      panels.forEach((panel,index) => { panel.hidden = index !== stage; });
+      links.forEach((link,index) => { if(index === stage) link.setAttribute('aria-current','step'); else link.removeAttribute('aria-current'); });
+      steps.forEach((button,index) => button.setAttribute('aria-pressed',String(index === stage)));
+      get('[data-rds-view-title]').textContent = stageTitles[stage];
+      get('[data-rds-progress]').textContent = `${String(stage + 1).padStart(2,'0')} / ${stageTitles[stage]}`;
+      workbench.querySelector<HTMLButtonElement>('[data-rds-prev]')!.disabled = stage === 0;
+      workbench.querySelector<HTMLButtonElement>('[data-rds-next]')!.disabled = stage === stageNames.length - 1;
+      const earliest = now - 6;
+      days.forEach((cell) => { const day = Number(cell.dataset.rdsDay); cell.dataset.state = day < earliest ? day === 2 ? 'lost' : 'expired' : day > now ? 'future' : 'available'; cell.querySelector('small')!.textContent = day < earliest ? 'Aged out' : day > now ? 'Not yet' : 'Available'; });
+      get('[data-rds-clock]').textContent = `DAY ${now} · NOW`;
+      get('[data-rds-early]').textContent = `EARLIEST ILLUSTRATED · DAY ${earliest}`;
+      get('[data-rds-late]').textContent = `CURRENT EXAMPLE · DAY ${now}`;
+      get('[data-rds-inspector-early]').textContent = `Day ${earliest}`;
+      workbench.querySelector<HTMLButtonElement>('[data-rds-day-back]')!.disabled = now === 8;
+      workbench.querySelector<HTMLButtonElement>('[data-rds-day-forward]')!.disabled = now === 9;
+      const restoreTarget = get('[data-rds-restore-target]');
+      restoreTarget.dataset.state = now === 8 ? 'available' : 'lost';
+      get('[data-rds-restore-state]').textContent = now === 8 ? 'AVAILABLE IN THE DAY 8 EXAMPLE' : 'AGED OUT AT DAY 9';
+      get('[data-rds-restore-copy]').textContent = now === 8 ? 'Use RDS’s reported range to choose an actual timestamp; this day label is only a teaching marker.' : 'Choose a still-reported time, or use a separate manual snapshot of one captured state.';
+      get('[data-rds-final-result]').textContent = final.checked ? 'Saved until you delete it' : 'No final snapshot created';
+      get('[data-rds-retain-result]').textContent = retain.checked ? 'Kept temporarily' : 'Same-Region set deleted';
+      blockButtons.forEach((button) => button.setAttribute('aria-pressed',String(Number(button.dataset.rdsBlockButton) === blockDay)));
+      const block = blockStates[blockDay];
+      get('[data-rds-block-day]').textContent = block.title;
+      get('[data-rds-block-change]').textContent = block.change;
+      blockCells.forEach((cell,index) => { const version = block.map[index]; const fresh = (block.fresh as readonly string[]).includes(version); cell.dataset.origin = fresh ? 'stored' : 'reference'; cell.querySelector('strong')!.textContent = version; cell.querySelector('span')!.textContent = fresh ? 'Stored now' : `↑ Day ${Number(version.slice(1))}`; });
+      historyRows.forEach((row) => { const day = Number(row.dataset.rdsHistoryDay); row.dataset.state = day === blockDay ? 'current' : day < blockDay ? 'past' : 'future'; });
+      workbench.querySelector<HTMLButtonElement>('[data-rds-block-prev]')!.disabled = blockDay === 1;
+      workbench.querySelector<HTMLButtonElement>('[data-rds-block-next]')!.disabled = blockDay === 8;
+      get('[data-rds-block-progress]').textContent = `DAY ${blockDay} / 8 · ${block.fresh.length} NEW`;
+      get('[data-rds-block-cleanup]').hidden = blockDay !== 8;
+      inspect();
+    }
+    function stopBlockPlayback() { if(blockPlayback !== undefined) { clearInterval(blockPlayback); blockPlayback = undefined; } const button = workbench.querySelector<HTMLButtonElement>('[data-rds-block-play]')!; button.textContent = '▶ Play sequence'; button.setAttribute('aria-label','Play the eight-day snapshot sequence'); }
+    function setBlockDay(day: number) { blockDay = Math.max(1,Math.min(8,day)) as keyof typeof blockStates; render(); const fresh = blockStates[blockDay].fresh as readonly string[]; blockCells.forEach((cell) => { cell.classList.remove('just-changed'); if(fresh.includes(cell.querySelector('strong')!.textContent || '')) { void cell.offsetWidth; cell.classList.add('just-changed'); } }); const row = historyRows[blockDay - 1]; row.classList.remove('row-entered'); void row.offsetWidth; row.classList.add('row-entered'); const arrow = get('.rds-block-arrow'); arrow.classList.remove('flowing'); void arrow.offsetWidth; arrow.classList.add('flowing'); }
+    function go(index: number, historyMode: 'push'|'replace'|'none' = 'push') { if(index !== 2) stopBlockPlayback(); stage = Math.max(0,Math.min(stageNames.length-1,index)); if(historyMode === 'push') history.pushState(null,'',`#stage-${stageNames[stage]}`); if(historyMode === 'replace') history.replaceState(null,'',`#stage-${stageNames[stage]}`); render(); workbench.scrollIntoView({block:'start',behavior:'auto'}); }
+    links.forEach((link,index) => link.addEventListener('click',(event) => { event.preventDefault(); go(index); }));
+    steps.forEach((button,index) => button.addEventListener('click',() => go(index)));
+    workbench.querySelector<HTMLButtonElement>('[data-rds-prev]')!.addEventListener('click',() => go(stage-1));
+    workbench.querySelector<HTMLButtonElement>('[data-rds-next]')!.addEventListener('click',() => go(stage+1));
+    workbench.querySelector<HTMLButtonElement>('[data-rds-day-back]')!.addEventListener('click',() => { now = 8; render(); });
+    workbench.querySelector<HTMLButtonElement>('[data-rds-day-forward]')!.addEventListener('click',() => { now = 9; render(); });
+    blockButtons.forEach((button) => button.addEventListener('click',() => { stopBlockPlayback(); setBlockDay(Number(button.dataset.rdsBlockButton)); }));
+    workbench.querySelector<HTMLButtonElement>('[data-rds-block-prev]')!.addEventListener('click',() => { stopBlockPlayback(); setBlockDay(blockDay - 1); });
+    workbench.querySelector<HTMLButtonElement>('[data-rds-block-next]')!.addEventListener('click',() => { stopBlockPlayback(); setBlockDay(blockDay + 1); });
+    workbench.querySelector<HTMLButtonElement>('[data-rds-block-play]')!.addEventListener('click',() => { if(blockPlayback !== undefined) { stopBlockPlayback(); return; } if(blockDay === 1 || blockDay === 8) setBlockDay(1); const button = workbench.querySelector<HTMLButtonElement>('[data-rds-block-play]')!; button.textContent = 'Ⅱ Pause sequence'; button.setAttribute('aria-label','Pause the eight-day snapshot sequence'); blockPlayback = window.setInterval(() => { if(stage !== 2 || Number(blockDay) === 8) { stopBlockPlayback(); return; } setBlockDay(blockDay + 1); if(Number(blockDay) === 8) stopBlockPlayback(); }, 1350); });
+    function showDecisionChange() { render(); workbench.querySelectorAll<HTMLElement>('.rds-delete-results article').forEach((result) => { result.classList.remove('decision-changed'); void result.offsetWidth; result.classList.add('decision-changed'); }); }
+    final.addEventListener('change',showDecisionChange);
+    retain.addEventListener('change',showDecisionChange);
+    addEventListener('popstate',() => go(stageFromHash(),'none'));
+    addEventListener('hashchange',() => { if(location.hash === '#sources') { workbench.querySelector<HTMLDetailsElement>('#sources')!.open = true; return; } go(stageFromHash(),'none'); });
+    workbench.querySelectorAll<HTMLElement>('[data-rds-enhancement]').forEach((item) => { item.hidden = false; });
+    workbench.classList.add('enhanced');
+    render();
+    if(location.hash === '#sources') workbench.querySelector<HTMLDetailsElement>('#sources')!.open = true;
+    else if(location.hash) workbench.scrollIntoView({block:'start',behavior:'auto'});
+  }
+</script>

@@ -2,6 +2,7 @@
 
 Status: Approved for integration  
 Version: 1.0  
+Console decision (2026-09-15): homepage, catalogue, collection, and topic-tree discovery contracts here remain applicable. The topic-opening and section-navigation details below describe the earlier shared article shell and are superseded for topic visuals by [SITE-REBUILD-BRIEF.md](../../../SITE-REBUILD-BRIEF.md) and the [console migration checklist](../../CONSOLE-MIGRATION-CHECKLIST.md).
 Target audience: Working developers building cloud, platform, DevOps, and SRE mental models  
 Page promise: Put a useful infrastructure reference within one clear selection, search, or scan.  
 Persistent scenario: A reader arrives with a mechanism to recall, narrows the library, opens one reference, and finds the first useful model quickly.  
@@ -25,7 +26,7 @@ Visual thesis: A technical atlas with a legible map and a compact editorial inde
 | 1 | Topic tree | Where does my question belong? | Root and collection hierarchy | Expand a collection, select a topic, reset | The library has four stable collections and independently useful topics. |
 | 2 | Catalogue | Can I find a reference directly? | Compact search and editorial index | Search, filter, switch view, clear | Search and filters lead directly to content without a marketing preamble. |
 | 3 | Collection page | What is available in this system? | Compact collection introduction plus index | Open a topic or map view | Collection identity supports discovery without changing diagram semantics. |
-| 4 | Topic opening | What will this page teach me? | Compressed title, summary, metadata, section navigation | Follow deep links and connected references | The first useful model appears near the initial viewport. |
+| 4 | Topic opening (historical shared-shell work) | What will this page teach me? | Compressed title, summary, metadata, earlier section navigation | Follow deep links and connected references | The first useful model appears near the initial viewport; topic-console migration supersedes this navigation. |
 
 ## Visual 1: Responsive topic-tree discovery
 
@@ -207,7 +208,7 @@ What question does this page answer, how current is it, and where should I begin
 
 ### Composition
 
-Breadcrumb, compact format labels, title, summary, taxonomy, and dates remain in that order. Title sizing responds to a title-length class. The section navigation drops decorative ordinal numbers. Related references use one prominent item followed by compact links and explain why each item is connected when metadata permits.
+Breadcrumb, compact format labels, title, summary, taxonomy, and dates remain in that order. Title sizing responds to a title-length class. The earlier section navigation dropped decorative ordinal numbers; topic migration replaces it with the grouped console index. Related references use one prominent item followed by compact links and explain why each item is connected when metadata permits.
 
 ### Interaction
 
@@ -215,7 +216,7 @@ Section navigation uses stable fragments. Taxonomy links open filtered catalogue
 
 ### Mobile behavior
 
-Long titles use a smaller cap, metadata remains at least 12px, and the horizontal section navigator retains 44px targets.
+Long titles use a smaller cap, metadata remains at least 12px, and the grouped console index retains 44px targets when topic pages migrate.
 
 ### Accessibility
 
@@ -254,7 +255,7 @@ The approval prototype is self-contained and demonstrates the four page surfaces
 - Shared catalogue: `src/components/LibraryExplorer.astro`
 - Tree: `src/components/TopicTree.astro` and `src/components/map/tree-camera.ts`
 - Cards/index: `src/components/TopicCard.astro`
-- Topic opening: `src/components/TopicHeader.astro`, `src/components/SectionNav.astro`, and `src/styles/topic.css`
+- Historical topic opening: `src/components/TopicHeader.astro`, `src/components/SectionNav.astro`, and `src/styles/topic.css`; new topic consoles use the neutral shared shell after extraction.
 - Shared shell and tokens: `src/layouts/BaseLayout.astro` and `src/styles/global.css`
 - Integration status: complete in the shared Astro interface
 
