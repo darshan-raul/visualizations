@@ -1,0 +1,29 @@
+---
+title: SSH, Illustrated
+summary: Watch SSH establish server trust, build encrypted transport, authenticate a user, and open logical channels.
+slug: ssh
+collection: foundations
+tags: [Security, SSH, Cryptography, Networking, Linux]
+technologies: [OpenSSH, SSH protocol, sshd, ssh-agent]
+format: flow-explorer
+difficulty: foundational
+published: 2026-09-16
+reviewed: 2026-09-16
+versionScope: OpenSSH protocol concepts and configuration model reviewed September 2026
+legacyPath: /ssh
+featured: true
+state: reviewed
+related: [linux, aws-identity-credential-flows, networking]
+sources:
+  - label: OpenSSH ssh manual
+    url: https://man.openbsd.org/ssh
+  - label: OpenSSH sshd manual
+    url: https://man.openbsd.org/sshd
+  - label: OpenSSH server configuration manual
+    url: https://man.openbsd.org/sshd_config
+---
+
+import ProtocolConsole from '../../components/foundations/ProtocolConsole.astro';
+import { protocolTopics } from '../../components/foundations/protocol-data';
+
+<ProtocolConsole topic={protocolTopics.ssh} published={props.published} reviewed={props.reviewed} />

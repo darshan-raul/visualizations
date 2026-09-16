@@ -1,0 +1,28 @@
+---
+title: Every Conversation Goes Through the Kubernetes API
+summary: Follow one Deployment request through API gates and independent Kubernetes reconciliation loops, then inspect node, Service, storage, extension, and failure conversations on one cluster map.
+slug: kubernetes-api-server
+collection: kubernetes
+tags: [Kubernetes, Architecture, Controllers, Troubleshooting]
+technologies: [kube-apiserver, etcd, kubelet, EndpointSlice, CSI]
+format: flow-explorer
+difficulty: intermediate
+published: 2026-09-16
+reviewed: 2026-09-16
+versionScope: Kubernetes API and control-plane behavior verified against current primary documentation on 2026-09-16
+legacyPath: /kubernetes-api-server
+featured: true
+state: reviewed
+related: [kubernetes-services, k8s-networking, kubernetes-gateway-ingress]
+sources:
+  - label: Kubernetes cluster components
+    url: https://kubernetes.io/docs/concepts/overview/components/
+  - label: Kubernetes API concepts
+    url: https://kubernetes.io/docs/reference/using-api/api-concepts
+  - label: Kubernetes node and control-plane communication
+    url: https://kubernetes.io/docs/concepts/architecture/control-plane-node-communication/
+---
+
+import ApiServerConsole from '../../components/k8s/api-server/ApiServerConsole.astro';
+
+<ApiServerConsole published={props.published} reviewed={props.reviewed} />

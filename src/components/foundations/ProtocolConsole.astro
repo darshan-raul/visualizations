@@ -1,0 +1,150 @@
+---
+import TopicConsoleShell from '../TopicConsoleShell.astro';
+import VisualCanvas from './VisualCanvas.astro';
+import type { ProtocolTopic } from './protocol-data';
+
+interface Props { topic: ProtocolTopic; published: Date; reviewed?: Date; }
+const { topic, published, reviewed } = Astro.props;
+const groups = [...new Set(topic.views.map((view) => view.group))];
+const date = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
+const active = topic.views[0];
+const animatedViews: Record<string, string[]> = {
+  networking: ['packet-journey', 'forwarding', 'diagnose'],
+  containers: ['assemble', 'run', 'break-fix'],
+  ssh: ['trust', 'encrypted', 'ssh-diagnose'],
+};
+const stateFields: Record<string, { key: string; value: string }[]> = {
+  networking: [{ key: 'NAME', value: 'app.example.test' }, { key: 'DST', value: 'unknown' }, { key: 'NEXT HOP', value: 'unresolved' }, { key: 'SRC', value: '10.20.10.25:51514' }],
+  containers: [{ key: 'HOST PID', value: '18472' }, { key: 'INSIDE PID', value: '—' }, { key: 'NETNS', value: 'host' }, { key: 'ROOTFS', value: '/' }],
+  ssh: [{ key: 'TCP', value: 'disconnected' }, { key: 'HOST', value: 'unknown' }, { key: 'CRYPTO', value: 'clear' }, { key: 'USER', value: 'unauthenticated' }, { key: 'CHANNEL', value: 'none' }],
+};
+---
+
+<TopicConsoleShell consoleId={topic.id} className="protocol-console" prefix="protocol" collectionHref="/foundations" collectionLabel="Foundations" crumbs={[{ label: 'Library', href: '/' }, { label: 'Foundations', href: '/foundations' }, { label: topic.title }]} kicker={topic.kicker} title={topic.title} summary={topic.summary} referenceLabel={topic.reference} formatLabel={topic.format} dates={`Published ${date.format(published)} · Reviewed ${date.format(reviewed ?? published)}`}>
+  <nav slot="index" class="protocol-index" aria-label={`${topic.title} view index`}>
+    <details class="protocol-index-menu" open><summary><span>EXPLORE VIEWS</span><strong data-protocol-count>01 / {String(topic.views.length).padStart(2, '0')}</strong></summary>
+      {groups.map((group, groupIndex) => <details data-protocol-group={groupIndex} open={groupIndex === 0}><summary><strong>{group}</strong><span>{String(topic.views.filter((view) => view.group === group).length).padStart(2, '0')} views</span></summary><div>{topic.views.filter((view) => view.group === group).map((view) => { const index = topic.views.indexOf(view); return <a href={`#${view.id}`} data-protocol-link={view.id} aria-current={index === 0 ? 'step' : undefined}><span>{String(index + 1).padStart(2, '0')}</span><strong>{view.label}</strong></a>; })}</div></details>)}
+      <a href="#protocol-sources" class="protocol-sources-link">↗ Sources</a>
+    </details>
+  </nav>
+
+  <main slot="main" class="protocol-main">
+    <div class="protocol-ribbon" aria-label="Persistent scenario"><span>LIVE SCENARIO</span><strong>{topic.objectLabel}</strong><span data-protocol-ribbon-state>READY</span></div>
+    <div class="protocol-state-strip" aria-label="Scenario state">{stateFields[topic.id]?.map((field) => <div><span>{field.key}</span><strong data-protocol-field={field.key}>{field.value}</strong></div>)}</div>
+    {topic.views.map((view, index) => <section id={view.id} class="protocol-view" data-protocol-view={view.id} data-protocol-title={view.title} data-protocol-inspector={view.inspector} data-protocol-takeaway={view.takeaway} data-protocol-caveat={view.caveat} data-protocol-failure={view.failure} data-protocol-stage-details={JSON.stringify(view.stages.map((stage) => stage.detail))} aria-labelledby={`${view.id}-title`}>
+      <header><span>{String(index + 1).padStart(2, '0')} / {view.group.toUpperCase()}</span><h2 id={`${view.id}-title`}>{view.title}</h2><p>{view.question}</p></header>
+      <figure class="protocol-canvas">
+        <div class="protocol-canvas-head"><span>{topic.id === 'networking' ? 'PACKET PATH' : topic.id === 'containers' ? 'LINUX PROCESS LAB' : 'SECURE TRANSPORT TRACE'}</span><span data-protocol-stage-status={view.id}>CHECKPOINT 01 / {String(view.stages.length).padStart(2, '0')}</span></div>
+        <VisualCanvas topicId={topic.id} view={view} />
+        <ol class="protocol-step-index" data-protocol-stages={view.id} aria-label="Manual checkpoints">{view.stages.map((stage, stageIndex) => <li data-protocol-stage={stageIndex} class={stageIndex === 0 ? 'is-active' : ''}><button type="button" data-protocol-stage-button={stageIndex} aria-current={stageIndex === 0 ? 'step' : undefined}><span>{String(stageIndex + 1).padStart(2, '0')}</span>{stage.label}</button></li>)}</ol>
+        <div class="protocol-controls" data-protocol-controls={view.id}><button type="button" data-protocol-prev>← Step back</button>{animatedViews[topic.id]?.includes(view.id) && <button type="button" data-protocol-play>▶ Play trace</button>}<button type="button" data-protocol-next>Next step →</button><button type="button" data-protocol-failure aria-pressed="false">{view.failureLabel}</button><p data-protocol-result aria-live="polite">{view.stages[0].label}: {view.stages[0].detail}</p></div>
+        <div class="protocol-evidence"><span>OBSERVABLE EVIDENCE</span><pre data-protocol-evidence>{view.evidence}</pre></div>
+        <figcaption>{view.takeaway}</figcaption>
+      </figure>
+      <div class="protocol-static-copy"><p>{view.inspector}</p><p><strong>Boundary:</strong> {view.caveat}</p><p><strong>Failure state:</strong> {view.failure}</p></div>
+    </section>)}
+  </main>
+
+  <aside slot="inspector" class="protocol-inspector" aria-live="polite"><span>CONTEXT INSPECTOR</span><h2 data-protocol-inspector-title>{active.title}</h2><p data-protocol-inspector-copy>{active.inspector}</p><div class="protocol-inspector-facts"><span>TEACHING OBJECT</span><strong>{topic.objectLabel}</strong><span>ACTIVE STATE</span><strong data-protocol-inspector-state>{active.stages[0].label}</strong></div><div class="protocol-caveat"><span>MODEL BOUNDARY</span><p data-protocol-inspector-caveat>{active.caveat}</p></div></aside>
+
+  <div slot="bottom" class="protocol-bottom">
+    <div class="protocol-takeaway"><span>TAKEAWAY</span><p data-protocol-takeaway>{active.takeaway}</p></div>
+    <nav class="protocol-sequence" aria-label="View sequence"><button type="button" data-protocol-view-prev aria-label="Previous view">←</button><span data-protocol-view-counter>01 / {String(topic.views.length).padStart(2, '0')}</span><button type="button" data-protocol-view-next aria-label="Next view">→</button></nav>
+    <div class="protocol-related"><span>RELATED VISUALS</span>{topic.related.map((item) => <a href={item.href}>{item.label} ↗</a>)}</div>
+    <details class="protocol-source-list" id="protocol-sources"><summary>Sources <span>Primary references</span></summary><ul>{topic.sources.map((source) => <li><a href={source.url}>{source.label} ↗</a></li>)}</ul></details>
+    <div class="protocol-foot"><span>Infra, Illustrated. · Visual deep dives into cloud infrastructure.</span><a href="/foundations">Back to Foundations</a></div>
+  </div>
+</TopicConsoleShell>
+
+<script>
+  document.querySelectorAll<HTMLElement>('.protocol-console').forEach((console) => {
+    const views = [...console.querySelectorAll<HTMLElement>('[data-protocol-view]')];
+    const links = [...console.querySelectorAll<HTMLAnchorElement>('[data-protocol-link]')];
+    const title = console.querySelector<HTMLElement>('[data-protocol-inspector-title]');
+    const copy = console.querySelector<HTMLElement>('[data-protocol-inspector-copy]');
+    const caveat = console.querySelector<HTMLElement>('[data-protocol-inspector-caveat]');
+    const takeaway = console.querySelector<HTMLElement>('[data-protocol-takeaway]');
+    const count = console.querySelector<HTMLElement>('[data-protocol-count]');
+    const counter = console.querySelector<HTMLElement>('[data-protocol-view-counter]');
+    const ribbon = console.querySelector<HTMLElement>('[data-protocol-ribbon-state]');
+    const stopPlayback = new Map<HTMLElement, () => void>();
+    const currentStage = new Map<HTMLElement, number>();
+    let activeView = 0;
+    const selectView = (index: number, updateHash = true) => {
+      activeView = (index + views.length) % views.length;
+      const view = views[activeView];
+      stopPlayback.forEach((stop, item) => { if (item !== view) stop(); });
+      views.forEach((item, i) => item.classList.toggle('is-active', i === activeView));
+      links.forEach((link, i) => { if (i === activeView) link.setAttribute('aria-current', 'step'); else link.removeAttribute('aria-current'); });
+      title && (title.textContent = view.dataset.protocolTitle || '');
+      copy && (copy.textContent = view.dataset.protocolInspector || '');
+      caveat && (caveat.textContent = view.dataset.protocolCaveat || '');
+      takeaway && (takeaway.textContent = view.dataset.protocolTakeaway || '');
+      const label = `${String(activeView + 1).padStart(2, '0')} / ${String(views.length).padStart(2, '0')}`;
+      if (count) count.textContent = label;
+      if (counter) counter.textContent = label;
+      const group = links[activeView]?.closest('details');
+      console.querySelectorAll<HTMLDetailsElement>('[data-protocol-group]').forEach((item) => item.open = item === group);
+      activateStage(view, currentStage.get(view) ?? 0);
+      if (updateHash && location.hash !== `#${view.id}`) history.pushState(null, '', `#${view.id}`);
+    };
+    const activateStage = (view: HTMLElement, stageIndex: number, failed = false) => {
+      currentStage.set(view, stageIndex);
+      const stages = [...view.querySelectorAll<HTMLElement>('[data-protocol-stage]')];
+      stages.forEach((stage, i) => { stage.classList.toggle('is-active', i === stageIndex); stage.classList.toggle('is-failed', failed && i === stageIndex); const button = stage.querySelector('button'); if (i === stageIndex) button?.setAttribute('aria-current','step'); else button?.removeAttribute('aria-current'); });
+      const current = stages[stageIndex];
+      const stageTitle = current?.querySelector('button')?.lastChild?.textContent?.trim() || 'Ready';
+      const detail = view.dataset.protocolStageDetails ? JSON.parse(view.dataset.protocolStageDetails)[stageIndex] : '';
+      const visualNodes = [...view.querySelectorAll<HTMLElement>('[data-visual-node]')];
+      visualNodes.forEach((node) => { const position = Number(node.dataset.visualNode); node.classList.toggle('is-reached', position <= stageIndex); node.classList.toggle('is-blocked', failed && position === stageIndex); });
+      view.querySelector('.protocol-canvas')?.classList.toggle('is-failed', failed);
+      if (!failed) view.querySelector('[data-protocol-failure]')?.setAttribute('aria-pressed', 'false');
+      view.querySelector<HTMLElement>('[data-protocol-result]')!.textContent = failed ? `Blocked at ${stageTitle}: ${view.dataset.protocolFailure || 'Failure state selected.'}` : `${stageTitle}: ${detail}`;
+      view.querySelector<HTMLElement>('[data-protocol-stage-status]')!.textContent = failed ? 'FAILURE STATE' : `CHECKPOINT ${String(stageIndex + 1).padStart(2, '0')} / ${String(stages.length).padStart(2, '0')}`;
+      if (ribbon) ribbon.textContent = failed ? 'BLOCKED' : stageTitle.toUpperCase();
+      const field = (key: string, value: string) => { const target = [...console.querySelectorAll<HTMLElement>('[data-protocol-field]')].find((item) => item.dataset.protocolField === key); if (target) target.textContent = value; };
+      if (console.dataset.consoleId === 'networking') {
+        field('DST', view.id === 'packet-journey' && stageIndex === 0 && failed ? 'unknown' : '203.0.113.80:443');
+        field('NEXT HOP', view.id === 'packet-journey' && stageIndex < 1 ? 'unresolved' : '10.20.10.1');
+        field('SRC', view.id === 'packet-journey' && stageIndex >= 4 ? '198.51.100.25:62001' : '10.20.10.25:51514');
+      } else if (console.dataset.consoleId === 'containers') {
+        field('INSIDE PID', view.id === 'assemble' && stageIndex < 1 ? '—' : '1');
+        field('NETNS', view.id === 'assemble' && stageIndex < 1 ? 'host' : 'container');
+        field('ROOTFS', view.id === 'assemble' && stageIndex < 2 ? '/' : 'image + writable');
+      } else if (console.dataset.consoleId === 'ssh') {
+        field('TCP', view.id === 'trust' && stageIndex < 1 ? 'connecting' : 'established');
+        field('HOST', view.id === 'trust' && stageIndex < 4 ? 'verifying' : failed && view.id === 'trust' ? 'mismatch' : 'verified');
+        field('CRYPTO', view.id === 'trust' || view.id === 'encrypted' && stageIndex < 2 ? 'negotiating' : 'encrypted');
+        field('USER', view.id === 'trust' || view.id === 'encrypted' ? 'unauthenticated' : view.id === 'user-auth' && stageIndex < 3 ? 'authenticating' : 'authenticated');
+        field('CHANNEL', view.id === 'channels' ? stageTitle.toLowerCase() : view.id === 'ssh-forwarding' ? 'forwarding' : 'none');
+      }
+      if (copy && views[activeView] === view) copy.textContent = failed ? view.dataset.protocolFailure || '' : view.dataset.protocolInspector || '';
+      const inspectorState = console.querySelector<HTMLElement>('[data-protocol-inspector-state]');
+      if (inspectorState) inspectorState.textContent = failed ? `Blocked at ${stageTitle}` : stageTitle;
+    };
+    views.forEach((view) => {
+      let stage = 0; let timer: number | undefined;
+      const playButton = view.querySelector<HTMLButtonElement>('[data-protocol-play]');
+      const stop = () => { if (timer) window.clearInterval(timer); timer = undefined; if (playButton) playButton.textContent = '▶ Play trace'; };
+      stopPlayback.set(view, stop);
+      const move = (delta: number) => { const stages = view.querySelectorAll('[data-protocol-stage]'); stage = Math.max(0, Math.min(stages.length - 1, stage + delta)); activateStage(view, stage); };
+      view.querySelector('[data-protocol-prev]')?.addEventListener('click', () => { stop(); move(-1); });
+      view.querySelector('[data-protocol-next]')?.addEventListener('click', () => { stop(); move(1); });
+      playButton?.addEventListener('click', () => { if (timer) { stop(); return; } stage = 0; activateStage(view, stage); if (matchMedia('(prefers-reduced-motion: reduce)').matches) { stage = view.querySelectorAll('[data-protocol-stage]').length - 1; activateStage(view, stage); return; } playButton.textContent = 'Ⅱ Pause trace'; timer = window.setInterval(() => { if (stage >= view.querySelectorAll('[data-protocol-stage]').length - 1) { stop(); return; } move(1); }, 1150); });
+      view.querySelector('[data-protocol-failure]')?.addEventListener('click', (event) => { stop(); const button = event.currentTarget as HTMLButtonElement; const on = button.getAttribute('aria-pressed') !== 'true'; const failureAt: Record<string, number> = { 'packet-journey': 0, encapsulation: 3, cidr: 3, arp: 2, forwarding: 0, tcp: 1, socket: 3, nat: 1, dns: 1, firewall: 0, 'load-balancer': 3, diagnose: 3, assemble: 1, namespaces: 3, cgroups: 2, 'build-cache': 2, image: 3, run: 3, 'container-packet': 3, boundary: 2, 'security-boundary': 3, registry: 1, 'break-fix': 1, 'vm-compare': 1, trust: 4, encrypted: 0, 'user-auth': 3, channels: 3, 'ssh-forwarding': 3, 'credential-tooling': 2, hardening: 2, 'ssh-diagnose': 2 }; if (on) stage = failureAt[view.id] ?? stage; button.setAttribute('aria-pressed', String(on)); activateStage(view, stage, on); });
+      view.querySelectorAll<HTMLButtonElement>('[data-protocol-stage-button]').forEach((button) => button.addEventListener('click', () => { stop(); stage = Number(button.dataset.protocolStageButton); activateStage(view, stage); }));
+    });
+    links.forEach((link, index) => link.addEventListener('click', () => selectView(index, false)));
+    console.querySelector('[data-protocol-view-prev]')?.addEventListener('click', () => selectView(activeView - 1));
+    console.querySelector('[data-protocol-view-next]')?.addEventListener('click', () => selectView(activeView + 1));
+    const fromHash = views.findIndex((view) => view.id === location.hash.slice(1));
+    selectView(fromHash >= 0 ? fromHash : 0, false);
+    const syncHistory = () => {
+      const index = views.findIndex((view) => view.id === location.hash.slice(1));
+      if (index >= 0) selectView(index, false);
+    };
+    window.addEventListener('hashchange', syncHistory);
+    window.addEventListener('popstate', syncHistory);
+    console.classList.add('is-enhanced');
+  });
+</script>

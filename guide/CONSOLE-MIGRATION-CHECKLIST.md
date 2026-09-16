@@ -1,6 +1,6 @@
 # Topic console migration checklist
 
-Status: planning inventory, checked against `src/content/topics/`, `src/pages/`, and `scripts/sync-legacy.mjs` on 2026-09-15. Update this file as each canonical page changes. [SITE-REBUILD-BRIEF.md](../SITE-REBUILD-BRIEF.md#confirmed-topic-console-design-language) is the design authority; this checklist records implementation progress. Do not mark a page complete because its specification or prototype was updated. The Linux foundation added one topic entry and nine static routes on 2026-09-15, bringing the catalogue inventory to 18 topics.
+Status: planning inventory, checked against `src/content/topics/`, `src/pages/`, and `scripts/sync-legacy.mjs` on 2026-09-16. Update this file as each canonical page changes. [SITE-REBUILD-BRIEF.md](../SITE-REBUILD-BRIEF.md#confirmed-topic-console-design-language) is the design authority; this checklist records implementation progress. Do not mark a page complete because its specification or prototype was updated. Networking, Containers, and SSH now have canonical Foundations console entries.
 
 ## Locked contract and scope
 
@@ -30,6 +30,15 @@ The pilots demonstrate the accepted language; neither is marked fully aligned un
 | Topic and routes | Current state | Remaining checks |
 | --- | --- | --- |
 | Linux Foundations — `/linux` hub plus `/linux/identity`, `/linux/storage`, `/linux/processes`, `/linux/networking`, `/linux/packages`, `/linux/shell`, `/linux/security`, `/linux/troubleshooting` | One canonical Foundations MDX topic, eight dedicated pillar consoles, grouped indexes, deterministic command evidence, meaningful failure states, and a navigation/interaction prototype. | [ ] Complete final browser QA at 320 px and 200% zoom, keyboard/touch, reduced motion, no JavaScript, all direct fragments, and back/forward; then record the result in the [Linux spec](topics/linux-foundation/linux-foundation-visual-spec.md). |
+| Networking — `/networking` | Canonical [MDX console](../src/content/topics/networking.mdx): 12 grouped views with packet, envelope, lookup, route, transport, edge, and diagnosis forms. [Spec](topics/networking/networking-visual-spec.md) · [prototype](topics/networking/networking-visual-prototype.html). | [ ] Complete browser QA at 320 px and 200% zoom, keyboard/touch, reduced motion, no JavaScript, direct fragments, and history. Static check/build pass; preview socket and Firefox screenshot were unavailable in this workspace on 2026-09-16. |
+| Containers — `/containers` | Canonical [MDX console](../src/content/topics/containers.mdx): 12 grouped views with host-kernel, namespace, resource, layer, lifecycle, network, security, and diagnosis forms. [Spec](topics/containers/containers-visual-spec.md) · [prototype](topics/containers/containers-visual-prototype.html). | [ ] Complete the same browser QA. Static check/build pass; preview socket and Firefox screenshot were unavailable in this workspace on 2026-09-16. |
+| SSH — `/ssh` | Canonical [MDX console](../src/content/topics/ssh.mdx): eight grouped views with transport, host proof, NEWKEYS, user authentication, channels, forwarding, hardening, and diagnosis forms. [Spec](topics/ssh/ssh-visual-spec.md) · [prototype](topics/ssh/ssh-visual-prototype.html). | [ ] Complete the same browser QA. Static check/build pass; preview socket and Firefox screenshot were unavailable in this workspace on 2026-09-16. |
+
+## New Kubernetes console
+
+| Topic and route | Current state | Remaining checks |
+| --- | --- | --- |
+| Kubernetes API Server — `/kubernetes-api-server` | Canonical [MDX console](../src/content/topics/kubernetes-api-server.mdx): 11 grouped views on one stable cluster map, 23 selectable flows, 11 request-gate presets, 11 failure presets, actor filters, API internals, HA, control/data-plane separation and a no-JavaScript reading path. [Spec](topics/kubernetes-api-server/kubernetes-api-server-visual-spec.md) · [prototype](topics/kubernetes-api-server/kubernetes-api-server-visual-prototype.html). `npm run check`, `npm run build`, `npm run check:graph`, `npm run check:links`, count/uniqueness assertions and self-containment assertions passed on 2026-09-16. | [ ] Complete browser QA at 320 px and 200% zoom, desktop, keyboard/touch, reduced motion, no JavaScript, direct fragments, flow query state and Back/Forward. Firefox headless crashed before rendering the self-contained prototype in this workspace on 2026-09-16, so visual QA is recorded as pending. |
 
 ## Topic queue
 

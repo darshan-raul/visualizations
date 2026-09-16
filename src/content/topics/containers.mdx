@@ -1,0 +1,29 @@
+---
+title: Containers, Illustrated
+summary: Follow one Linux process as a runtime gives it an isolated view, resource controls, filesystem layers, and a lifecycle.
+slug: containers
+collection: foundations
+tags: [Containers, Linux, Docker, Security, Networking]
+technologies: [Docker, OCI Runtime, Linux namespaces, cgroup v2]
+format: deep-dive
+difficulty: foundational
+published: 2026-09-16
+reviewed: 2026-09-16
+versionScope: Generic Linux container model; runtime-specific details are labelled in the visual
+legacyPath: /containers
+featured: true
+state: reviewed
+related: [linux, pod-networking-cni, networking]
+sources:
+  - label: Docker container concepts
+    url: https://docs.docker.com/get-started/docker-concepts/the-basics/what-is-a-container/
+  - label: OCI Runtime Specification
+    url: https://github.com/opencontainers/runtime-spec
+  - label: Linux cgroup v2 documentation
+    url: https://docs.kernel.org/admin-guide/cgroup-v2.html
+---
+
+import ProtocolConsole from '../../components/foundations/ProtocolConsole.astro';
+import { protocolTopics } from '../../components/foundations/protocol-data';
+
+<ProtocolConsole topic={protocolTopics.containers} published={props.published} reviewed={props.reviewed} />

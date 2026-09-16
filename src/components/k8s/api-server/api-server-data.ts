@@ -1,0 +1,320 @@
+export type ActorId = 'client' | 'api' | 'etcd' | 'controller' | 'scheduler' | 'node-a' | 'node-b' | 'runtime' | 'pod' | 'proxy' | 'csi' | 'cloud' | 'provider' | 'operator' | 'webhook' | 'metrics' | 'aggregated' | 'endpoint';
+export type EdgeKind = 'api' | 'watch' | 'status' | 'external' | 'local' | 'data' | 'store' | 'special';
+export type Tier = 'foundation' | 'practitioner' | 'internals';
+export interface Actor { id: ActorId; label: string; short: string; role: string; reads: string; watches: string; writes: string; why: string; external?: string; tier: Tier; }
+export interface Step { label: string; from: ActorId; to: ActorId; kind: EdgeKind; operation: string; object: string; detail: string; state: string; desired?: number; observed?: number; yaml?: string; }
+export interface Flow { id: string; title: string; group: Tier; question: string; takeaway: string; caveat: string; sources: string[]; steps: Step[]; }
+export interface Fault { id: string; label: string; actor: ActorId; stops: string; continues: string; detector: string; object: string; reactor: string; traffic: string; recovery: string; sources: string[]; steps: Step[]; }
+export interface View { id: string; group: string; label: string; title: string; question: string; inspector: string; takeaway: string; caveat: string; sources: string[]; }
+
+const K = 'https://kubernetes.io/docs/';
+export const sourceLinks = [
+  { label: 'Cluster components', url: `${K}concepts/overview/components/` },
+  { label: 'Cluster architecture and API replicas', url: `${K}concepts/architecture/` },
+  { label: 'Node and control-plane communication', url: `${K}concepts/architecture/control-plane-node-communication/` },
+  { label: 'API concepts, LIST/WATCH and subresources', url: `${K}reference/using-api/api-concepts` },
+  { label: 'Authentication', url: `${K}reference/access-authn-authz/authentication/` },
+  { label: 'Authorization', url: `${K}reference/access-authn-authz/authorization/` },
+  { label: 'Admission controllers and phases', url: `${K}reference/access-authn-authz/admission-controllers/` },
+  { label: 'Deployments and ReplicaSets', url: `${K}concepts/workloads/controllers/deployment/` },
+  { label: 'Nodes and heartbeats', url: `${K}concepts/architecture/nodes/` },
+  { label: 'Leases', url: `${K}concepts/architecture/leases/` },
+  { label: 'EndpointSlices', url: `${K}concepts/services-networking/endpoint-slices/` },
+  { label: 'Service proxies and dataplane', url: `${K}concepts/services-networking/` },
+  { label: 'Horizontal Pod Autoscaling', url: `${K}concepts/workloads/autoscaling/horizontal-pod-autoscale/` },
+  { label: 'CSI external provisioner', url: 'https://kubernetes-csi.github.io/docs/external-provisioner.html' },
+  { label: 'StorageClass binding', url: `${K}concepts/storage/storage-classes/` },
+  { label: 'ServiceAccounts', url: `${K}concepts/security/service-accounts/` },
+  { label: 'API aggregation', url: `${K}concepts/extend-kubernetes/api-extension/apiserver-aggregation/` },
+  { label: 'API Priority and Fairness', url: `${K}concepts/cluster-administration/flow-control/` },
+  { label: 'Auditing', url: `${K}tasks/debug/debug-cluster/audit/` },
+];
+
+export const actors: Actor[] = [
+  { id: 'client', label: 'Human / automation clients', short: 'kubectl · CI · GitOps', role: 'Clients submit intent and read shared state through the Kubernetes API. kubectl is one client among many.', reads: 'Deployments, Pods, Service status', watches: 'Optional client watches', writes: 'Deployment and other desired objects', why: 'Declare, inspect or automate cluster state.', tier: 'foundation' },
+  { id: 'api', label: 'kube-apiserver', short: 'Kubernetes API', role: 'Serves the versioned Kubernetes API and mediates access to shared cluster state.', reads: 'Backing state and serving caches', watches: 'Storage changes for serving API watches', writes: 'Validated accepted objects to backing storage', why: 'Provide one authenticated, authorized, policy-aware state surface.', tier: 'foundation' },
+  { id: 'etcd', label: 'etcd', short: 'durable memory', role: 'Consistent durable backing store for Kubernetes API state; it is not the public client API.', reads: 'Committed cluster state', watches: 'Internal storage changes', writes: 'Durable API object updates', why: 'Remember accepted desired and observed state.', tier: 'foundation' },
+  { id: 'controller', label: 'Controller manager', short: 'independent loops', role: 'Hosts several reconcilers, including Deployment, ReplicaSet, Node and EndpointSlice controllers.', reads: 'Deployments, ReplicaSets, Pods, Nodes and Services', watches: 'Relevant API objects through client caches', writes: 'ReplicaSets, Pods, EndpointSlices and status', why: 'Move observed state toward desired state.', tier: 'foundation' },
+  { id: 'scheduler', label: 'Scheduler', short: 'placement', role: 'Selects suitable Nodes for unscheduled Pods and records binding through the API.', reads: 'Candidate Pods, Nodes, resources and constraints', watches: 'Unscheduled Pods and scheduling inputs', writes: 'Pod binding / nodeName through API', why: 'Choose placement; it does not start containers.', tier: 'foundation' },
+  { id: 'node-a', label: 'kubelet · worker-a', short: 'Node execution', role: 'Observes assigned PodSpecs, drives node-local runtime and reports Pod/Node state.', reads: 'Assigned Pods, referenced ConfigMaps/Secrets', watches: 'Pods assigned to worker-a', writes: 'Pod status, Node status, Node Lease', why: 'Make assigned Pod state real on worker-a.', tier: 'foundation' },
+  { id: 'node-b', label: 'kubelet · worker-b', short: 'Node execution', role: 'Observes assigned PodSpecs and reports node-local reality.', reads: 'Assigned Pods', watches: 'Pods assigned to worker-b', writes: 'Pod status, Node status, Node Lease', why: 'Run the assigned workload within worker-b.', tier: 'foundation' },
+  { id: 'runtime', label: 'Container runtime', short: 'CRI execution', role: 'Runs containers on a Node after kubelet invokes the Container Runtime Interface.', reads: 'Node-local runtime configuration', watches: 'Node-local container events', writes: 'Node-local container state', why: 'Execute containers, outside the shared Kubernetes API object model.', tier: 'foundation' },
+  { id: 'pod', label: 'web Pods', short: 'application', role: 'Run the web application; ordinary HTTP traffic reaches Pods through the workload dataplane.', reads: 'Mounted/projected application data', watches: 'Application traffic', writes: 'Application responses', why: 'Serve the workload, not coordinate the whole cluster.', tier: 'foundation' },
+  { id: 'proxy', label: 'Service proxy', short: 'kube-proxy / alternative', role: 'Watches Service and EndpointSlice state and configures forwarding on Nodes in clusters that use it.', reads: 'Services and EndpointSlices', watches: 'Service and EndpointSlice changes', writes: 'Node-local forwarding rules', why: 'Make Service traffic reach eligible backends.', tier: 'practitioner' },
+  { id: 'csi', label: 'CSI controller / node plugin', short: 'storage integration', role: 'Controller-side CSI components react to PVCs; node-side plugin helps kubelet stage and publish volumes.', reads: 'PVC, PV, StorageClass, attachment objects', watches: 'Relevant PVC and volume changes', writes: 'PV and attachment-related API objects', why: 'Translate desired storage into provider and node mount operations.', external: 'CSI CreateVolume / storage provider API', tier: 'practitioner' },
+  { id: 'cloud', label: 'Cloud controller', short: 'infrastructure integration', role: 'Watches Kubernetes objects such as Services and calls a provider API for infrastructure.', reads: 'Services and Nodes', watches: 'Provider-relevant API objects', writes: 'Service/Node status', why: 'Reconcile Kubernetes intent with external infrastructure.', external: 'Cloud provider API', tier: 'practitioner' },
+  { id: 'provider', label: 'External provider', short: 'cloud / storage API', role: 'Receives direct calls from integrations; it is outside the Kubernetes object-state exchange.', reads: 'Provider requests', watches: 'Provider state', writes: 'Load balancer or volume resources', why: 'Supply external infrastructure required by the workload.', tier: 'practitioner' },
+  { id: 'operator', label: 'Operator / custom controller', short: 'same loop pattern', role: 'Watches custom resources and reconciles related Kubernetes objects through the API.', reads: 'DatabaseCluster and dependent objects', watches: 'Custom-resource changes', writes: 'StatefulSet, Service, PVC and status', why: 'Extend Kubernetes with another observer/compare/act loop.', external: 'Optional provider/database API', tier: 'internals' },
+  { id: 'webhook', label: 'Admission webhook', short: 'API-initiated call', role: 'Receives an AdmissionReview from kube-apiserver during an applicable request.', reads: 'AdmissionReview input', watches: 'Not a normal controller watch in this flow', writes: 'Allow, deny or mutation patch response', why: 'Extend request-time policy; not a direct client of etcd.', tier: 'internals' },
+  { id: 'metrics', label: 'Metrics source / server', short: 'metrics.k8s.io', role: 'Provides resource metrics that HPA can use through an aggregated API.', reads: 'Resource metrics', watches: 'Metrics collection', writes: 'Metrics API responses', why: 'Supply observed load without creating Pods directly.', tier: 'practitioner' },
+  { id: 'aggregated', label: 'Aggregated API server', short: 'extension API', role: 'Implements an API group registered through APIService; kube-apiserver proxies its requests.', reads: 'Extension API requests', watches: 'Extension resource behavior', writes: 'Extension responses', why: 'Extend the API surface without implementing every group in core kube-apiserver.', tier: 'internals' },
+  { id: 'endpoint', label: 'Control-plane endpoint', short: 'LB / VIP', role: 'Stable client entry point for multiple concurrently serving API server replicas.', reads: 'Replica health', watches: 'Endpoint health', writes: 'Routes client requests to serving replicas', why: 'Avoid one API replica becoming a client endpoint dependency.', tier: 'internals' },
+];
+
+export const views: View[] = [
+  { id: 'exchange', group: 'The exchange', label: 'Who talks to the API?', title: 'One shared exchange, many independent actors', question: 'Who actually talks to kube-apiserver?', inspector: 'kubectl is one client. Controllers, scheduler, kubelets and extensions also use the Kubernetes API to observe or change cluster state. etcd sits behind the API server as durable backing state.', takeaway: 'Kubernetes components coordinate through shared API objects; the API server is the state gateway, not a monolithic decision engine.', caveat: 'Special API-server-initiated and external-provider calls exist; ordinary application traffic is a different path.', sources: [sourceLinks[0].url, sourceLinks[2].url] },
+  { id: 'request-gates', group: 'The exchange', label: 'Request gates', title: 'A request must pass the right gates before state changes', question: 'Where can an API request stop before an object is stored?', inspector: 'Authentication identifies the caller. Authorization evaluates this operation. Applicable admission can mutate or reject an object-changing request before persistence.', takeaway: 'A denied request never reaches later gates or becomes shared API state.', caveat: 'The rail is conceptual; ordinary GET/LIST/WATCH bypass admission.', sources: [sourceLinks[4].url, sourceLinks[5].url, sourceLinks[6].url] },
+  { id: 'watch', group: 'The exchange', label: 'Watch and caches', title: 'Controllers follow API changes instead of hammering etcd', question: 'How does a controller learn that a Deployment changed?', inspector: 'LIST establishes initial state and a resourceVersion. WATCH streams later changes. Client informers and server caches mean a logical decision need not fetch every object directly from etcd.', takeaway: 'LIST gives a starting point; WATCH and caches make independent reconcilers reactive.', caveat: 'A too-old watch can require a new LIST after 410 Gone.', sources: [sourceLinks[3].url] },
+  { id: 'spec-status', group: 'Reconciliation', label: 'Spec and status', title: 'Intent and reality are separate fields', question: 'Why can desired replicas be three when only one Pod is ready?', inspector: 'A client or controller writes desired spec. Kubelet and controllers report observed status. The gap is what reconciliation loops work to close.', takeaway: 'Spec describes desired state; status reports observation; convergence is a process.', caveat: 'Running phase and Ready condition are distinct.', sources: [sourceLinks[7].url] },
+  { id: 'flow-lab', group: 'Reconciliation', label: 'Play a flow', title: 'Follow one conversation across the same cluster map', question: 'What happens after web is accepted through the API?', inspector: 'Each selected stage names its actor, API operation and object change. Unrelated actors stay in place and muted.', takeaway: 'No single component builds a Deployment end to end; independent loops act through API state.', caveat: 'Stage timing and exact workload readiness are illustrative.', sources: [sourceLinks[0].url, sourceLinks[7].url] },
+  { id: 'conversations', group: 'Reconciliation', label: 'Conversations', title: 'Inspect each actor’s scope and API relationship', question: 'What does this component read, watch, write and why?', inspector: 'Select an actor or relationship. Controllers, scheduler and kubelets have different responsibility boundaries even when all use the same API.', takeaway: 'Controllers reconcile objects, scheduler records placement, and kubelets execute assigned PodSpecs on Nodes.', caveat: 'Read/watch/write lists are representative, not complete API-client call inventories.', sources: [sourceLinks[0].url, sourceLinks[2].url] },
+  { id: 'control-data', group: 'Boundaries', label: 'Control or data?', title: 'The API does not carry ordinary application requests', question: 'Does HTTP traffic to web pass through kube-apiserver?', inspector: 'The EndpointSlice controller writes endpoint state through the API. A node service dataplane uses that state to forward application packets to Pods.', takeaway: 'The API coordinates Service state; node and workload networking carry application traffic.', caveat: 'kube-proxy is optional when another implementation provides Service forwarding.', sources: [sourceLinks[10].url, sourceLinks[11].url] },
+  { id: 'failures', group: 'Boundaries', label: 'Fail something', title: 'Break one dependency and follow what changes', question: 'Which work stops first, and which work keeps running?', inspector: 'A fault affects API availability, reconciliation, node execution or application traffic differently. The first detector and changed API object tell you where the loop stalled.', takeaway: 'Separate state access, control loops, execution and dataplane traffic during a failure.', caveat: 'Recovery and Node eviction timing depend on cluster configuration.', sources: [sourceLinks[8].url, sourceLinks[9].url] },
+  { id: 'ha-state', group: 'Boundaries', label: 'HA and durable state', title: 'API replicas can serve concurrently', question: 'What happens if one API server replica fails?', inspector: 'A healthy control-plane endpoint can route around one failed replica. etcd and endpoint availability remain shared dependencies. Scheduler and controller-manager leadership use separate Lease coordination.', takeaway: 'API serving can be replicated without one active API leader; the backing dependencies still matter.', caveat: 'Three API replicas do not imply tolerance of any two control-plane failures.', sources: [sourceLinks[1].url, sourceLinks[9].url] },
+  { id: 'responsibilities', group: 'Internals', label: 'API responsibilities', title: 'The API boundary contains policy, serving and extension layers', question: 'What else does kube-apiserver do besides accept kubectl requests?', inspector: 'Select a capability to see where API processing ends and a storage, webhook, kubelet or aggregated-server call begins.', takeaway: 'A stable versioned API surface lets many clients coordinate without sharing implementation internals.', caveat: 'Request routing, APF and caches are shown conceptually, not as a literal fixed handler stack.', sources: [sourceLinks[3].url, sourceLinks[16].url, sourceLinks[17].url] },
+  { id: 'one-picture', group: 'Internals', label: 'One picture', title: 'Kubernetes is many loops around one state gateway', question: 'Why not directly connect every component to every other one?', inspector: 'A common object model, policy boundary, watch semantics and durable backing state let independent actors converge without a monolithic orchestrator.', takeaway: 'Kubernetes is a distributed system of reconciliation loops centered around a shared, versioned API.', caveat: 'This is a state-coordination model, not a claim about every network call or runtime mechanism.', sources: [sourceLinks[1].url, sourceLinks[0].url] },
+];
+
+const s = (label: string, from: ActorId, to: ActorId, kind: EdgeKind, operation: string, object: string, detail: string, state: string, desired?: number, observed?: number, yaml?: string): Step => ({ label, from, to, kind, operation, object, detail, state, desired, observed, yaml });
+const flow = (id: string, title: string, group: Tier, question: string, takeaway: string, caveat: string, sources: string[], steps: Step[]): Flow => ({ id, title, group, question, takeaway, caveat, sources, steps });
+
+export const flows: Flow[] = [
+  flow('deployment', 'Create a Deployment', 'foundation', 'Does applying replicas: 3 mean three containers exist already?', 'Multiple reconcilers, scheduler and kubelets turn one stored intent into running Pods.', 'This example assumes requests are allowed and Pods become Ready; timing is illustrative.', [sourceLinks[7].url, sourceLinks[3].url], [
+    s('Apply', 'client', 'api', 'api', 'CREATE Deployment', 'Deployment/demo/web', 'Alice sends desired replicas: 3 through the Kubernetes API.', 'request received', 3, 0, 'kind: Deployment\nmetadata: {name: web, namespace: demo}\nspec: {replicas: 3}'),
+    s('Authenticate', 'client', 'api', 'api', 'AUTHENTICATE', 'alice', 'The API server establishes Alice’s identity.', 'identity established', 3, 0),
+    s('Authorize', 'client', 'api', 'api', 'AUTHORIZE create', 'deployments.apps/demo', 'The authorizer allows this specific create operation.', 'permission allowed', 3, 0),
+    s('Admission', 'api', 'webhook', 'special', 'ADMISSION if matched', 'Deployment/demo/web', 'Applicable mutating then validating admission runs before persistence.', 'policy allowed', 3, 0),
+    s('Store desired state', 'api', 'etcd', 'store', 'PERSIST', 'Deployment/demo/web', 'The accepted Deployment spec is durable. No web container is implied yet.', 'Deployment stored', 3, 0),
+    s('Observe Deployment', 'api', 'controller', 'watch', 'WATCH Deployments', 'Deployment/demo/web', 'The Deployment controller observes the new desired object.', 'Deployment observed', 3, 0),
+    s('Create ReplicaSet', 'controller', 'api', 'api', 'CREATE ReplicaSet', 'ReplicaSet/web-rs', 'Deployment reconciliation creates a ReplicaSet for the Pod template.', 'ReplicaSet stored', 3, 0),
+    s('Compare replicas', 'api', 'controller', 'watch', 'WATCH ReplicaSets/Pods', 'ReplicaSet/web-rs', 'ReplicaSet wants three Pods and currently sees none.', 'difference +3', 3, 0),
+    s('Create Pods', 'controller', 'api', 'api', 'CREATE Pods', 'web-a · web-b · web-c', 'ReplicaSet reconciliation creates three Pod API objects.', 'Pods Pending', 3, 0, 'kind: Pod\nmetadata: {name: web-a}\nspec: {nodeName: null}'),
+    s('Select Nodes', 'api', 'scheduler', 'watch', 'WATCH unscheduled Pods', 'web-a · web-b · web-c', 'Scheduler filters and scores candidate Nodes; it does not start containers.', 'placement chosen', 3, 0),
+    s('Bind Pods', 'scheduler', 'api', 'api', 'BIND Pods', 'web-a → worker-a', 'Scheduler records its placement decision through the API.', 'spec.nodeName set', 3, 0, 'spec:\n  nodeName: worker-a'),
+    s('Execute on Node', 'api', 'node-a', 'watch', 'WATCH assigned Pods', 'Pod/web-a', 'Kubelet observes the Pod assigned to worker-a, then invokes node-local runtime work.', 'PodSpec observed', 3, 0),
+    s('Start containers', 'node-a', 'runtime', 'local', 'CRI create/start', 'web containers', 'The runtime starts containers under kubelet’s node-local reconciliation.', 'containers starting', 3, 1),
+    s('Report and converge', 'node-a', 'api', 'status', 'PATCH Pod/status', 'web-a · web-b · web-c', 'Kubelets report Pod conditions; controllers see observed availability reach three in this fixture.', '3 desired / 3 ready', 3, 3, 'status:\n  phase: Running\n  conditions: [{type: Ready, status: "True"}]'),
+  ]),
+  flow('scheduling', 'Schedule a Pod', 'foundation', 'Does scheduler tell a kubelet to start the Pod?', 'Scheduler records binding; kubelet separately observes the assigned Pod.', 'Real scheduling also considers capacity, taints, affinity, topology and storage.', [sourceLinks[0].url], [
+    s('Pending Pod', 'controller', 'api', 'api', 'CREATE Pod', 'web-a', 'Pod exists with no nodeName.', 'Pending / unscheduled', 3, 0, 'spec:\n  nodeName: null'),
+    s('Observe', 'api', 'scheduler', 'watch', 'WATCH Pods/Nodes', 'web-a', 'Scheduler learns about unscheduled Pods and cached Node inputs.', 'candidate observed', 3, 0),
+    s('Filter and score', 'scheduler', 'scheduler', 'local', 'FILTER / SCORE', 'worker-a · worker-b', 'Scheduler chooses a suitable Node from scheduling inputs.', 'worker-a chosen', 3, 0),
+    s('Bind', 'scheduler', 'api', 'api', 'BIND Pod', 'web-a', 'Placement is recorded via the Kubernetes API.', 'nodeName=worker-a', 3, 0, 'spec:\n  nodeName: worker-a'),
+    s('Kubelet observes', 'api', 'node-a', 'watch', 'WATCH assigned Pod', 'web-a', 'The kubelet learns its assigned Pod; scheduler did not call it.', 'execution can begin', 3, 0),
+  ]),
+  flow('pod-execution', 'Start a Pod on a Node', 'foundation', 'Who turns an assigned PodSpec into containers?', 'Kubelet drives node-local reality after observing assigned API state.', 'CNI, CSI, Secrets and probes can add steps; this is the core route.', [sourceLinks[0].url, sourceLinks[2].url], [
+    s('Pod assigned', 'scheduler', 'api', 'api', 'BIND Pod', 'web-a/worker-a', 'The API records spec.nodeName.', 'assigned', 3, 0),
+    s('Kubelet watch', 'api', 'node-a', 'watch', 'WATCH Pod', 'web-a', 'Kubelet observes the Pod assigned to its Node.', 'PodSpec visible', 3, 0),
+    s('Prepare Node', 'node-a', 'node-a', 'local', 'SET UP network/volumes', 'web-a', 'Kubelet coordinates required node-local preparations.', 'sandbox preparing', 3, 0),
+    s('CRI execution', 'node-a', 'runtime', 'local', 'CRI StartContainer', 'web container', 'Kubelet asks the local runtime to start containers.', 'container started', 3, 1),
+    s('Report', 'node-a', 'api', 'status', 'PATCH Pod/status', 'web-a', 'Observed container state returns through the API.', 'status updated', 3, 1),
+  ]),
+  flow('pod-status', 'Pod Status Reporting', 'foundation', 'How does actual node state get back to controllers?', 'Kubelet reports Pod status through API; controllers observe it and compare with intent.', 'Running phase is distinct from readiness.', [sourceLinks[0].url, sourceLinks[3].url], [
+    s('Runtime observes', 'runtime', 'node-a', 'local', 'CONTAINER state', 'web-a', 'The runtime has started the container.', 'container running', 3, 0),
+    s('Kubelet checks', 'node-a', 'node-a', 'local', 'PROBE / OBSERVE', 'web-a', 'Kubelet observes phase and readiness conditions.', 'Ready=True', 3, 1),
+    s('Status update', 'node-a', 'api', 'status', 'PATCH Pod/status', 'web-a', 'Pod status is updated through the API.', 'Running / Ready', 3, 1, 'status:\n  phase: Running\n  conditions: [{type: Ready, status: "True"}]'),
+    s('Controller reacts', 'api', 'controller', 'watch', 'WATCH Pod/status', 'web-a', 'Controller cache observes the new actual state.', 'availability recalculated', 3, 1),
+  ]),
+  flow('node-join', 'Node Joins Cluster', 'practitioner', 'How does a new worker become visible to scheduler?', 'Kubelet registers a Node API object; control-plane components observe it.', 'Bootstrap and authorization steps vary by cluster.', [sourceLinks[8].url], [
+    s('New worker', 'node-b', 'node-b', 'local', 'START kubelet', 'worker-b', 'Kubelet starts with valid client credentials.', 'joining'),
+    s('Register Node', 'node-b', 'api', 'api', 'CREATE Node', 'Node/worker-b', 'Kubelet registers its Node through the API.', 'Node object created'),
+    s('Report capacity', 'node-b', 'api', 'status', 'PATCH Node/status', 'worker-b', 'Status includes addresses, capacity and conditions.', 'capacity visible'),
+    s('Observe Node', 'api', 'scheduler', 'watch', 'WATCH Nodes', 'worker-b', 'Scheduler and controllers can use the new Node state.', 'candidate visible'),
+  ]),
+  flow('heartbeat', 'Node Heartbeat', 'practitioner', 'What tells the control plane a Node is still present?', 'Node status and lightweight Lease renewals are related heartbeat signals.', 'Renewal timestamps shown are illustrative, not a universal cadence.', [sourceLinks[8].url, sourceLinks[9].url], [
+    s('Node status', 'node-a', 'api', 'status', 'PATCH Node/status', 'worker-a', 'Kubelet periodically reports Node conditions.', 'Ready=True'),
+    s('Lease renewal', 'node-a', 'api', 'status', 'UPDATE Lease', 'kube-node-lease/worker-a', 'Kubelet updates Lease spec.renewTime.', 'renewTime=12:00:00'),
+    s('Later renewal', 'node-a', 'api', 'status', 'UPDATE Lease', 'kube-node-lease/worker-a', 'A later renewal keeps the liveness signal fresh.', 'renewTime=12:00:10'),
+    s('Lifecycle observes', 'api', 'controller', 'watch', 'WATCH Node/Lease', 'worker-a', 'Node lifecycle logic can compare Node condition and Lease freshness.', 'Node considered healthy'),
+  ]),
+  flow('node-failure', 'Node Failure', 'practitioner', 'Does one missed heartbeat instantly recreate every Pod?', 'Node lifecycle and workload reconcilers react after detecting degraded Node state; replacement is conditional and takes time.', 'Taint, eviction and replacement behavior depend on configured timings and workload ownership.', [sourceLinks[8].url, sourceLinks[9].url], [
+    s('Power loss', 'node-b', 'node-b', 'local', 'NODE unavailable', 'worker-b', 'Kubelet on worker-b stops renewing its Lease.', 'heartbeat missing', 3, 3),
+    s('Lease ages', 'api', 'controller', 'watch', 'WATCH Lease', 'worker-b', 'Control-plane logic notices sustained absence rather than one missed renewal.', 'lifecycle evaluating', 3, 3),
+    s('Condition/taint', 'controller', 'api', 'status', 'UPDATE Node/status', 'worker-b', 'Ready may become Unknown or False; lifecycle handling can taint Node.', 'Node not healthy', 3, 2),
+    s('Workload gap', 'api', 'controller', 'watch', 'WATCH Pods/ReplicaSet', 'web-b', 'Affected Pods and desired replica count create a reconciliation gap.', '2 ready / 3 desired', 3, 2),
+    s('Replacement', 'controller', 'api', 'api', 'CREATE replacement Pod', 'web-d', 'A managed workload may get a replacement after lifecycle handling.', 'replacement Pending', 3, 2),
+    s('Healthy placement', 'scheduler', 'api', 'api', 'BIND Pod', 'web-d/worker-a', 'Scheduler selects a healthy Node for replacement.', 'new Pod assigned', 3, 2),
+  ]),
+  flow('endpointslice', 'Service + EndpointSlice', 'practitioner', 'Who turns selected Pods into Service backends?', 'EndpointSlice controller writes backend state through API; dataplane consumers use it later.', 'Selectors and endpoint readiness matter; slices can be multiple and endpoints may temporarily duplicate.', [sourceLinks[10].url], [
+    s('Declare Service', 'client', 'api', 'api', 'CREATE Service', 'Service/demo/web', 'Selector app=web and port 80 enter API state.', 'Service stored'),
+    s('Observe members', 'api', 'controller', 'watch', 'WATCH Service/Pods', 'web-a · web-b · web-c', 'EndpointSlice controller observes matching Pods and conditions.', 'eligible endpoints found'),
+    s('Write slice', 'controller', 'api', 'api', 'CREATE EndpointSlice', 'web slice', 'Controller records eligible backend addresses.', '10.1.0.5 · .8 · .9'),
+    s('Proxy observes', 'api', 'proxy', 'watch', 'WATCH EndpointSlices', 'web slice', 'A Service forwarding implementation sees updated backends.', 'dataplane can update'),
+  ]),
+  flow('service-proxy', 'Service Proxy Programming', 'practitioner', 'How do node forwarding rules learn Service destinations?', 'A Service proxy watches API objects and configures node dataplane rules; implementations can differ.', 'kube-proxy is optional when another implementation replaces it.', [sourceLinks[11].url, sourceLinks[10].url], [
+    s('Watch Service', 'api', 'proxy', 'watch', 'WATCH Services', 'Service/demo/web', 'Service proxy observes virtual Service configuration.', 'virtual address known'),
+    s('Watch backends', 'api', 'proxy', 'watch', 'WATCH EndpointSlices', 'web slice', 'It learns currently eligible backend addresses.', 'backend set known'),
+    s('Program Node', 'proxy', 'node-a', 'local', 'SYNC forwarding rules', 'worker-a dataplane', 'iptables, nftables or a replacement implementation configures forwarding.', 'rules updated'),
+    s('Serve traffic', 'client', 'pod', 'data', 'HTTP via Service', 'web-a', 'Application packet takes a workload path, not an API request path.', 'application response'),
+  ]),
+  flow('configuration', 'ConfigMap / Secret', 'practitioner', 'How does referenced application data reach a container?', 'Kubelet obtains referenced API data and materializes it for its assigned Pod.', 'Environment values are captured at container start; projected/mounted data update behaviour depends on kubelet and volume type.', [sourceLinks[3].url], [
+    s('Pod references', 'client', 'api', 'api', 'CREATE Pod', 'web-a', 'PodSpec references ConfigMap web-config and Secret web-creds.', 'references stored'),
+    s('Kubelet reads', 'node-a', 'api', 'api', 'GET ConfigMap/Secret', 'web-config · web-creds', 'Kubelet obtains required API objects.', 'data available on Node'),
+    s('Materialize', 'node-a', 'node-a', 'local', 'PROJECT / SET ENV', 'web-a', 'Kubelet prepares mounted data or environment setup.', 'Pod inputs ready'),
+    s('Container starts', 'node-a', 'runtime', 'local', 'CRI StartContainer', 'web-a', 'Runtime starts the app with prepared inputs.', 'running'),
+  ]),
+  flow('serviceaccount', 'ServiceAccount API Call', 'practitioner', 'Can a Pod itself be a Kubernetes API client?', 'A workload can send an authenticated API request with a projected ServiceAccount token.', 'A token authenticates identity; RBAC still controls each operation.', [sourceLinks[15].url, sourceLinks[2].url], [
+    s('Projected identity', 'node-a', 'pod', 'local', 'PROJECT token', 'ServiceAccount/web-reader', 'Kubelet makes a bound token available to the Pod.', 'token available'),
+    s('Call API', 'pod', 'api', 'api', 'GET Pods', 'demo Pods', 'Pod client sends bearer token to the Kubernetes API Service.', 'request received'),
+    s('Authenticate', 'api', 'api', 'local', 'AUTHENTICATE token', 'web-reader', 'API server establishes ServiceAccount identity.', 'identity established'),
+    s('Authorize', 'api', 'api', 'local', 'AUTHORIZE get', 'pods/demo', 'RBAC or configured authorizer checks this operation.', 'allowed or 403'),
+    s('Read response', 'api', 'pod', 'api', 'RETURN PodList', 'demo Pods', 'If allowed, Pod receives API data; ordinary read skips admission.', 'response delivered'),
+  ]),
+  flow('hpa', 'Horizontal Pod Autoscaler', 'practitioner', 'Does HPA create Pods itself?', 'HPA updates target scale through API; the usual Deployment and ReplicaSet loops create the Pods.', 'Metrics availability, stabilization and scaling policies affect the actual change.', [sourceLinks[12].url], [
+    s('Metrics available', 'metrics', 'api', 'special', 'SERVE metrics.k8s.io', 'web CPU', 'Resource metrics are available through an API.', 'CPU high', 3, 3),
+    s('HPA reads', 'api', 'controller', 'api', 'GET metrics/scale', 'Deployment/web', 'HPA controller compares current metric with target.', 'desired scale=8', 3, 3),
+    s('Write scale', 'controller', 'api', 'api', 'UPDATE /scale', 'Deployment/web', 'HPA changes desired replicas from 3 to 8 through API.', 'scale=8', 8, 3, 'spec:\n  replicas: 8'),
+    s('Normal loops', 'api', 'controller', 'watch', 'WATCH Deployment/ReplicaSet', 'web', 'Deployment and ReplicaSet reconcilers handle new Pod count.', 'difference +5', 8, 3),
+    s('Create Pods', 'controller', 'api', 'api', 'CREATE Pods', 'web-d … web-h', 'ReplicaSet creates Pods; scheduler and kubelets then handle placement and execution.', 'new Pods Pending', 8, 3),
+  ]),
+  flow('csi', 'PersistentVolume / CSI', 'practitioner', 'Where does a PVC become a real volume and mount?', 'API objects coordinate CSI controller provisioning and kubelet/CSI node mounting, with a direct storage-provider call.', 'WaitForFirstConsumer can defer provisioning until scheduling context exists; attach applies only where needed.', [sourceLinks[13].url, sourceLinks[14].url], [
+    s('Declare PVC', 'client', 'api', 'api', 'CREATE PVC', 'PVC/demo/web-data', 'The claim and StorageClass enter API state.', 'PVC Pending'),
+    s('Provisioner watch', 'api', 'csi', 'watch', 'WATCH PVC', 'web-data', 'CSI external provisioner sees a claim matching its driver.', 'provisioning needed'),
+    s('Create volume', 'csi', 'provider', 'external', 'CSI CreateVolume', 'provider volume', 'Controller-side CSI calls its driver/provider, outside Kubernetes API.', 'volume provisioned'),
+    s('Write PV', 'csi', 'api', 'api', 'CREATE PV / bind PVC', 'PV/web-data', 'A PV and binding state represent the external volume.', 'PVC Bound'),
+    s('Schedule Pod', 'scheduler', 'api', 'api', 'BIND Pod', 'web-a/worker-a', 'A Pod consuming the claim is assigned with topology constraints considered.', 'assigned'),
+    s('Mount on Node', 'node-a', 'csi', 'local', 'NodeStage/NodePublish', 'web-data', 'Kubelet works with CSI node plugin to make the volume available to container.', 'mounted'),
+  ]),
+  flow('loadbalancer', 'Service type LoadBalancer', 'practitioner', 'Who creates the external load balancer?', 'A provider controller watches Service intent, calls a cloud API directly, then reports status through Kubernetes API.', 'Availability and fields vary by provider and controller implementation.', [sourceLinks[11].url], [
+    s('Declare Service', 'client', 'api', 'api', 'CREATE Service', 'Service/demo/web', 'Service type LoadBalancer enters API state.', 'external IP Pending'),
+    s('Cloud watch', 'api', 'cloud', 'watch', 'WATCH Service', 'web', 'Cloud/provider controller observes desired Service.', 'provider work required'),
+    s('External call', 'cloud', 'provider', 'external', 'CREATE load balancer', 'provider LB', 'Controller calls external cloud API directly.', 'LB provisioning'),
+    s('Report status', 'cloud', 'api', 'status', 'PATCH Service/status', 'web', 'Controller records ingress address when provider reports it.', 'external address available'),
+    s('Serve traffic', 'client', 'pod', 'data', 'HTTP via LB/Service', 'web-a', 'Ordinary application packets use load balancer and Service dataplane.', 'response served'),
+  ]),
+  flow('gateway', 'Ingress / Gateway Controller', 'practitioner', 'How does an Ingress or HTTPRoute become a live route?', 'A controller observes API route objects and configures a separate proxy or provider dataplane.', 'Gateway and Ingress implementations differ; the API object alone is not the traffic path.', [sourceLinks[11].url], [
+    s('Declare route', 'client', 'api', 'api', 'CREATE HTTPRoute', 'web route', 'Route object refers to the web Service.', 'desired route stored'),
+    s('Controller watch', 'api', 'cloud', 'watch', 'WATCH Gateway/HTTPRoute', 'web route', 'Gateway controller observes route and attachment state.', 'route accepted or pending'),
+    s('Configure proxy', 'cloud', 'provider', 'external', 'CONFIGURE Envoy/LB', 'web route', 'Implementation configures its proxy or cloud dataplane.', 'route programmed'),
+    s('Report status', 'cloud', 'api', 'status', 'PATCH HTTPRoute/status', 'web route', 'Controller reports accepted/programmed conditions.', 'status visible'),
+  ]),
+  flow('operator', 'Operator / CRD', 'internals', 'Do Operators use a different coordination architecture?', 'Operators reconcile custom API resources by the same observe/compare/write pattern.', 'A CRD defines an API type; any external database/provider call is an explicit additional edge.', [sourceLinks[16].url, sourceLinks[3].url], [
+    s('Custom intent', 'client', 'api', 'api', 'CREATE DatabaseCluster', 'DatabaseCluster/demo/orders', 'Custom resource enters versioned Kubernetes API state.', 'desired database stored'),
+    s('Operator watch', 'api', 'operator', 'watch', 'WATCH DatabaseCluster', 'orders', 'Operator learns desired database specification.', 'reconcile queued'),
+    s('Create dependents', 'operator', 'api', 'api', 'CREATE StatefulSet/PVC', 'orders', 'Operator writes dependent Kubernetes objects through API.', 'dependent state created'),
+    s('Observe state', 'api', 'operator', 'watch', 'WATCH dependents', 'orders Pods/PVC', 'Operator compares observed dependent state.', 'conditions evaluated'),
+    s('Report status', 'operator', 'api', 'status', 'PATCH custom/status', 'orders', 'Status and conditions report reality back through API.', 'Ready condition updated'),
+  ]),
+  flow('webhook', 'Admission Webhook', 'internals', 'Is an admission webhook a controller watching objects?', 'kube-apiserver calls a matching webhook during request processing; its answer can allow, deny or mutate.', 'Timeout outcome depends on failurePolicy; webhooks are optional extension points.', [sourceLinks[6].url], [
+    s('Client write', 'client', 'api', 'api', 'CREATE Pod', 'web-d', 'A Pod create request arrives at API server.', 'processing'),
+    s('Gates pass', 'api', 'api', 'local', 'AUTHN / AUTHZ', 'web-d', 'Identity and permission checks succeed.', 'admission applicable'),
+    s('Call webhook', 'api', 'webhook', 'special', 'AdmissionReview', 'web-d', 'API server initiates a direct call to matched admission webhook.', 'waiting on response'),
+    s('Return decision', 'webhook', 'api', 'special', 'ALLOW / PATCH / DENY', 'web-d', 'Webhook may allow, mutate or reject before persistence.', 'decision received'),
+    s('Continue or stop', 'api', 'etcd', 'store', 'PERSIST if allowed', 'web-d', 'Only an allowed request continues to durable API state.', 'conditional commit'),
+  ]),
+  flow('logs', 'kubectl logs', 'internals', 'Does the API server ever initiate a call to kubelet?', 'For Pod logs the API server can contact the kubelet HTTPS endpoint; this is a named exception.', 'Control-plane-to-node networking and kubelet serving-certificate verification deserve operational care.', [sourceLinks[2].url], [
+    s('Ask for logs', 'client', 'api', 'api', 'GET Pod/log', 'web-a', 'kubectl requests the log subresource through API.', 'request authenticated'),
+    s('Kubelet path', 'api', 'node-a', 'special', 'PROXY logs', 'worker-a kubelet', 'API server initiates an HTTPS request to kubelet endpoint.', 'special direct path'),
+    s('Read container', 'node-a', 'runtime', 'local', 'READ logs', 'web-a', 'Kubelet obtains node-local container logs.', 'logs available'),
+    s('Return stream', 'api', 'client', 'api', 'RETURN logs', 'web-a', 'Response returns through API client connection.', 'logs displayed'),
+  ]),
+  flow('exec', 'exec / attach / port-forward', 'internals', 'What happens behind a special Pod connection subresource?', 'Client asks API server; API server uses a special kubelet path for exec, attach or port-forward.', 'Exact streaming transport/proxy implementation can vary; ordinary application HTTP is separate.', [sourceLinks[2].url, sourceLinks[3].url], [
+    s('Client request', 'client', 'api', 'api', 'CONNECT Pod/exec', 'web-a', 'kubectl exec requests a special Pod subresource.', 'request authorized'),
+    s('Special node path', 'api', 'node-a', 'special', 'PROXY exec/attach/portforward', 'worker-a kubelet', 'API server initiates a kubelet connection for the selected special operation.', 'stream established'),
+    s('Node process', 'node-a', 'runtime', 'local', 'EXEC / ATTACH', 'web-a container', 'Kubelet/runtime handle the node-local process or forwarding work.', 'operation active'),
+    s('Bidirectional stream', 'api', 'client', 'special', 'STREAM response', 'kubectl', 'Interactive data returns through the API path.', 'client attached'),
+  ]),
+  flow('leader', 'Leader Election', 'internals', 'Why do controller-manager or scheduler replicas use Leases?', 'A Lease coordinates an active reconciler; API servers are not modeled as one elected serving leader.', 'Leader renewal and failover timing are configured, not fixed here.', [sourceLinks[9].url], [
+    s('Two replicas', 'controller', 'api', 'api', 'GET Lease', 'coordination Lease', 'Controller-manager A and B can reach API.', 'A active / B standby'),
+    s('A renews', 'controller', 'api', 'status', 'UPDATE Lease', 'controller-manager Lease', 'A keeps Lease ownership fresh.', 'A remains leader'),
+    s('A fails', 'controller', 'controller', 'local', 'PROCESS unavailable', 'controller-manager A', 'Renewals stop while other components can continue.', 'Lease aging'),
+    s('B acquires', 'controller', 'api', 'api', 'UPDATE Lease', 'controller-manager Lease', 'After expiry, B can acquire leadership and reconcile.', 'B active'),
+  ]),
+  flow('aggregation', 'API Aggregation / Metrics', 'internals', 'Is every API group implemented inside kube-apiserver?', 'APIService can register an extension API; kube-apiserver proxies the claimed path to its aggregated server.', 'An unavailable extension API need not imply the core API is unavailable.', [sourceLinks[16].url], [
+    s('Discover API', 'client', 'api', 'api', 'GET /apis', 'metrics.k8s.io', 'Client discovers a registered API group.', 'group advertised'),
+    s('Request metrics', 'client', 'api', 'api', 'GET metrics.k8s.io', 'Pod metrics', 'Client calls the normal Kubernetes API endpoint.', 'request routed'),
+    s('Proxy extension', 'api', 'aggregated', 'special', 'PROXY APIService path', 'metrics.k8s.io', 'Aggregation layer delegates request to extension API server.', 'extension called'),
+    s('Metric response', 'aggregated', 'metrics', 'external', 'READ metrics', 'web Pods', 'Example extension API obtains provider metrics.', 'metric data ready'),
+    s('Return result', 'api', 'client', 'api', 'RETURN API response', 'Pod metrics', 'Response reaches client through kube-apiserver.', 'metrics visible'),
+  ]),
+  flow('api-outage', 'API Server Failure', 'internals', 'Do existing containers die when API serving stops?', 'Existing Pods can keep running while API reads/writes and new coordination are impaired.', 'Node-local runtime and dataplane continuity are conditional on other healthy dependencies.', [sourceLinks[1].url, sourceLinks[2].url], [
+    s('Serving lost', 'api', 'api', 'local', 'STOP API', 'all replicas', 'No API replica can serve new requests.', 'API unavailable', 3, 3),
+    s('Client blocked', 'client', 'api', 'api', 'GET / APPLY', 'web', 'kubectl calls fail; no new desired writes are accepted.', 'request fails', 3, 3),
+    s('Loops impaired', 'controller', 'api', 'watch', 'WATCH / WRITE', 'web', 'Controllers and scheduler cannot coordinate fresh state.', 'reconciliation stalled', 3, 3),
+    s('Nodes continue', 'runtime', 'pod', 'local', 'KEEP RUNNING', 'web-a · web-b · web-c', 'Existing node-local workloads can continue serving.', 'existing Pods remain', 3, 3),
+    s('Recover endpoint', 'endpoint', 'api', 'special', 'RESTORE serving', 'control-plane endpoint', 'When API service returns, clients relist/reconnect and loops resume.', 'coordination resumes', 3, 3),
+  ]),
+  flow('api-ha', 'HA API Servers', 'internals', 'Must one API server leader handle all clients?', 'Multiple API replicas may serve concurrently behind a stable endpoint; etcd and endpoint health remain dependencies.', 'No fixed quorum survival claim follows from API replica count alone.', [sourceLinks[1].url, sourceLinks[9].url], [
+    s('Endpoint routes', 'client', 'endpoint', 'special', 'HTTPS Kubernetes API', 'control-plane endpoint', 'Clients use one endpoint for API access.', 'API1/API2/API3 healthy'),
+    s('Concurrent serve', 'endpoint', 'api', 'special', 'ROUTE requests', 'API1 · API2 · API3', 'Different replicas can serve requests concurrently.', 'three serving'),
+    s('One fails', 'api', 'api', 'local', 'API2 unavailable', 'API2', 'One replica fails; health checks remove it from serving pool.', 'API1/API3 serving'),
+    s('State backing', 'api', 'etcd', 'store', 'ACCESS durable state', 'etcd', 'Serving replicas still rely on backing state and endpoint health.', 'API still available if dependencies healthy'),
+  ]),
+];
+
+const fault = (id: string, label: string, actor: ActorId, stops: string, continues: string, detector: string, object: string, reactor: string, traffic: string, recovery: string, sources: string[], steps: Step[]): Fault => ({ id, label, actor, stops, continues, detector, object, reactor, traffic, recovery, sources, steps });
+export const faults: Fault[] = [
+  fault('pod', 'Kill one Pod', 'pod', 'web-b process and its readiness', 'API, other Pods, Service routes to healthy endpoints', 'kubelet reports termination; ReplicaSet sees a replica gap', 'Pod/web-b status and a replacement Pod/web-d', 'ReplicaSet controller, then scheduler and kubelet', 'Existing healthy backends can still serve; capacity dips', 'Replacement Pod becomes Ready if healthy Nodes and image/runtime are available', [sourceLinks[7].url], [
+    s('Pod B exits', 'pod', 'node-b', 'local', 'CONTAINER EXIT', 'web-b', 'Node-local runtime reports the stopped container.', '2 ready / 3 desired', 3, 2),
+    s('Report status', 'node-b', 'api', 'status', 'PATCH Pod/status', 'web-b', 'Kubelet reports actual state through API.', 'web-b not Ready', 3, 2),
+    s('Replica gap', 'api', 'controller', 'watch', 'WATCH Pods', 'web ReplicaSet', 'ReplicaSet sees the gap between desired and current Pods.', 'difference +1', 3, 2),
+    s('Create D', 'controller', 'api', 'api', 'CREATE Pod', 'web-d', 'ReplicaSet writes a replacement Pod through API.', 'web-d Pending', 3, 2),
+    s('Bind D', 'scheduler', 'api', 'api', 'BIND Pod', 'web-d/worker-a', 'Scheduler records placement through API.', 'assigned', 3, 2),
+    s('Start D', 'node-a', 'runtime', 'local', 'CRI StartContainer', 'web-d', 'Kubelet drives node-local runtime after observing assigned Pod.', '3 ready in fixture', 3, 3),
+  ]),
+  fault('node', 'Kill one Node', 'node-b', 'kubelet Lease renewals and Pods on worker-b', 'API and Pods on healthy Nodes', 'Node lifecycle observes stale Lease/Node condition after configured intervals', 'Node/worker-b condition/taints; affected Pod state; possible replacements', 'Node controller and workload reconcilers', 'Traffic to affected backend can degrade until endpoints update', 'Healthy Nodes, lifecycle handling and scheduler capacity allow replacements', [sourceLinks[8].url, sourceLinks[9].url], [
+    s('Worker-b lost', 'node-b', 'node-b', 'local', 'POWER LOSS', 'worker-b', 'Node stops sending heartbeat; one miss is not instant eviction.', 'heartbeats absent', 3, 3),
+    s('Lease ages', 'api', 'controller', 'watch', 'WATCH Lease', 'worker-b', 'Lifecycle logic evaluates sustained absence.', 'Node suspect', 3, 3),
+    s('Mark state', 'controller', 'api', 'status', 'UPDATE Node', 'worker-b', 'Condition/taints reflect unavailable Node.', 'Node degraded', 3, 2),
+    s('Replace conditionally', 'controller', 'api', 'api', 'CREATE Pod if needed', 'web-d', 'Managed workload loops may create replacement after lifecycle handling.', 'replacement Pending', 3, 2),
+  ]),
+  fault('controller', 'Kill controller manager', 'controller', 'affected Deployment/ReplicaSet/Node reconciliation', 'API reads/writes and existing running Pods', 'operator sees stalled controller health and absent object progress', 'existing desired objects remain; new dependent objects/status may not progress', 'standby controller-manager after Lease failover if available', 'existing Pod traffic can continue', 'healthy replica takes Lease leadership or process is restored', [sourceLinks[0].url, sourceLinks[9].url], [
+    s('Loop stops', 'controller', 'controller', 'local', 'PROCESS STOP', 'controller-manager', 'Affected control loops stop reconciling.', 'existing Pods remain', 3, 3),
+    s('API still serves', 'client', 'api', 'api', 'GET Deployment', 'web', 'kubectl can still read API state.', 'API available', 3, 3),
+    s('Desired gap persists', 'api', 'controller', 'watch', 'WATCH Deployment', 'web', 'New intent may be accepted but dependent objects do not advance.', 'reconciliation stalled', 4, 3),
+    s('Leader recovery', 'controller', 'api', 'api', 'ACQUIRE Lease', 'controller-manager', 'A healthy replica can take over after Lease handling.', 'loops resume', 4, 3),
+  ]),
+  fault('scheduler', 'Kill scheduler', 'scheduler', 'new Pod placement', 'API reads, existing bound Pods and running containers', 'Pending Pods remain unscheduled; scheduler health is absent', 'Pod spec.nodeName remains unset', 'standby scheduler after Lease failover if available', 'existing application traffic can continue', 'scheduler replica or process restores placement decisions', [sourceLinks[0].url, sourceLinks[9].url], [
+    s('Scheduler stops', 'scheduler', 'scheduler', 'local', 'PROCESS STOP', 'scheduler', 'No active scheduler makes new placement decisions.', 'existing Pods running', 3, 3),
+    s('Pod accepted', 'controller', 'api', 'api', 'CREATE Pod', 'web-d', 'A new Pod object can still be stored.', 'Pending / nodeName unset', 4, 3),
+    s('Gap visible', 'client', 'api', 'api', 'GET Pod', 'web-d', 'The API shows an unscheduled Pod.', 'placement stalled', 4, 3),
+    s('Recover', 'scheduler', 'api', 'api', 'BIND Pod', 'web-d', 'Restored active scheduler records placement.', 'assigned', 4, 3),
+  ]),
+  fault('api', 'Stop all API servers', 'api', 'new API reads/writes, status propagation and fresh coordination', 'existing node-local containers and possible existing dataplane rules', 'clients see API connection failure; watches disconnect', 'no accepted API object change until serving returns', 'controllers and kubelets reconnect/relist after restoration', 'existing Pod traffic can continue if other dependencies stay healthy', 'serving endpoint and backing dependencies recover; clients reconnect', [sourceLinks[1].url, sourceLinks[2].url], [
+    s('Serving stops', 'api', 'api', 'local', 'STOP API', 'all replicas', 'No API server handles new requests.', 'API unavailable', 3, 3),
+    s('Calls fail', 'client', 'api', 'api', 'GET / APPLY', 'web', 'kubectl reads and writes fail.', 'no new state', 3, 3),
+    s('Loops wait', 'controller', 'api', 'watch', 'WATCH / WRITE', 'web', 'Reconcilers cannot coordinate new objects.', 'control loops impaired', 3, 3),
+    s('Existing work', 'runtime', 'pod', 'local', 'KEEP RUNNING', 'web Pods', 'Existing containers do not inherently disappear.', '3 existing ready in fixture', 3, 3),
+    s('Restore', 'endpoint', 'api', 'special', 'RESTORE API', 'cluster endpoint', 'Clients reconnect and relist as needed.', 'coordination resumes', 3, 3),
+  ]),
+  fault('api-replica', 'Kill one API replica', 'api', 'API2 serving', 'API1/API3 serving via healthy endpoint, existing Pods', 'endpoint health check excludes failed replica', 'accepted objects remain in shared backing state', 'no controller failover is required for API serving itself', 'normal traffic can continue', 'restart API2; endpoint/etcd remain healthy', [sourceLinks[1].url], [
+    s('Replica fails', 'api', 'api', 'local', 'API2 STOP', 'API2', 'Only one serving replica is lost.', 'API1/API3 healthy'),
+    s('Endpoint reroutes', 'client', 'endpoint', 'special', 'HTTPS API', 'cluster endpoint', 'Healthy endpoint can choose another API replica.', 'API available'),
+    s('State shared', 'api', 'etcd', 'store', 'READ/WRITE API state', 'etcd', 'Remaining replicas access shared durable backing state.', 'requests accepted'),
+  ]),
+  fault('webhook', 'Block admission webhook', 'webhook', 'matching object-changing requests may wait or fail', 'unmatched requests and ordinary GET/LIST/WATCH can continue', 'API server receives timeout or connection error', 'matching object not persisted if fail-closed; fail-open may continue', 'requester/operator repairs webhook; no controller bypass is implied', 'existing application traffic usually continues', 'webhook recovers or configured failurePolicy permits continuation', [sourceLinks[6].url], [
+    s('Write request', 'client', 'api', 'api', 'CREATE Pod', 'web-d', 'A matched write reaches admission after AuthN/AuthZ.', 'admission pending'),
+    s('Webhook call', 'api', 'webhook', 'special', 'AdmissionReview', 'web-d', 'API server calls matched webhook.', 'waiting'),
+    s('Timeout', 'webhook', 'api', 'special', 'TIMEOUT', 'web-d', 'Response depends on failurePolicy; this fixture uses fail-closed.', 'request rejected'),
+    s('No commit', 'api', 'etcd', 'store', 'NOT REACHED', 'web-d', 'Fail-closed request does not persist.', 'object absent'),
+  ]),
+  fault('rbac', 'Break RBAC', 'api', 'a specific forbidden API operation', 'authorized reads, unrelated writes and existing Pods', 'API authorizer returns 403 Forbidden', 'requested object unchanged; admission/persistence not reached', 'requester or administrator fixes role/binding after investigation', 'existing application traffic continues', 'grant only required verb/resource/scope, then retry', [sourceLinks[5].url], [
+    s('Request', 'client', 'api', 'api', 'CREATE Deployment', 'web', 'Alice submits a write.', 'request received'),
+    s('Identity', 'api', 'api', 'local', 'AUTHENTICATE', 'alice', 'Identity is established.', 'alice known'),
+    s('Deny', 'api', 'api', 'local', 'AUTHORIZE create', 'deployments.apps/demo', 'No rule allows this operation.', '403 Forbidden'),
+    s('Not reached', 'api', 'etcd', 'store', 'NOT REACHED', 'Deployment/web', 'Admission and persistence do not run for this rejected request.', 'object absent'),
+  ]),
+  fault('etcd', 'Break etcd connectivity', 'etcd', 'durable state access and many API operations', 'some existing node workloads and local dataplane state', 'API servers report storage errors/latency', 'new desired/status writes may fail; reads depend on request/cache semantics', 'operators restore storage quorum/connectivity; controllers retry after API recovers', 'existing traffic may continue but freshness degrades', 'restore durable backing state and healthy API serving', [sourceLinks[1].url, sourceLinks[3].url], [
+    s('Backing lost', 'api', 'etcd', 'store', 'STORAGE ERROR', 'etcd', 'API server cannot reach durable backing state.', 'storage degraded'),
+    s('Write fails', 'client', 'api', 'api', 'CREATE Deployment', 'web', 'New accepted intent cannot be durably committed.', 'request error'),
+    s('Pods persist locally', 'runtime', 'pod', 'local', 'KEEP RUNNING', 'web Pods', 'Existing node-local workloads may continue.', 'traffic conditional'),
+    s('Restore store', 'api', 'etcd', 'store', 'RECOVER storage', 'etcd', 'After storage recovers, clients/reconcilers can retry.', 'state access restored'),
+  ]),
+  fault('overload', 'Overload API', 'api', 'some requests queue or receive 429, depending on priority level', 'existing Pods and some higher-priority/healthy request classes may continue', 'APF queue/reject metrics and API latency reveal saturation', 'desired/status changes may be delayed; rejected writes remain absent', 'clients back off; operators address noisy source/priority configuration', 'existing dataplane traffic need not use API request seats', 'reduce load or tune capacity/classification with measured evidence', [sourceLinks[17].url], [
+    s('Runaway client', 'client', 'api', 'api', 'MANY GET requests', 'API', 'Noisy API client increases demand.', 'request pressure'),
+    s('APF classifies', 'api', 'api', 'local', 'CLASSIFY / QUEUE', 'FlowSchema', 'Priority/fairness separates request classes.', 'queueing'),
+    s('Reject if limited', 'api', 'client', 'api', '429 if Reject', 'client', 'Excess can queue or be rejected based on configuration.', 'latency / 429'),
+    s('Existing workload', 'runtime', 'pod', 'local', 'SERVE HTTP', 'web Pods', 'Ordinary application traffic does not take API request queue.', 'traffic continues if dataplane healthy'),
+  ]),
+  fault('proxy', 'Remove kube-proxy', 'proxy', 'Service forwarding in clusters relying on kube-proxy', 'API state and directly addressed Pods; clusters with replacements differ', 'node/service traffic fails or routes stale despite healthy EndpointSlices', 'Service and EndpointSlice objects may remain unchanged', 'network operator restores service proxy or replacement dataplane', 'ClusterIP traffic can fail on affected Nodes', 'restore chosen Service forwarding implementation and resync rules', [sourceLinks[11].url], [
+    s('Proxy stops', 'proxy', 'proxy', 'local', 'PROCESS STOP', 'kube-proxy', 'This fixture uses kube-proxy and loses its rule updates.', 'node dataplane stale'),
+    s('API still valid', 'api', 'proxy', 'watch', 'WATCH EndpointSlices', 'web', 'API object state remains valid even while consumer is absent.', 'state healthy'),
+    s('Client attempts', 'client', 'pod', 'data', 'HTTP via Service', 'web-a', 'Service forwarding can fail on affected Node.', 'application connection fails'),
+    s('Restore proxy', 'proxy', 'node-a', 'local', 'SYNC rules', 'worker-a', 'Restored proxy resynchronizes forwarding rules.', 'Service path recovers'),
+  ]),
+];
+
+export type GatePreset = { id: string; label: string; gate: string; result: string; notReached: string; detail: string; };
+export const gatePresets: GatePreset[] = [
+  { id: 'none', label: 'No failure · accepted write', gate: 'None', result: '201 Created in this fixture', notReached: 'None', detail: 'Accepted object can become shared state after applicable gates.' },
+  { id: 'bad-credential', label: 'Bad certificate/token', gate: 'Authentication', result: '401 Unauthorized', notReached: 'Authorization, admission, persistence', detail: 'No identity is established; the desired object is absent.' },
+  { id: 'rbac', label: 'RBAC denied', gate: 'Authorization', result: '403 Forbidden', notReached: 'Admission, persistence', detail: 'Alice is authenticated but lacks this create permission; etcd state is unchanged.' },
+  { id: 'namespace', label: 'Namespace missing', gate: 'Resource processing', result: 'Request rejected', notReached: 'Persistence', detail: 'A namespaced create cannot complete in an absent target namespace.' },
+  { id: 'quota', label: 'Quota exceeded', gate: 'Validating admission', result: 'Request rejected', notReached: 'Persistence', detail: 'Applicable quota check denies the object before it becomes durable state.' },
+  { id: 'podsecurity', label: 'PodSecurity violation', gate: 'Validating admission', result: 'Request rejected', notReached: 'Persistence', detail: 'An applicable Pod security policy rejects the incoming Pod.' },
+  { id: 'webhook-deny', label: 'Webhook denied', gate: 'Validating admission', result: 'Request rejected', notReached: 'Persistence', detail: 'A matched validating webhook denies the request.' },
+  { id: 'webhook-timeout', label: 'Webhook timeout', gate: 'Admission webhook', result: 'Conditional on failurePolicy', notReached: 'Persistence if fail-closed', detail: 'Fail-closed rejects; fail-open can continue. The result cannot be stated without configuration.' },
+  { id: 'malformed', label: 'Malformed object', gate: 'Resource processing', result: 'Request rejected', notReached: 'Persistence', detail: 'Decoding or object validation fails; the requested object is not committed.' },
+  { id: 'conflict', label: 'Stale resourceVersion', gate: 'Resource processing', result: '409 Conflict', notReached: 'Persistence for this update', detail: 'An update based on stale version conflicts; client must refetch and retry carefully.' },
+  { id: 'overload', label: 'API overload', gate: 'Request handling', result: 'Queued or 429 Too Many Requests', notReached: 'Later gates if rejected', detail: 'APF behavior depends on FlowSchema and priority-level settings.' },
+];

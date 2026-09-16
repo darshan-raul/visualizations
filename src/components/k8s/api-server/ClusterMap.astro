@@ -1,0 +1,51 @@
+---
+import { actors, flows, faults, type ActorId, type EdgeKind } from './api-server-data';
+interface Props { mapId: string; depth?: 'foundation' | 'practitioner' | 'internals'; caption?: string; }
+const { mapId, depth = 'foundation', caption = 'One Kubernetes cluster: clients above, kube-apiserver at the center, etcd behind it, reconcilers and scheduler beside it, and kubelets with running Pods below.' } = Astro.props;
+const positions: Record<ActorId, [number, number]> = {
+  client: [500, 42], endpoint: [500, 105], api: [500, 235], etcd: [500, 352],
+  controller: [206, 250], scheduler: [794, 250], 'node-a': [282, 462], 'node-b': [718, 462],
+  runtime: [500, 453], pod: [500, 516], proxy: [85, 473], csi: [86, 391], cloud: [87, 319],
+  provider: [913, 375], operator: [86, 169], webhook: [916, 165], metrics: [912, 44], aggregated: [915, 95],
+};
+const baseline = new Set(['client:api:api','controller:api:watch','controller:api:api','scheduler:api:watch','scheduler:api:api','node-a:api:watch','node-a:api:status','api:etcd:store']);
+const edgeMap = new Map<string, { from: ActorId; to: ActorId; kind: EdgeKind; label: string }>();
+for (const step of [...flows.flatMap((flow) => flow.steps), ...faults.flatMap((fault) => fault.steps)]) {
+  if (step.from === step.to) continue;
+  const key = `${step.from}:${step.to}:${step.kind}`;
+  if (!edgeMap.has(key)) edgeMap.set(key, { from: step.from, to: step.to, kind: step.kind, label: step.operation });
+}
+for (const [from,to,kind,label] of [
+  ['client','api','api','Kubernetes API request'],['controller','api','watch','LIST/WATCH API state'],['controller','api','api','CREATE/PATCH API objects'],['scheduler','api','watch','WATCH unscheduled Pods'],['scheduler','api','api','BIND Pod via API'],['node-a','api','watch','WATCH assigned Pods'],['node-a','api','status','PATCH Pod/Node status'],['api','etcd','store','Persist durable API state'],
+] as [ActorId,ActorId,EdgeKind,string][]) edgeMap.set(`${from}:${to}:${kind}`, { from,to,kind,label });
+const edges = [...edgeMap.values()].map((edge) => {
+  const [x1,y1] = positions[edge.from], [x2,y2] = positions[edge.to];
+  const dx=x2-x1, dy=y2-y1, length=Math.hypot(dx,dy) || 1;
+  const offset = edge.kind === 'watch' ? -15 : edge.kind === 'status' ? 15 : edge.kind === 'api' && edge.from === 'controller' ? 16 : 0;
+  const midX=(x1+x2)/2 + (-dy/length)*offset, midY=(y1+y2)/2 + (dx/length)*offset;
+  return { ...edge, key:`${edge.from}:${edge.to}:${edge.kind}`, path:`M ${x1} ${y1} Q ${midX} ${midY} ${x2} ${y2}`, midX, midY, baseline:baseline.has(`${edge.from}:${edge.to}:${edge.kind}`) };
+});
+const actorById = Object.fromEntries(actors.map((actor) => [actor.id, actor]));
+const edgeTag = (kind: EdgeKind, from: ActorId) => kind === 'api' && from === 'scheduler' ? 'BIND' : kind === 'api' && from === 'controller' ? 'WRITE' : kind === 'store' ? 'PERSIST' : kind.toUpperCase();
+---
+<div class="api-map" data-api-map={mapId} data-depth={depth} role="group" aria-label="Canonical Kubernetes cluster topology">
+  <div class="api-map-viewport" tabindex="0" aria-label="Pannable Kubernetes cluster map; scroll horizontally to inspect the full topology on narrow screens">
+    <div class="api-map-scene">
+      <div class="api-map-boundary api-map-outside"><span>OUTSIDE CLUSTER · HUMAN / AUTOMATION</span></div>
+      <div class="api-map-boundary api-map-control"><span>CONTROL PLANE · SHARED API STATE</span></div>
+      <div class="api-map-boundary api-map-workers"><span>WORKER NODES · EXECUTION / DATA PLANE</span></div>
+      <div class="api-map-boundary api-map-external"><span>EXTERNAL / EXTENSIONS</span></div>
+      <svg class="api-map-wires" viewBox="0 0 1000 550" aria-hidden="true" focusable="false">
+        <defs>
+          {(['api','watch','status','external','local','data','store','special'] as EdgeKind[]).map((kind) => <marker id={`${mapId}-${kind}-arrow`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" class={`marker-${kind}`} /></marker>)}
+        </defs>
+        {edges.map((edge) => <path d={edge.path} class:list={['api-map-path',`kind-${edge.kind}`,edge.baseline && 'is-baseline']} data-map-path={edge.key} marker-end={`url(#${mapId}-${edge.kind}-arrow)`} />)}
+      </svg>
+      {edges.map((edge) => <button type="button" class:list={['api-map-edge',`kind-${edge.kind}`,edge.baseline && 'is-baseline']} data-map-edge={edge.key} data-edge-from={edge.from} data-edge-to={edge.to} data-edge-kind={edge.kind} data-edge-label={edge.label} style={`--edge-x:${edge.midX}px;--edge-y:${edge.midY}px`} aria-label={`${actorById[edge.from]?.label} to ${actorById[edge.to]?.label}: ${edge.label}`}>{edgeTag(edge.kind,edge.from)}</button>)}
+      {actors.map((actor) => <button type="button" class:list={['api-map-actor',`actor-${actor.id}`,`tier-${actor.tier}`]} data-map-actor={actor.id} data-actor-tier={actor.tier} style={`--actor-x:${positions[actor.id][0]}px;--actor-y:${positions[actor.id][1]}px`} aria-pressed="false" title={actor.role}><span>{actor.label}</span><small>{actor.short}</small></button>)}
+      <div class="api-map-live" aria-live="polite" data-map-current>Selected path: kubectl → kube-apiserver</div>
+    </div>
+  </div>
+  <div class="api-map-legend" aria-label="Connector meanings"><span><i class="kind-api"></i>API REQUEST / WRITE</span><span><i class="kind-watch"></i>LIST / WATCH</span><span><i class="kind-status"></i>STATUS</span><span><i class="kind-external"></i>EXTERNAL CALL</span><span><i class="kind-data"></i>DATA PLANE</span><span><i class="kind-special"></i>SPECIAL API CALL</span></div>
+  <p class="api-map-caption">{caption}</p>
+</div>
