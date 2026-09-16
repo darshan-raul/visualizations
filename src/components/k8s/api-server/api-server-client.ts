@@ -32,10 +32,6 @@ function initConsole(console: HTMLElement) {
     if (!actor) return;
     for (const key of ['reads','watches','writes','why','external'] as const) setText(console,`[data-api-actor-field="${key}"]`, key === 'external' ? actor.external || 'No direct external call in this selected relationship' : actor[key]);
   };
-  const showActorDetails = (show: boolean) => {
-    const details = q<HTMLElement>(console,'[data-api-actor-details]');
-    if (details) details.hidden = !show;
-  };
   const clearMap = (map: HTMLElement) => {
     qa(map,'.is-current,.is-selected,.is-failed').forEach((item) => item.classList.remove('is-current','is-selected','is-failed'));
     qa<HTMLButtonElement>(map,'[data-map-actor]').forEach((item) => item.setAttribute('aria-pressed','false'));
@@ -51,10 +47,6 @@ function initConsole(console: HTMLElement) {
     const path = q<SVGPathElement>(map,`[data-map-path="${key}"]`);
     const edge = q<HTMLButtonElement>(map,`[data-map-edge="${key}"]`);
     path?.classList.add('is-current'); edge?.classList.add('is-current');
-    if (edge) {
-      const action=text.match(/\b(LIST|WATCH|MODIFIED|ADDED|DELETED|CREATE|PATCH|UPDATE|BIND|STATUS|PERSIST|GET|POST|DELETE|EXEC|LOGS?|RECONCILE|AUTHENTICATE|AUTHORIZE|ADMISSION)\b/i)?.[1];
-      edge.textContent=(action || (kind==='store'?'PERSIST':kind)).toUpperCase();
-    }
     if (failed) { path?.classList.add('is-failed'); edge?.classList.add('is-failed'); }
     setText(map,'[data-map-current]',`${failed?'Blocked path':'Selected path'}: ${byActor.get(from)?.label || from} ${kind==='watch'?'··· WATCH ···':'→'} ${byActor.get(to)?.label || to}. ${text}`);
   };
@@ -68,30 +60,7 @@ function initConsole(console: HTMLElement) {
     const count=`${String(activeIndex+1).padStart(2,'0')} / ${String(sections.length).padStart(2,'0')}`;
     setText(console,'[data-api-view-count]',count);setText(console,'[data-api-view-counter]',count);
     setText(console,'[data-api-bottom-takeaway]',section.dataset.apiTakeaway || '');
-    const viewState: Record<string, [string,string,string,string]> = {
-      exchange: ['Deployment request prepared','3','0','API client'],
-      'request-gates': ['Deployment request entering API','3','0','kube-apiserver'],
-      watch: ['Deployment stored · watch established','3','0','Deployment controller'],
-      'spec-status': ['Pod/web-a · Pending','3','0','Scheduler'],
-      'flow-lab': ['Deployment/demo/web','3','0','API client'],
-      conversations: ['Shared API objects','3','3','Independent actors'],
-      'control-data': ['EndpointSlice/demo/web','3','3','EndpointSlice controller'],
-      failures: ['Pod/web-b · failure injected','3','2','First detector'],
-      'ha-state': ['API endpoint · healthy','3','3','Serving API replica'],
-      responsibilities: ['Versioned Kubernetes API','3','3','kube-apiserver'],
-      'one-picture': ['Deployment/demo/web · converged','3','3','Independent loops'],
-    };
-    const [object,desired,observed,owner] = viewState[section.id] || viewState.exchange;
-    setText(console,'[data-api-scenario-object]',object);
-    setText(console,'[data-api-desired]',desired);
-    setText(console,'[data-api-observed]',observed);
-    setText(console,'[data-api-owner]',owner);
-    showActorDetails(false);
-    inspector(section.dataset.apiLabel || section.dataset.apiTitle || '',section.dataset.apiInspector || '',section.id === 'exchange' ? 'Clients → kube-apiserver' : section.dataset.apiTitle || '', section.id === 'exchange' ? 'Select a component to isolate its main relationship.' : 'Choose an actor or stage to inspect its relationship.',section.dataset.apiCaveat || '');
-    if (section.id === 'exchange') {
-      const map = q<HTMLElement>(section,'[data-api-map]');
-      if (map) highlight(map,'client','api','api','Clients submit and inspect API state.');
-    }
+    inspector(section.dataset.apiTitle || '',section.dataset.apiInspector || '',section.dataset.apiTitle || '', 'Choose an actor or stage to inspect its relationship.',section.dataset.apiCaveat || '');
     if (push && location.hash!==`#${section.id}`) history.pushState(null,'',`#${section.id}`);
   };
   links.forEach((link,index)=>link.addEventListener('click',()=>selectView(index,false)));
@@ -101,7 +70,7 @@ function initConsole(console: HTMLElement) {
     const index=sections.findIndex((section)=>section.id===location.hash.slice(1));
     if(index>=0)selectView(index,false);
     const flowId=new URL(location.href).searchParams.get('flow');
-    if(location.hash.slice(1)==='flow-lab' && flowId && byFlow.has(flowId)) flowSelect(flowId,false);
+    if(flowId && byFlow.has(flowId)) flowSelect(flowId,false);
   };
   window.addEventListener('hashchange',syncLocation);
   window.addEventListener('popstate',syncLocation);
@@ -111,23 +80,8 @@ function initConsole(console: HTMLElement) {
       pauseAll();clearMap(map);
       const id=button.dataset.mapActor as ActorId, actor=byActor.get(id);
       if(!actor)return;
-      const primary: Partial<Record<ActorId,[ActorId,ActorId,EdgeKind,string]>> = {
-        client:['client','api','api','Submit or inspect API state'],
-        api:['client','api','api','Serve the shared Kubernetes API'],
-        etcd:['api','etcd','store','Persist accepted API state'],
-        controller:['controller','api','watch','Observe API state, then write changes'],
-        scheduler:['scheduler','api','watch','Observe unscheduled Pods, then bind through API'],
-        'node-a':['node-a','api','status','Observe assigned Pods and report status'],
-        'node-b':['node-b','api','status','Observe assigned Pods and report status'],
-        pod:['node-a','api','status','Kubelet reports workload status through API'],
-        runtime:['node-a','api','watch','Kubelet observes assigned PodSpecs through API'],
-      };
-      const relation = primary[id];
-      if (relation) highlight(map,...relation);
-      else clearMap(map);
       button.classList.add('is-selected');button.setAttribute('aria-pressed','true');
       actorFields(id);
-      showActorDetails(true);
       inspector(actor.label,actor.role,actor.short,`Reads: ${actor.reads}. Watches: ${actor.watches}. Writes: ${actor.writes}.`,actor.external ? `Direct external call: ${actor.external}` : sections[activeIndex].dataset.apiCaveat || '');
       setText(map,'[data-map-current]',`Selected actor: ${actor.label}. ${actor.role}`);
     }));
@@ -136,7 +90,6 @@ function initConsole(console: HTMLElement) {
       const from=button.dataset.edgeFrom as ActorId,to=button.dataset.edgeTo as ActorId,kind=button.dataset.edgeKind as EdgeKind;
       highlight(map,from,to,kind,button.dataset.edgeLabel || kind);
       actorFields(from);
-      showActorDetails(true);
       inspector(`${byActor.get(from)?.label} → ${byActor.get(to)?.label}`,`${button.dataset.edgeLabel || kind}. ${byActor.get(from)?.role || ''}`,'Relationship selected',`${kind.toUpperCase()} · ${button.dataset.edgeLabel || ''}`,sections[activeIndex].dataset.apiCaveat || '');
     }));
   });
@@ -230,10 +183,8 @@ function initConsole(console: HTMLElement) {
   const faultStage=(index:number)=>{
     faultIndex=Math.max(0,Math.min(selectedFault.steps.length-1,index));const step=selectedFault.steps[faultIndex];
     qa<HTMLButtonElement>(faultTimeline,'[data-fault-step]').forEach((button,i)=>{button.classList.toggle('is-active',i===faultIndex);if(i===faultIndex)button.setAttribute('aria-current','step');else button.removeAttribute('aria-current');});
-    const recoveryStep=/RESTORE|RECOVER|RESTART|ACQUIRE|SYNC|requests accepted/i.test(`${step.operation} ${step.state}`);
-    const failedStep=/STOP|LOSS|EXIT|TIMEOUT|DENY|FORBIDDEN|ERROR|UNAVAILABLE|NOT REACHED|POWER LOSS|429|QUEUE/i.test(`${step.operation} ${step.state}`);
-    faultMap.dataset.depth='internals';renderStep(faultMap,step,selectedFault.label,faultIndex,selectedFault.steps.length,failedStep&&!recoveryStep);
-    if(!recoveryStep) q<HTMLButtonElement>(faultMap,`[data-map-actor="${selectedFault.actor}"]`)?.classList.add('is-failed');
+    faultMap.dataset.depth='internals';renderStep(faultMap,step,selectedFault.label,faultIndex,selectedFault.steps.length,true);
+    q<HTMLButtonElement>(faultMap,`[data-map-actor="${selectedFault.actor}"]`)?.classList.add('is-failed');
     setText(faultLab,'[data-fault-summary]',`${step.label}: ${step.detail}. ${step.state}.`);
     setText(console,'[data-api-bottom-takeaway]',`${selectedFault.label}: ${selectedFault.stops}; ${selectedFault.continues}.`);
   };
@@ -255,7 +206,7 @@ function initConsole(console: HTMLElement) {
 
   // Request processing has a write sequence and a shorter read sequence; later gates never appear as reached after denial.
   const gateLab=q<HTMLElement>(console,'[data-api-gate-lab]')!;
-  const gateMap=q<HTMLElement>(gateLab.closest('[data-api-view]')!,'[data-api-map]');
+  const gateMap=q<HTMLElement>(gateLab.closest('[data-api-view]')!,'[data-api-map]')!;
   const gateRail=q<HTMLOListElement>(gateLab,'[data-gate-rail]')!;
   const gateInput=q<HTMLSelectElement>(gateLab,'[data-gate-preset]')!;
   const gatePlay=q<HTMLButtonElement>(gateLab,'[data-gate-play]')!;
@@ -275,8 +226,8 @@ function initConsole(console: HTMLElement) {
     setText(gateLab,'[data-gate-result]',`${gateMode.toUpperCase()} REQUEST · STEP ${gateIndex+1} / ${stages.length}. ${result}`);
     setText(console,'[data-api-scenario-object]',blocked?'Deployment absent':gateMode==='read'?'GET demo Pods':'Deployment request in processing');
     setText(console,'[data-api-observed]','0');
-    if(gateMap) highlight(gateMap,'client','api','api',stages[gateIndex],blocked);
-    if(gateMap&&gateMode==='write'&&gateIndex===stages.length-1&&!blocked)highlight(gateMap,'api','etcd','store','Accepted state committed');
+    highlight(gateMap,'client','api','api',stages[gateIndex],blocked);
+    if(gateMode==='write'&&gateIndex===stages.length-1&&!blocked)highlight(gateMap,'api','etcd','store','Accepted state committed');
     inspector(stages[gateIndex],result,blocked?`${preset?.result}`:gateIndex===stages.length-1?'Request complete':'Request processing',`Stage ${gateIndex+1}/${stages.length}`, 'This is a teaching order, not every kube-apiserver handler call.');
     setText(gateLab.closest('[data-api-view]') || console,'[data-api-canvas-state]',blocked?`BLOCKED · ${stages[gateIndex].toUpperCase()}`:`${gateMode.toUpperCase()} · GATE ${gateIndex+1}/${stages.length}`);
   };
@@ -289,44 +240,42 @@ function initConsole(console: HTMLElement) {
   gatePlay.addEventListener('click',()=>{if(gateTimer){stopGate();return;}if(isReduced()){gateStage((gateMode==='write'?writeGates:readGates).length-1);return;}gateStage(0);gatePlay.textContent='Ⅱ Pause gates';gateTimer=window.setInterval(()=>{const length=(gateMode==='write'?writeGates:readGates).length;const old=gateIndex;gateStage(gateIndex+1);if(gateIndex===old||gateIndex>=length-1)stopGate();},1100);});
 
   const watchLab=q<HTMLElement>(console,'[data-api-watch-lab]')!;
-  const watchMap=q<HTMLElement>(watchLab.closest('[data-api-view]')!,'[data-api-map]');
+  const watchMap=q<HTMLElement>(watchLab.closest('[data-api-view]')!,'[data-api-map]')!;
   const watchPairs:[ActorId,ActorId,EdgeKind,string][]=[['controller','api','api','LIST Deployments'],['controller','api','watch','WATCH from resourceVersion 10245'],['api','controller','watch','MODIFIED event 11020'],['controller','api','api','Reconcile then write if needed']];
   let watchIndex=0;
-  const watchStage=(index:number)=>{watchIndex=Math.max(0,Math.min(3,index));qa(watchLab,'[data-watch-step]').forEach((item,i)=>item.classList.toggle('is-current',i===watchIndex));const [from,to,kind,operation]=watchPairs[watchIndex];if(watchMap)highlight(watchMap,from,to,kind,operation);setText(watchLab.closest('[data-api-view]') || console,'[data-api-canvas-state]',`STEP ${String(watchIndex+1).padStart(2,'0')} / 04`);inspector('LIST / WATCH',`${operation}. ${watchIndex===3?'The work queue triggers a compare-and-act loop.':'A client can follow later changes without repeated polling.'}`,'resourceVersion 10245 → 11020',operation,'A too-old watch requires re-LIST after 410 Gone.');};
+  const watchStage=(index:number)=>{watchIndex=Math.max(0,Math.min(3,index));qa(watchLab,'[data-watch-step]').forEach((item,i)=>item.classList.toggle('is-current',i===watchIndex));const [from,to,kind,operation]=watchPairs[watchIndex];highlight(watchMap,from,to,kind,operation);inspector('LIST / WATCH',`${operation}. ${watchIndex===3?'The work queue triggers a compare-and-act loop.':'A client can follow later changes without repeated polling.'}`,'resourceVersion 10245 → 11020',operation,'A too-old watch requires re-LIST after 410 Gone.');};
   q(watchLab,'[data-watch-prev]')?.addEventListener('click',()=>watchStage(watchIndex-1));
   q(watchLab,'[data-watch-next]')?.addEventListener('click',()=>watchStage(watchIndex+1));
   q(watchLab,'[data-watch-reset]')?.addEventListener('click',()=>watchStage(0));
 
   const stateLab=q<HTMLElement>(console,'[data-api-state-lab]')!;
-  const stateMap=q<HTMLElement>(stateLab.closest('[data-api-view]')!,'[data-api-map]');
+  const stateMap=q<HTMLElement>(stateLab.closest('[data-api-view]')!,'[data-api-map]')!;
   const podVersions={
     unscheduled:{ready:0,yaml:'kind: Pod\nmetadata: {name: web-a}\nspec: {nodeName: null}\nstatus: {phase: Pending}',result:'Pod API object exists. Scheduler has not recorded placement; kubelet has not started its container.',from:'controller' as ActorId,to:'api' as ActorId,kind:'api' as EdgeKind},
     bound:{ready:0,yaml:'kind: Pod\nmetadata: {name: web-a}\nspec: {nodeName: worker-a}\nstatus: {phase: Pending}',result:'Scheduler recorded a binding through API. Kubelet must observe this assigned Pod separately.',from:'scheduler' as ActorId,to:'api' as ActorId,kind:'api' as EdgeKind},
-    running:{ready:1,yaml:'kind: Pod\nmetadata: {name: web-a}\nspec: {nodeName: worker-a}\nstatus:\n  phase: Running\n  conditions:\n  - type: Ready\n    status: "True"',result:'Kubelet reports node-local reality through Pod status; one of three desired Pods is Ready.',from:'node-a' as ActorId,to:'api' as ActorId,kind:'status' as EdgeKind},
+    running:{ready:1,yaml:'kind: Pod\nmetadata: {name: web-a}\nspec: {nodeName: worker-a}\nstatus:\n  phase: Running\n  Ready: "True"',result:'Kubelet reports node-local reality through Pod status; one of three desired Pods is Ready.',from:'node-a' as ActorId,to:'api' as ActorId,kind:'status' as EdgeKind},
   };
-  qa<HTMLButtonElement>(stateLab,'[data-pod-version]').forEach((button)=>button.addEventListener('click',()=>{const version=podVersions[button.dataset.podVersion as keyof typeof podVersions];if(!version)return;qa<HTMLButtonElement>(stateLab,'[data-pod-version]').forEach((item)=>item.setAttribute('aria-pressed',String(item===button)));setText(stateLab,'[data-pod-yaml]',version.yaml);setText(stateLab,'[data-pod-version-result]',version.result);setText(stateLab,'[data-state-ready]',`${version.ready} ${version.ready===1?'replica':'replicas'}`);const meter=q<HTMLMeterElement>(stateLab,'[data-state-meter]');if(meter)meter.value=version.ready;setText(console,'[data-api-observed]',String(version.ready));if(stateMap)highlight(stateMap,version.from,version.to,version.kind,button.textContent || 'Pod state');inspector('Pod object version',version.result,`${version.ready}/3 ready`,version.yaml,'Running phase and Ready condition are separate.');}));
+  qa<HTMLButtonElement>(stateLab,'[data-pod-version]').forEach((button)=>button.addEventListener('click',()=>{const version=podVersions[button.dataset.podVersion as keyof typeof podVersions];if(!version)return;qa<HTMLButtonElement>(stateLab,'[data-pod-version]').forEach((item)=>item.setAttribute('aria-pressed',String(item===button)));setText(stateLab,'[data-pod-yaml]',version.yaml);setText(stateLab,'[data-pod-version-result]',version.result);setText(stateLab,'[data-state-ready]',`${version.ready} ${version.ready===1?'replica':'replicas'}`);const meter=q<HTMLMeterElement>(stateLab,'[data-state-meter]');if(meter)meter.value=version.ready;setText(console,'[data-api-observed]',String(version.ready));highlight(stateMap,version.from,version.to,version.kind,button.textContent || 'Pod state');inspector('Pod object version',version.result,`${version.ready}/3 ready`,version.yaml,'Running phase and Ready condition are separate.');}));
 
   const planeLab=q<HTMLElement>(console,'[data-api-dataplane-lab]')!;
-  const planeMap=q<HTMLElement>(planeLab.closest('[data-api-view]')!,'[data-api-map]');
-  qa<HTMLInputElement>(planeLab,'input[name="api-plane"]').forEach((input)=>input.addEventListener('change',()=>{if(!input.checked)return;if(planeMap)planeMap.dataset.plane=input.value;const result=input.value==='control'?'Controller writes EndpointSlice through API; Service proxy watches that API object.':input.value==='data'?'Client HTTP traverses Service forwarding to a Pod. It does not use kube-apiserver as a packet hop.':'API state configures the forwarding implementation; workload traffic follows the separate node dataplane.';setText(planeLab,'[data-plane-result]',result);if(planeMap){if(input.value==='data')highlight(planeMap,'client','pod','data','HTTP via Service forwarding');else highlight(planeMap,'api','proxy','watch','WATCH EndpointSlices');}inspector('Control plane versus data plane',result,input.value.toUpperCase(),input.value==='data'?'HTTP DATA PLANE':'WATCH EndpointSlices','kube-proxy is optional when another Service proxy implementation is used.');}));
+  const planeMap=q<HTMLElement>(planeLab.closest('[data-api-view]')!,'[data-api-map]')!;
+  qa<HTMLInputElement>(planeLab,'input[name="api-plane"]').forEach((input)=>input.addEventListener('change',()=>{if(!input.checked)return;planeMap.dataset.plane=input.value;const result=input.value==='control'?'Controller writes EndpointSlice through API; Service proxy watches that API object.':input.value==='data'?'Client HTTP traverses Service forwarding to a Pod. It does not use kube-apiserver as a packet hop.':'API state configures the forwarding implementation; workload traffic follows the separate node dataplane.';setText(planeLab,'[data-plane-result]',result);if(input.value==='data')highlight(planeMap,'client','pod','data','HTTP via Service forwarding');else highlight(planeMap,'api','proxy','watch','WATCH EndpointSlices');inspector('Control plane versus data plane',result,input.value.toUpperCase(),input.value==='data'?'HTTP DATA PLANE':'WATCH EndpointSlices','kube-proxy is optional when another Service proxy implementation is used.');}));
 
   const haLab=q<HTMLElement>(console,'[data-api-ha-lab]')!;
-  const haMap=q<HTMLElement>(haLab.closest('[data-api-view]')!,'[data-api-map]');
+  const haMap=q<HTMLElement>(haLab.closest('[data-api-view]')!,'[data-api-map]')!;
   const haResults:Record<string,string>={healthy:'API1, API2 and API3 can serve requests concurrently. Scheduler/controller-manager leadership is separate Lease coordination.',replica:'API2 failed. A healthy endpoint can route to API1 or API3; serving does not wait for one elected API leader.',endpoint:'The client endpoint is unavailable, so healthy API replicas may be unreachable from clients.',etcd:'Durable backing state is degraded. Multiple serving replicas cannot by themselves repair the shared storage dependency.'};
-  qa<HTMLButtonElement>(haLab,'[data-ha-choice]').forEach((button)=>button.addEventListener('click',()=>{const choice=button.dataset.haChoice || 'healthy';qa<HTMLButtonElement>(haLab,'[data-ha-choice]').forEach((item)=>item.setAttribute('aria-pressed',String(item===button)));qa<HTMLElement>(haLab,'[data-ha-replica]').forEach((item)=>{item.classList.toggle('is-failed',choice==='replica'&&item.dataset.haReplica==='2');item.textContent=`API${item.dataset.haReplica} · ${choice==='replica'&&item.dataset.haReplica==='2'?'FAILED':'SERVING'}`;});setText(haLab,'[data-ha-etcd]',choice==='etcd'?'etcd · DEGRADED':'etcd · HEALTHY');setText(haLab,'[data-ha-result]',haResults[choice]);if(haMap)highlight(haMap,choice==='endpoint'?'client':'api',choice==='endpoint'?'endpoint':'etcd',choice==='endpoint'?'special':'store',choice.toUpperCase(),choice!=='healthy');inspector('API high availability',haResults[choice],choice.toUpperCase(),'endpoint → concurrent API replicas → backing state','No fixed failure tolerance follows from API replica count alone.');}));
+  qa<HTMLButtonElement>(haLab,'[data-ha-choice]').forEach((button)=>button.addEventListener('click',()=>{const choice=button.dataset.haChoice || 'healthy';qa<HTMLButtonElement>(haLab,'[data-ha-choice]').forEach((item)=>item.setAttribute('aria-pressed',String(item===button)));qa<HTMLElement>(haLab,'[data-ha-replica]').forEach((item)=>{item.classList.toggle('is-failed',choice==='replica'&&item.dataset.haReplica==='2');item.textContent=`API${item.dataset.haReplica} · ${choice==='replica'&&item.dataset.haReplica==='2'?'FAILED':'SERVING'}`;});setText(haLab,'[data-ha-etcd]',choice==='etcd'?'etcd · DEGRADED':'etcd · HEALTHY');setText(haLab,'[data-ha-result]',haResults[choice]);highlight(haMap,choice==='endpoint'?'client':'api',choice==='endpoint'?'endpoint':'etcd',choice==='endpoint'?'special':'store',choice.toUpperCase(),choice!=='healthy');inspector('API high availability',haResults[choice],choice.toUpperCase(),'endpoint → concurrent API replicas → backing state','No fixed failure tolerance follows from API replica count alone.');}));
 
   qa<HTMLButtonElement>(console,'[data-capability-title]').forEach((button)=>button.addEventListener('click',()=>{const lab=button.closest('.api-responsibility-lab')!;setText(lab,'[data-capability-active]',button.dataset.capabilityTitle || '');setText(lab,'[data-capability-description]',button.dataset.capabilityCopy || '');qa<HTMLButtonElement>(lab,'[data-capability-title]').forEach((item)=>item.setAttribute('aria-pressed',String(item===button)));inspector(button.dataset.capabilityTitle || 'API responsibility',button.dataset.capabilityCopy || '', 'Selected capability',button.dataset.capabilityTitle || '',sections[activeIndex].dataset.apiCaveat || '');}));
   q(console,'[data-finale-step]')?.addEventListener('click',(event)=>{const lab=(event.currentTarget as HTMLElement).closest<HTMLElement>('[data-api-finale-lab]')!;lab.classList.toggle('is-revealed');const map=q<HTMLElement>(lab.closest('[data-api-view]')!,'[data-api-map]')!;map.classList.toggle('is-finale',lab.classList.contains('is-revealed'));setText(lab,'[data-finale-result]',lab.classList.contains('is-revealed')?'Intent enters through API. Controllers and scheduler make scoped decisions, kubelets execute assigned state, and observed status returns through API.':'Kubernetes is a distributed system of reconciliation loops centered around a shared, versioned API.');});
 
   console.addEventListener('keydown',(event)=>{if(event.key==='Escape'){const active=sections[activeIndex];qa<HTMLDetailsElement>(active,'details[open]').forEach((detail)=>{if(!detail.classList.contains('api-flow-static'))detail.open=false;});}if(event.code==='Space'&&event.target instanceof HTMLElement && event.target.matches('[data-flow-timeline]')){event.preventDefault();flowPlay.click();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden)pauseAll();});
-  const initialFlowId=new URL(location.href).searchParams.get('flow') || flows[0].id;
-  flowSelect(initialFlowId,false);
+  flowSelect(new URL(location.href).searchParams.get('flow') || flows[0].id,false);
   faultSelect(faults[0].id);
   renderGates();
   watchStage(0);
   const initial=sections.findIndex((section)=>section.id===location.hash.slice(1));
   selectView(initial>=0?initial:0,false);
-  if(sections[initial>=0?initial:0]?.id==='flow-lab') flowSelect(initialFlowId,false);
   console.classList.add('is-enhanced');
 }
