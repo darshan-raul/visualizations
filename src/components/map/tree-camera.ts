@@ -32,7 +32,7 @@ export function createTreeCamera(map: HTMLElement) {
     const horizontalRoom = width - (isCompact() ? 36 : 140);
     const verticalRoom = height - (isCompact() ? 120 : 190);
     const focusedBranch = map.classList.contains('has-selection') && !isCompact();
-    return Math.max(.4, Math.min(horizontalRoom / (focusedBranch ? 1320 : 1650), verticalRoom / (focusedBranch ? 860 : 930), 1.08));
+    return Math.max(isCompact() ? .25 : .4, Math.min(horizontalRoom / (focusedBranch ? 1320 : 1650), verticalRoom / (focusedBranch ? 860 : 930), 1.08));
   };
 
   function tickAnim() {

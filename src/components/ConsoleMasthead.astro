@@ -1,0 +1,28 @@
+---
+interface Props {
+  className?: string;
+  brandClass?: string;
+  activeHref?: string;
+}
+
+const { className = '', brandClass = '', activeHref } = Astro.props;
+const pathname = Astro.url.pathname;
+const navItems = [
+  { href: '/visualizations', label: 'All visuals' },
+  { href: '/aws', label: 'AWS' },
+  { href: '/kubernetes', label: 'Kubernetes' },
+  { href: '/devops-sre', label: 'DevOps & SRE' },
+  { href: '/foundations', label: 'Foundations' },
+];
+const isCurrent = (href: string) => pathname === href || (href !== '/visualizations' && pathname.startsWith(`${href}/`));
+---
+
+<header class:list={['console-masthead', className]}>
+  <a class:list={['console-brand', brandClass]} href="/" aria-label="Infra Illustrated home">
+    <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+    <span>Infra, <em>Illustrated.</em></span>
+  </a>
+  <nav aria-label="Primary navigation">
+    {navItems.map((item) => <a href={item.href} aria-current={item.href === activeHref || isCurrent(item.href) ? 'page' : undefined}>{item.label}</a>)}
+  </nav>
+</header>

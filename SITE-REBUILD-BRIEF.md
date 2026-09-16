@@ -28,6 +28,8 @@ Use arrows and motion to teach direction, causality, timing, state change, or a 
 
 The [console migration checklist](guide/CONSOLE-MIGRATION-CHECKLIST.md) records the shared shell work, topic inventory, per-topic gates, and remaining gaps in the two pilots. Its status is planning information; this brief governs the design decision.
 
+Confirmed on 2026-09-16: discovery surfaces share the topic console's outer visual frame—bordered environment, compact masthead, dark technical backdrop, typography, and status-like footer—without inheriting the topic console's teaching controls. The homepage keeps the topic tree as its primary workspace; catalogue and collection pages keep search, filters, maps, and lists. A grouped view index, active teaching canvas, inspector, and takeaway remain topic-page semantics rather than decorative site chrome.
+
 ## Product identity
 
 - Product name: **Infra Illustrated**

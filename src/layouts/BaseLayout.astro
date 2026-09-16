@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import SiteConsoleFrame from '../components/SiteConsoleFrame.astro';
 
 interface Props {
   title?: string;
@@ -31,34 +32,6 @@ const pageTitle = title === 'Infra Illustrated' ? title : `${title} · Infra Ill
   <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
     <div class="ambient" aria-hidden="true"></div>
-    {chrome && <header class="site-header">
-      <div class="shell header-inner">
-        <a class="brand" href="/" aria-label="Infra Illustrated home">
-          <span class="brand-mark" aria-hidden="true">
-            <span></span><span></span><span></span>
-          </span>
-          <span>Infra, <em>Illustrated.</em></span>
-        </a>
-        <nav aria-label="Primary navigation">
-          <a href="/visualizations">Explore</a>
-          <a href="/aws">AWS</a>
-          <a href="/kubernetes">Kubernetes</a>
-          <a href="/devops-sre">DevOps & SRE</a>
-          <a href="/foundations">Foundations</a>
-        </nav>
-      </div>
-    </header>}
-    <main id="main-content">
-      <slot />
-    </main>
-    {chrome && <footer class="site-footer">
-      <div class="shell footer-inner">
-        <div>
-          <a class="brand footer-brand" href="/">Infra, <em>Illustrated.</em></a>
-          <p>Visual deep dives into cloud infrastructure.</p>
-        </div>
-        <a href="/visualizations">Browse all visuals <span aria-hidden="true">↗</span></a>
-      </div>
-    </footer>}
+    {chrome ? <SiteConsoleFrame><slot /></SiteConsoleFrame> : <main id="main-content"><slot /></main>}
   </body>
 </html>

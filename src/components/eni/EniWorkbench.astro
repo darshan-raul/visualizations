@@ -1,6 +1,7 @@
 ---
 import { getCollection, getEntry } from 'astro:content';
 import RelatedVisuals from '../RelatedVisuals.astro';
+import ConsoleMasthead from '../ConsoleMasthead.astro';
 import EniIdentity from './EniIdentity.astro';
 import EniTopology from './EniTopology.astro';
 import EniServices from './EniServices.astro';
@@ -39,7 +40,7 @@ const formatter = new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short'
 ---
 
 <article class="rds-workbench eni-workbench" data-eni-workbench aria-labelledby="eni-page-title">
-  <div class="rds-workbench-topbar"><a class="rds-workbench-brand" href="/" aria-label="Infra Illustrated home"><span aria-hidden="true">▥</span> Infra, <em>Illustrated.</em></a><nav aria-label="Library navigation"><a href="/visualizations">All visuals</a><a href="/aws">AWS collection</a><a href="/">Topic library</a></nav></div>
+  <ConsoleMasthead className="rds-workbench-topbar" brandClass="rds-workbench-brand" activeHref="/aws" />
   <header class="rds-workbench-head">
     <div class="rds-workbench-title"><nav class="rds-workbench-crumb" aria-label="Breadcrumb"><a href="/">Library</a><span>/</span><a href="/aws">AWS</a><span>/</span><span>Deep Dive</span></nav><span class="rds-kicker">AMAZON VPC · NETWORK INTERFACE CONSOLE</span><h1 id="eni-page-title">{data.title}</h1><p>{data.summary}</p></div>
     <div class="rds-workbench-context" aria-label="Topic metadata"><span class="rds-model-light"><i aria-hidden="true"></i> TEACHING PERSONA · ENI-123</span><span>INTERMEDIATE · DEEP DIVE</span><span>Published {formatter.format(data.published)} · Reviewed {formatter.format(data.reviewed!)}</span><span>flow-42 · 10.20.1.17 → 10.20.3.25</span></div>

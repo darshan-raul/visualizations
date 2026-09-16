@@ -1,0 +1,21 @@
+---
+import ConsoleMasthead from './ConsoleMasthead.astro';
+---
+
+<div class="site-console-frame">
+  <ConsoleMasthead className="site-header header-inner" />
+
+  <main id="main-content" class="site-console-workspace">
+    <slot />
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <p><span>INFRA ILLUSTRATED</span> Visual deep dives into cloud infrastructure.</p>
+      <nav aria-label="Footer navigation">
+        <a href="/">Topic map</a>
+        <a href="/visualizations">Browse all visuals <span aria-hidden="true">↗</span></a>
+      </nav>
+    </div>
+  </footer>
+</div>

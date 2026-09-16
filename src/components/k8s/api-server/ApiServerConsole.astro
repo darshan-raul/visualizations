@@ -1,0 +1,42 @@
+---
+import TopicConsoleShell from '../../TopicConsoleShell.astro';
+import ApiCanvas from './ApiCanvas.astro';
+import { actors, views, sourceLinks } from './api-server-data';
+interface Props { published: Date; reviewed?: Date; }
+const { published, reviewed } = Astro.props;
+const groups = [...new Set(views.map((view) => view.group))];
+const date = new Intl.DateTimeFormat('en', { year:'numeric', month:'short', day:'numeric', timeZone:'UTC' });
+const first = views[0];
+const related = [
+  { href:'/kubernetes-services', label:'Kubernetes Services' },
+  { href:'/k8s-networking', label:'Kubernetes Networking' },
+  { href:'/kubernetes-gateway-ingress', label:'Gateway and Ingress' },
+];
+---
+
+<TopicConsoleShell consoleId="kubernetes-api-server" className="api-server-console" prefix="api-server" collectionHref="/kubernetes" collectionLabel="Kubernetes" crumbs={[{label:'Library',href:'/'},{label:'Kubernetes',href:'/kubernetes'},{label:'The API Server'}]} kicker="KUBERNETES · API STATE AND RECONCILIATION" title="How Kubernetes Turns API State Into Running Workloads" summary="Follow one Deployment from an accepted API request to stored intent, independent control loops, scheduled Pods, node execution, and reported status." referenceLabel="ONE DEPLOYMENT · demo/web" formatLabel="FLOW EXPLORER · REQUEST → REALITY" dates={`Published ${date.format(published)} · Reviewed ${date.format(reviewed ?? published)}`}>
+  <nav slot="index" class="api-server-index" aria-label="Kubernetes API Server view index">
+    <details class="api-index-menu" open><summary><span>EXPLORE VIEWS</span><strong data-api-view-count>01 / {String(views.length).padStart(2,'0')}</strong></summary>
+      {groups.map((group, groupIndex) => <details data-api-index-group={groupIndex} open={groupIndex===0}><summary><strong>{group}</strong><span>{views.filter((view)=>view.group===group).length} views</span></summary><div>{views.filter((view)=>view.group===group).map((view)=>{const index=views.indexOf(view);return <a href={`#${view.id}`} data-api-view-link={view.id} aria-current={index===0?'page':undefined}><span>{String(index+1).padStart(2,'0')}</span><strong>{view.label}</strong></a>})}</div></details>)}
+      <a class="api-sources-jump" href="#api-server-sources">↗ Primary sources</a>
+    </details>
+  </nav>
+
+  <main slot="main" class="api-server-main">
+    <div class="api-scenario-ribbon" aria-label="Persistent web Deployment scenario"><span>SCENARIO · demo/web</span><strong data-api-scenario-object>Deployment request prepared</strong><div><span>DESIRED <b data-api-desired>3</b></span><span>READY <b data-api-observed>0</b></span><span>OWNER <b data-api-owner>API client</b></span></div></div>
+    {views.map((view,index) => <section id={view.id} class="api-server-view" data-api-view={view.id} data-api-title={view.title} data-api-label={view.label} data-api-inspector={view.inspector} data-api-takeaway={view.takeaway} data-api-caveat={view.caveat} aria-labelledby={`${view.id}-title`}>
+      <header class="api-view-head"><span>{String(index+1).padStart(2,'0')} / {view.group.toUpperCase()}</span><h2 id={`${view.id}-title`}>{view.title}</h2><p>{view.question}</p></header>
+      <figure class:list={['api-canvas',`canvas-${view.id}`]}><div class="api-canvas-top"><span>{view.id==='exchange'?'SELECT AN ACTOR · FOLLOW ONE RELATIONSHIP':view.id==='watch'?'LIST · WATCH · RECONCILE':view.id==='request-gates'?'REQUEST PROCESSING':view.id==='spec-status'?'DESIRED · OBSERVED':view.id==='ha-state'?'SERVING · DURABLE STATE':view.id==='responsibilities'?'API SERVER CAPABILITIES':'ONE CLUSTER · SELECTED CONVERSATION'}</span>{view.id!=='exchange' && <span data-api-canvas-state={view.id}>{view.id==='flow-lab'?'DEPLOYMENT · STEP 01 / 14':view.id==='failures'?'POD LOSS · STEP 01 / 06':view.id==='watch'?'STEP 01 / 04':'SELECT A STATE'}</span>}</div><ApiCanvas view={view} /><figcaption>{view.takeaway}</figcaption></figure>
+      <div class="api-static-copy"><p>{view.inspector}</p><p><strong>Context:</strong> {view.caveat}</p><p>{view.sources.map((url)=><a href={url}>Primary source ↗ </a>)}</p></div>
+    </section>)}
+  </main>
+
+  <aside slot="inspector" class="api-server-inspector" aria-live="polite"><span>CONTEXT INSPECTOR</span><h2 data-api-inspector-title>{first.label}</h2><p data-api-inspector-copy>{first.inspector}</p><dl class="api-inspector-fields" data-api-actor-details hidden><div><dt>READS</dt><dd data-api-actor-field="reads">{actors[1].reads}</dd></div><div><dt>WATCHES</dt><dd data-api-actor-field="watches">{actors[1].watches}</dd></div><div><dt>WRITES</dt><dd data-api-actor-field="writes">{actors[1].writes}</dd></div><div><dt>WHY</dt><dd data-api-actor-field="why">{actors[1].why}</dd></div><div class="api-inspector-optional"><dt>DIRECT EXTERNAL CALLS</dt><dd data-api-actor-field="external">None for this actor in the selected model</dd></div></dl><div class="api-inspector-step"><span>CURRENT STATE</span><strong data-api-inspector-state>Clients coordinate through API state</strong><p data-api-inspector-operation>Select a component to isolate its main relationship.</p></div><p class="api-inspector-caveat" data-api-inspector-caveat>{first.caveat}</p></aside>
+
+  <div slot="bottom" class="api-server-bottom"><div class="api-bottom-takeaway"><span>TAKEAWAY</span><p data-api-bottom-takeaway>{first.takeaway}</p></div><nav class="api-view-sequence" aria-label="View sequence"><button type="button" data-api-view-prev aria-label="Previous view">←</button><span data-api-view-counter>01 / {String(views.length).padStart(2,'0')}</span><button type="button" data-api-view-next aria-label="Next view">→</button></nav><div class="api-bottom-related"><span>RELATED VISUALS</span>{related.map((item)=><a href={item.href}>{item.label} ↗</a>)}</div><details class="api-bottom-sources" id="api-server-sources"><summary>Sources <span>Primary references</span></summary><ul>{sourceLinks.map((source)=><li><a href={source.url}>{source.label} ↗</a></li>)}</ul></details><div class="api-bottom-foot"><span>Infra, Illustrated. · Visual deep dives into cloud infrastructure.</span><a href="/kubernetes">Back to Kubernetes</a></div></div>
+</TopicConsoleShell>
+
+<script>
+  import { initApiServerConsoles } from './api-server-client';
+  initApiServerConsoles();
+</script>

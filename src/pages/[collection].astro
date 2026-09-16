@@ -16,10 +16,18 @@ const topics = (await getCollection('topics', ({ data }) => data.collection === 
 
 <BaseLayout title={collection.label} description={collection.description}>
   <section class={`page-intro collection-intro collection-${slug} shell`}>
-    <span class="eyebrow"><i></i> {collection.eyebrow}</span>
-    <h1>{collection.label}</h1>
-    <p>{collection.description}</p>
-    <div class="intro-meta"><span>{topics.length} visualizations</span><span>Open any topic directly</span><a href={`/visualizations?view=map&collection=${slug}`}>View in topic map ↗</a></div>
+    <div>
+      <nav class="discovery-crumb" aria-label="Breadcrumb"><a href="/">Library</a><span aria-hidden="true">/</span><span aria-current="page">{collection.label}</span></nav>
+      <span class="eyebrow"><i></i> {collection.eyebrow}</span>
+      <h1>{collection.label}</h1>
+      <p>{collection.description}</p>
+      <div class="intro-meta"><span>{topics.length} visualizations</span><span>Open any topic directly</span><a href={`/visualizations?view=map&collection=${slug}`}>View in topic map ↗</a></div>
+    </div>
+    <aside class="page-intro-context" aria-label="Collection details">
+      <span>COLLECTION</span>
+      <strong>{collection.label}</strong>
+      <span>{String(topics.length).padStart(2, '0')} REFERENCES · LIVE INDEX</span>
+    </aside>
   </section>
   <section class="catalogue-section shell">
     <LibraryExplorer topics={topics} compact />

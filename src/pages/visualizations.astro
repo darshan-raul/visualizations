@@ -8,9 +8,17 @@ const topics = (await getCollection('topics')).sort((a, b) => a.data.title.local
 
 <BaseLayout title="All visualizations" description="Browse every visual deep dive in Infra Illustrated.">
   <section class="page-intro shell">
-    <span class="eyebrow"><i></i> Complete catalogue</span>
-    <h1>Explore every<br /><span>visual reference.</span></h1>
-    <p>Search for a mechanism or narrow the library by collection, topic, technology, and format.</p>
+    <div>
+      <nav class="discovery-crumb" aria-label="Breadcrumb"><a href="/">Library</a><span aria-hidden="true">/</span><span aria-current="page">All visuals</span></nav>
+      <span class="eyebrow"><i></i> Complete catalogue</span>
+      <h1>Explore every<br /><span>visual reference.</span></h1>
+      <p>Search for a mechanism or narrow the library by collection, topic, technology, and format.</p>
+    </div>
+    <aside class="page-intro-context" aria-label="Catalogue details">
+      <span>LIBRARY INDEX</span>
+      <strong>{topics.length} visual references</strong>
+      <span>SEARCH · FILTER · MAP</span>
+    </aside>
   </section>
   <section class="catalogue-section shell">
     <LibraryExplorer topics={topics} enableMap defaultView="map" />

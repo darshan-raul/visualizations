@@ -1,6 +1,7 @@
 ---
 import { getCollection, getEntry } from 'astro:content';
 import RelatedVisuals from '../RelatedVisuals.astro';
+import ConsoleMasthead from '../ConsoleMasthead.astro';
 
 const topic = await getEntry('topics', 'rds-backup-retention');
 if (!topic) throw new Error('RDS Backup Retention content is missing');
@@ -31,7 +32,7 @@ const formatter = new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short'
 ---
 
 <article class="rds-workbench" data-rds-workbench aria-labelledby="rds-page-title">
-  <div class="rds-workbench-topbar"><a class="rds-workbench-brand" href="/" aria-label="Infra Illustrated home"><span aria-hidden="true">▥</span> Infra, <em>Illustrated.</em></a><nav aria-label="Library navigation"><a href="/visualizations">All visuals</a><a href="/aws">AWS collection</a><a href="/">Topic library</a></nav></div>
+  <ConsoleMasthead className="rds-workbench-topbar" brandClass="rds-workbench-brand" activeHref="/aws" />
   <header class="rds-workbench-head">
     <div class="rds-workbench-title">
       <nav class="rds-workbench-crumb" aria-label="Breadcrumb"><a href="/">Library</a><span>/</span><a href="/aws">AWS</a><span>/</span><span>Visual Brief</span></nav>

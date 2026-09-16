@@ -1,13 +1,14 @@
 ---
 import { getEntry } from 'astro:content';
 import { linuxPillars } from './linux-data';
+import ConsoleMasthead from '../ConsoleMasthead.astro';
 const topic = await getEntry('topics', 'linux');
 if (!topic) throw new Error('Linux foundation topic metadata is missing.');
 const date = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
 ---
 
 <article class="linux-hub" aria-labelledby="linux-hub-title" data-linux-hub>
-  <div class="linux-topbar"><a class="linux-brand" href="/" aria-label="Infra Illustrated home"><span aria-hidden="true">▥</span> Infra, <em>Illustrated.</em></a><nav aria-label="Library navigation"><a href="/visualizations">All visuals</a><a href="/foundations">Foundations</a><a href="/">Topic library</a></nav></div>
+  <ConsoleMasthead className="linux-topbar" brandClass="linux-brand" activeHref="/foundations" />
   <header class="linux-hub-head"><div><nav class="linux-crumb" aria-label="Breadcrumb"><a href="/">Library</a><span>/</span><a href="/foundations">Foundations</a><span>/</span><span aria-current="page">Linux</span></nav><span class="linux-kicker">LINUX FOUNDATION · SYSTEM MAP</span><h1 id="linux-hub-title">One Linux machine. Eight lenses.</h1><p>Follow one web service through the primitives behind cloud, containers, and Kubernetes.</p></div><div class="linux-head-context"><span>REFERENCE HOST · devbox-01</span><span>FOUNDATIONAL · DEEP DIVE</span><span>Published {date.format(topic.data.published)} · Reviewed {date.format(topic.data.reviewed ?? topic.data.published)}</span></div></header>
 
   <section class="linux-map-section" aria-labelledby="linux-map-title"><div class="linux-map-heading"><div><span class="linux-kicker">THE MAP</span><h2 id="linux-map-title">Pick a subsystem to inspect.</h2></div><div class="linux-map-mode" role="group" aria-label="Map exploration mode"><button type="button" data-linux-mode="free" aria-pressed="true">Explore freely</button><button type="button" data-linux-mode="path" aria-pressed="false">Show suggested path</button></div></div>

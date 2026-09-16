@@ -1,4 +1,5 @@
 ---
+import ConsoleMasthead from './ConsoleMasthead.astro';
 interface Crumb { label: string; href?: string; }
 interface Props {
   consoleId: string;
@@ -16,10 +17,10 @@ interface Props {
   backHref?: string;
   backLabel?: string;
 }
-const { consoleId, className = '', prefix = 'topic', collectionHref, collectionLabel, crumbs, kicker, title, summary, formatLabel, referenceLabel, dates, backHref, backLabel } = Astro.props;
+const { consoleId, className = '', prefix = 'topic', collectionHref, crumbs, kicker, title, summary, formatLabel, referenceLabel, dates, backHref, backLabel } = Astro.props;
 ---
 <article class={`topic-console ${className}`} data-console-id={consoleId} aria-labelledby={`${consoleId}-console-title`}>
-  <div class={`topic-console-topbar ${prefix}-topbar`}><a class={`topic-console-brand ${prefix}-brand`} href="/" aria-label="Infra Illustrated home"><span aria-hidden="true">▥</span> Infra, <em>Illustrated.</em></a><nav aria-label="Library navigation"><a href="/visualizations">All visuals</a><a href={collectionHref}>{collectionLabel}</a><slot name="topbar-link" /></nav></div>
+  <ConsoleMasthead className={`topic-console-topbar ${prefix}-topbar`} brandClass={`topic-console-brand ${prefix}-brand`} activeHref={collectionHref} />
   <header class={`topic-console-head ${prefix}-console-head`}><div><nav class={`topic-console-crumb ${prefix}-crumb`} aria-label="Breadcrumb">{crumbs.map((crumb, index) => <><span class="topic-console-crumb-separator" aria-hidden="true">{index > 0 ? '/' : ''}</span>{crumb.href ? <a href={crumb.href}>{crumb.label}</a> : <span aria-current="page">{crumb.label}</span>}</>)}</nav><span class={`topic-console-kicker ${prefix}-kicker`}>{kicker}</span><h1 id={`${consoleId}-console-title`}>{title}</h1><p>{summary}</p></div><div class={`topic-console-context ${prefix}-head-context`}>{backHref && <a class={`${prefix}-map-back`} href={backHref}>{backLabel}</a>}<span>{referenceLabel}</span><span>{formatLabel}</span><span>{dates}</span></div></header>
   <div class={`topic-console-grid ${prefix}-console-grid`}><slot name="index" /><slot name="main" /><slot name="inspector" /></div>
   <footer class={`topic-console-bottom ${prefix}-console-bottom`}><slot name="bottom" /></footer>

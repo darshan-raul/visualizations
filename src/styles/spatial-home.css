@@ -1,4 +1,4 @@
-/* Full-viewport homepage shell. The tree itself stays in the reusable component. */
+/* Console-framed homepage workspace. The tree itself stays in the reusable component. */
 body:has(.spatial-home) .ambient {
   background:
     radial-gradient(ellipse 80% 65% at 50% 48%, rgba(21, 30, 44, .55), transparent 62%),
@@ -7,28 +7,30 @@ body:has(.spatial-home) .ambient {
     var(--bg);
 }
 body:has(.spatial-home) .ambient::after { opacity: .25; mask-image: radial-gradient(circle at center, #000, transparent 82%); }
-body:has(.spatial-home) .site-header { position: absolute; z-index: 40; top: 22px; left: 28px; border: 0; background: none; backdrop-filter: none; }
-body:has(.spatial-home) .header-inner { width: auto; min-height: 44px; }
-body:has(.spatial-home) .site-header nav,
+body:has(.spatial-home) .site-console-frame { height: calc(100dvh - 32px); min-height: 680px; margin-block: 16px; }
+body:has(.spatial-home) .site-console-workspace { min-height: 0; }
 body:has(.spatial-home) .site-footer { display: none; }
 
-.spatial-home { min-height: 100dvh; }
-.spatial-home .library { padding: 95px 28px 70px; }
-.spatial-home .library[data-current-view="map"] { height: 100dvh; padding: 0; overflow: hidden; }
+.spatial-home { position: relative; height: 100%; min-height: 0; }
+.spatial-heading { position: absolute; z-index: 31; top: 24px; left: 28px; max-width: 330px; pointer-events: none; }
+.spatial-heading span { color: var(--cyan); font: 600 .7rem var(--mono); letter-spacing: .1em; }
+.spatial-heading p { margin: 7px 0 0; color: var(--muted); font-size: .78rem; line-height: 1.45; }
+.spatial-home .library { padding: 108px 28px 70px; }
+.spatial-home .library[data-current-view="map"] { height: 100%; padding: 0; overflow: hidden; }
 .spatial-home .library.immersive[data-library] .topic-tree { position: absolute; inset: 0; height: 100%; margin: 0; }
 .spatial-home .library.immersive[data-library] .topic-tree .map-stage,
 .spatial-home .library.immersive[data-library] .topic-tree .map-viewport { height: 100%; min-height: 0; }
 .spatial-home .library.immersive[data-library] .topic-tree .map-viewport { border: 0; border-radius: 0; background: transparent; touch-action: pinch-zoom; }
 .spatial-home .library.immersive[data-library] .topic-tree .map-topbar { top: auto; right: auto; }
 
-.spatial-home .collection-switch { position: absolute; z-index: 40; top: 22px; right: 28px; margin: 0; gap: 3px; padding: 3px; border: 1px solid var(--border); border-radius: 999px; background: rgba(9,12,19,.86); backdrop-filter: blur(16px); }
-.spatial-home .collection-switch button { min-height: 38px; padding-inline: 12px; border-radius: 999px; font-size: .75rem; }
+.spatial-home .collection-switch { position: absolute; z-index: 40; top: 24px; right: 28px; margin: 0; gap: 3px; padding: 3px; border: 1px solid var(--border); border-radius: 10px; background: rgba(9,12,19,.86); backdrop-filter: blur(16px); }
+.spatial-home .collection-switch button { min-height: 38px; padding-inline: 12px; border-radius: 7px; font-size: .75rem; }
 .spatial-home .collection-switch button span { display: none; }
 .spatial-home .collection-switch button:first-child { font-size: 0; }
 .spatial-home .collection-switch button:first-child::before { content: 'All'; font-size: .75rem; }
 
-.spatial-home .library-tools { position: absolute; z-index: 30; top: 82px; left: 28px; display: block; width: min(300px, calc(100% - 56px)); margin: 0; padding: 0; border: 0; border-radius: 0; background: none; }
-.spatial-home .library-tools .search-field input { height: 42px; border-radius: 999px; background: rgba(9,12,19,.76); font-size: .75rem; backdrop-filter: blur(14px); }
+.spatial-home .library-tools { position: absolute; z-index: 30; top: 88px; left: 28px; display: block; width: min(300px, calc(100% - 56px)); margin: 0; padding: 0; border: 0; border-radius: 0; background: none; }
+.spatial-home .library-tools .search-field input { height: 42px; border-radius: 9px; background: rgba(9,12,19,.82); font-size: .75rem; backdrop-filter: blur(14px); }
 .spatial-home .advanced-filters { margin-top: 8px; }
 .spatial-home .advanced-filters > summary { width: max-content; padding: 8px 12px; border-radius: 8px; background: rgba(9,12,19,.78); color: var(--dim); font-size: .7rem; cursor: pointer; }
 .spatial-home .advanced-filters[open] { padding: 8px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
@@ -42,10 +44,11 @@ body:has(.spatial-home) .site-footer { display: none; }
 .spatial-home .spatial-catalogue { position: absolute; z-index: 30; right: 28px; bottom: 25px; padding: 8px; color: var(--muted); font-size: .75rem; text-decoration: none; }
 
 @media (max-width: 900px) {
-  body:has(.spatial-home) .site-header { top: 16px; left: 18px; }
-  .spatial-home { min-height: 100dvh; padding: 72px 16px 18px; }
-  .spatial-home .library[data-current-view="map"] { display: grid; height: auto; min-height: calc(100dvh - 122px); grid-template-rows: auto auto minmax(470px, 1fr) auto; gap: 10px; overflow: visible; }
-  .spatial-home .collection-switch { position: static; grid-row: 1; max-width: 100%; flex-wrap: nowrap; overflow-x: auto; margin: 0; border-radius: 12px; scrollbar-width: none; }
+  body:has(.spatial-home) .site-console-frame { height: auto; min-height: calc(100dvh - 20px); margin-block: 10px; }
+  .spatial-home { min-height: calc(100dvh - 83px); padding: 18px 16px; }
+  .spatial-heading { position: static; max-width: none; margin: 2px 2px 15px; }
+  .spatial-home .library[data-current-view="map"] { display: grid; height: auto; min-height: calc(100dvh - 190px); grid-template-rows: auto auto minmax(470px, 1fr) auto; gap: 10px; overflow: visible; }
+  .spatial-home .collection-switch { position: static; grid-row: 1; max-width: 100%; flex-wrap: nowrap; overflow-x: auto; margin: 0; border-radius: 10px; scrollbar-width: none; }
   .spatial-home .collection-switch button { min-height: 44px; flex: 0 0 auto; padding-inline: 10px; font-size: .75rem; }
   .spatial-home .library-tools { position: static; grid-row: 2; width: 100%; }
   .spatial-home .library-tools .search-field input { height: 46px; font-size: .875rem; }

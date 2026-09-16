@@ -1,0 +1,29 @@
+---
+title: Networking, Illustrated
+summary: Follow one HTTPS request from hostname resolution to a server, and see which network layer makes each decision.
+slug: networking
+collection: foundations
+tags: [Networking, DNS, TCP/IP, Routing, Troubleshooting]
+technologies: [TCP/IP, DNS, Ethernet, NAT]
+format: flow-explorer
+difficulty: foundational
+published: 2026-09-16
+reviewed: 2026-09-16
+versionScope: Protocol concepts use documentation addresses and standards current at review date
+legacyPath: /networking
+featured: true
+state: reviewed
+related: [linux, k8s-networking, vpc-flow]
+sources:
+  - label: RFC 1122 — Internet host requirements
+    url: https://www.rfc-editor.org/rfc/rfc1122
+  - label: RFC 9293 — Transmission Control Protocol
+    url: https://www.rfc-editor.org/rfc/rfc9293
+  - label: RFC 1034 — Domain names concepts and facilities
+    url: https://www.rfc-editor.org/rfc/rfc1034
+---
+
+import ProtocolConsole from '../../components/foundations/ProtocolConsole.astro';
+import { protocolTopics } from '../../components/foundations/protocol-data';
+
+<ProtocolConsole topic={protocolTopics.networking} published={props.published} reviewed={props.reviewed} />
