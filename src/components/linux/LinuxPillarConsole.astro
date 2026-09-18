@@ -4,6 +4,11 @@ import RelatedVisuals from '../RelatedVisuals.astro';
 import TopicConsoleShell from '../TopicConsoleShell.astro';
 import type { LinuxPillar } from './linux-data';
 import { linuxPillars, actorKinds } from './linux-data';
+import ProcessTreeLab from './interactive/ProcessTreeLab.astro';
+import PermissionLab from './interactive/PermissionLab.astro';
+import VfsLab from './interactive/VfsLab.astro';
+import PacketTraceLab from './interactive/PacketTraceLab.astro';
+import PipelineLab from './interactive/PipelineLab.astro';
 
 interface Props { pillar: LinuxPillar; }
 const { pillar } = Astro.props;
@@ -50,6 +55,64 @@ const viewEvidence = (view: LinuxPillar['views'][number]) => view.probe || view.
         {pillar.views.map((view, viewIndex) => <section class={`linux-view linux-kind-${view.kind}`} id={view.id} data-linux-view={view.id} data-view-kind={view.kind} data-view-explanation={view.explanation} data-view-takeaway={view.takeaway} data-view-caveat={view.caveat} data-view-command={view.command || ''} data-view-output={view.output || ''} data-view-probe={view.probe || ''} data-view-probe-output={view.probeOutput || ''} data-view-object={viewObject(view)} data-view-status={viewStatus(view)} data-view-owner={ownerByPillar[pillar.id]} data-view-evidence={viewEvidence(view)} aria-labelledby={`${view.id}-title`}><div class="linux-view-heading"><span>{String(viewIndex + 1).padStart(2, '0')} / {pillar.short.toUpperCase()} · {kindLabel(view.kind)}</span><h2 id={`${view.id}-title`}>{view.title}</h2><p>{view.question}</p></div>
 
           {/* ═══════════════════════════════════════════════════════════════════════
+              NEW: INTERACTIVE LABS
+             ═══════════════════════════════════════════════════════════════════════ */}
+          {view.kind === 'interactive-tree' && view.treeData && (
+            <figure class="linux-diagram linux-diagram-interactive" aria-label={`${view.title} on devbox-01`}>
+              <div class="linux-diagram-scope">
+                <span>DEVBOX-01 · INTERACTIVE PROCESS TREE</span>
+                <span data-linux-visual-status>READY TO INSPECT</span>
+              </div>
+              <ProcessTreeLab treeData={view.treeData} id={view.id} />
+              <figcaption>{view.takeaway}</figcaption>
+            </figure>
+          )}
+
+          {view.kind === 'interactive-permission' && view.permissionData && (
+            <figure class="linux-diagram linux-diagram-interactive" aria-label={`${view.title} on devbox-01`}>
+              <div class="linux-diagram-scope">
+                <span>DEVBOX-01 · ACCESS CONTROL MATRIX LAB</span>
+                <span data-linux-visual-status>READY TO INSPECT</span>
+              </div>
+              <PermissionLab permissionData={view.permissionData} id={view.id} />
+              <figcaption>{view.takeaway}</figcaption>
+            </figure>
+          )}
+
+          {view.kind === 'interactive-vfs' && view.vfsData && (
+            <figure class="linux-diagram linux-diagram-interactive" aria-label={`${view.title} on devbox-01`}>
+              <div class="linux-diagram-scope">
+                <span>DEVBOX-01 · KERNEL VFS LAB</span>
+                <span data-linux-visual-status>READY TO INSPECT</span>
+              </div>
+              <VfsLab vfsData={view.vfsData} id={view.id} />
+              <figcaption>{view.takeaway}</figcaption>
+            </figure>
+          )}
+
+          {view.kind === 'interactive-packet' && view.packetData && (
+            <figure class="linux-diagram linux-diagram-interactive" aria-label={`${view.title} on devbox-01`}>
+              <div class="linux-diagram-scope">
+                <span>DEVBOX-01 · KERNEL PACKET TRACE LAB</span>
+                <span data-linux-visual-status>READY TO INSPECT</span>
+              </div>
+              <PacketTraceLab packetData={view.packetData} id={view.id} />
+              <figcaption>{view.takeaway}</figcaption>
+            </figure>
+          )}
+
+          {view.kind === 'interactive-pipeline' && view.pipelineData && (
+            <figure class="linux-diagram linux-diagram-interactive" aria-label={`${view.title} on devbox-01`}>
+              <div class="linux-diagram-scope">
+                <span>DEVBOX-01 · KERNEL PIPELINE LAB</span>
+                <span data-linux-visual-status>READY TO INSPECT</span>
+              </div>
+              <PipelineLab pipelineData={view.pipelineData} id={view.id} />
+              <figcaption>{view.takeaway}</figcaption>
+            </figure>
+          )}
+
+          {/* ═══════════════════════════════════════════════════════════════════════
               1. ACTOR-DIAGRAM VIEWS (path, tree, layers, split, evidence)
              ═══════════════════════════════════════════════════════════════════════ */}
           {isActor(view.kind) && view.actors && (
@@ -58,6 +121,203 @@ const viewEvidence = (view: LinuxPillar['views'][number]) => view.probe || view.
                 <span>DEVBOX-01 · {kindLabel(view.kind)}</span>
                 <span data-linux-visual-status>{view.failure ? 'BLOCKED FIXTURE' : 'READY TO INSPECT'}</span>
               </div>
+
+              {/* Special Educational Diagram: VFS Pipeline for Storage Path */}
+              {pillar.id === 'storage' && view.id === 'path' && (
+                <div class="vfs-pipeline-canvas">
+                  <div class="vfs-node"><span>1. PATH STRING</span><strong>/srv/app/config</strong><small>Parsed component by component</small></div>
+                  <div class="vfs-node"><span>2. RAM CACHE</span><strong>Dentry Cache</strong><small>Hash maps name to Inode #262145</small></div>
+                  <div class="vfs-node"><span>3. METADATA</span><strong>Inode #262145</strong><small>Mode 0644, UID 33, Extent Tree</small></div>
+                  <div class="vfs-node"><span>4. PAGE CACHE</span><strong>Page Cache (RAM)</strong><small>4KB memory pages from disk</small></div>
+                  <div class="vfs-node"><span>5. STORAGE</span><strong>ext4 /dev/vdc1</strong><small>Physical NVMe blocks</small></div>
+                </div>
+              )}
+
+              {/* Special Educational Diagram: Dual Capacity for Storage Space vs Inodes */}
+              {pillar.id === 'storage' && view.id === 'space' && (
+                <div class="meter-split-board">
+                  <div class="meter-card">
+                    <span>DATA BLOCKS (df -h)</span>
+                    <strong>50% Used · 50% Free</strong>
+                    <div class="meter-bar"><div class="meter-fill" style="width:50%; background:var(--green);"></div></div>
+                    <small style="color:var(--muted); margin-top:6px; display:block;">Space remains for file writes</small>
+                  </div>
+                  <div class="meter-card">
+                    <span>INODE SLOTS (df -i)</span>
+                    <strong style="color:var(--red);">100% Used · 0 Free!</strong>
+                    <div class="meter-bar"><div class="meter-fill" style="width:100%; background:var(--red);"></div></div>
+                    <small style="color:var(--red); margin-top:6px; display:block;">ENOSPC: No metadata slots left</small>
+                  </div>
+                </div>
+              )}
+
+              {/* Special Educational Diagram: Open-Unlinked Phantom Space */}
+              {pillar.id === 'storage' && view.id === 'open-file' && (
+                <div class="phantom-split-board">
+                  <div class="phantom-box">
+                    <div class="phantom-box-head">DIRECTORY TREE (du view)</div>
+                    <p>File unlinked via <code>rm access.log</code>. The directory entry is deleted (<code>nlink=0</code>). <code>du</code> scans filenames and finds <strong>0 MB used</strong>.</p>
+                  </div>
+                  <div class="phantom-box">
+                    <div class="phantom-box-head">KERNEL PROCESS TABLE (df view)</div>
+                    <p>Worker <code>PID 421</code> still holds <code>FD 14</code> open (<code>refcount &gt; 0</code>). The kernel preserves the inode and disk blocks until FD 14 is closed! <code>df</code> stays <strong>100% full</strong>.</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Special Educational Diagram: Traversal Gate Matrix for Identity */}
+              {pillar.id === 'identity' && (view.id === 'permission' || view.id === 'deny') && (
+                <div class="traversal-gate-canvas">
+                  <div class="gate-card is-granted"><span>GATE 1: ROOT</span><strong>/ (root)</strong><small>Mode 0755 · other has +x<br/><b style="color:var(--green);">✓ GRANTED</b></small></div>
+                  <div class="gate-card is-granted"><span>GATE 2: MOUNT</span><strong>/srv</strong><small>Mode 0755 · other has +x<br/><b style="color:var(--green);">✓ GRANTED</b></small></div>
+                  <div class="gate-card is-denied"><span>GATE 3: PARENT DIR</span><strong>/srv/site</strong><small>Mode 0750 · worker not in group<br/><b style="color:var(--red);">✗ DENIED (EACCES)</b></small></div>
+                  <div class="gate-card is-unreached"><span>GATE 4: TARGET</span><strong>index.html</strong><small>Mode 0777 · read check<br/><b>NOT REACHED!</b></small></div>
+                </div>
+              )}
+
+              {/* Special Educational Diagram: Virtual Address Space for Processes fork */}
+              {pillar.id === 'processes' && view.id === 'fork' && (
+                <div class="mem-map-diagram">
+                  <div class="mem-seg mem-seg-kernel"><strong>0xFFFFFFFFFFFFFFFF — KERNEL SPACE (High Memory)</strong><small>Mapped for all processes; accessible only on Ring 0 syscall entry</small></div>
+                  <div class="mem-seg mem-seg-stack"><strong>STACK (Grows Downward ↓)</strong><small>Local function frames, stack pointers, return addresses</small></div>
+                  <div class="mem-seg mem-seg-mmap"><strong>MEMORY MAPPING SEGMENT (mmap)</strong><small>Shared libraries (libc.so, libssl.so), dynamic mmap allocations</small></div>
+                  <div class="mem-seg mem-seg-heap"><strong>HEAP (Grows Upward ↑ via brk/malloc)</strong><small>Dynamically allocated application buffers and objects</small></div>
+                  <div class="mem-seg mem-seg-text"><strong>TEXT / CODE & DATA (ELF Machine Instructions)</strong><small>Read-only binary code and initialized/BSS global variables</small></div>
+                </div>
+              )}
+
+              {/* Special Educational Diagram: Kernel Pipe Buffer for Shell pipeline */}
+              {pillar.id === 'shell' && view.id === 'pipeline' && (
+                <div class="pipe-canvas">
+                  <div class="pipe-actor"><span>WRITER PROCESS</span><strong>journalctl (PID 1024)</strong><small>FD 1 (stdout) directed to pipe write-end</small></div>
+                  <div class="pipe-buffer"><strong>KERNEL CIRCULAR PIPE BUFFER</strong><small>64 KB RAM ring buffer</small></div>
+                  <div class="pipe-actor"><span>READER PROCESS</span><strong>grep (PID 1025)</strong><small>FD 0 (stdin) reads from pipe read-end</small></div>
+                </div>
+              )}
+
+              {/* Special Educational Diagram: Defense Rings for Security */}
+              {pillar.id === 'security' && view.id === 'rings' && (
+                <div class="defense-rings-canvas">
+                  <div class="defense-layer"><span>LAYER 1: DAC</span><strong>Discretionary Access Control</strong><small>Owner/Group/Other mode bits (chmod)</small></div>
+                  <div class="defense-layer"><span>LAYER 2: ACLs</span><strong>POSIX Access Control Lists</strong><small>Granular per-user/group permissions (getfacl)</small></div>
+                  <div class="defense-layer"><span>LAYER 3: CAPS</span><strong>Linux Capabilities</strong><small>Deconstructed root privileges (CAP_NET_BIND_SERVICE)</small></div>
+                  <div class="defense-layer"><span>LAYER 4: MAC</span><strong>Mandatory Access Control</strong><small>SELinux contexts / AppArmor profiles (type enforcement)</small></div>
+                  <div class="defense-layer"><span>LAYER 5: SECCOMP</span><strong>Syscall BPF Sandbox</strong><small>Restricts allowed kernel system calls</small></div>
+                </div>
+              )}
+
+              {/* Special Educational Diagram: Dynamic Linker for Packages */}
+              {pillar.id === 'packages' && view.id === 'libraries' && (
+                <div class="linker-pipeline-canvas">
+                  <div class="linker-node"><span>1. EXECVE</span><strong>Binary Exec</strong><small>Kernel reads ELF .interp</small></div>
+                  <div class="linker-node"><span>2. LOADER</span><strong>ld-linux.so</strong><small>Takes initial CPU control</small></div>
+                  <div class="linker-node"><span>3. DT_NEEDED</span><strong>Dependencies</strong><small>libssl.so, libc.so</small></div>
+                  <div class="linker-node"><span>4. CACHE LOOKUP</span><strong>/etc/ld.so.cache</strong><small>Fast hash cache lookup</small></div>
+                  <div class="linker-node"><span>5. MMAP & JUMP</span><strong>main() Entry</strong><small>Segments mapped to memory</small></div>
+                </div>
+              )}
+
+              {/* Special Educational Diagram: Package vs Service State Board for Packages */}
+              {pillar.id === 'packages' && view.id === 'service' && (
+                <div class="pkg-state-board">
+                  <div class="pkg-box"><span>1. PACKAGE STATE</span><strong>dpkg / rpm</strong><small>Files extracted on disk (/usr/bin)</small></div>
+                  <div class="pkg-box"><span>2. SYSTEMD UNIT</span><strong>systemctl</strong><small>Unit enabled; multi-user.target</small></div>
+                  <div class="pkg-box"><span>3. CGROUP PROCESS</span><strong>task_struct</strong><small>PID 418 in system.slice cgroup</small></div>
+                  <div class="pkg-box"><span>4. TCP SOCKET</span><strong>struct sock</strong><small>Kernel socket listening on :80/:443</small></div>
+                </div>
+              )}
+
+              {/* Special Educational Diagram: Shell 5-Stage Expansion Pipeline */}
+              {pillar.id === 'shell' && view.id === 'parse' && (
+                <div class="shell-pipeline-canvas">
+                  <div class="shell-node"><span>1. RAW INPUT</span><strong>echo *.log $USER</strong><small>Input from stdin / keyboard</small></div>
+                  <div class="shell-node"><span>2. TOKENIZER</span><strong>Lexical Split</strong><small>Words, quotes, operators</small></div>
+                  <div class="shell-node"><span>3. EXPANSIONS</span><strong>$USER → darshan</strong><small>Vars, math, subshells</small></div>
+                  <div class="shell-node"><span>4. GLOBBING</span><strong>*.log → a.log b.log</strong><small>Directory readdir() matches</small></div>
+                  <div class="shell-node"><span>5. SYSCALL</span><strong>execve("/bin/echo")</strong><small>Final argv array executed</small></div>
+                </div>
+              )}
+
+              {/* Special Educational Diagram: File Descriptor Routing for Shell */}
+              {pillar.id === 'shell' && view.id === 'redirection' && (
+                <div class="fd-routing-canvas">
+                  <div class="fd-box"><span>FD 0 (stdin)</span><strong>Keyboard / Terminal</strong><small>Default /dev/pts/1; &lt; file</small></div>
+                  <div class="fd-box"><span>FD 1 (stdout)</span><strong>/tmp/found.txt</strong><small>Data redirected via &gt; file</small></div>
+                  <div class="fd-box"><span>FD 2 (stderr)</span><strong>/tmp/denied.txt</strong><small>Errors redirected via 2&gt; file</small></div>
+                  <div class="fd-box"><span>2&gt;&amp;1 (dup2)</span><strong>Stream Clone</strong><small>dup2(1, 2) clones FD 1 into FD 2</small></div>
+                </div>
+              )}
+
+              {/* Special Educational Diagram: DAC Match Ladder for Security */}
+              {pillar.id === 'security' && view.id === 'dac' && (
+                <div class="dac-ladder-canvas">
+                  <div class="dac-step"><span>STEP 1: OWNER MATCH</span><strong>Is EUID == file.owner?</strong><small>YES → Apply Owner mode (rwx) &amp; STOP</small></div>
+                  <div class="dac-step"><span>STEP 2: GROUP MATCH</span><strong>Is GID/Groups == file.group?</strong><small>YES → Apply Group mode (rwx) &amp; STOP</small></div>
+                  <div class="dac-step"><span>STEP 3: OTHER MATCH</span><strong>Neither identity matches?</strong><small>Apply Others mode (rwx)</small></div>
+                  <div class="dac-step"><span>ROOT BYPASS</span><strong>UID 0 (Root)</strong><small>Bypasses standard DAC permissions</small></div>
+                </div>
+              )}
+
+              {/* Special Educational Diagram: Inbound Defense Boundaries for Security */}
+              {pillar.id === 'security' && view.id === 'network' && (
+                <div class="net-defense-canvas">
+                  <div class="net-barrier"><span>1. CLOUD VPC</span><strong>Security Group</strong><small>Hypervisor ingress packet drop</small></div>
+                  <div class="net-barrier"><span>2. HOST FIREWALL</span><strong>nftables / iptables</strong><small>Kernel Netfilter INPUT hook</small></div>
+                  <div class="net-barrier"><span>3. BIND ADDRESS</span><strong>0.0.0.0 vs 127.0.0.1</strong><small>Interface listener filter</small></div>
+                  <div class="net-barrier"><span>4. TCP BACKLOG</span><strong>Socket Queue</strong><small>accept() delivery to worker</small></div>
+                </div>
+              )}
+
+              {/* Special Educational Diagram: USE Method Matrix for Troubleshooting */}
+              {pillar.id === 'troubleshooting' && view.id === 'probes' && (
+                <div class="use-matrix-canvas">
+                  <div class="use-row"><span>CPU</span><strong>top / mpstat (Util)</strong><strong>vmstat run-queue (Sat)</strong><strong>mcelog / dmesg (Err)</strong></div>
+                  <div class="use-row"><span>MEMORY</span><strong>free -m (Util)</strong><strong>vmstat si/so swap (Sat)</strong><strong>dmesg OOM killer (Err)</strong></div>
+                  <div class="use-row"><span>STORAGE</span><strong>df -h / iostat (Util)</strong><strong>iostat await queue (Sat)</strong><strong>df -i / dmesg I/O (Err)</strong></div>
+                  <div class="use-row"><span>NETWORK</span><strong>ip -s link (Util)</strong><strong>netstat -s listen (Sat)</strong><strong>ethtool -S drops (Err)</strong></div>
+                </div>
+              )}
+
+              {/* Special Educational Diagram: Four Resource Cliffs for Troubleshooting */}
+              {pillar.id === 'troubleshooting' && view.id === 'resources' && (
+                <div class="resource-cliffs-canvas">
+                  <div class="cliff-card"><span>1. DATA BLOCKS</span><strong>df -h (100% full)</strong><small>Writes fail with ENOSPC</small></div>
+                  <div class="cliff-card"><span>2. INODE SLOTS</span><strong>df -i (0 free)</strong><small>No metadata slots; ENOSPC</small></div>
+                  <div class="cliff-card"><span>3. FILE DESCRIPTORS</span><strong>ulimit -n (exhausted)</strong><small>EMFILE: Too many open files</small></div>
+                  <div class="cliff-card"><span>4. MEMORY / OOM</span><strong>oom_score_adj (killed)</strong><small>Kernel terminates hungry PID</small></div>
+                </div>
+              )}
+
+              {/* Special Educational Diagram: NSS Resolution Chain for Identity */}
+              {pillar.id === 'identity' && view.id === 'account' && (
+                <div class="nss-chain-canvas">
+                  <div class="nss-node"><span>1. STRING</span><strong>getpwnam("nginx")</strong><small>glibc libc call</small></div>
+                  <div class="nss-node"><span>2. SWITCH</span><strong>/etc/nsswitch.conf</strong><small>Resolution order</small></div>
+                  <div class="nss-node"><span>3. BACKEND</span><strong>/etc/passwd</strong><small>Local file or SSSD</small></div>
+                  <div class="nss-node"><span>4. KERNEL CRED</span><strong>Numeric UID 33</strong><small>Integer UID for VFS</small></div>
+                </div>
+              )}
+
+              {/* Special Educational Diagram: Netfilter Hook Stages for Networking */}
+              {pillar.id === 'networking' && view.id === 'netfilter' && (
+                <div class="netfilter-hook-canvas">
+                  <div class="hook-node"><span>1. WIRE</span><strong>PREROUTING</strong><small>Conntrack &amp; DNAT</small></div>
+                  <div class="hook-node"><span>2. ROUTING</span><strong>FIB Decision</strong><small>Local delivery vs forward</small></div>
+                  <div class="hook-node"><span>3. INGRESS</span><strong>INPUT</strong><small>Host firewall filtering</small></div>
+                  <div class="hook-node"><span>4. EGRESS</span><strong>OUTPUT / POSTROUTING</strong><small>SNAT &amp; MASQUERADE</small></div>
+                </div>
+              )}
+
+              {/* Special Educational Diagram: Container Veth Bridge for Networking */}
+              {pillar.id === 'networking' && view.id === 'containers' && (
+                <div class="veth-bridge-canvas">
+                  <div class="bridge-node"><span>CONTAINER</span><strong>eth0 (172.17.0.2)</strong><small>Isolated net namespace</small></div>
+                  <div class="bridge-node"><span>VETH PAIR</span><strong>veth4a29</strong><small>Kernel virtual wire</small></div>
+                  <div class="bridge-node"><span>BRIDGE</span><strong>docker0 / cbr0</strong><small>Host Layer-2 switch</small></div>
+                  <div class="bridge-node"><span>HOST NIC</span><strong>eth0 (10.0.1.17)</strong><small>Physical / cloud egress</small></div>
+                </div>
+              )}
+
               <div class="linux-actors" data-linux-actors>
                 {view.actors.map((actor, actorIndex) => (
                   <button type="button" disabled class="linux-actor" data-linux-actor={actorIndex} data-linux-original-label={actor.label} data-linux-original-detail={actor.detail} data-blocked={view.failure?.blocked === actorIndex ? 'true' : undefined} aria-label={`Inspect ${actor.label}: ${actor.detail}`}>

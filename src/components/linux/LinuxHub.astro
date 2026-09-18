@@ -9,31 +9,258 @@ const date = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', da
 
 <article class="linux-hub" aria-labelledby="linux-hub-title" data-linux-hub>
   <ConsoleMasthead className="linux-topbar" brandClass="linux-brand" activeHref="/foundations" />
-  <header class="linux-hub-head"><div><nav class="linux-crumb" aria-label="Breadcrumb"><a href="/">Library</a><span>/</span><a href="/foundations">Foundations</a><span>/</span><span aria-current="page">Linux</span></nav><span class="linux-kicker">LINUX FOUNDATION · SYSTEM MAP</span><h1 id="linux-hub-title">One Linux machine. Eight lenses.</h1><p>Follow one web service through the primitives behind cloud, containers, and Kubernetes.</p></div><div class="linux-head-context"><span>REFERENCE HOST · devbox-01</span><span>FOUNDATIONAL · DEEP DIVE</span><span>Published {date.format(topic.data.published)} · Reviewed {date.format(topic.data.reviewed ?? topic.data.published)}</span></div></header>
+  <header class="linux-hub-head">
+    <div>
+      <nav class="linux-crumb" aria-label="Breadcrumb">
+        <a href="/">Library</a><span>/</span><a href="/foundations">Foundations</a><span>/</span><span aria-current="page">Linux</span>
+      </nav>
+      <span class="linux-kicker">LINUX FOUNDATIONS · HOST ARCHITECTURE CANVAS</span>
+      <h1 id="linux-hub-title">One Linux Machine. Eight Lenses.</h1>
+      <p>Follow how User Space applications invoke the System Call Interface to command Kernel Subsystems and Hardware. This is the shared machine model that underlies cloud VMs, Docker containers, and Kubernetes nodes.</p>
+    </div>
+    <div class="linux-head-context">
+      <span>REFERENCE HOST · devbox-01</span>
+      <span>FOUNDATIONAL · INTERACTIVE SYSTEM MODEL</span>
+      <span>Published {date.format(topic.data.published)} · Reviewed {date.format(topic.data.reviewed ?? topic.data.published)}</span>
+    </div>
+  </header>
 
-  <section class="linux-map-section" aria-labelledby="linux-map-title"><div class="linux-map-heading"><div><span class="linux-kicker">THE MAP</span><h2 id="linux-map-title">Pick a subsystem to inspect.</h2></div><div class="linux-map-mode" role="group" aria-label="Map exploration mode"><button type="button" data-linux-mode="free" aria-pressed="true">Explore freely</button><button type="button" data-linux-mode="path" aria-pressed="false">Show suggested path</button></div></div>
-    <div class="linux-map" data-map-mode="free" aria-label="Linux machine and eight pillar routes"><div class="linux-map-core"><span>DEVBOX-01</span><strong>LINUX MACHINE</strong><small>Userspace ↕ kernel ↕ hardware</small><a href="#linux-machine">Meet the machine ↓</a></div>{linuxPillars.map((pillar, index) => <a class={`linux-map-node linux-map-node-${pillar.id}`} href={`/linux/${pillar.id}`} aria-label={`Explore Linux ${pillar.name}`} data-linux-map-node={pillar.id}><span>{String(index + 1).padStart(2, '0')}</span><strong>{pillar.name}</strong><small>{pillar.hints}</small><b aria-hidden="true">↗</b></a>)}</div>
-    <div class="linux-map-caption"><p data-linux-map-preview>One host, eight connected subsystems. Every lens opens a dedicated page; return here whenever you need the whole machine.</p><span>SELECT ANY NODE · NO LOCKED ORDER</span></div>
+  <!-- Interactive System Architecture Canvas -->
+  <section class="linux-map-section" aria-labelledby="linux-canvas-title">
+    <div class="linux-map-heading">
+      <div>
+        <span class="linux-kicker">HOST ARCHITECTURE CANVAS</span>
+        <h2 id="linux-canvas-title">The Boundary: User Space, Syscalls, Kernel & Hardware</h2>
+      </div>
+      <div class="linux-map-mode" role="group" aria-label="Simulate system scenarios">
+        <button type="button" data-hub-trace="http" aria-pressed="true">1. Inbound HTTPS (:443)</button>
+        <button type="button" data-hub-trace="file" aria-pressed="false">2. Open & Read File</button>
+        <button type="button" data-hub-trace="container" aria-pressed="false">3. Container Boundary</button>
+      </div>
+    </div>
+
+    <div class="linux-arch-canvas" aria-label="Interactive Linux Architecture Canvas">
+      <!-- User Space Layer -->
+      <div class="arch-layer arch-layer-userspace">
+        <div class="arch-layer-head">
+          <strong>USER SPACE (Ring 3 — Unprivileged Processes)</strong>
+          <span>Isolated memory spaces · Cannot access hardware directly</span>
+        </div>
+        <div class="arch-components">
+          <div class="arch-node" data-node-id="nginx-master">
+            <span>PID 418 · root</span>
+            <strong>nginx: master</strong>
+            <small>Binds privileged TCP/443</small>
+          </div>
+          <div class="arch-node is-active" data-node-id="nginx-worker">
+            <span>PID 421 · UID 33 (www-data)</span>
+            <strong>nginx: worker</strong>
+            <small>Handles HTTP/TLS traffic</small>
+          </div>
+          <div class="arch-node" data-node-id="bash">
+            <span>PID 1024 · dev</span>
+            <strong>bash shell</strong>
+            <small>Interactive CLI session</small>
+          </div>
+          <div class="arch-node" data-node-id="container-app">
+            <span>PID 2048 (namespaced)</span>
+            <strong>containerized workload</strong>
+            <small>Private PID & Net namespace</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Syscall Gateway Trap -->
+      <div class="arch-layer-syscall">
+        <span class="syscall-tag">CPU PRIVILEGE SWITCH</span>
+        <strong>↕ SYSTEM CALL INTERFACE (Ring 3 Trap → Ring 0 Kernel Entry: socket(), epoll_wait(), openat(), read(), clone()) ↕</strong>
+      </div>
+
+      <!-- Kernel Space Layer -->
+      <div class="arch-layer arch-layer-kernel">
+        <div class="arch-layer-head">
+          <strong>KERNEL SPACE (Ring 0 — Mediates All Hardware & Resources)</strong>
+          <span>Full hardware privilege · Memory protection · Process scheduling</span>
+        </div>
+        <div class="arch-components">
+          <div class="arch-node" data-node-id="vfs">
+            <span>Filesystem Subsystem</span>
+            <strong>VFS & Page Cache</strong>
+            <small>Dentries, Inodes, ext4</small>
+          </div>
+          <div class="arch-node" data-node-id="sched">
+            <span>Process Subsystem</span>
+            <strong>CFS Scheduler & task_struct</strong>
+            <small>Runqueues, Context switches</small>
+          </div>
+          <div class="arch-node is-active" data-node-id="netstack">
+            <span>Networking Subsystem</span>
+            <strong>TCP/IP Stack & Netfilter</strong>
+            <small>Socket queues, Routing (FIB)</small>
+          </div>
+          <div class="arch-node" data-node-id="mm">
+            <span>Memory Subsystem</span>
+            <strong>Virtual Memory & MMU</strong>
+            <small>Page tables, Copy-on-Write</small>
+          </div>
+          <div class="arch-node" data-node-id="cgroups">
+            <span>Resource & Isolation</span>
+            <strong>Namespaces & Cgroups v2</strong>
+            <small>PID/Net/Mount, CPU/RAM limits</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hardware & Drivers Layer -->
+      <div class="arch-layer arch-layer-hardware">
+        <div class="arch-layer-head">
+          <strong>HARDWARE & DEVICE CONTROLLERS</strong>
+          <span>Physical bare-metal or hypervisor-virtualized devices</span>
+        </div>
+        <div class="arch-components">
+          <div class="arch-node" data-node-id="cpu">
+            <span>Compute</span>
+            <strong>CPU Cores & MMU</strong>
+            <small>8 vCPUs · Ring 0 / Ring 3</small>
+          </div>
+          <div class="arch-node" data-node-id="ram">
+            <span>Main Memory</span>
+            <strong>Physical RAM</strong>
+            <small>16 GB · 4KB Page Frames</small>
+          </div>
+          <div class="arch-node" data-node-id="disk">
+            <span>Block Storage</span>
+            <strong>NVMe /dev/vdb1</strong>
+            <small>Mounted at /srv (ext4)</small>
+          </div>
+          <div class="arch-node is-active" data-node-id="nic">
+            <span>Network Controller</span>
+            <strong>eth0 (10.0.1.17)</strong>
+            <small>RX/TX DMA Ring Buffers</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interactive Trace Explanation Box -->
+    <div class="flow-trace-explainer" id="hub-explainer">
+      <div>
+        <p id="hub-trace-copy"><strong>HTTPS Ingress Flow:</strong> An Ethernet frame arrives on <code>eth0</code>. The NIC driver uses DMA to write to the RX ring buffer and triggers NAPI. Kernel Netfilter evaluates <code>PREROUTING</code>, the routing table confirms destination <code>10.0.1.17</code>, and the TCP payload is queued in the socket buffer. <code>epoll_wait()</code> wakes up <strong>nginx worker PID 421</strong> to read the HTTP request.</p>
+      </div>
+      <span class="step-badge" id="hub-step-badge">TRACE: PACKET → WORKER</span>
+    </div>
   </section>
 
-  <section class="linux-machine-basics" id="linux-machine" aria-labelledby="linux-machine-title"><div class="linux-basics-head"><span class="linux-kicker">ORIENTATION · DEVBOX-01</span><h2 id="linux-machine-title">Meet the Linux machine.</h2><p>Our reference web service runs as a process, reads configuration, opens a socket, and writes logs. Each pillar follows one of those relationships.</p></div><div class="linux-basic-layers" role="img" aria-label="Userspace processes call kernel services, which manage hardware"><div><span>USERSPACE</span><strong>shell · nginx · sshd</strong><small>Programs and operator tools</small></div><i aria-hidden="true">↕ system calls</i><div><span>KERNEL</span><strong>process · filesystem · network</strong><small>Resource and access decisions</small></div><i aria-hidden="true">↕ drivers</i><div><span>HARDWARE</span><strong>CPU · RAM · disk · NIC</strong><small>Physical or virtual devices</small></div></div><p class="linux-basics-caveat">Linux names the kernel and ecosystem; a distribution supplies userspace tools and configuration. This fixture uses a generic modern host, with systemd and distro-specific tools labelled in the pillar pages.</p>
-    <div class="linux-orientation-pair"><div><h3>From boot to a service</h3><ol><li>Firmware</li><li>Bootloader</li><li>Kernel + initramfs</li><li>PID 1 / init system</li><li>Services and login</li></ol><p>systemd is common, not universal. A container does not normally run this full machine boot sequence.</p></div><div><h3>From / to a resource</h3><div class="linux-root-path"><code>/</code><span>etc · config</span><span>home · users</span><span>var · changing data/logs</span><span>proc / sys · virtual kernel views</span><span>dev · device entries</span></div><p>A pathname can cross a mount into another filesystem. Storage explores what backs it.</p></div></div></section>
-  <footer class="linux-hub-bottom"><div><span class="linux-kicker">A SUGGESTED ROUTE, WHEN YOU WANT ONE</span><p>Identity → Storage → Processes → Networking → Packages → Shell → Security → Troubleshooting. Jump wherever your current question starts.</p></div><a href="/linux/identity">Start with Identity →</a><div class="linux-sitefoot"><span>Infra, Illustrated. · Linux foundations for cloud systems.</span><a href="/visualizations">Browse all visuals ↗</a></div></footer>
+  <!-- Eight Dedicated Subsystem Consoles Grid -->
+  <section class="linux-map-section" aria-labelledby="subsystem-grid-title">
+    <div class="linux-map-heading">
+      <div>
+        <span class="linux-kicker">SUBSYSTEM DEEP DIVES</span>
+        <h2 id="subsystem-grid-title">Explore the 8 Subsystem Lenses</h2>
+      </div>
+      <p style="color: var(--muted); font-size: 0.9rem; margin: 0;">Each lens opens a dedicated console with specialized system diagrams, kernel mechanics, and failure diagnostics.</p>
+    </div>
+
+    <div class="linux-map" data-map-mode="free" aria-label="Linux eight pillar routes">
+      {linuxPillars.map((pillar, index) => (
+        <a class={`linux-map-node linux-map-node-${pillar.id}`} href={`/linux/${pillar.id}`} aria-label={`Explore Linux ${pillar.name}`} data-linux-map-node={pillar.id}>
+          <span>{String(index + 1).padStart(2, '0')}</span>
+          <strong>{pillar.name}</strong>
+          <small>{pillar.hints}</small>
+          <b aria-hidden="true">↗</b>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <!-- Machine Basics & Orientation -->
+  <section class="linux-machine-basics" id="linux-machine" aria-labelledby="linux-machine-title">
+    <div class="linux-basics-head">
+      <span class="linux-kicker">ORIENTATION · DEVBOX-01</span>
+      <h2 id="linux-machine-title">The Foundation of Cloud & Containers</h2>
+      <p>Modern cloud infrastructure rests on these exact primitives. Containers do not run separate kernels; they are regular Linux processes running under namespaces and cgroups on this shared host.</p>
+    </div>
+    <div class="linux-orientation-pair">
+      <div>
+        <h3>From Boot to a Running Service</h3>
+        <ol>
+          <li><strong>Firmware & Bootloader:</strong> Initializes hardware and loads kernel image + initramfs into RAM.</li>
+          <li><strong>Kernel Initialization:</strong> Mounts root filesystem, initializes device drivers, and starts PID 1.</li>
+          <li><strong>Init System (systemd):</strong> Reads unit files, manages dependency trees, and starts services.</li>
+          <li><strong>Application Worker:</strong> Master process forks unprivileged worker processes and binds sockets.</li>
+        </ol>
+        <p>Containers skip steps 1–3: the host kernel directly executes the container entrypoint inside isolated namespaces.</p>
+      </div>
+      <div>
+        <h3>From / to a Resource</h3>
+        <div class="linux-root-path">
+          <code>/</code>
+          <span>etc · system configuration</span>
+          <span>home · user workspaces</span>
+          <span>var · dynamic logs & databases</span>
+          <span>proc · virtual kernel state & PIDs</span>
+          <span>sys · hardware & device attributes</span>
+          <span>dev · device node special files</span>
+        </div>
+        <p>In Linux, "everything is a file" means files, sockets, pipes, and devices all present as File Descriptors (FDs) through the VFS.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="linux-hub-bottom">
+    <div>
+      <span class="linux-kicker">RECOMMENDED LEARNING SEQUENCE</span>
+      <p>Identity → Storage → Processes → Networking → Packages → Shell → Security → Troubleshooting. Jump wherever your question begins.</p>
+    </div>
+    <a href="/linux/identity">Start with Identity & Access →</a>
+    <div class="linux-sitefoot">
+      <span>Infra, Illustrated. · Linux foundations for cloud systems.</span>
+      <a href="/visualizations">Browse all visuals ↗</a>
+    </div>
+  </footer>
 </article>
 
 <script>
-  for (const hub of document.querySelectorAll<HTMLElement>('[data-linux-hub]')) {
-    const map = hub.querySelector<HTMLElement>('.linux-map')!;
-    const modeButtons = [...hub.querySelectorAll<HTMLButtonElement>('[data-linux-mode]')];
-    modeButtons.forEach((button) => button.addEventListener('click', () => {
-      const mode = button.dataset.linuxMode || 'free';
-      map.dataset.mapMode = mode;
-      modeButtons.forEach((other) => other.setAttribute('aria-pressed', String(other === button)));
-      hub.querySelector<HTMLElement>('[data-linux-map-preview]')!.textContent = mode === 'path' ? 'The numbered path is one way to build the primitives. Every pillar remains open for direct exploration.' : 'One host, eight connected subsystems. Every lens opens a dedicated page; return here whenever you need the whole machine.';
-    }));
-    hub.querySelectorAll<HTMLAnchorElement>('[data-linux-map-node]').forEach((node) => {
-      function preview() { const name = node.querySelector('strong')?.textContent || ''; const hints = node.querySelector('small')?.textContent || ''; hub.querySelector<HTMLElement>('[data-linux-map-preview]')!.textContent = `${name}: ${hints}. Open this dedicated console to follow the subsystem on devbox-01.`; }
-      node.addEventListener('focus', preview); node.addEventListener('pointerenter', preview);
+  // Scenario Switcher for Host Architecture Canvas
+  const traces: Record<string, { activeNodes: string[]; copy: string; badge: string }> = {
+    http: {
+      activeNodes: ['nic', 'netstack', 'nginx-worker'],
+      copy: '<strong>HTTPS Ingress Flow:</strong> An Ethernet frame arrives on <code>eth0</code>. The NIC driver uses DMA to write to the RX ring buffer and triggers NAPI. Kernel Netfilter evaluates <code>PREROUTING</code>, the routing table confirms destination <code>10.0.1.17</code>, and the TCP payload is queued in the socket buffer. <code>epoll_wait()</code> wakes up <strong>nginx worker PID 421</strong> to read the HTTP request.',
+      badge: 'TRACE: PACKET → WORKER'
+    },
+    file: {
+      activeNodes: ['nginx-worker', 'vfs', 'disk', 'ram'],
+      copy: '<strong>Static Asset Read Flow:</strong> Worker calls <code>openat("/srv/site/index.html", O_RDONLY)</code>. The CPU transitions to Ring 0 via syscall trap. VFS validates process UID 33 against directory traversal gates, locates the Inode, and checks Page Cache in RAM (Cache Hit = instant memory copy; Cache Miss = ext4 DMA read from NVMe <code>/dev/vdb1</code>).',
+      badge: 'TRACE: WORKER → VFS → NVMe'
+    },
+    container: {
+      activeNodes: ['container-app', 'cgroups', 'sched', 'mm'],
+      copy: '<strong>Container Isolation Boundary:</strong> The container process is an ordinary Linux task, but the kernel restricts it using <strong>Namespaces</strong> (private PID 1, private Mount table, private virtual <code>veth</code> network) and throttles it using <strong>Cgroups v2</strong> (hard limits: 512MB RAM, 1 CPU quota).',
+      badge: 'TRACE: NAMESPACES & CGROUPS'
+    }
+  };
+
+  const hub = document.querySelector<HTMLElement>('[data-linux-hub]');
+  if (hub) {
+    const traceButtons = [...hub.querySelectorAll<HTMLButtonElement>('[data-hub-trace]')];
+    const nodes = [...hub.querySelectorAll<HTMLElement>('.arch-node')];
+    const copyEl = hub.querySelector<HTMLElement>('#hub-trace-copy');
+    const badgeEl = hub.querySelector<HTMLElement>('#hub-step-badge');
+
+    traceButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const key = button.dataset.hubTrace || 'http';
+        const trace = traces[key];
+        if (!trace) return;
+
+        traceButtons.forEach((btn) => btn.setAttribute('aria-pressed', String(btn === button)));
+        nodes.forEach((node) => {
+          node.classList.toggle('is-active', trace.activeNodes.includes(node.dataset.nodeId || ''));
+        });
+
+        if (copyEl) copyEl.innerHTML = trace.copy;
+        if (badgeEl) badgeEl.textContent = trace.badge;
+      });
     });
   }
 </script>

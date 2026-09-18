@@ -1,0 +1,424 @@
+---
+interface Props {
+  treeData: any;
+  id: string;
+}
+
+const { treeData, id } = Astro.props;
+const jsonString = JSON.stringify(treeData);
+---
+
+<process-tree-lab data-initial-tree={jsonString} data-view-id={id}>
+  <div class="pt-lab-container">
+    <div class="pt-sidebar">
+      <div class="pt-sidebar-header">
+        <strong>KERNEL TASK TABLE</strong>
+        <small>Interactive Process Hierarchy</small>
+      </div>
+      <div class="pt-tree-view" id={`tree-root-${id}`}>
+        <!-- Populated by JS -->
+      </div>
+    </div>
+    
+    <div class="pt-inspector">
+      <div class="pt-inspector-header">
+        <strong>TASK_STRUCT INSPECTOR</strong>
+        <span class="pt-badge" id={`pt-state-badge-${id}`}>SELECT A PROCESS</span>
+      </div>
+      <div class="pt-inspector-body" id={`pt-inspector-body-${id}`}>
+        <p class="pt-empty-state">Click a process in the tree to view its live kernel struct, memory map, and signal controls.</p>
+      </div>
+    </div>
+  </div>
+</process-tree-lab>
+
+<style>
+  process-tree-lab {
+    display: block;
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-surface);
+    overflow: hidden;
+    font-family: var(--font-mono);
+  }
+
+  .pt-lab-container {
+    display: flex;
+    flex-direction: row;
+    height: 400px;
+  }
+
+  .pt-sidebar {
+    width: 45%;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-code);
+  }
+
+  .pt-sidebar-header, .pt-inspector-header {
+    padding: 12px 16px;
+    background: var(--bg-surface-hover);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .pt-sidebar-header strong, .pt-inspector-header strong {
+    font-size: 13px;
+    color: var(--text-heading);
+    letter-spacing: 0.5px;
+  }
+  
+  .pt-sidebar-header small {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .pt-tree-view {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    font-size: 13px;
+  }
+
+  .pt-inspector {
+    width: 55%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .pt-inspector-body {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+  }
+
+  .pt-badge {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--border);
+    color: var(--text-body);
+  }
+  .pt-badge.state-R { background: var(--green); color: #000; }
+  .pt-badge.state-S { background: var(--blue); color: #fff; }
+  .pt-badge.state-Z { background: var(--red); color: #fff; }
+  .pt-badge.state-D { background: var(--orange); color: #000; }
+
+  /* Tree Styles */
+  :global(.pt-node) {
+    margin-bottom: 4px;
+  }
+  :global(.pt-node-line) {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background 0.2s;
+  }
+  :global(.pt-node-line:hover) {
+    background: rgba(255, 255, 255, 0.05);
+  }
+  :global(.pt-node-line.is-selected) {
+    background: var(--blue-dim);
+    border-left: 2px solid var(--blue);
+  }
+  :global(.pt-expander) {
+    width: 16px;
+    text-align: center;
+    display: inline-block;
+    color: var(--muted);
+    font-size: 10px;
+  }
+  :global(.pt-pid) {
+    color: var(--blue);
+    margin: 0 8px;
+    min-width: 40px;
+  }
+  :global(.pt-comm) {
+    color: var(--text-body);
+    font-weight: 600;
+  }
+  :global(.pt-children) {
+    padding-left: 20px;
+    border-left: 1px dashed var(--border);
+    margin-left: 12px;
+    margin-top: 4px;
+  }
+  
+  /* Inspector Styles */
+  :global(.pt-detail-row) {
+    display: flex;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 12px;
+  }
+  :global(.pt-detail-label) {
+    width: 100px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  :global(.pt-detail-value) {
+    flex: 1;
+    color: var(--text-heading);
+  }
+  :global(.pt-signal-controls) {
+    margin-top: 24px;
+    padding: 16px;
+    background: var(--bg-code);
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+  :global(.pt-signal-controls h4) {
+    margin: 0 0 12px 0;
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  :global(.pt-btn) {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    color: var(--text-body);
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    margin-right: 8px;
+    margin-bottom: 8px;
+    transition: all 0.2s;
+  }
+  :global(.pt-btn:hover) {
+    border-color: var(--blue);
+    color: var(--blue);
+  }
+  :global(.pt-btn.kill-btn:hover) {
+    border-color: var(--red);
+    color: var(--red);
+  }
+
+  @media (max-width: 768px) {
+    .pt-lab-container {
+      flex-direction: column;
+      height: auto;
+    }
+    .pt-sidebar {
+      width: 100%;
+      height: 250px;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+    }
+    .pt-inspector {
+      width: 100%;
+      height: 300px;
+    }
+  }
+</style>
+
+<script>
+  class ProcessTreeLab extends HTMLElement {
+    treeData: any;
+    viewId: string;
+    selectedPid: number | null = null;
+    rootEl: HTMLElement;
+    inspectorBody: HTMLElement;
+    stateBadge: HTMLElement;
+    flatNodes: Record<number, any> = {};
+
+    constructor() {
+      super();
+      const initialData = this.getAttribute('data-initial-tree');
+      this.treeData = initialData ? JSON.parse(initialData) : null;
+      this.viewId = this.getAttribute('data-view-id') || '';
+      
+      this.rootEl = this.querySelector(`#tree-root-${this.viewId}`) as HTMLElement;
+      this.inspectorBody = this.querySelector(`#pt-inspector-body-${this.viewId}`) as HTMLElement;
+      this.stateBadge = this.querySelector(`#pt-state-badge-${this.viewId}`) as HTMLElement;
+      
+      if (this.treeData && this.rootEl) {
+        this.indexNodes(this.treeData);
+        this.renderTree();
+      }
+    }
+
+    indexNodes(node: any, parent: any = null) {
+      node.parent = parent ? parent.pid : null;
+      node.expanded = true;
+      this.flatNodes[node.pid] = node;
+      if (node.children) {
+        node.children.forEach((child: any) => this.indexNodes(child, node));
+      }
+    }
+
+    renderTree() {
+      this.rootEl.innerHTML = '';
+      if (this.treeData) {
+        this.rootEl.appendChild(this.createNodeEl(this.treeData));
+      }
+    }
+
+    createNodeEl(node: any) {
+      const div = document.createElement('div');
+      div.className = 'pt-node';
+      div.dataset.pid = node.pid.toString();
+      
+      const line = document.createElement('div');
+      line.className = `pt-node-line ${this.selectedPid === node.pid ? 'is-selected' : ''}`;
+      
+      const expander = document.createElement('span');
+      expander.className = 'pt-expander';
+      if (node.children && node.children.length > 0) {
+        expander.textContent = node.expanded ? '▼' : '▶';
+        expander.style.cursor = 'pointer';
+        expander.onclick = (e) => {
+          e.stopPropagation();
+          node.expanded = !node.expanded;
+          this.renderTree();
+        };
+      }
+      
+      const pid = document.createElement('span');
+      pid.className = 'pt-pid';
+      pid.textContent = node.pid;
+      
+      const comm = document.createElement('span');
+      comm.className = 'pt-comm';
+      comm.textContent = node.comm;
+      if (node.state === 'Z') {
+        comm.textContent += ' <defunct>';
+        comm.style.color = 'var(--red)';
+        comm.style.textDecoration = 'line-through';
+      }
+      
+      line.appendChild(expander);
+      line.appendChild(pid);
+      line.appendChild(comm);
+      
+      line.onclick = () => {
+        this.selectedPid = node.pid;
+        this.renderTree(); // re-render to update selected class
+        this.renderInspector(node);
+      };
+      
+      div.appendChild(line);
+      
+      if (node.expanded && node.children && node.children.length > 0) {
+        const childrenDiv = document.createElement('div');
+        childrenDiv.className = 'pt-children';
+        node.children.forEach((child: any) => {
+          childrenDiv.appendChild(this.createNodeEl(child));
+        });
+        div.appendChild(childrenDiv);
+      }
+      
+      return div;
+    }
+
+    renderInspector(node: any) {
+      const stateMap: Record<string, string> = {
+        'R': 'RUNNING',
+        'S': 'SLEEPING',
+        'D': 'UNINTERRUPTIBLE',
+        'Z': 'ZOMBIE (DEFUNCT)'
+      };
+      
+      this.stateBadge.textContent = stateMap[node.state] || node.state;
+      this.stateBadge.className = `pt-badge state-${node.state}`;
+      
+      let html = `
+        <div class="pt-detail-row">
+          <div class="pt-detail-label">PID</div>
+          <div class="pt-detail-value">${node.pid}</div>
+        </div>
+        <div class="pt-detail-row">
+          <div class="pt-detail-label">Command</div>
+          <div class="pt-detail-value">${node.comm}</div>
+        </div>
+        <div class="pt-detail-row">
+          <div class="pt-detail-label">User</div>
+          <div class="pt-detail-value">${node.user}</div>
+        </div>
+        <div class="pt-detail-row">
+          <div class="pt-detail-label">PPID</div>
+          <div class="pt-detail-value">${node.parent || '0 (Kernel)'}</div>
+        </div>
+        <div class="pt-detail-row">
+          <div class="pt-detail-label">Description</div>
+          <div class="pt-detail-value">${node.desc}</div>
+        </div>
+      `;
+
+      if (node.state !== 'Z') {
+        html += `
+          <div class="pt-signal-controls">
+            <h4>Inject Signal to PID ${node.pid}</h4>
+            <button class="pt-btn" data-sig="SIGTERM">SIGTERM (15)</button>
+            <button class="pt-btn kill-btn" data-sig="SIGKILL">SIGKILL (9)</button>
+            <button class="pt-btn" data-sig="SIGSTOP">SIGSTOP (19)</button>
+          </div>
+        `;
+      } else {
+        html += `
+          <div class="pt-signal-controls">
+            <h4>Process is a Zombie</h4>
+            <p style="font-size:12px;color:var(--muted);margin:0;">This process has terminated. Its memory is freed, but it remains in the process table until its parent (PID ${node.parent}) reads its exit status via wait(). Signals cannot be delivered to a zombie.</p>
+          </div>
+        `;
+      }
+
+      this.inspectorBody.innerHTML = html;
+
+      // Attach signal handlers
+      const sigBtns = this.inspectorBody.querySelectorAll('button[data-sig]');
+      sigBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const sig = (e.target as HTMLButtonElement).dataset.sig;
+          this.handleSignal(node, sig);
+        });
+      });
+    }
+
+    handleSignal(node: any, sig: string | undefined) {
+      if (!sig) return;
+      
+      if (node.pid === 1) {
+        alert("Permission denied: systemd (PID 1) ignores uncatchable signals and usually doesn't exit.");
+        return;
+      }
+      
+      if (sig === 'SIGTERM' || sig === 'SIGKILL') {
+        node.state = 'Z';
+        node.desc = 'Terminated by ' + sig + ', waiting for parent to reap.';
+      } else if (sig === 'SIGSTOP') {
+        node.state = 'S';
+        node.desc = 'Stopped (frozen) by SIGSTOP.';
+      }
+      
+      // If parent is dead, orphans get adopted by PID 1
+      if (sig === 'SIGTERM' || sig === 'SIGKILL') {
+         // simulate reparenting for children
+         if (node.children && node.children.length > 0) {
+           const root = this.flatNodes[1];
+           node.children.forEach((child: any) => {
+             child.parent = 1;
+             child.desc += ' (Orphaned, adopted by PID 1)';
+             root.children.push(child);
+           });
+           node.children = [];
+         }
+      }
+      
+      this.renderTree();
+      this.renderInspector(node);
+    }
+  }
+
+  if (!customElements.get('process-tree-lab')) {
+    customElements.define('process-tree-lab', ProcessTreeLab);
+  }
+</script>

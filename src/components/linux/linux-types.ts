@@ -9,7 +9,7 @@ export const nftables = 'https://wiki.nftables.org/wiki-nftables/index.php/Main_
 /** View kinds — actor diagrams are the original layout; structured kinds are the new additions */
 export type ViewKind =
   | 'path' | 'tree' | 'layers' | 'split' | 'evidence'
-  | 'walkthrough' | 'comparison' | 'recipe' | 'reference' | 'gotcha' | 'decision';
+  | 'walkthrough' | 'comparison' | 'recipe' | 'reference' | 'gotcha' | 'decision' | 'interactive-tree' | 'interactive-permission' | 'interactive-vfs' | 'interactive-packet' | 'interactive-pipeline';
 
 export const actorKinds: readonly string[] = ['path', 'tree', 'layers', 'split', 'evidence'];
 
@@ -103,6 +103,21 @@ export type LinuxView = {
 
   /** Decision flow — troubleshooting flowchart nodes */
   decisions?: DecisionNode[];
+
+  /** Interactive Tree Data */
+  treeData?: any;
+
+  /** Interactive Permission Data */
+  permissionData?: any;
+
+  /** Interactive VFS Data */
+  vfsData?: any;
+
+  /** Interactive Packet Data */
+  packetData?: any;
+
+  /** Interactive Pipeline Data */
+  pipelineData?: any;
 };
 
 /**

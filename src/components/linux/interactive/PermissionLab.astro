@@ -1,0 +1,443 @@
+---
+interface Props {
+  permissionData: any;
+  id: string;
+}
+
+const { permissionData, id } = Astro.props;
+const jsonString = JSON.stringify(permissionData);
+---
+
+<permission-lab data-initial-state={jsonString} data-view-id={id}>
+  <div class="perm-lab-container">
+    <div class="perm-actor-panel">
+      <div class="perm-header">
+        <strong>SUBJECT (PROCESS)</strong>
+        <small>Who is asking for access?</small>
+      </div>
+      <div class="perm-actor-select" id={`perm-users-${id}`}>
+        <!-- Populated by JS -->
+      </div>
+      <div class="perm-actor-details" id={`perm-actor-details-${id}`}>
+        <!-- Populated by JS -->
+      </div>
+    </div>
+    
+    <div class="perm-eval-panel">
+      <div class="perm-header">
+        <strong>KERNEL DAC LADDER</strong>
+        <small>Access Control Evaluation</small>
+      </div>
+      <div class="perm-ladder" id={`perm-ladder-${id}`}>
+        <div class="ladder-step" id="step-owner">
+          <span class="step-num">1</span>
+          <div class="step-logic">
+            <strong>OWNER MATCH?</strong>
+            <small>Is Process UID == File Owner UID?</small>
+          </div>
+          <span class="step-result" id="res-owner">--</span>
+        </div>
+        <div class="ladder-step" id="step-group">
+          <span class="step-num">2</span>
+          <div class="step-logic">
+            <strong>GROUP MATCH?</strong>
+            <small>Is File GID in Process Groups?</small>
+          </div>
+          <span class="step-result" id="res-group">--</span>
+        </div>
+        <div class="ladder-step" id="step-other">
+          <span class="step-num">3</span>
+          <div class="step-logic">
+            <strong>FALLBACK TO OTHER</strong>
+            <small>Apply "Other" bits</small>
+          </div>
+          <span class="step-result" id="res-other">--</span>
+        </div>
+      </div>
+      <div class="perm-final-result" id={`perm-final-${id}`}>
+        <div class="result-badge" id="final-badge">SELECT A PROCESS</div>
+      </div>
+    </div>
+
+    <div class="perm-target-panel">
+      <div class="perm-header">
+        <strong>OBJECT (FILE)</strong>
+        <small>What are we accessing?</small>
+      </div>
+      <div class="perm-file-card">
+        <div class="file-icon">📄</div>
+        <strong id={`file-path-${id}`}>/path</strong>
+        <div class="file-ownership">
+          <span>Owner: <strong id={`file-owner-${id}`}>0</strong></span>
+          <span>Group: <strong id={`file-group-${id}`}>0</strong></span>
+        </div>
+      </div>
+      
+      <div class="perm-mode-editor">
+        <div class="mode-header">
+          <strong>Mode Bits: </strong>
+          <code id={`file-mode-str-${id}`}>000</code>
+        </div>
+        <div class="mode-grid">
+          <div class="mode-col">
+            <span>OWNER</span>
+            <label><input type="checkbox" id="mo-r" value="4"> Read (4)</label>
+            <label><input type="checkbox" id="mo-w" value="2"> Write (2)</label>
+            <label><input type="checkbox" id="mo-x" value="1"> Exec (1)</label>
+          </div>
+          <div class="mode-col">
+            <span>GROUP</span>
+            <label><input type="checkbox" id="mg-r" value="4"> Read (4)</label>
+            <label><input type="checkbox" id="mg-w" value="2"> Write (2)</label>
+            <label><input type="checkbox" id="mg-x" value="1"> Exec (1)</label>
+          </div>
+          <div class="mode-col">
+            <span>OTHER</span>
+            <label><input type="checkbox" id="moo-r" value="4"> Read (4)</label>
+            <label><input type="checkbox" id="moo-w" value="2"> Write (2)</label>
+            <label><input type="checkbox" id="moo-x" value="1"> Exec (1)</label>
+          </div>
+        </div>
+        <div class="mode-presets">
+          <button class="pt-btn" data-preset="0640">0640 (Secure)</button>
+          <button class="pt-btn" data-preset="0644">0644 (Public)</button>
+          <button class="pt-btn kill-btn" data-preset="0777">0777 (Trap)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</permission-lab>
+
+<style>
+  permission-lab {
+    display: block;
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-surface);
+    overflow: hidden;
+    font-family: var(--font-mono);
+  }
+
+  .perm-lab-container {
+    display: flex;
+    flex-direction: row;
+    min-height: 400px;
+  }
+
+  .perm-actor-panel, .perm-target-panel {
+    width: 30%;
+    background: var(--bg-code);
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .perm-actor-panel { border-right: 1px solid var(--border); }
+  .perm-target-panel { border-left: 1px solid var(--border); }
+  
+  .perm-eval-panel {
+    width: 40%;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-surface);
+  }
+
+  .perm-header {
+    padding: 12px 16px;
+    background: var(--bg-surface-hover);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+  }
+  .perm-header strong { font-size: 13px; color: var(--text-heading); letter-spacing: 0.5px; }
+  .perm-header small { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* Actor Panel */
+  .perm-actor-select {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  :global(.actor-btn) {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    color: var(--text-body);
+    padding: 10px;
+    border-radius: 4px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    font-size: 13px;
+  }
+  :global(.actor-btn:hover) { border-color: var(--blue); }
+  :global(.actor-btn.is-active) {
+    background: var(--blue-dim);
+    border-color: var(--blue);
+  }
+  .perm-actor-details {
+    padding: 16px;
+    font-size: 12px;
+  }
+
+  /* File Panel */
+  .perm-file-card {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .file-icon { font-size: 32px; margin-bottom: 8px; }
+  .file-ownership { margin-top: 12px; font-size: 12px; color: var(--muted); display: flex; gap: 16px; }
+  
+  .perm-mode-editor { padding: 16px; }
+  .mode-header { font-size: 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+  .mode-grid { display: flex; gap: 12px; margin-bottom: 16px; }
+  .mode-col { flex: 1; display: flex; flex-direction: column; gap: 6px; font-size: 11px; }
+  .mode-col span { font-weight: bold; color: var(--muted); border-bottom: 1px solid var(--border); padding-bottom: 4px; margin-bottom: 4px; }
+  .mode-col label { display: flex; align-items: center; gap: 4px; cursor: pointer; color: var(--text-body); }
+  
+  .mode-presets { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pt-btn {
+    background: var(--bg-surface); border: 1px solid var(--border); color: var(--text-body);
+    padding: 6px 10px; border-radius: 4px; font-family: inherit; font-size: 11px; cursor: pointer;
+  }
+  .pt-btn:hover { border-color: var(--blue); color: var(--blue); }
+  .pt-btn.kill-btn:hover { border-color: var(--red); color: var(--red); }
+
+  /* Ladder Panel */
+  .perm-ladder { padding: 20px; display: flex; flex-direction: column; gap: 16px; flex: 1; }
+  .ladder-step {
+    display: flex; align-items: center; gap: 12px; padding: 12px;
+    background: var(--bg-code); border: 1px solid var(--border); border-radius: 6px;
+    transition: all 0.3s;
+  }
+  .ladder-step.is-active { border-color: var(--blue); box-shadow: 0 0 0 1px var(--blue); }
+  .ladder-step.is-skipped { opacity: 0.4; }
+  .step-num { width: 24px; height: 24px; border-radius: 12px; background: var(--bg-surface); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; border: 1px solid var(--border); }
+  .step-logic { flex: 1; display: flex; flex-direction: column; }
+  .step-logic strong { font-size: 12px; }
+  .step-logic small { font-size: 11px; color: var(--muted); }
+  .step-result { font-weight: bold; font-size: 12px; }
+  
+  .step-result.res-yes { color: var(--green); }
+  .step-result.res-no { color: var(--red); }
+
+  .perm-final-result { padding: 20px; border-top: 1px solid var(--border); text-align: center; background: var(--bg-surface-hover); }
+  .result-badge {
+    display: inline-block; padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 14px;
+    background: var(--border); color: var(--text-body);
+  }
+  .result-badge.granted { background: var(--green); color: #000; }
+  .result-badge.denied { background: var(--red); color: #fff; }
+
+  @media (max-width: 900px) {
+    .perm-lab-container { flex-direction: column; }
+    .perm-actor-panel, .perm-eval-panel, .perm-target-panel { width: 100%; border: none; border-bottom: 1px solid var(--border); }
+  }
+</style>
+
+<script>
+  class PermissionLab extends HTMLElement {
+    data: any;
+    viewId: string;
+    activeUserIndex: number = 0;
+    currentMode: string = '0640';
+
+    constructor() {
+      super();
+      const initialData = this.getAttribute('data-initial-state');
+      this.data = initialData ? JSON.parse(initialData) : null;
+      this.viewId = this.getAttribute('data-view-id') || '';
+      
+      if (this.data) {
+        this.currentMode = this.data.file.mode;
+        this.renderUsers();
+        this.bindCheckboxes();
+        this.bindPresets();
+        this.updateFileDisplay();
+        this.evaluate();
+      }
+    }
+
+    renderUsers() {
+      const container = this.querySelector(`#perm-users-${this.viewId}`);
+      if (!container) return;
+      container.innerHTML = '';
+      
+      this.data.users.forEach((u: any, idx: number) => {
+        const btn = document.createElement('button');
+        btn.className = `actor-btn ${idx === this.activeUserIndex ? 'is-active' : ''}`;
+        btn.textContent = u.name;
+        btn.onclick = () => {
+          this.activeUserIndex = idx;
+          this.renderUsers();
+          this.evaluate();
+        };
+        container.appendChild(btn);
+      });
+    }
+
+    bindCheckboxes() {
+      const inputs = this.querySelectorAll('input[type="checkbox"]');
+      inputs.forEach(input => {
+        input.addEventListener('change', () => {
+          this.calculateModeFromCheckboxes();
+          this.updateFileDisplay();
+          this.evaluate();
+        });
+      });
+    }
+
+    bindPresets() {
+      const btns = this.querySelectorAll('button[data-preset]');
+      btns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          this.currentMode = (e.target as HTMLElement).dataset.preset || '0000';
+          this.updateFileDisplay();
+          this.evaluate();
+        });
+      });
+    }
+
+    updateFileDisplay() {
+      const pathEl = this.querySelector(`#file-path-${this.viewId}`);
+      const ownerEl = this.querySelector(`#file-owner-${this.viewId}`);
+      const groupEl = this.querySelector(`#file-group-${this.viewId}`);
+      const modeStrEl = this.querySelector(`#file-mode-str-${this.viewId}`);
+      
+      if (pathEl) pathEl.textContent = this.data.file.path;
+      if (ownerEl) ownerEl.textContent = `${this.data.groups[this.data.file.owner]} (${this.data.file.owner})`;
+      if (groupEl) groupEl.textContent = `${this.data.groups[this.data.file.group]} (${this.data.file.group})`;
+      if (modeStrEl) modeStrEl.textContent = this.currentMode;
+
+      // Update checkboxes to match currentMode
+      const m = this.currentMode.padStart(4, '0');
+      const ownerBits = parseInt(m[1], 8);
+      const groupBits = parseInt(m[2], 8);
+      const otherBits = parseInt(m[3], 8);
+
+      (this.querySelector('#mo-r') as HTMLInputElement).checked = (ownerBits & 4) !== 0;
+      (this.querySelector('#mo-w') as HTMLInputElement).checked = (ownerBits & 2) !== 0;
+      (this.querySelector('#mo-x') as HTMLInputElement).checked = (ownerBits & 1) !== 0;
+
+      (this.querySelector('#mg-r') as HTMLInputElement).checked = (groupBits & 4) !== 0;
+      (this.querySelector('#mg-w') as HTMLInputElement).checked = (groupBits & 2) !== 0;
+      (this.querySelector('#mg-x') as HTMLInputElement).checked = (groupBits & 1) !== 0;
+
+      (this.querySelector('#moo-r') as HTMLInputElement).checked = (otherBits & 4) !== 0;
+      (this.querySelector('#moo-w') as HTMLInputElement).checked = (otherBits & 2) !== 0;
+      (this.querySelector('#moo-x') as HTMLInputElement).checked = (otherBits & 1) !== 0;
+    }
+
+    calculateModeFromCheckboxes() {
+      let o = 0, g = 0, oo = 0;
+      if ((this.querySelector('#mo-r') as HTMLInputElement).checked) o += 4;
+      if ((this.querySelector('#mo-w') as HTMLInputElement).checked) o += 2;
+      if ((this.querySelector('#mo-x') as HTMLInputElement).checked) o += 1;
+      
+      if ((this.querySelector('#mg-r') as HTMLInputElement).checked) g += 4;
+      if ((this.querySelector('#mg-w') as HTMLInputElement).checked) g += 2;
+      if ((this.querySelector('#mg-x') as HTMLInputElement).checked) g += 1;
+      
+      if ((this.querySelector('#moo-r') as HTMLInputElement).checked) oo += 4;
+      if ((this.querySelector('#moo-w') as HTMLInputElement).checked) oo += 2;
+      if ((this.querySelector('#moo-x') as HTMLInputElement).checked) oo += 1;
+
+      this.currentMode = `0${o}${g}${oo}`;
+    }
+
+    evaluate() {
+      const user = this.data.users[this.activeUserIndex];
+      const file = this.data.file;
+      const detailsEl = this.querySelector(`#perm-actor-details-${this.viewId}`);
+      if (detailsEl) {
+        detailsEl.innerHTML = `
+          <div style="margin-bottom:4px;color:var(--muted)">Active Process Credentials:</div>
+          <div><strong>UID:</strong> ${user.uid}</div>
+          <div><strong>Groups:</strong> ${user.groups.join(', ')}</div>
+        `;
+      }
+
+      const m = this.currentMode.padStart(4, '0');
+      const ownerBits = parseInt(m[1], 8);
+      const groupBits = parseInt(m[2], 8);
+      const otherBits = parseInt(m[3], 8);
+
+      const sOwner = this.querySelector('#step-owner');
+      const sGroup = this.querySelector('#step-group');
+      const sOther = this.querySelector('#step-other');
+      const rOwner = this.querySelector('#res-owner');
+      const rGroup = this.querySelector('#res-group');
+      const rOther = this.querySelector('#res-other');
+      const badge = this.querySelector('#final-badge');
+
+      // Reset ladder
+      [sOwner, sGroup, sOther].forEach(el => { el?.classList.remove('is-active', 'is-skipped'); });
+      [rOwner, rGroup, rOther].forEach(el => { if(el) { el.textContent = '--'; el.className = 'step-result'; } });
+
+      let granted = false;
+      let appliedBits = 0;
+      let usedLevel = '';
+
+      if (user.uid === 0) {
+        // Root bypass
+        granted = true;
+        sOwner?.classList.add('is-active');
+        sGroup?.classList.add('is-skipped');
+        sOther?.classList.add('is-skipped');
+        if (rOwner) { rOwner.textContent = 'ROOT BYPASS'; rOwner.className = 'step-result res-yes'; }
+        if (badge) { badge.textContent = '✓ GRANTED (ROOT)'; badge.className = 'result-badge granted'; }
+        return;
+      }
+
+      // DAC Ladder
+      if (user.uid === file.owner) {
+        sOwner?.classList.add('is-active');
+        sGroup?.classList.add('is-skipped');
+        sOther?.classList.add('is-skipped');
+        if (rOwner) { rOwner.textContent = 'YES → USE OWNER BITS'; rOwner.className = 'step-result res-yes'; }
+        appliedBits = ownerBits;
+        usedLevel = 'OWNER';
+      } else if (user.groups.includes(file.group)) {
+        sOwner?.classList.add('is-skipped');
+        sGroup?.classList.add('is-active');
+        sOther?.classList.add('is-skipped');
+        if (rOwner) { rOwner.textContent = 'NO'; rOwner.className = 'step-result res-no'; }
+        if (rGroup) { rGroup.textContent = 'YES → USE GROUP BITS'; rGroup.className = 'step-result res-yes'; }
+        appliedBits = groupBits;
+        usedLevel = 'GROUP';
+      } else {
+        sOwner?.classList.add('is-skipped');
+        sGroup?.classList.add('is-skipped');
+        sOther?.classList.add('is-active');
+        if (rOwner) { rOwner.textContent = 'NO'; rOwner.className = 'step-result res-no'; }
+        if (rGroup) { rGroup.textContent = 'NO'; rGroup.className = 'step-result res-no'; }
+        if (rOther) { rOther.textContent = 'USE OTHER BITS'; rOther.className = 'step-result res-yes'; }
+        appliedBits = otherBits;
+        usedLevel = 'OTHER';
+      }
+
+      // Evaluate read check (assume we want read)
+      granted = (appliedBits & 4) !== 0;
+
+      if (badge) {
+        if (granted) {
+          badge.textContent = `✓ READ GRANTED BY ${usedLevel}`;
+          badge.className = 'result-badge granted';
+        } else {
+          badge.textContent = `✗ EACCES (DENIED BY ${usedLevel})`;
+          badge.className = 'result-badge denied';
+        }
+      }
+    }
+  }
+
+  if (!customElements.get('permission-lab')) {
+    customElements.define('permission-lab', PermissionLab);
+  }
+</script>

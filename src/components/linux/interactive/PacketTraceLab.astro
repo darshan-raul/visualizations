@@ -1,0 +1,280 @@
+---
+interface Props {
+  packetData: any;
+  id: string;
+}
+
+const { packetData, id } = Astro.props;
+const jsonString = JSON.stringify(packetData);
+---
+
+<packet-trace-lab data-initial-state={jsonString} data-view-id={id}>
+  <div class="pkt-container">
+    
+    <div class="pkt-header">
+      <div class="pkt-command">
+        <strong>$ curl https://example.com</strong>
+      </div>
+      <div class="pkt-result" id={`pkt-result-${id}`}>
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <div class="pkt-main">
+      <div class="pkt-sidebar">
+        <div class="pkt-header-small">
+          <strong>SIMULATE FAILURES</strong>
+          <small>Break a link in the chain</small>
+        </div>
+        <div class="pkt-controls" id={`pkt-controls-${id}`}>
+          <!-- Toggles populated by JS -->
+        </div>
+      </div>
+
+      <div class="pkt-pipeline">
+        <div class="pkt-header-small">
+          <strong>KERNEL EGRESS PIPELINE</strong>
+        </div>
+        <div class="pkt-stages" id={`pkt-stages-${id}`}>
+          <!-- Stages populated by JS -->
+        </div>
+      </div>
+    </div>
+
+  </div>
+</packet-trace-lab>
+
+<style>
+  packet-trace-lab {
+    display: block;
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-surface);
+    overflow: hidden;
+    font-family: var(--font-mono);
+  }
+
+  .pkt-container {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .pkt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: var(--bg-code);
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .pkt-command { font-size: 14px; color: var(--blue); }
+  .pkt-result { font-weight: bold; font-size: 13px; }
+  .pkt-result.success { color: var(--green); }
+  .pkt-result.error { color: var(--red); }
+
+  .pkt-main {
+    display: flex;
+  }
+
+  .pkt-sidebar {
+    width: 300px;
+    border-right: 1px solid var(--border);
+    background: var(--bg-surface-hover);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .pkt-header-small {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-surface);
+  }
+  .pkt-header-small strong { font-size: 12px; color: var(--text-heading); }
+  .pkt-header-small small { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .pkt-controls {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .pkt-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .pkt-toggle:hover { border-color: var(--blue); }
+  
+  .pkt-toggle.is-broken {
+    background: #3a1a1a;
+    border-color: var(--red);
+    color: var(--red);
+  }
+
+  .pkt-pipeline {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-surface);
+  }
+
+  .pkt-stages {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+  }
+
+  .pkt-stage {
+    display: flex;
+    align-items: flex-start;
+    position: relative;
+    padding-bottom: 24px;
+  }
+  .pkt-stage:last-child { padding-bottom: 0; }
+
+  .pkt-stage-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 12px;
+    background: var(--blue);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    z-index: 2;
+    box-shadow: 0 0 0 4px var(--bg-surface);
+  }
+
+  .pkt-stage-line {
+    position: absolute;
+    top: 24px;
+    bottom: 0;
+    left: 11px;
+    width: 2px;
+    background: var(--blue);
+    z-index: 1;
+  }
+  .pkt-stage:last-child .pkt-stage-line { display: none; }
+
+  .pkt-stage-content {
+    margin-left: 16px;
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    padding: 12px;
+    border-radius: 6px;
+    flex: 1;
+  }
+
+  .pkt-stage-content strong { font-size: 13px; display: block; margin-bottom: 4px; }
+  .pkt-stage-content small { font-size: 12px; color: var(--muted); }
+
+  /* States */
+  .pkt-stage.is-failed .pkt-stage-icon { background: var(--red); }
+  .pkt-stage.is-failed .pkt-stage-line { background: var(--border); border-left: 2px dashed var(--border); }
+  .pkt-stage.is-failed .pkt-stage-content { border-color: var(--red); background: #2a1111; }
+  .pkt-stage.is-failed .pkt-stage-content strong { color: var(--red); }
+
+  .pkt-stage.is-skipped .pkt-stage-icon { background: var(--bg-code); color: var(--muted); border: 1px solid var(--border); }
+  .pkt-stage.is-skipped .pkt-stage-line { background: var(--border); }
+  .pkt-stage.is-skipped .pkt-stage-content { opacity: 0.5; }
+
+  @media (max-width: 768px) {
+    .pkt-main { flex-direction: column; }
+    .pkt-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); }
+  }
+</style>
+
+<script>
+  class PacketTraceLab extends HTMLElement {
+    data: any;
+    viewId: string;
+    
+    constructor() {
+      super();
+      const initialData = this.getAttribute('data-initial-state');
+      this.data = initialData ? JSON.parse(initialData) : null;
+      this.viewId = this.getAttribute('data-view-id') || '';
+      
+      if (this.data) {
+        this.render();
+      }
+    }
+
+    render() {
+      const controlsContainer = this.querySelector(`#pkt-controls-${this.viewId}`);
+      const stagesContainer = this.querySelector(`#pkt-stages-${this.viewId}`);
+      const resultContainer = this.querySelector(`#pkt-result-${this.viewId}`);
+      
+      if (!controlsContainer || !stagesContainer || !resultContainer) return;
+
+      controlsContainer.innerHTML = '';
+      stagesContainer.innerHTML = '';
+
+      let hasFailed = false;
+      let failureMsg = '';
+
+      this.data.stages.forEach((stage: any, index: number) => {
+        // Render Control
+        const btn = document.createElement('div');
+        btn.className = `pkt-toggle ${!stage.active ? 'is-broken' : ''}`;
+        btn.innerHTML = `<span>${stage.name}</span> <strong>${stage.active ? 'OK' : 'FAIL'}</strong>`;
+        btn.onclick = () => {
+          stage.active = !stage.active;
+          this.render();
+        };
+        controlsContainer.appendChild(btn);
+
+        // Evaluate Status
+        let stageClass = '';
+        if (hasFailed) {
+          stageClass = 'is-skipped';
+        } else if (!stage.active) {
+          stageClass = 'is-failed';
+          hasFailed = true;
+          failureMsg = stage.failure;
+        }
+
+        // Render Stage
+        const stg = document.createElement('div');
+        stg.className = `pkt-stage ${stageClass}`;
+        stg.innerHTML = `
+          <div class="pkt-stage-icon">${index + 1}</div>
+          <div class="pkt-stage-line"></div>
+          <div class="pkt-stage-content">
+            <strong>${stage.name}</strong>
+            <small>${!stage.active ? stage.failure : stage.desc}</small>
+          </div>
+        `;
+        stagesContainer.appendChild(stg);
+      });
+
+      if (hasFailed) {
+        resultContainer.className = 'pkt-result error';
+        resultContainer.textContent = `✗ curl: (6) ${failureMsg}`;
+      } else {
+        resultContainer.className = 'pkt-result success';
+        resultContainer.textContent = `✓ Connected to ${this.data.destination}`;
+      }
+    }
+  }
+
+  if (!customElements.get('packet-trace-lab')) {
+    customElements.define('packet-trace-lab', PacketTraceLab);
+  }
+</script>

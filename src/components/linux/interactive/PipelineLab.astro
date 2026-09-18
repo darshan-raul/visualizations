@@ -1,0 +1,219 @@
+---
+interface Props {
+  pipelineData: any;
+  id: string;
+}
+
+const { pipelineData, id } = Astro.props;
+const jsonString = JSON.stringify(pipelineData);
+---
+
+<pipeline-lab data-initial-state={jsonString} data-view-id={id}>
+  <div class="pipe-container">
+    <div class="pipe-header">
+      <div class="pipe-command">
+        <strong>$ {pipelineData.command}</strong>
+      </div>
+      <div class="pipe-controls">
+        <button class="pt-btn" id={`btn-step-${id}`}>Step Stream</button>
+        <button class="pt-btn" id={`btn-reset-${id}`}>Reset</button>
+      </div>
+    </div>
+
+    <div class="pipe-main" id={`pipe-main-${id}`}>
+      <!-- Process Nodes & Pipes populated by JS -->
+    </div>
+    
+    <div class="pipe-log" id={`pipe-log-${id}`}>
+      <div style="font-size: 11px; color: var(--muted); margin-bottom: 8px;">TERMINAL OUTPUT</div>
+    </div>
+  </div>
+</pipeline-lab>
+
+<style>
+  pipeline-lab {
+    display: block;
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-surface);
+    overflow: hidden;
+    font-family: var(--font-mono);
+  }
+
+  .pipe-container { display: flex; flex-direction: column; }
+
+  .pipe-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px; background: var(--bg-code); border-bottom: 1px solid var(--border);
+  }
+  
+  .pipe-command { font-size: 14px; color: var(--blue); }
+  
+  .pipe-controls { display: flex; gap: 8px; }
+  .pt-btn { background: var(--bg-surface); border: 1px solid var(--border); color: var(--text-body); padding: 6px 12px; border-radius: 4px; font-family: inherit; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+  .pt-btn:hover { border-color: var(--blue); color: var(--blue); }
+  .pt-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .pipe-main {
+    padding: 32px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-surface-hover);
+    border-bottom: 1px solid var(--border);
+    min-height: 200px;
+    position: relative;
+    overflow-x: auto;
+  }
+
+  .pipe-node {
+    display: flex; flex-direction: column; align-items: center;
+    width: 140px; background: var(--bg-surface); border: 2px solid var(--border);
+    border-radius: 8px; z-index: 2; position: relative;
+  }
+  .pipe-node.is-running { border-color: var(--blue); }
+  .pipe-node.is-dead { border-color: var(--red); opacity: 0.7; }
+  
+  .node-title { padding: 8px; background: var(--bg-code); width: 100%; text-align: center; border-bottom: 1px solid var(--border); border-radius: 6px 6px 0 0; font-weight: bold; font-size: 14px; }
+  .node-body { padding: 12px 8px; width: 100%; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+  
+  .node-buffer { width: 100%; height: 24px; background: var(--bg-code); border: 1px solid var(--border); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .node-buffer.has-data { background: var(--blue-dim); color: var(--blue); border-color: var(--blue); }
+
+  .pipe-link {
+    flex: 1; height: 16px; background: var(--bg-code); border-top: 2px solid var(--border); border-bottom: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center; position: relative; margin: 0 -4px; z-index: 1;
+  }
+  .pipe-link.is-broken { border-color: var(--red); background: #3a1a1a; }
+  .pipe-link-text { font-size: 10px; font-weight: bold; background: var(--bg-surface); padding: 0 4px; border-radius: 4px; color: var(--muted); }
+  .pipe-link.is-broken .pipe-link-text { color: var(--red); content: 'BROKEN'; }
+
+  .pipe-log {
+    padding: 16px; min-height: 100px; background: #000; color: var(--green); font-size: 13px;
+  }
+</style>
+
+<script>
+  class PipelineLab extends HTMLElement {
+    data: any;
+    viewId: string;
+    
+    // Simulation state
+    tick: number = 0;
+    processes: any[] = [];
+    terminalOutput: string[] = [];
+
+    // The predefined script of data items flowing
+    // Tick 0: cat reads 'line 1'
+    // Tick 1: cat -> grep 'line 1' (grep drops it)
+    // Tick 2: cat reads 'line 2'
+    // Tick 3: cat -> grep 'line 2' (grep drops it)
+    // Tick 4: cat reads 'error 1'
+    // Tick 5: cat -> grep 'error 1'
+    // Tick 6: grep -> head 'error 1'
+    // Tick 7: head -> terminal 'error 1' -> head EXITS
+    // Tick 8: grep gets SIGPIPE (pipe broken) -> grep EXITS
+    // Tick 9: cat gets SIGPIPE (pipe broken) -> cat EXITS
+
+    constructor() {
+      super();
+      const initialData = this.getAttribute('data-initial-state');
+      this.data = initialData ? JSON.parse(initialData) : null;
+      this.viewId = this.getAttribute('data-view-id') || '';
+      
+      if (this.data) {
+        this.reset();
+        this.bindEvents();
+      }
+    }
+
+    reset() {
+      this.tick = 0;
+      this.terminalOutput = [];
+      this.processes = [
+        { name: 'cat', state: 'RUNNING', buf: '' },
+        { name: 'grep', state: 'RUNNING', buf: '' },
+        { name: 'head', state: 'RUNNING', buf: '' }
+      ];
+      this.render();
+    }
+
+    bindEvents() {
+      this.querySelector(`#btn-step-${this.viewId}`)?.addEventListener('click', () => {
+        this.step();
+        this.render();
+      });
+      this.querySelector(`#btn-reset-${this.viewId}`)?.addEventListener('click', () => {
+        this.reset();
+      });
+    }
+
+    step() {
+      this.tick++;
+      if (this.tick === 1) this.processes[0].buf = 'line 1 (info)';
+      else if (this.tick === 2) { this.processes[1].buf = this.processes[0].buf; this.processes[0].buf = ''; } // grep gets it, drops it
+      else if (this.tick === 3) { this.processes[1].buf = ''; this.processes[0].buf = 'line 2 (info)'; }
+      else if (this.tick === 4) { this.processes[1].buf = this.processes[0].buf; this.processes[0].buf = ''; } // grep gets it, drops it
+      else if (this.tick === 5) { this.processes[1].buf = ''; this.processes[0].buf = 'error: connection lost'; } // cat reads error
+      else if (this.tick === 6) { this.processes[1].buf = this.processes[0].buf; this.processes[0].buf = ''; } // grep gets error
+      else if (this.tick === 7) { this.processes[2].buf = this.processes[1].buf; this.processes[1].buf = ''; } // head gets error
+      else if (this.tick === 8) { 
+        this.terminalOutput.push(this.processes[2].buf);
+        this.processes[2].buf = '';
+        this.processes[2].state = 'DEAD (EXIT 0)'; // Head exits after 1 line
+      }
+      else if (this.tick === 9) {
+        this.processes[1].state = 'DEAD (SIGPIPE)'; // Grep pipe broken
+      }
+      else if (this.tick === 10) {
+        this.processes[0].state = 'DEAD (SIGPIPE)'; // Cat pipe broken
+      }
+    }
+
+    render() {
+      const main = this.querySelector(`#pipe-main-${this.viewId}`);
+      const log = this.querySelector(`#pipe-log-${this.viewId}`);
+      const btnStep = this.querySelector(`#btn-step-${this.viewId}`) as HTMLButtonElement;
+      if (!main || !log || !btnStep) return;
+
+      btnStep.disabled = this.tick >= 10;
+
+      main.innerHTML = '';
+      
+      this.processes.forEach((p, idx) => {
+        // Node
+        const node = document.createElement('div');
+        node.className = `pipe-node ${p.state.startsWith('DEAD') ? 'is-dead' : 'is-running'}`;
+        node.innerHTML = `
+          <div class="node-title">${p.name}</div>
+          <div class="node-body">
+            <div style="font-size:10px; font-weight:bold; color:var(--muted)">${p.state}</div>
+            <div class="node-buffer ${p.buf ? 'has-data' : ''}">${p.buf || 'Buffer Empty'}</div>
+          </div>
+        `;
+        main.appendChild(node);
+
+        // Pipe (if not last)
+        if (idx < this.processes.length - 1) {
+          const pipe = document.createElement('div');
+          const isBroken = this.processes[idx+1].state.startsWith('DEAD');
+          pipe.className = `pipe-link ${isBroken ? 'is-broken' : ''}`;
+          pipe.innerHTML = `<span class="pipe-link-text">${isBroken ? 'BROKEN' : 'PIPE (64KB)'}</span>`;
+          main.appendChild(pipe);
+        }
+      });
+
+      log.innerHTML = '<div style="font-size: 11px; color: var(--muted); margin-bottom: 8px;">TERMINAL OUTPUT</div>';
+      this.terminalOutput.forEach(l => {
+        const div = document.createElement('div');
+        div.textContent = l;
+        log.appendChild(div);
+      });
+    }
+  }
+
+  if (!customElements.get('pipeline-lab')) {
+    customElements.define('pipeline-lab', PipelineLab);
+  }
+</script>

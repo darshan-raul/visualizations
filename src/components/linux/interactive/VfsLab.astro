@@ -1,0 +1,374 @@
+---
+interface Props {
+  vfsData: any;
+  id: string;
+}
+
+const { vfsData, id } = Astro.props;
+const jsonString = JSON.stringify(vfsData);
+---
+
+<vfs-lab data-initial-state={jsonString} data-view-id={id}>
+  <div class="vfs-lab-container">
+    
+    <!-- Top Row: Namespaces -->
+    <div class="vfs-row">
+      <div class="vfs-panel" id={`vfs-dir-panel-${id}`}>
+        <div class="vfs-header">
+          <strong>DIRECTORY ENTRY (DENTRY)</strong>
+          <small>User-space path resolution</small>
+        </div>
+        <div class="vfs-body">
+          <table class="vfs-table">
+            <thead>
+              <tr><th>Path</th><th>Points to Inode</th></tr>
+            </thead>
+            <tbody id={`vfs-dir-tbody-${id}`}>
+              <tr id={`vfs-dentry-row-${id}`}>
+                <td><code class="vfs-path" id={`vfs-path-${id}`}>/srv/log/access.log</code></td>
+                <td><strong class="vfs-inode-ref">262150</strong></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="vfs-empty-msg" id={`vfs-dir-empty-${id}`} hidden>
+            <span style="color:var(--red)">Unlinked: Name removed from directory</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="vfs-panel" id={`vfs-proc-panel-${id}`}>
+        <div class="vfs-header">
+          <strong>PROCESS FD TABLE</strong>
+          <small>Kernel process memory</small>
+        </div>
+        <div class="vfs-body">
+          <table class="vfs-table">
+            <thead>
+              <tr><th>Process</th><th>FD</th><th>Points to Inode</th></tr>
+            </thead>
+            <tbody id={`vfs-fd-tbody-${id}`}>
+              <tr id={`vfs-fd-row-${id}`}>
+                <td><strong id={`vfs-comm-${id}`}>nginx (421)</strong></td>
+                <td><code class="vfs-path">14 (w)</code></td>
+                <td><strong class="vfs-inode-ref">262150</strong></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="vfs-empty-msg" id={`vfs-fd-empty-${id}`} hidden>
+            <span style="color:var(--red)">Process terminated / FD closed</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Middle: The Inode -->
+    <div class="vfs-inode-section">
+      <div class="vfs-inode-card" id={`vfs-inode-card-${id}`}>
+        <div class="inode-top">
+          <span class="inode-icon">🗄️</span>
+          <strong>INODE <span id={`inode-num-${id}`}>262150</span></strong>
+        </div>
+        <div class="inode-stats">
+          <div class="inode-stat">
+            <small>Hard Links (i_nlink)</small>
+            <strong id={`inode-nlink-${id}`}>1</strong>
+          </div>
+          <div class="inode-stat">
+            <small>Open Handles (f_count)</small>
+            <strong id={`inode-fcount-${id}`}>1</strong>
+          </div>
+          <div class="inode-stat">
+            <small>Data Blocks Size</small>
+            <strong id={`inode-size-${id}`} class="size-alert">20 GB</strong>
+          </div>
+        </div>
+        <div class="inode-status" id={`inode-status-${id}`}>
+          State: ALIVE (Refcount > 0)
+        </div>
+      </div>
+    </div>
+    
+    <!-- Bottom: Disk -->
+    <div class="vfs-disk-section" id={`vfs-disk-${id}`}>
+      <div class="disk-track">
+        <div class="disk-used" id={`disk-used-${id}`}>
+          <span id={`disk-label-${id}`}>20 GB RETAINED ON DISK</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Controls -->
+    <div class="vfs-controls">
+      <div class="vfs-header" style="border-bottom:none; padding-bottom:0;">
+        <strong>INTERACTIVE SIMULATION</strong>
+      </div>
+      <div class="vfs-btn-group">
+        <button class="pt-btn kill-btn" id={`btn-rm-${id}`}>$ rm access.log</button>
+        <button class="pt-btn" id={`btn-trunc-${id}`}>$ : > /proc/421/fd/14</button>
+        <button class="pt-btn kill-btn" id={`btn-kill-${id}`}>$ kill 421</button>
+        <button class="pt-btn" id={`btn-reset-${id}`}>↺ Reset Lab</button>
+      </div>
+      <p class="vfs-explainer" id={`vfs-explainer-${id}`}>
+        Click <strong>rm access.log</strong> to see why space isn't freed when a file is deleted while still open.
+      </p>
+    </div>
+  </div>
+</vfs-lab>
+
+<style>
+  vfs-lab {
+    display: block;
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-surface);
+    overflow: hidden;
+    font-family: var(--font-mono);
+  }
+
+  .vfs-lab-container {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .vfs-row {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .vfs-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-code);
+  }
+  .vfs-panel:first-child { border-right: 1px solid var(--border); }
+
+  .vfs-header {
+    padding: 12px 16px;
+    background: var(--bg-surface-hover);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+  }
+  .vfs-header strong { font-size: 13px; color: var(--text-heading); letter-spacing: 0.5px; }
+  .vfs-header small { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .vfs-body { padding: 16px; min-height: 80px; display: flex; flex-direction: column; justify-content: center; }
+  
+  .vfs-table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: left; }
+  .vfs-table th { color: var(--muted); padding-bottom: 8px; font-weight: normal; border-bottom: 1px solid var(--border); }
+  .vfs-table td { padding: 12px 0 4px 0; }
+  
+  .vfs-path { color: var(--text-body); background: var(--bg-surface); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border); }
+  .vfs-inode-ref { color: var(--blue); }
+  
+  .vfs-empty-msg { text-align: center; font-size: 12px; font-weight: bold; }
+
+  /* Inode */
+  .vfs-inode-section {
+    padding: 24px;
+    background: var(--bg-surface);
+    display: flex;
+    justify-content: center;
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .vfs-inode-card {
+    border: 2px solid var(--blue);
+    border-radius: 8px;
+    padding: 16px;
+    width: 400px;
+    background: var(--bg-surface-hover);
+    transition: all 0.3s;
+  }
+  .vfs-inode-card.is-dead {
+    border-color: var(--border);
+    opacity: 0.5;
+  }
+  
+  .inode-top { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; font-size: 14px; color: var(--blue); }
+  .inode-top strong { letter-spacing: 1px; }
+  .is-dead .inode-top { color: var(--muted); }
+  
+  .inode-stats { display: flex; justify-content: space-between; margin-bottom: 16px; }
+  .inode-stat { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .inode-stat small { font-size: 10px; color: var(--muted); text-transform: uppercase; }
+  .inode-stat strong { font-size: 16px; }
+  .size-alert { color: var(--red); }
+  .size-ok { color: var(--green); }
+  
+  .inode-status { text-align: center; font-size: 11px; font-weight: bold; padding: 6px; border-radius: 4px; background: var(--blue-dim); color: var(--blue); }
+  .is-dead .inode-status { background: var(--border); color: var(--text-body); text-decoration: line-through; }
+
+  /* Disk */
+  .vfs-disk-section { padding: 24px; background: var(--bg-code); border-bottom: 1px solid var(--border); }
+  .disk-track { height: 24px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; position: relative; }
+  .disk-used { height: 100%; background: var(--red); width: 100%; transition: width 0.5s ease-out; display: flex; align-items: center; justify-content: center; }
+  .disk-used.is-empty { width: 0%; }
+  .disk-used span { font-size: 10px; font-weight: bold; color: #fff; white-space: nowrap; }
+
+  /* Controls */
+  .vfs-controls { padding: 16px; background: var(--bg-surface); }
+  .vfs-btn-group { display: flex; gap: 12px; margin: 12px 16px; flex-wrap: wrap; }
+  .pt-btn { background: var(--bg-surface); border: 1px solid var(--border); color: var(--text-body); padding: 8px 16px; border-radius: 4px; font-family: inherit; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+  .pt-btn:hover { border-color: var(--blue); color: var(--blue); }
+  .pt-btn.kill-btn:hover { border-color: var(--red); color: var(--red); }
+  .pt-btn:disabled { opacity: 0.5; cursor: not-allowed; border-color: var(--border) !important; color: var(--muted) !important; }
+  
+  .vfs-explainer { margin: 0 16px 8px 16px; font-size: 13px; color: var(--muted); }
+
+  @media (max-width: 768px) {
+    .vfs-row { flex-direction: column; }
+    .vfs-panel:first-child { border-right: none; border-bottom: 1px solid var(--border); }
+    .vfs-inode-card { width: 100%; }
+  }
+</style>
+
+<script>
+  class VfsLab extends HTMLElement {
+    data: any;
+    viewId: string;
+    
+    // State
+    nlink: number = 1;
+    fcount: number = 1;
+    size: string = '20 GB';
+    
+    constructor() {
+      super();
+      const initialData = this.getAttribute('data-initial-state');
+      this.data = initialData ? JSON.parse(initialData) : null;
+      this.viewId = this.getAttribute('data-view-id') || '';
+      
+      if (this.data) {
+        this.bindEvents();
+        this.render();
+      }
+    }
+
+    bindEvents() {
+      this.querySelector(`#btn-rm-${this.viewId}`)?.addEventListener('click', () => {
+        this.nlink = 0;
+        this.render('rm');
+      });
+      
+      this.querySelector(`#btn-trunc-${this.viewId}`)?.addEventListener('click', () => {
+        this.size = '0 B';
+        this.render('trunc');
+      });
+      
+      this.querySelector(`#btn-kill-${this.viewId}`)?.addEventListener('click', () => {
+        this.fcount = 0;
+        this.render('kill');
+      });
+      
+      this.querySelector(`#btn-reset-${this.viewId}`)?.addEventListener('click', () => {
+        this.nlink = 1;
+        this.fcount = 1;
+        this.size = '20 GB';
+        this.render('reset');
+      });
+    }
+
+    render(action?: string) {
+      // Dentry
+      const dentryRow = this.querySelector(`#vfs-dentry-row-${this.viewId}`);
+      const dentryEmpty = this.querySelector(`#vfs-dir-empty-${this.viewId}`);
+      const btnRm = this.querySelector(`#btn-rm-${this.viewId}`) as HTMLButtonElement;
+      
+      if (this.nlink === 0) {
+        dentryRow?.setAttribute('hidden', 'true');
+        dentryEmpty?.removeAttribute('hidden');
+        if (btnRm) btnRm.disabled = true;
+      } else {
+        dentryRow?.removeAttribute('hidden');
+        dentryEmpty?.setAttribute('hidden', 'true');
+        if (btnRm) btnRm.disabled = false;
+      }
+
+      // FD
+      const fdRow = this.querySelector(`#vfs-fd-row-${this.viewId}`);
+      const fdEmpty = this.querySelector(`#vfs-fd-empty-${this.viewId}`);
+      const btnKill = this.querySelector(`#btn-kill-${this.viewId}`) as HTMLButtonElement;
+      const btnTrunc = this.querySelector(`#btn-trunc-${this.viewId}`) as HTMLButtonElement;
+      
+      if (this.fcount === 0) {
+        fdRow?.setAttribute('hidden', 'true');
+        fdEmpty?.removeAttribute('hidden');
+        if (btnKill) btnKill.disabled = true;
+        if (btnTrunc) btnTrunc.disabled = true;
+      } else {
+        fdRow?.removeAttribute('hidden');
+        fdEmpty?.setAttribute('hidden', 'true');
+        if (btnKill) btnKill.disabled = false;
+        if (btnTrunc) btnTrunc.disabled = this.size === '0 B';
+      }
+
+      // Inode
+      const inodeNlink = this.querySelector(`#inode-nlink-${this.viewId}`);
+      const inodeFcount = this.querySelector(`#inode-fcount-${this.viewId}`);
+      const inodeSize = this.querySelector(`#inode-size-${this.viewId}`);
+      const inodeCard = this.querySelector(`#vfs-inode-card-${this.viewId}`);
+      const inodeStatus = this.querySelector(`#inode-status-${this.viewId}`);
+      
+      if (inodeNlink) inodeNlink.textContent = this.nlink.toString();
+      if (inodeFcount) inodeFcount.textContent = this.fcount.toString();
+      
+      if (inodeSize) {
+        inodeSize.textContent = this.size;
+        inodeSize.className = this.size === '0 B' ? 'size-ok' : 'size-alert';
+      }
+      
+      const isDead = this.nlink === 0 && this.fcount === 0;
+      
+      if (isDead) {
+        inodeCard?.classList.add('is-dead');
+        if (inodeStatus) inodeStatus.textContent = 'State: DEAD & FREED';
+        this.size = '0 B'; // Kernel frees blocks
+        if (inodeSize) inodeSize.textContent = this.size;
+      } else {
+        inodeCard?.classList.remove('is-dead');
+        if (inodeStatus) inodeStatus.textContent = `State: ALIVE (Refcount = ${this.nlink + this.fcount})`;
+      }
+
+      // Disk
+      const diskUsed = this.querySelector(`#disk-used-${this.viewId}`);
+      const diskLabel = this.querySelector(`#disk-label-${this.viewId}`);
+      
+      if (this.size === '0 B') {
+        diskUsed?.classList.add('is-empty');
+        if (diskLabel) diskLabel.textContent = '';
+      } else {
+        diskUsed?.classList.remove('is-empty');
+        if (diskLabel) diskLabel.textContent = '20 GB RETAINED ON DISK';
+      }
+      
+      // Explainer
+      const explainer = this.querySelector(`#vfs-explainer-${this.viewId}`);
+      if (explainer) {
+        if (action === 'rm') {
+          if (this.fcount > 0) {
+            explainer.innerHTML = `<strong>rm</strong> removes the name from the directory (i_nlink=0). But <strong>nginx</strong> still has the file open (f_count=1). The kernel CANNOT free the 20GB disk blocks yet!`;
+          } else {
+            explainer.innerHTML = `Because the file is closed (f_count=0), removing the name (i_nlink=0) causes the kernel to finally free the inode and disk blocks.`;
+          }
+        } else if (action === 'kill') {
+          if (this.nlink > 0) {
+            explainer.innerHTML = `Process killed. The file descriptor is closed (f_count=0). However, the file still exists in the directory (i_nlink=1), so the 20GB disk blocks remain intact.`;
+          } else {
+            explainer.innerHTML = `Process killed (f_count=0). Since the file was already unlinked (i_nlink=0), the kernel immediately frees the inode and reclaims the 20GB disk blocks!`;
+          }
+        } else if (action === 'trunc') {
+          explainer.innerHTML = `Truncating via procfs sets the file size to 0. The inode remains alive, but the 20GB physical data blocks are freed back to the filesystem instantly.`;
+        } else if (action === 'reset') {
+          explainer.innerHTML = `Click <strong>rm access.log</strong> to see why space isn't freed when a file is deleted while still open.`;
+        }
+      }
+    }
+  }
+
+  if (!customElements.get('vfs-lab')) {
+    customElements.define('vfs-lab', VfsLab);
+  }
+</script>

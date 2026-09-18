@@ -4,50 +4,883 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <title>Linux foundations · console approval prototype</title>
+  <title>Linux foundations · Educational Architecture & Systems Prototype</title>
   <style>
-    :root{--bg:#090c13;--shell:#0d1824;--panel:#142638;--line:#31445a;--text:#f2f5fc;--muted:#a2b0c2;--cyan:#42d6e8;--green:#49d6a3;--red:#fb7e85;--amber:#f6c763;font-family:system-ui,sans-serif;color-scheme:dark}
-    *{box-sizing:border-box}body{margin:0;min-width:320px;background:var(--bg);color:var(--text)}a{color:inherit;text-decoration:none}a:hover{color:var(--cyan)}button,select{font:inherit;cursor:pointer;min-height:44px;color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 12px}:focus-visible{outline:3px solid var(--cyan);outline-offset:3px}.skip{position:absolute;top:-100px;left:10px}.skip:focus{top:10px;background:var(--cyan);color:#07111a;padding:10px;z-index:10}
-    body:not(.enhanced) .mode button,body:not(.enhanced) .controls button,body:not(.enhanced) [data-network-probe]{display:none}.prototype{width:min(calc(100% - 24px),1460px);margin:12px auto 30px;border:1px solid var(--line);border-radius:17px;background:var(--shell);overflow:clip}.top{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 23px;border-bottom:1px solid var(--line)}.brand{font-weight:750}.brand em{font-style:normal;color:var(--cyan)}.top nav{display:flex;gap:18px;color:var(--muted);font-size:.85rem}.head{display:flex;justify-content:space-between;gap:20px;padding:24px;border-bottom:1px solid var(--line)}.crumb{color:var(--muted);font-size:.8rem}.kicker{display:block;color:var(--cyan);font:.75rem ui-monospace,monospace;letter-spacing:.1em;margin-top:19px}h1{font-size:clamp(2rem,4.4vw,3.4rem);letter-spacing:-.05em;margin:8px 0}h2{font-size:clamp(1.5rem,3vw,2.3rem);letter-spacing:-.04em;margin:8px 0}p{line-height:1.55}.head p{color:var(--muted);margin:0}.head>a{display:grid;place-items:center;align-self:start;min-height:44px;border:1px solid var(--cyan);color:var(--cyan);border-radius:9px;padding:8px 13px;white-space:nowrap}.map{padding:24px}.map-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:stretch;margin-top:20px}.core{grid-column:2/4;grid-row:1/3;display:grid;place-items:center;text-align:center;border:1px solid var(--cyan);border-radius:13px;background:#17303e;min-height:220px}.core strong{font-size:1.4rem}.core small{display:block;color:var(--muted);font:.78rem ui-monospace,monospace}.node{display:grid;gap:7px;border:1px solid var(--line);border-radius:11px;background:var(--panel);padding:15px;min-height:100px}.node span{color:var(--cyan);font:.76rem ui-monospace,monospace}.node strong{font-size:1.05rem}.node small{color:var(--muted);font:.72rem ui-monospace,monospace}.mode{display:flex;gap:7px;flex-wrap:wrap;margin-top:20px}.mode button[aria-pressed=true],.controls button[aria-pressed=true]{border-color:var(--cyan);color:var(--cyan)}.map-note,.bottom{padding:17px 24px;border-top:1px solid var(--line);color:var(--muted)}.map-note{font-size:.92rem}.map[data-mode=path] .node{border-color:var(--green)}.basics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:24px;border-top:1px solid var(--line)}.basics div{border:1px solid var(--line);border-radius:9px;background:var(--panel);padding:15px}.basics span{color:var(--cyan);font:.75rem ui-monospace,monospace}.basics strong{display:block;margin-top:8px}.basics p{color:var(--muted);margin-bottom:0}
-    .console{display:grid;grid-template-columns:190px minmax(0,1fr) 270px}.index{padding:16px;background:#111e2b;border-right:1px solid var(--line)}.index>strong{display:block;color:var(--cyan);font:.75rem ui-monospace,monospace;margin-bottom:15px}.index details{border-top:1px solid var(--line)}.index summary{min-height:48px;cursor:pointer;padding:13px 2px;font-weight:700}.index a{display:block;min-height:44px;padding:11px;border-radius:7px;color:var(--muted)}.index a[aria-current]{color:var(--cyan);background:#163443}.canvas{padding:24px;min-height:490px;background:repeating-linear-gradient(0deg,transparent,transparent 43px,rgba(255,255,255,.025) 44px),#101e2b}.diagram{border:1px solid #3a5b77;border-radius:13px;background:#13283a;padding:18px;margin:20px 0}.diagram>span{color:var(--cyan);font:.7rem ui-monospace,monospace}.actors{display:flex;gap:29px;margin-top:17px}.actor{position:relative;display:grid;align-content:center;gap:6px;flex:1;min-height:95px;min-width:0;border:1px solid var(--line);border-radius:9px;background:#1a3447;padding:11px;transition:transform .25s,border-color .25s}.actor:not(:last-child):after{content:'→';position:absolute;right:-24px;top:40%;color:var(--cyan);font-size:1.25rem}.actor strong{overflow-wrap:anywhere}.actor small{color:var(--muted)}.actor.is-current{transform:translateY(-3px);border-color:var(--cyan);background:#1a4951}.actor.is-blocked{border-color:var(--red);background:#432330}.actor.is-blocked:after{content:'×'}.diagram figcaption{border-top:1px solid var(--line);margin-top:17px;padding-top:12px}.controls{display:flex;flex-wrap:wrap;gap:7px}.controls p{width:100%;color:var(--muted);margin:7px 0}.inspector{padding:20px;border-left:1px solid var(--line);background:#111f2e}.inspector>span{color:var(--cyan);font:.75rem ui-monospace,monospace}.inspector h3{font-size:1.25rem}.inspector p{color:var(--muted)}.terminal{border:1px solid #296653;border-radius:9px;background:#091a21;padding:12px;margin-top:16px}.terminal span{color:var(--green);font:.72rem ui-monospace,monospace}.terminal pre{white-space:pre-wrap;overflow-wrap:anywhere;font:.78rem/1.5 ui-monospace,monospace}.bottom{display:flex;justify-content:space-between;gap:15px;flex-wrap:wrap}.bottom a{color:var(--cyan)}.sources{padding:16px 24px;border-top:1px solid var(--line)}.sources summary{cursor:pointer;min-height:44px}.sources a{color:var(--cyan)}.nojs-note{color:var(--amber);font-size:.8rem}
-    @media(max-width:1050px){.console{grid-template-columns:170px minmax(0,1fr)}.inspector{grid-column:2;border-left:0;border-top:1px solid var(--line)}}
-    @media(max-width:760px){.head{display:grid}.console{display:block}.index{border-right:0;border-bottom:1px solid var(--line)}.index details{display:inline-block;width:49%;vertical-align:top}.canvas{padding:17px;min-height:0}.inspector{border-top:1px solid var(--line)}.map-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.core{grid-column:1/3;grid-row:1}.basics{grid-template-columns:1fr}}
-    @media(max-width:520px){.top{padding:14px}.top nav a:not(:last-child){display:none}.head,.map,.basics{padding:17px}.index details{display:block;width:100%}.map-grid{grid-template-columns:1fr}.core{grid-column:1}.actors{display:grid;gap:25px}.actor:not(:last-child):after{content:'↓';top:auto;bottom:-26px;right:50%}.bottom{padding:17px}.sources{padding:17px}}
-    @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+    :root {
+      --bg: #090c13;
+      --shell: #0d1824;
+      --panel: #142638;
+      --panel-dark: #0a1420;
+      --line: #31445a;
+      --line-subtle: #1c2c3d;
+      --text: #f2f5fc;
+      --muted: #a2b0c2;
+      --dim: #6d8096;
+      --cyan: #42d6e8;
+      --purple: #9d7cd8;
+      --green: #49d6a3;
+      --red: #fb7e85;
+      --amber: #f6c763;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-family: system-ui, -apple-system, sans-serif;
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; background: var(--bg); color: var(--text); line-height: 1.5; }
+    a { color: inherit; text-decoration: none; }
+    a:hover { color: var(--cyan); }
+    button, select {
+      font: inherit; cursor: pointer; min-height: 44px; color: var(--text);
+      background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px;
+      transition: all 0.2s ease;
+    }
+    button:hover { border-color: var(--cyan); }
+    :focus-visible { outline: 3px solid var(--cyan); outline-offset: 3px; }
+    .skip { position: absolute; top: -100px; left: 10px; }
+    .skip:focus { top: 10px; background: var(--cyan); color: #07111a; padding: 10px; z-index: 10; }
+
+    .prototype {
+      width: min(calc(100% - 24px), 1560px); margin: 16px auto 36px;
+      border: 1px solid var(--line); border-radius: 18px; background: var(--shell); overflow: clip;
+      box-shadow: 0 24px 80px rgba(0,4,12,0.4);
+    }
+    .top {
+      display: flex; justify-content: space-between; align-items: center; gap: 16px;
+      padding: 16px 24px; border-bottom: 1px solid var(--line); background: rgba(10,18,28,0.7);
+    }
+    .brand { font-weight: 750; font-size: 1.05rem; }
+    .brand em { font-style: normal; color: var(--cyan); }
+    .top nav { display: flex; gap: 20px; color: var(--muted); font-size: 0.88rem; }
+    .head {
+      display: flex; justify-content: space-between; gap: 24px; padding: 28px 28px 24px;
+      border-bottom: 1px solid var(--line); background: var(--panel-dark);
+    }
+    .crumb { color: var(--dim); font: 0.78rem var(--mono); }
+    .kicker { display: block; color: var(--cyan); font: 700 0.75rem var(--mono); letter-spacing: 0.08em; margin-top: 14px; }
+    h1 { font-size: clamp(2rem, 3.8vw, 3.1rem); letter-spacing: -0.04em; margin: 8px 0 6px; line-height: 1.15; }
+    h2 { font-size: clamp(1.4rem, 2.4vw, 2rem); letter-spacing: -0.03em; margin: 6px 0; }
+    p { margin: 0 0 12px; }
+    .head p { color: var(--muted); font-size: 0.98rem; max-width: 75ch; }
+    .head > a {
+      display: inline-flex; align-items: center; align-self: start; min-height: 44px;
+      border: 1px solid var(--cyan); color: var(--cyan); border-radius: 9px; padding: 8px 16px;
+      font-size: 0.88rem; font-weight: 600; white-space: nowrap;
+    }
+
+    /* Host Canvas & Subsystem Map */
+    .hub-section { padding: 26px 28px; }
+    .canvas-card {
+      border: 1px solid var(--line); border-radius: 14px; background: var(--panel-dark);
+      padding: 22px; margin-top: 18px;
+    }
+    .scenario-toolbar {
+      display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 20px;
+      padding-bottom: 16px; border-bottom: 1px solid var(--line-subtle);
+    }
+    .scenario-toolbar span { font: 700 0.76rem var(--mono); color: var(--cyan); letter-spacing: 0.06em; margin-right: 6px; }
+    .scenario-toolbar button[aria-pressed="true"] {
+      border-color: var(--cyan); background: rgba(66, 214, 232, 0.15); color: var(--cyan); font-weight: 600;
+    }
+
+    /* Architecture Layers (User Space ↔ Syscall ↔ Kernel ↔ Hardware) */
+    .arch-diagram {
+      display: grid; gap: 14px; border: 1px solid var(--line); border-radius: 12px;
+      background: #09121c; padding: 20px;
+    }
+    .arch-layer {
+      border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px;
+      background: rgba(20, 38, 56, 0.6); position: relative;
+    }
+    .arch-layer-head {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+    }
+    .arch-layer-head strong { font: 700 0.82rem var(--mono); letter-spacing: 0.05em; color: var(--muted); }
+    .arch-layer-head span { font: 0.72rem var(--mono); color: var(--dim); }
+    .arch-layer-userspace { border-color: rgba(157, 124, 216, 0.5); background: rgba(157, 124, 216, 0.06); }
+    .arch-layer-userspace .arch-layer-head strong { color: var(--purple); }
+    .arch-layer-syscall {
+      border: 1px dashed var(--cyan); background: rgba(66, 214, 232, 0.08); text-align: center; padding: 10px 16px;
+    }
+    .arch-layer-syscall strong { color: var(--cyan); font: 700 0.8rem var(--mono); }
+    .arch-layer-kernel { border-color: rgba(66, 214, 232, 0.5); background: rgba(66, 214, 232, 0.05); }
+    .arch-layer-kernel .arch-layer-head strong { color: var(--cyan); }
+    .arch-layer-hardware { border-color: rgba(73, 214, 163, 0.5); background: rgba(73, 214, 163, 0.05); }
+    .arch-layer-hardware .arch-layer-head strong { color: var(--green); }
+
+    .arch-components {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px;
+    }
+    .arch-node {
+      border: 1px solid var(--line); border-radius: 8px; background: var(--shell);
+      padding: 10px 12px; font-size: 0.85rem; transition: all 0.25s ease;
+    }
+    .arch-node span { display: block; font: 0.72rem var(--mono); color: var(--dim); margin-bottom: 2px; }
+    .arch-node strong { display: block; color: var(--text); font-size: 0.88rem; }
+    .arch-node small { display: block; font-size: 0.75rem; color: var(--muted); margin-top: 3px; }
+    .arch-node.is-active {
+      border-color: var(--cyan); background: rgba(66, 214, 232, 0.18); transform: translateY(-2px);
+      box-shadow: 0 0 16px rgba(66, 214, 232, 0.25);
+    }
+    .arch-node.is-active strong { color: var(--cyan); }
+    .arch-node.is-blocked {
+      border-color: var(--red); background: rgba(251, 126, 133, 0.15);
+    }
+
+    .flow-trace-explainer {
+      margin-top: 16px; padding: 14px 18px; border-radius: 10px;
+      border: 1px solid var(--line); background: var(--panel);
+      display: flex; justify-content: space-between; align-items: center; gap: 20px;
+    }
+    .flow-trace-explainer p { margin: 0; font-size: 0.92rem; color: var(--text); }
+    .flow-trace-explainer strong { color: var(--cyan); }
+    .flow-trace-explainer .step-badge {
+      font: 700 0.78rem var(--mono); background: rgba(66, 214, 232, 0.15); color: var(--cyan);
+      border: 1px solid var(--cyan); padding: 4px 10px; border-radius: 20px; white-space: nowrap;
+    }
+
+    /* Radial Subsystem Navigator */
+    .pillar-grid {
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 24px;
+    }
+    .pillar-card {
+      border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 16px;
+      display: grid; gap: 6px; transition: all 0.2s ease;
+    }
+    .pillar-card:hover {
+      border-color: var(--cyan); transform: translateY(-2px); background: #182f42;
+    }
+    .pillar-card .num { font: 700 0.75rem var(--mono); color: var(--cyan); }
+    .pillar-card strong { font-size: 1.05rem; }
+    .pillar-card p { font-size: 0.8rem; color: var(--muted); margin: 0; }
+    .pillar-card .arrow { font: 700 0.88rem var(--mono); color: var(--cyan); align-self: end; margin-top: 8px; }
+
+    /* Console Subvisuals Layout */
+    .console-layout {
+      display: grid; grid-template-columns: 210px minmax(0, 1fr) 280px; min-height: 600px;
+    }
+    .console-nav {
+      border-right: 1px solid var(--line); background: var(--panel-dark); padding: 16px;
+    }
+    .console-nav h4 { font: 700 0.74rem var(--mono); color: var(--dim); margin: 0 0 12px; letter-spacing: 0.05em; }
+    .console-nav a {
+      display: block; padding: 10px 12px; border-radius: 8px; font-size: 0.85rem; color: var(--muted);
+      margin-bottom: 4px; border: 1px solid transparent;
+    }
+    .console-nav a[aria-current="step"] {
+      background: rgba(66, 214, 232, 0.12); color: var(--cyan); border-color: rgba(66, 214, 232, 0.3); font-weight: 600;
+    }
+    .console-main {
+      padding: 24px 28px; background: #0c1622;
+    }
+    .console-inspector {
+      border-left: 1px solid var(--line); background: var(--panel-dark); padding: 20px;
+    }
+    .inspector-label { font: 700 0.72rem var(--mono); color: var(--cyan); letter-spacing: 0.06em; }
+    .inspector-title { font-size: 1.15rem; margin: 6px 0 12px; }
+    .terminal-box {
+      border: 1px solid #1e3a47; border-radius: 9px; background: #061017; padding: 12px; margin-top: 14px;
+    }
+    .terminal-head { font: 700 0.72rem var(--mono); color: var(--green); margin-bottom: 6px; }
+    .terminal-box pre {
+      margin: 0; font: 0.78rem/1.5 var(--mono); color: #d0e4f5; white-space: pre-wrap;
+    }
+
+    /* Deep Visual Diagrams */
+    .vfs-pipeline {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin: 20px 0;
+    }
+    .vfs-node {
+      border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 12px;
+      font-size: 0.82rem; position: relative;
+    }
+    .vfs-node:not(:last-child)::after {
+      content: '→'; position: absolute; right: -14px; top: 40%; color: var(--cyan); font-weight: bold;
+    }
+    .vfs-node strong { display: block; color: var(--cyan); font-size: 0.9rem; margin-bottom: 4px; }
+    .vfs-node small { display: block; color: var(--muted); font-size: 0.75rem; }
+
+    .stat-row {
+      display: flex; gap: 14px; margin-top: 16px;
+    }
+    .meter-card {
+      flex: 1; border: 1px solid var(--line); border-radius: 9px; padding: 12px; background: var(--panel);
+    }
+    .meter-card span { font: 700 0.72rem var(--mono); color: var(--dim); display: block; }
+    .meter-card strong { font-size: 1.2rem; display: block; margin: 4px 0; }
+    .meter-bar { height: 6px; border-radius: 3px; background: var(--line-subtle); overflow: hidden; margin-top: 6px; }
+    .meter-fill { height: 100%; }
+
+    @media (max-width: 1080px) {
+      .console-layout { grid-template-columns: 190px minmax(0, 1fr); }
+      .console-inspector { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--line); }
+      .pillar-grid { grid-template-columns: repeat(2, 1fr); }
+      .vfs-pipeline { grid-template-columns: 1fr; }
+      .vfs-node:not(:last-child)::after { content: '↓'; right: 50%; top: auto; bottom: -16px; }
+    }
+    @media (max-width: 680px) {
+      .console-layout { display: block; }
+      .console-nav { border-right: 0; border-bottom: 1px solid var(--line); }
+      .pillar-grid { grid-template-columns: 1fr; }
+      .top { flex-direction: column; align-items: start; }
+      .head { flex-direction: column; }
+    }
   </style>
 </head>
 <body>
-<a class="skip" href="#prototype-main">Skip to content</a>
-<main id="prototype-main">
-  <article class="prototype" id="prototype-hub" data-page="hub"><div class="top"><a class="brand" href="#prototype-hub">▥ Infra, <em>Illustrated.</em></a><nav><a href="/visualizations">All visuals</a><a href="/foundations">Foundations</a></nav></div><header class="head"><div><span class="crumb">Library / Foundations / Linux</span><span class="kicker">LINUX FOUNDATION · SYSTEM MAP</span><h1>One Linux machine.<br>Eight lenses.</h1><p>Explore one web service through the primitives that power cloud, containers, and Kubernetes.</p></div></header><section class="map" aria-labelledby="map-title"><h2 id="map-title">Pick a subsystem to inspect.</h2><div class="map-grid" id="prototype-map" data-mode="free"><div class="core"><div><span class="kicker">DEVBOX-01</span><strong>LINUX MACHINE</strong><small>Userspace ↕ kernel ↕ hardware</small><a href="#prototype-basics">Meet the machine ↓</a></div></div><a class="node" href="#prototype-identity"><span>01</span><strong>Identity & Access</strong><small>UID · groups · permissions</small></a><a class="node" href="#prototype-storage"><span>02</span><strong>Filesystem & Storage</strong><small>path · mount · inode</small></a><a class="node" href="#prototype-processes"><span>03</span><strong>Processes & Services</strong><small>PID · unit · signals</small></a><a class="node" href="#prototype-networking"><span>04</span><strong>Networking</strong><small>socket · route · eth0</small></a><a class="node" href="#prototype-packages"><span>05</span><strong>Packages & Software</strong><small>repo · files · runtime</small></a><a class="node" href="#prototype-shell"><span>06</span><strong>Shell & Automation</strong><small>pipe · FD · status</small></a><a class="node" href="#prototype-security"><span>07</span><strong>Security</strong><small>DAC · MAC · firewall</small></a><a class="node" href="#prototype-troubleshooting"><span>08</span><strong>Observability & Troubleshooting</strong><small>probe · localize · verify</small></a></div><div class="mode" role="group" aria-label="Map mode"><button type="button" data-mode="free" aria-pressed="true">Explore freely</button><button type="button" data-mode="path" aria-pressed="false">Show suggested path</button></div></section><div class="map-note" data-map-note>Each node opens a dedicated pillar console. The path is optional, and no route is locked.</div><section class="basics" id="prototype-basics" aria-label="Meet the Linux machine"><div><span>USERSPACE</span><strong>shell · nginx · sshd</strong><p>Programs request system services.</p></div><div><span>KERNEL</span><strong>process · filesystem · network</strong><p>The kernel mediates resources and access.</p></div><div><span>HARDWARE</span><strong>CPU · RAM · disk · NIC</strong><p>Devices may be physical or virtual.</p></div></section><div class="bottom"><span>Boot orientation: firmware → bootloader → kernel → PID 1 → services. systemd is common, not universal.</span><a href="#prototype-identity">Start with Identity →</a></div></article>
-  <article class="prototype" id="prototype-identity" data-page="identity"><div class="top"><a class="brand" href="#prototype-hub">▥ Infra, <em>Illustrated.</em></a><nav><a href="#prototype-hub">Linux Map</a></nav></div><header class="head"><div><span class="crumb">Linux / Identity</span><span class="kicker">01 · IDENTITY CONSOLE</span><h1>Identity & Access</h1><p>Follow a name into numeric process credentials and a file permission check.</p></div><a href="#prototype-hub">← Back to Linux Map</a></header><div class="console"><nav class="index"><strong>01 / 02</strong><details open><summary>Credentials</summary><a aria-current="step" href="#identity-model">Account → UID</a></details><details><summary>Access</summary><a href="#identity-model">Path gate</a></details></nav><section class="canvas" id="identity-model"><span class="kicker">ACTIVE VIEW · ACCOUNT LOOKUP</span><h2>A name resolves to credentials.</h2><figure class="diagram"><span>DEVBOX-01 · PROCESS IDENTITY</span><div class="actors"><div class="actor"><strong>nginx</strong><small>account name</small></div><div class="actor"><strong>UID 33</strong><small>fixture numeric ID</small></div><div class="actor"><strong>worker PID 421</strong><small>credential set</small></div><div class="actor"><strong>/srv/site</strong><small>search + file read</small></div></div><figcaption>Directory traversal is checked before the file’s read bit.</figcaption></figure><p>Failure state: without search permission on /srv/site, the worker cannot reach index.html.</p></section><aside class="inspector"><span>IDENTITY INSPECTOR</span><h3>Credentials live on a process.</h3><p>A username is a lookup label; the worker carries numeric IDs and groups.</p><div class="terminal"><span>$ id nginx</span><pre>uid=33(nginx) gid=33(nginx)</pre></div></aside></div><div class="bottom"><span>THE POINT TO KEEP · A readable file can still be unreachable through its parent directory.</span><a href="#prototype-storage">Storage →</a></div></article>
-  <article class="prototype" id="prototype-storage" data-page="storage"><div class="top"><a class="brand" href="#prototype-hub">▥ Infra, <em>Illustrated.</em></a><nav><a href="#prototype-hub">Linux Map</a></nav></div><header class="head"><div><span class="crumb">Linux / Storage</span><span class="kicker">02 · STORAGE CONSOLE</span><h1>Filesystem & Storage</h1><p>Trace a pathname through the mount to the backing device.</p></div><a href="#prototype-hub">← Back to Linux Map</a></header><div class="console"><nav class="index"><strong>01 / 02</strong><details open><summary>Path to bytes</summary><a aria-current="step" href="#storage-model">Mount chain</a></details><details><summary>Capacity</summary><a href="#storage-model">Inodes</a></details></nav><section class="canvas" id="storage-model"><span class="kicker">ACTIVE VIEW · MOUNT CHAIN</span><h2>A pathname crosses a mount.</h2><figure class="diagram"><span>DEVBOX-01 · STORAGE LAYERS</span><div class="actors"><div class="actor"><strong>/srv/app/data.db</strong><small>path</small></div><div class="actor"><strong>/srv</strong><small>mount point</small></div><div class="actor"><strong>ext4</strong><small>filesystem</small></div><div class="actor"><strong>/dev/vdb1</strong><small>partition</small></div></div><figcaption>Path, mount, filesystem, and block device are different layers.</figcaption></figure><p>Failure state: data blocks can remain while free inodes reach zero.</p></section><aside class="inspector"><span>STORAGE INSPECTOR</span><h3>Find the backing layer.</h3><p>Mount state determines which filesystem supplies /srv.</p><div class="terminal"><span>$ findmnt -T /srv</span><pre>/srv /dev/vdb1 ext4</pre></div></aside></div><div class="bottom"><span>THE POINT TO KEEP · Free bytes do not guarantee room for another file.</span><a href="#prototype-processes">Processes →</a></div></article>
-  <article class="prototype" id="prototype-processes" data-page="processes"><div class="top"><a class="brand" href="#prototype-hub">▥ Infra, <em>Illustrated.</em></a><nav><a href="#prototype-hub">Linux Map</a></nav></div><header class="head"><div><span class="crumb">Linux / Processes</span><span class="kicker">03 · PROCESS CONSOLE</span><h1>Processes & Services</h1><p>See how an executable becomes managed runtime state.</p></div><a href="#prototype-hub">← Back to Linux Map</a></header><div class="console"><nav class="index"><strong>01 / 02</strong><details open><summary>Runtime</summary><a aria-current="step" href="#process-model">Process tree</a></details><details><summary>Services</summary><a href="#process-model">Unit state</a></details></nav><section class="canvas" id="process-model"><span class="kicker">ACTIVE VIEW · PROCESS TREE</span><h2>Parentage explains what started.</h2><figure class="diagram"><span>DEVBOX-01 · RUNTIME</span><div class="actors"><div class="actor"><strong>PID 1</strong><small>system manager</small></div><div class="actor"><strong>PID 418</strong><small>nginx master</small></div><div class="actor"><strong>PID 421</strong><small>nginx worker</small></div><div class="actor"><strong>TCP :443</strong><small>open socket</small></div></div><figcaption>Installed, enabled, active, and healthy are different states.</figcaption></figure><p>Failure state: invalid config leaves the unit failed, worker absent, and socket absent.</p></section><aside class="inspector"><span>PROCESS INSPECTOR</span><h3>A program is not a process.</h3><p>Starting a binary creates a runtime instance with PID, credentials, and FDs.</p><div class="terminal"><span>$ ps -o pid,ppid,user,cmd -p 421</span><pre>421 418 nginx nginx: worker</pre></div></aside></div><div class="bottom"><span>THE POINT TO KEEP · A service state is evidence, not the cause.</span><a href="#prototype-networking">Networking →</a></div></article>
-  <article class="prototype" id="prototype-networking" data-page="networking"><div class="top"><a class="brand" href="#prototype-hub">▥ Infra, <em>Illustrated.</em></a><nav><a href="#prototype-hub">Linux Map</a></nav></div><header class="head"><div><span class="crumb">Linux / Networking</span><span class="kicker">04 · NETWORK CONSOLE</span><h1>Networking</h1><p>Follow a connection from name and socket through Linux decisions to eth0.</p></div><a href="#prototype-hub">← Back to Linux Map</a></header><div class="console"><nav class="index"><strong data-network-count>01 / 03</strong><details open><summary>Connection path</summary><a href="#network-trace" aria-current="step">Outbound trace</a><a href="#network-bind">Bind address</a></details><details><summary>Reachability</summary><a href="#network-fail">Blocked path</a></details></nav><div class="canvas"><section id="network-trace" data-network-view="trace"><span class="kicker">ACTIVE VIEW · OUTBOUND TRACE</span><h2>Distinct decisions carry the flow.</h2><figure class="diagram"><span>DEVBOX-01 · CONNECT TO API.EXAMPLE.TEST</span><div class="actors" data-network-actors><div class="actor"><strong>DNS</strong><small>192.0.2.25</small></div><div class="actor"><strong>socket</strong><small>connect :443</small></div><div class="actor"><strong>route</strong><small>via 10.0.1.1</small></div><div class="actor"><strong>firewall</strong><small>local policy</small></div><div class="actor"><strong>eth0</strong><small>transmit</small></div></div><figcaption>Resolving a name and forwarding a packet are separate stages.</figcaption></figure><div class="controls"><button type="button" data-step="prev">← Step back</button><button type="button" data-step="play">▶ Play</button><button type="button" data-step="next">Next step →</button><p data-network-result>All five steps are visible. Advance to inspect one transition.</p></div></section><section id="network-bind" data-network-view="bind"><span class="kicker">ACTIVE VIEW · LISTENER</span><h2>The bind address narrows the destination.</h2><figure class="diagram"><span>DEVBOX-01 · TCP/443</span><div class="actors"><div class="actor"><strong>nginx</strong><small>creates socket</small></div><div class="actor" data-bind-actor><strong>127.0.0.1:443</strong><small>loopback only</small></div><div class="actor"><strong>firewall</strong><small>independent policy</small></div></div><figcaption>A listener can exist without being remotely reachable.</figcaption></figure><div class="controls"><button type="button" data-bind="loopback" aria-pressed="true">127.0.0.1</button><button type="button" data-bind="wildcard" aria-pressed="false">0.0.0.0</button><button type="button" data-bind="eth0" aria-pressed="false">10.0.1.17</button><p data-bind-result>Loopback accepts only local namespace connections.</p></div></section><section id="network-fail" data-network-view="fail"><span class="kicker">ACTIVE VIEW · DENIAL</span><h2>A local filter stops the fixture.</h2><figure class="diagram"><span>DEVBOX-01 · REACHABILITY</span><div class="actors"><div class="actor"><strong>DNS</strong><small>resolved</small></div><div class="actor"><strong>route</strong><small>present</small></div><div class="actor"><strong>socket</strong><small>listening</small></div><div class="actor is-blocked" data-fail-actor><strong>firewall</strong><small>DROP</small></div></div><figcaption>A successful probe at one layer does not prove the next works.</figcaption></figure><div class="controls"><button type="button" data-network-fix aria-pressed="false">Remove local DROP fixture →</button><p data-fail-result>Default: local DROP blocks this path.</p></div></section></div><aside class="inspector"><span>NETWORK INSPECTOR</span><h3 data-network-inspector>DNS chooses an address.</h3><p data-network-explainer>Routing and firewall decisions follow separately. AWS controls remain outside the guest.</p><div class="terminal"><span data-terminal-command>$ getent hosts api.example.test</span><pre data-terminal-output aria-live="polite">192.0.2.25 api.example.test</pre></div><button type="button" data-network-probe>Run next probe</button><p data-probe-result>Command evidence updates the selected diagram state.</p></aside></div><div class="bottom"><span data-network-takeaway>THE POINT TO KEEP · Name lookup and packet forwarding are different stages.</span><a href="#prototype-packages">Packages →</a></div><details class="sources"><summary>Primary sources</summary><p><a href="https://man7.org/linux/man-pages/man7/socket.7.html">socket(7)</a> · <a href="https://man7.org/linux/man-pages/man8/ip-route.8.html">ip-route(8)</a> · <a href="https://wiki.nftables.org/wiki-nftables/index.php/Main_Page">nftables</a></p></details></article>
-  <article class="prototype" id="prototype-packages" data-page="packages"><div class="top"><a class="brand" href="#prototype-hub">▥ Infra, <em>Illustrated.</em></a><nav><a href="#prototype-hub">Linux Map</a></nav></div><header class="head"><div><span class="crumb">Linux / Packages</span><span class="kicker">05 · PACKAGE CONSOLE</span><h1>Packages & Software</h1><p>Follow repository metadata through installed artifacts and service runtime.</p></div><a href="#prototype-hub">← Back to Linux Map</a></header><div class="console"><nav class="index"><strong>01 / 02</strong><details open><summary>Install chain</summary><a aria-current="step" href="#package-model">Transaction</a></details><details><summary>Runtime</summary><a href="#package-model">Start policy</a></details></nav><section class="canvas" id="package-model"><span class="kicker">ACTIVE VIEW · TRANSACTION</span><h2>Metadata selects a package.</h2><figure class="diagram"><span>DEVBOX-01 · SOFTWARE</span><div class="actors"><div class="actor"><strong>repo</strong><small>metadata + trust</small></div><div class="actor"><strong>manager</strong><small>resolve dependencies</small></div><div class="actor"><strong>files</strong><small>binary + config + unit</small></div><div class="actor"><strong>runtime</strong><small>separate start</small></div></div><figcaption>Installing a package does not prove its service is active.</figcaption></figure><p>Failure state: the package is installed, but invalid config prevents the unit starting.</p></section><aside class="inspector"><span>PACKAGE INSPECTOR</span><h3>Files are not runtime.</h3><p>apt/dpkg and dnf/rpm are distro-family examples, not universal commands.</p><div class="terminal"><span>$ command -v nginx</span><pre>/usr/sbin/nginx</pre></div></aside></div><div class="bottom"><span>THE POINT TO KEEP · Installed, active, and healthy need independent evidence.</span><a href="#prototype-shell">Shell →</a></div></article>
-  <article class="prototype" id="prototype-shell" data-page="shell"><div class="top"><a class="brand" href="#prototype-hub">▥ Infra, <em>Illustrated.</em></a><nav><a href="#prototype-hub">Linux Map</a></nav></div><header class="head"><div><span class="crumb">Linux / Shell</span><span class="kicker">06 · SHELL CONSOLE</span><h1>Shell & Automation</h1><p>Watch parsed commands route data through file descriptors and pipelines.</p></div><a href="#prototype-hub">← Back to Linux Map</a></header><div class="console"><nav class="index"><strong>01 / 02</strong><details open><summary>Execution</summary><a aria-current="step" href="#shell-model">Pipe data</a></details><details><summary>Status</summary><a href="#shell-model">pipefail</a></details></nav><section class="canvas" id="shell-model"><span class="kicker">ACTIVE VIEW · PIPELINE</span><h2>A pipe carries stdout.</h2><figure class="diagram"><span>DEVBOX-01 · BASH FIXTURE</span><div class="actors"><div class="actor"><strong>journalctl</strong><small>stdout</small></div><div class="actor"><strong>|</strong><small>stdout → stdin</small></div><div class="actor"><strong>grep</strong><small>filter lines</small></div><div class="actor"><strong>file</strong><small>redirected stdout</small></div></div><figcaption>stderr requires an explicit redirection or a different pipeline operator.</figcaption></figure><p>Failure state: by default Bash can report the last command’s success despite an earlier failure; pipefail changes that.</p></section><aside class="inspector"><span>SHELL INSPECTOR</span><h3>Shell and terminal differ.</h3><p>The terminal shows the session; Bash parses syntax and arranges FDs.</p><div class="terminal"><span>$ false | cat; echo $?</span><pre>0  # Bash default</pre></div></aside></div><div class="bottom"><span>THE POINT TO KEEP · Choose the status and streams you need to observe.</span><a href="#prototype-security">Security →</a></div></article>
-  <article class="prototype" id="prototype-security" data-page="security"><div class="top"><a class="brand" href="#prototype-hub">▥ Infra, <em>Illustrated.</em></a><nav><a href="#prototype-hub">Linux Map</a></nav></div><header class="head"><div><span class="crumb">Linux / Security</span><span class="kicker">07 · SECURITY CONSOLE</span><h1>Security</h1><p>Inspect independent controls around the same worker and secret.</p></div><a href="#prototype-hub">← Back to Linux Map</a></header><div class="console"><nav class="index"><strong>01 / 02</strong><details open><summary>Access layers</summary><a aria-current="step" href="#security-model">Control stack</a></details><details><summary>Denial</summary><a href="#security-model">Secret read</a></details></nav><section class="canvas" id="security-model"><span class="kicker">ACTIVE VIEW · INDEPENDENT CONTROLS</span><h2>One allow does not bypass all controls.</h2><figure class="diagram"><span>DEVBOX-01 · ACCESS MODEL</span><div class="actors"><div class="actor"><strong>UID 33</strong><small>worker</small></div><div class="actor"><strong>DAC</strong><small>mode + ACL</small></div><div class="actor"><strong>MAC</strong><small>if enabled</small></div><div class="actor"><strong>file read</strong><small>final result</small></div></div><figcaption>Independent controls can each deny; this is not a universal kernel call order.</figcaption></figure><p>Failure state: /srv/secret/config is root-only; grant narrow service read rather than chmod 777.</p></section><aside class="inspector"><span>SECURITY INSPECTOR</span><h3>Inspect the denying control.</h3><p>SELinux/AppArmor presence and policy vary by distribution.</p><div class="terminal"><span>$ stat -c "%a %U:%G" /srv/secret/config</span><pre>600 root:root</pre></div></aside></div><div class="bottom"><span>THE POINT TO KEEP · A DAC allow does not guarantee a MAC allow.</span><a href="#prototype-troubleshooting">Troubleshooting →</a></div></article>
-  <article class="prototype" id="prototype-troubleshooting" data-page="troubleshooting"><div class="top"><a class="brand" href="#prototype-hub">▥ Infra, <em>Illustrated.</em></a><nav><a href="#prototype-hub">Linux Map</a></nav></div><header class="head"><div><span class="crumb">Linux / Troubleshooting</span><span class="kicker">08 · DIAGNOSIS CONSOLE</span><h1>Observability & Troubleshooting</h1><p>Use evidence from the whole machine to localize an unreachable service.</p></div><a href="#prototype-hub">← Back to Linux Map</a></header><div class="console"><nav class="index"><strong>01 / 02</strong><details open><summary>Localize</summary><a aria-current="step" href="#trouble-model">Hypotheses</a></details><details><summary>Resolve</summary><a href="#trouble-model">Verify path</a></details></nav><section class="canvas" id="trouble-model"><span class="kicker">ACTIVE VIEW · INCIDENT BOARD</span><h2>A client timeout is an observation.</h2><figure class="diagram"><span>DEVBOX-01 · DIAGNOSIS</span><div class="actors"><div class="actor"><strong>DNS</strong><small>resolved?</small></div><div class="actor"><strong>service</strong><small>active?</small></div><div class="actor"><strong>socket</strong><small>bound where?</small></div><div class="actor"><strong>client</strong><small>same path?</small></div></div><figcaption>A probe should eliminate hypotheses before a fix changes state.</figcaption></figure><p>Failure state: loopback-only bind leaves the service active but unavailable to remote clients.</p></section><aside class="inspector"><span>DIAGNOSIS INSPECTOR</span><h3>Measure the boundary.</h3><p>Ping, process existence, and active unit state do not prove application reachability.</p><div class="terminal"><span>$ ss -lntp | grep :443</span><pre>LISTEN 127.0.0.1:443</pre></div></aside></div><div class="bottom"><span>THE POINT TO KEEP · Verify the original failing client path after a fix.</span><a href="#prototype-hub">Linux Map ↗</a></div></article>
+<a class="skip" href="#prototype-hub">Skip to content</a>
+
+<main>
+  <!-- ══════════════════════════════════════════════════════════════════════════
+       1. LINUX HOST ARCHITECTURE HUB (/linux)
+       ══════════════════════════════════════════════════════════════════════════ -->
+  <article class="prototype" id="prototype-hub">
+    <div class="top">
+      <a class="brand" href="#prototype-hub">▥ Infra, <em>Illustrated.</em></a>
+      <nav>
+        <a href="/visualizations">All Visuals</a>
+        <a href="/foundations">Foundations</a>
+      </nav>
+    </div>
+
+    <header class="head">
+      <div>
+        <span class="crumb">Library / Foundations / Linux</span>
+        <span class="kicker">LINUX FOUNDATIONS · HOST ARCHITECTURE CANVAS</span>
+        <h1>One Linux Machine.<br>Eight Subsystem Lenses.</h1>
+        <p>Explore how User Space applications invoke the System Call Interface to command Kernel Subsystems and Hardware. This is the shared machine model that underlies cloud VMs, Docker containers, and Kubernetes nodes.</p>
+      </div>
+      <a href="#prototype-storage">Inspect Storage Subsystem →</a>
+    </header>
+
+    <section class="hub-section">
+      <div class="canvas-card">
+        <div class="scenario-toolbar" role="group" aria-label="Interactive Scenario Trace">
+          <span>SIMULATE SYSTEM FLOW:</span>
+          <button type="button" data-hub-trace="http" aria-pressed="true">1. Inbound HTTPS Request (:443)</button>
+          <button type="button" data-hub-trace="file" aria-pressed="false">2. Open & Read Static File</button>
+          <button type="button" data-hub-trace="container" aria-pressed="false">3. Container Boundary (Namespaces & Cgroups)</button>
+        </div>
+
+        <div class="arch-diagram" id="hub-arch">
+          <!-- User Space -->
+          <div class="arch-layer arch-layer-userspace">
+            <div class="arch-layer-head">
+              <strong>USER SPACE (Ring 3 — Unprivileged Applications)</strong>
+              <span>Cannot touch hardware directly</span>
+            </div>
+            <div class="arch-components">
+              <div class="arch-node" data-node-id="nginx-master">
+                <span>PID 418 · root</span>
+                <strong>nginx: master</strong>
+                <small>Binds privileged :443</small>
+              </div>
+              <div class="arch-node is-active" data-node-id="nginx-worker">
+                <span>PID 421 · UID 33 (www-data)</span>
+                <strong>nginx: worker</strong>
+                <small>Serves HTTP traffic</small>
+              </div>
+              <div class="arch-node" data-node-id="bash">
+                <span>PID 1024 · dev</span>
+                <strong>bash shell</strong>
+                <small>Interactive session</small>
+              </div>
+              <div class="arch-node" data-node-id="container-app">
+                <span>PID 2048 (namespaced)</span>
+                <strong>containerized app</strong>
+                <small>Private PID & Net NS</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Syscall Gateway -->
+          <div class="arch-layer-syscall">
+            <strong>↕ SYSTEM CALL INTERFACE (CPU Ring 3 → Ring 0 Trap: socket(), epoll_wait(), openat(), read(), clone()) ↕</strong>
+          </div>
+
+          <!-- Kernel Space -->
+          <div class="arch-layer arch-layer-kernel">
+            <div class="arch-layer-head">
+              <strong>KERNEL SPACE (Ring 0 — Mediates All Access & Resources)</strong>
+              <span>Privileged supervisor</span>
+            </div>
+            <div class="arch-components">
+              <div class="arch-node" data-node-id="vfs">
+                <span>Filesystem Subsystem</span>
+                <strong>VFS & Page Cache</strong>
+                <small>Dentries, Inodes, ext4</small>
+              </div>
+              <div class="arch-node" data-node-id="sched">
+                <span>Process Subsystem</span>
+                <strong>CFS Scheduler & task_struct</strong>
+                <small>CPU Runqueues, Signals</small>
+              </div>
+              <div class="arch-node is-active" data-node-id="netstack">
+                <span>Networking Subsystem</span>
+                <strong>TCP/IP & Netfilter</strong>
+                <small>Sockets, Routing, nftables</small>
+              </div>
+              <div class="arch-node" data-node-id="mm">
+                <span>Memory Subsystem</span>
+                <strong>Virtual Memory & Page Tables</strong>
+                <small>MMU translation, CoW</small>
+              </div>
+              <div class="arch-node" data-node-id="cgroups">
+                <span>Isolation Subsystem</span>
+                <strong>Namespaces & Cgroups v2</strong>
+                <small>Mount, Net, CPU/RAM limits</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hardware -->
+          <div class="arch-layer arch-layer-hardware">
+            <div class="arch-layer-head">
+              <strong>HARDWARE & DEVICE DRIVERS</strong>
+              <span>Physical or hypervisor virtualized</span>
+            </div>
+            <div class="arch-components">
+              <div class="arch-node" data-node-id="cpu">
+                <span>Compute</span>
+                <strong>CPU & MMU</strong>
+                <small>8 Cores · Ring 0/3</small>
+              </div>
+              <div class="arch-node" data-node-id="ram">
+                <span>Volatile Storage</span>
+                <strong>Physical RAM</strong>
+                <small>16 GB · Page Frames</small>
+              </div>
+              <div class="arch-node" data-node-id="disk">
+                <span>Non-Volatile Storage</span>
+                <strong>NVMe /dev/vdb1</strong>
+                <small>Mounted at /srv (ext4)</small>
+              </div>
+              <div class="arch-node is-active" data-node-id="nic">
+                <span>Network Interface</span>
+                <strong>eth0 (10.0.1.17)</strong>
+                <small>RX/TX DMA Rings, NAPI</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flow-trace-explainer" id="hub-explainer">
+          <div>
+            <p id="hub-trace-copy"><strong>HTTPS Ingress Flow:</strong> An Ethernet frame arrives on <code>eth0</code>. The NIC driver uses DMA to write to the RX ring buffer and triggers NAPI. Kernel Netfilter evaluates <code>PREROUTING</code>, the routing table confirms destination <code>10.0.1.17</code>, and the TCP payload is queued in the socket buffer. <code>epoll_wait()</code> wakes up <strong>nginx worker PID 421</strong> to read the HTTP request.</p>
+          </div>
+          <span class="step-badge" id="hub-step-badge">TRACE: PACKET → WORKER</span>
+        </div>
+      </div>
+
+      <!-- Eight Subsystem Navigator -->
+      <div class="pillar-grid">
+        <a class="pillar-card" href="#prototype-identity">
+          <span class="num">01 · IDENTITY</span>
+          <strong>Identity & Credentials</strong>
+          <p>Real UID, Effective UID, capabilities, and hierarchical path traversal gates.</p>
+          <span class="arrow">Explore Identity →</span>
+        </a>
+        <a class="pillar-card" href="#prototype-storage">
+          <span class="num">02 · STORAGE</span>
+          <strong>Filesystem & Storage</strong>
+          <p>Dentry cache, inodes, page cache, ext4 extents, and the open-unlinked file puzzle.</p>
+          <span class="arrow">Explore Storage →</span>
+        </a>
+        <a class="pillar-card" href="#prototype-processes">
+          <span class="num">03 · PROCESSES</span>
+          <strong>Processes & Services</strong>
+          <p>Virtual address space layout, task_struct states (R, S, D, Z), and signals.</p>
+          <span class="arrow">Explore Processes →</span>
+        </a>
+        <a class="pillar-card" href="#prototype-networking">
+          <span class="num">04 · NETWORKING</span>
+          <strong>Networking & Sockets</strong>
+          <p>Packet journey, socket queues, Netfilter hooks, and container veth bridges.</p>
+          <span class="arrow">Explore Networking →</span>
+        </a>
+        <a class="pillar-card" href="#prototype-packages">
+          <span class="num">05 · PACKAGES</span>
+          <strong>Packages & Software</strong>
+          <p>Repository signatures, dynamic linking (ld.so), and systemd unit activation.</p>
+          <span class="arrow">Explore Packages →</span>
+        </a>
+        <a class="pillar-card" href="#prototype-shell">
+          <span class="num">06 · SHELL</span>
+          <strong>Shell & Automation</strong>
+          <p>File descriptor wiring, kernel pipe ring buffers, and pipefail exit statuses.</p>
+          <span class="arrow">Explore Shell →</span>
+        </a>
+        <a class="pillar-card" href="#prototype-security">
+          <span class="num">07 · SECURITY</span>
+          <strong>Host Security Layers</strong>
+          <p>DAC file modes, POSIX ACLs, capabilities, SELinux/AppArmor, and Seccomp.</p>
+          <span class="arrow">Explore Security →</span>
+        </a>
+        <a class="pillar-card" href="#prototype-troubleshooting">
+          <span class="num">08 · OBSERVABILITY</span>
+          <strong>Observability & USE Method</strong>
+          <p>Systematic triage of CPU, memory, disk, and network without guessing.</p>
+          <span class="arrow">Explore Troubleshooting →</span>
+        </a>
+      </div>
+    </section>
+  </article>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════
+       2. STORAGE PILLAR REBUILT WITH AUTHENTIC VFS PIPELINE (/linux/storage)
+       ══════════════════════════════════════════════════════════════════════════ -->
+  <article class="prototype" id="prototype-storage">
+    <div class="top">
+      <a class="brand" href="#prototype-hub">▥ Infra, <em>Illustrated.</em></a>
+      <nav><a href="#prototype-hub">← Back to Linux Map</a></nav>
+    </div>
+
+    <header class="head">
+      <div>
+        <span class="crumb">Linux / Storage Subsystem</span>
+        <span class="kicker">02 · STORAGE CONSOLE</span>
+        <h1>The Path to Bytes & The Inode Architecture</h1>
+        <p>A pathname is just human syntax. See how the Linux VFS resolves paths through directory caches and inodes down to disk blocks—and why deleting an open file keeps disk blocks claimed.</p>
+      </div>
+      <a href="#prototype-hub">← Linux Map</a>
+    </header>
+
+    <div class="console-layout">
+      <nav class="console-nav">
+        <h4>VFS PERSPECTIVES</h4>
+        <a href="#storage-vfs" aria-current="step">01 · VFS Pipeline</a>
+        <a href="#storage-inodes">02 · Inodes vs Blocks</a>
+        <a href="#storage-deleted">03 · Deleted but Open</a>
+        <a href="#prototype-networking" style="margin-top: 24px; color: var(--cyan);">Next: Networking →</a>
+      </nav>
+
+      <section class="console-main">
+        <span class="kicker">ACTIVE VIEW · VFS RESOLUTION PIPELINE</span>
+        <h2>How <code>open("/srv/site/index.html")</code> Becomes Disk Sectors</h2>
+        <p>The kernel does not search the physical disk for the string <code>"/srv/site/index.html"</code>. It navigates a chain of cached in-memory structures before ever invoking device I/O.</p>
+
+        <!-- VFS Pipeline Diagram -->
+        <div class="vfs-pipeline">
+          <div class="vfs-node">
+            <span>STEP 1: PATHNAME</span>
+            <strong>Path String</strong>
+            <small><code>/srv/site/index.html</code> parsed component by component</small>
+          </div>
+          <div class="vfs-node">
+            <span>STEP 2: RAM CACHE</span>
+            <strong>Dentry Cache</strong>
+            <small>Resolves names to Inode #262145 via dcache hash</small>
+          </div>
+          <div class="vfs-node">
+            <span>STEP 3: METADATA</span>
+            <strong>Inode Object</strong>
+            <small>Mode 0644, UID 33, Size 4.2KB, nlink=1, Extent Tree</small>
+          </div>
+          <div class="vfs-node">
+            <span>STEP 4: PAGE CACHE</span>
+            <strong>Page Cache (RAM)</strong>
+            <small>4KB memory pages cached from block device</small>
+          </div>
+          <div class="vfs-node">
+            <span>STEP 5: DISK</span>
+            <strong>ext4 /dev/vdb1</strong>
+            <small>Physical NVMe blocks #839210–839212</small>
+          </div>
+        </div>
+
+        <div class="stat-row">
+          <div class="meter-card">
+            <span>CAPACITY: DATA BLOCKS (df -h)</span>
+            <strong>38% Used · 62 GB Free</strong>
+            <div class="meter-bar"><div class="meter-fill" style="width: 38%; background: var(--green);"></div></div>
+          </div>
+          <div class="meter-card">
+            <span>CAPACITY: INODES (df -i)</span>
+            <strong>99.8% Used · 142 Inodes Free</strong>
+            <div class="meter-bar"><div class="meter-fill" style="width: 99.8%; background: var(--red);"></div></div>
+          </div>
+        </div>
+
+        <div style="margin-top: 20px; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel);">
+          <strong style="color: var(--amber);">Operational Takeaway:</strong>
+          Free disk bytes do not guarantee you can create a file. If automated logging or session files exhaust available <strong>inodes</strong>, the kernel returns <code>ENOSPC: No space left on device</code> even when gigabytes of data block storage remain empty!
+        </div>
+      </section>
+
+      <aside class="console-inspector">
+        <span class="inspector-label">VFS INSPECTOR</span>
+        <h3 class="inspector-title">Inode Metadata & Link Counts</h3>
+        <p style="font-size: 0.85rem; color: var(--muted);">The directory entry links the name to the inode. When <code>rm</code> unlinks a file, <code>i_nlink</code> drops to 0, but the inode survives as long as any process holds an open File Descriptor.</p>
+
+        <div class="terminal-box">
+          <div class="terminal-head">$ stat /srv/site/index.html</div>
+          <pre>  File: /srv/site/index.html
+  Size: 4218       Blocks: 16   IO Block: 4096 regular file
+Device: 259,1      Inode: 262145 Links: 1
+Access: (0644/-rw-r--r--)  Uid: (33/www-data)   Gid: (33/www-data)</pre>
+        </div>
+
+        <div class="terminal-box" style="margin-top: 12px;">
+          <div class="terminal-head">$ lsof +L1 /srv # Finds unlinked open files!</div>
+          <pre>COMMAND PID USER   FD TYPE DEVICE NLINK NODE NAME
+nginx   421 www-data 14u REG  259,1     0 262150 /srv/log/access.log (deleted)</pre>
+        </div>
+      </aside>
+    </div>
+  </article>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════
+       3. NETWORKING PILLAR WITH AUTHENTIC PACKET FLOW (/linux/networking)
+       ══════════════════════════════════════════════════════════════════════════ -->
+  <article class="prototype" id="prototype-networking">
+    <div class="top">
+      <a class="brand" href="#prototype-hub">▥ Infra, <em>Illustrated.</em></a>
+      <nav><a href="#prototype-hub">← Back to Linux Map</a></nav>
+    </div>
+
+    <header class="head">
+      <div>
+        <span class="crumb">Linux / Networking Subsystem</span>
+        <span class="kicker">04 · NETWORKING CONSOLE</span>
+        <h1>Kernel Packet Journey & Socket Architecture</h1>
+        <p>Trace an incoming packet from physical network reception through Netfilter firewall chains and the Forwarding Information Base (FIB) into socket queues.</p>
+      </div>
+      <a href="#prototype-hub">← Linux Map</a>
+    </header>
+
+    <div class="console-layout">
+      <nav class="console-nav">
+        <h4>PACKET PATHS</h4>
+        <a href="#net-ingress" aria-current="step">01 · Ingress Packet Path</a>
+        <a href="#net-bind">02 · Bind Scope (127.0.0.1 vs 0.0.0.0)</a>
+        <a href="#net-veth">03 · Container veth Bridge</a>
+        <a href="#prototype-processes" style="margin-top: 24px; color: var(--cyan);">Next: Processes →</a>
+      </nav>
+
+      <section class="console-main">
+        <span class="kicker">ACTIVE VIEW · KERNEL PACKET JOURNEY</span>
+        <h2>From Hardware Interrupt to Application Socket Buffer</h2>
+        <p>A port is not a physical socket—it is an index in the kernel's protocol table. When a packet arrives, it must survive multiple filtering and routing decisions before reaching the socket queue.</p>
+
+        <!-- Kernel Packet Path Diagram -->
+        <div class="vfs-pipeline" style="grid-template-columns: repeat(4, 1fr);">
+          <div class="vfs-node">
+            <span>STAGE 1: HARDWARE</span>
+            <strong>NIC RX Ring</strong>
+            <small>DMA transfers packet frame; NAPI SoftIRQ schedules kernel processing</small>
+          </div>
+          <div class="vfs-node">
+            <span>STAGE 2: NETFILTER</span>
+            <strong>PREROUTING Hook</strong>
+            <small>Connection tracking (conntrack) and DNAT translation</small>
+          </div>
+          <div class="vfs-node">
+            <span>STAGE 3: ROUTING</span>
+            <strong>Routing Decision (FIB)</strong>
+            <small>Is destination local host or forwardable to another interface?</small>
+          </div>
+          <div class="vfs-node">
+            <span>STAGE 4: SOCKET</span>
+            <strong>TCP :443 Receive Queue</strong>
+            <small>Segment queued in <code>sk_buff</code>; worker awakened via epoll</small>
+          </div>
+        </div>
+
+        <div style="margin-top: 24px; padding: 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel-dark);">
+          <span style="font: 700 0.76rem var(--mono); color: var(--cyan);">INTERACTIVE BIND ADDRESS EXPERIMENT</span>
+          <div style="display: flex; gap: 8px; margin: 12px 0;">
+            <button type="button" data-bind="wildcard" style="border-color: var(--cyan); color: var(--cyan);">0.0.0.0:443 (All Interfaces)</button>
+            <button type="button" data-bind="loopback">127.0.0.1:443 (Loopback Only)</button>
+            <button type="button" data-bind="eth0">10.0.1.17:443 (eth0 Only)</button>
+          </div>
+          <p id="bind-explainer" style="font-size: 0.88rem; color: var(--muted); margin: 0;">
+            <strong>Wildcard Bind (0.0.0.0):</strong> The kernel accepts TCP handshakes addressed to any IP configured on any local interface (eth0, lo, or container bridges). This is required for public web services.
+          </p>
+        </div>
+      </section>
+
+      <aside class="console-inspector">
+        <span class="inspector-label">NETWORKING INSPECTOR</span>
+        <h3 class="inspector-title">Socket & Interface State</h3>
+        <p style="font-size: 0.85rem; color: var(--muted);">Use <code>ss -tlnp</code> to inspect which process owns a listening socket and what interface it binds.</p>
+
+        <div class="terminal-box">
+          <div class="terminal-head">$ ss -tlnp | grep :443</div>
+          <pre>State  Recv-Q Send-Q Local Address:Port  Peer Address:Port Process
+LISTEN 0      511          0.0.0.0:443        0.0.0.0:*     users:(("nginx",pid=421,fd=11),("nginx",pid=418,fd=11))</pre>
+        </div>
+
+        <div class="terminal-box" style="margin-top: 12px;">
+          <div class="terminal-head">$ ip route get 1.1.1.1</div>
+          <pre>1.1.1.1 via 10.0.1.1 dev eth0 src 10.0.1.17 uid 33
+    cache</pre>
+        </div>
+      </aside>
+    </div>
+  </article>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════
+       4. PROCESSES PILLAR WITH VIRTUAL MEMORY & SIGNALS (/linux/processes)
+       ══════════════════════════════════════════════════════════════════════════ -->
+  <article class="prototype" id="prototype-processes">
+    <div class="top">
+      <a class="brand" href="#prototype-hub">▥ Infra, <em>Illustrated.</em></a>
+      <nav><a href="#prototype-hub">← Back to Linux Map</a></nav>
+    </div>
+
+    <header class="head">
+      <div>
+        <span class="crumb">Linux / Processes Subsystem</span>
+        <span class="kicker">03 · PROCESS CONSOLE</span>
+        <h1>Process Anatomy, Virtual Memory & Signals</h1>
+        <p>A process is not a file on disk—it is a live kernel task with private memory segments, open file descriptors, and an operating system lifecycle state machine.</p>
+      </div>
+      <a href="#prototype-hub">← Linux Map</a>
+    </header>
+
+    <div class="console-layout">
+      <nav class="console-nav">
+        <h4>PROCESS MECHANICS</h4>
+        <a href="#proc-mem" aria-current="step">01 · Memory Segments</a>
+        <a href="#proc-states">02 · State Machine (R, S, D, Z)</a>
+        <a href="#proc-signals">03 · Signal Dispatcher Lab</a>
+        <a href="#prototype-identity" style="margin-top: 24px; color: var(--cyan);">Next: Identity →</a>
+      </nav>
+
+      <section class="console-main">
+        <span class="kicker">ACTIVE VIEW · VIRTUAL ADDRESS SPACE</span>
+        <h2>The Architecture of a Running Process</h2>
+        <p>When the kernel executes an ELF binary via <code>execve()</code>, it creates a 64-bit virtual address space mapped through multi-level page tables to physical RAM frames.</p>
+
+        <!-- Memory Segment Diagram -->
+        <div style="border: 1px solid var(--line); border-radius: 12px; background: #081119; padding: 18px; margin: 20px 0;">
+          <div style="display: grid; gap: 8px;">
+            <div style="background: rgba(157, 124, 216, 0.2); border: 1px solid var(--purple); padding: 8px 12px; border-radius: 6px;">
+              <strong style="color: var(--purple);">0xFFFFFFFFFFFFFFFF — KERNEL SPACE (High Memory)</strong>
+              <small style="display: block; color: var(--muted);">Protected page tables; accessible only on Ring 0 syscall entry</small>
+            </div>
+            <div style="background: rgba(66, 214, 232, 0.15); border: 1px solid var(--cyan); padding: 8px 12px; border-radius: 6px;">
+              <strong style="color: var(--cyan);">STACK (Grows Downward ↓)</strong>
+              <small style="display: block; color: var(--muted);">Local variables, function return frames, stack pointers (RSP)</small>
+            </div>
+            <div style="background: rgba(246, 199, 99, 0.15); border: 1px solid var(--amber); padding: 8px 12px; border-radius: 6px;">
+              <strong style="color: var(--amber);">MEMORY MAPPING SEGMENT (mmap)</strong>
+              <small style="display: block; color: var(--muted);">Shared libraries: libc.so, libssl.so, open file descriptors</small>
+            </div>
+            <div style="background: rgba(73, 214, 163, 0.15); border: 1px solid var(--green); padding: 8px 12px; border-radius: 6px;">
+              <strong style="color: var(--green);">HEAP (Grows Upward ↑ via brk/sbrk/malloc)</strong>
+              <small style="display: block; color: var(--muted);">Dynamic runtime memory allocations (HTTP response buffers)</small>
+            </div>
+            <div style="background: rgba(162, 176, 194, 0.15); border: 1px solid var(--line); padding: 8px 12px; border-radius: 6px;">
+              <strong style="color: var(--text);">BSS & DATA (Global Variables)</strong>
+              <small style="display: block; color: var(--muted);">Initialized and zero-initialized static program state</small>
+            </div>
+            <div style="background: rgba(66, 214, 232, 0.1); border: 1px solid var(--line); padding: 8px 12px; border-radius: 6px;">
+              <strong style="color: var(--cyan);">TEXT / CODE SEGMENT (Read-Only)</strong>
+              <small style="display: block; color: var(--muted);">Compiled machine instructions loaded from /usr/sbin/nginx</small>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding: 14px 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel);">
+          <strong style="color: var(--cyan);">Process State Machine Note:</strong>
+          Processes in state <code>D (Uninterruptible Sleep)</code> are waiting for direct hardware/disk I/O and <strong>cannot be terminated, even with <code>kill -9</code></strong>! The kernel protects filesystem integrity by shielding D-state tasks until the controller returns or times out.
+        </div>
+      </section>
+
+      <aside class="console-inspector">
+        <span class="inspector-label">PROCESS INSPECTOR</span>
+        <h3 class="inspector-title">task_struct & Open File Handles</h3>
+        <p style="font-size: 0.85rem; color: var(--muted);">Inspect memory mapping and open file descriptors directly through the virtual <code>/proc</code> filesystem.</p>
+
+        <div class="terminal-box">
+          <div class="terminal-head">$ ls -l /proc/421/fd</div>
+          <pre>lrwx------ 1 www-data 0 -> /dev/null
+lrwx------ 1 www-data 1 -> /dev/null
+lrwx------ 1 www-data 2 -> /var/log/nginx/error.log
+lrwx------ 1 www-data 11 -> socket:[123456] # :443
+lr-x------ 1 www-data 12 -> /srv/site/index.html</pre>
+        </div>
+
+        <div class="terminal-box" style="margin-top: 12px;">
+          <div class="terminal-head">$ cat /proc/421/status | grep State</div>
+          <pre>State: S (sleeping) # Waiting on epoll_wait()</pre>
+        </div>
+      </aside>
+    </div>
+  </article>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════
+       5. IDENTITY PILLAR WITH HIERARCHICAL TRAVERSAL GATES (/linux/identity)
+       ══════════════════════════════════════════════════════════════════════════ -->
+  <article class="prototype" id="prototype-identity">
+    <div class="top">
+      <a class="brand" href="#prototype-hub">▥ Infra, <em>Illustrated.</em></a>
+      <nav><a href="#prototype-hub">← Back to Linux Map</a></nav>
+    </div>
+
+    <header class="head">
+      <div>
+        <span class="crumb">Linux / Identity Subsystem</span>
+        <span class="kicker">01 · IDENTITY CONSOLE</span>
+        <h1>Process Credentials & Path Traversal Gates</h1>
+        <p>Why a file with <code>chmod 0777</code> can still return <code>Permission Denied (EACCES)</code> if any parent directory denies search permission.</p>
+      </div>
+      <a href="#prototype-hub">← Linux Map</a>
+    </header>
+
+    <div class="console-layout">
+      <nav class="console-nav">
+        <h4>CREDENTIAL VIEWS</h4>
+        <a href="#ident-path" aria-current="step">01 · Path Traversal Gate</a>
+        <a href="#ident-creds">02 · RUID vs EUID vs FSUID</a>
+        <a href="#ident-least">03 · Least Privilege vs 777</a>
+        <a href="#prototype-storage" style="margin-top: 24px; color: var(--cyan);">Next: Storage →</a>
+      </nav>
+
+      <section class="console-main">
+        <span class="kicker">ACTIVE VIEW · HIERARCHICAL PATH RESOLUTION GATE</span>
+        <h2>How the Linux Kernel Evaluates File Permissions</h2>
+        <p>Linux does not check permissions on the leaf file in isolation. To read <code>/srv/site/index.html</code>, the kernel walks from root <code>/</code>, evaluating execute (<code>+x</code>) permissions at every directory gate.</p>
+
+        <!-- Traversal Gate Diagram -->
+        <div class="vfs-pipeline" style="grid-template-columns: repeat(4, 1fr);">
+          <div class="vfs-node" style="border-color: var(--green);">
+            <span style="color: var(--green);">GATE 1: ROOT DIRECTORY</span>
+            <strong>/ (root)</strong>
+            <small>Mode: 0755 (drwxr-xr-x)<br>Check: other has +x<br><b style="color: var(--green);">✓ GRANTED</b></small>
+          </div>
+          <div class="vfs-node" style="border-color: var(--green);">
+            <span style="color: var(--green);">GATE 2: MOUNT POINT</span>
+            <strong>/srv</strong>
+            <small>Mode: 0755 (drwxr-xr-x)<br>Check: other has +x<br><b style="color: var(--green);">✓ GRANTED</b></small>
+          </div>
+          <div class="vfs-node" id="gate-site" style="border-color: var(--red); background: rgba(251, 126, 133, 0.08);">
+            <span style="color: var(--red);">GATE 3: PARENT DIRECTORY</span>
+            <strong>/srv/site</strong>
+            <small>Mode: 0750 (drwxr-x---)<br>Worker UID 33 not in group<br><b style="color: var(--red);">✗ DENIED (EACCES)</b></small>
+          </div>
+          <div class="vfs-node" style="opacity: 0.45;">
+            <span>GATE 4: TARGET FILE</span>
+            <strong>index.html</strong>
+            <small>Mode: 0777 (-rwxrwxrwx)<br>Check: Read bit<br><b>NOT REACHED!</b></small>
+          </div>
+        </div>
+
+        <div style="margin-top: 20px; padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-dark);">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <strong style="color: var(--cyan);">Simulation: Fix Parent Directory Traversal</strong>
+              <p style="font-size: 0.85rem; color: var(--muted); margin-top: 4px;">Grant group search permission to <code>www-data</code> so the worker can traverse into <code>/srv/site</code>.</p>
+            </div>
+            <button type="button" id="btn-fix-traversal" style="border-color: var(--cyan); color: var(--cyan);">Apply chmod 0755 /srv/site →</button>
+          </div>
+        </div>
+      </section>
+
+      <aside class="console-inspector">
+        <span class="inspector-label">IDENTITY INSPECTOR</span>
+        <h3 class="inspector-title">Process Credential Vector</h3>
+        <p style="font-size: 0.85rem; color: var(--muted);">Linux maintains four distinct UIDs per process: Real (who started it), Effective (setuid operations), Saved (temporary privilege drop), and FSUID (used exclusively for filesystem checks).</p>
+
+        <div class="terminal-box">
+          <div class="terminal-head">$ id www-data</div>
+          <pre>uid=33(www-data) gid=33(www-data) groups=33(www-data)</pre>
+        </div>
+
+        <div class="terminal-box" style="margin-top: 12px;">
+          <div class="terminal-head">$ namei -om /srv/site/index.html</div>
+          <pre>f: /srv/site/index.html
+ drwxr-xr-x root root /
+ drwxr-xr-x root root srv
+ drwxr-x--- root root site    # BLOCKED!
+ -rwxrwxrwx root root index.html</pre>
+        </div>
+      </aside>
+    </div>
+  </article>
 </main>
+
 <script>
-  const pages=[...document.querySelectorAll('[data-page]')];
-  const map=document.querySelector('#prototype-map');
-  const network=document.querySelector('#prototype-networking');
-  const networkViews=[...network.querySelectorAll('[data-network-view]')];
-  const networkLinks=[...network.querySelectorAll('.index a')];
-  let networkStage=0,step=-1,playTimer;
-  function stop(){if(playTimer){clearInterval(playTimer);playTimer=undefined}}
-  function route(){const id=location.hash.slice(1);const networkView=networkViews.find(view=>view.id===id);const target=networkView?network:pages.find(page=>page.id===id)||pages[0];pages.forEach(page=>page.hidden=page!==target);if(target===network){const viewIndex=networkViews.findIndex(view=>view.id===id);if(viewIndex>=0)networkStage=viewIndex;renderNetwork()}if(id==='prototype-basics'){document.querySelector('#prototype-basics').scrollIntoView();return}const heading=target.querySelector('h1');heading?.setAttribute('tabindex','-1');heading?.focus();window.scrollTo(0,0)}
-  function setNetwork(index){networkStage=Math.max(0,Math.min(networkViews.length-1,index));stop();renderNetwork();history.pushState(null,'',`#${networkViews[networkStage].id}`)}
-  function renderNetwork(){networkViews.forEach((view,index)=>view.hidden=index!==networkStage);networkLinks.forEach((link,index)=>{if(index===networkStage)link.setAttribute('aria-current','step');else link.removeAttribute('aria-current')});network.querySelector('[data-network-count]').textContent=`0${networkStage+1} / 03`;const titles=['DNS chooses an address.','A bind address changes the potential listener destinations.','The local filter stops this fixture.'];network.querySelector('[data-network-inspector]').textContent=titles[networkStage];network.querySelector('[data-network-takeaway]').textContent=['THE POINT TO KEEP · Name lookup and packet forwarding are different stages.','THE POINT TO KEEP · Bind scope and policy are independent checks.','THE POINT TO KEEP · A successful probe at one layer does not prove the next works.'][networkStage];network.querySelector('[data-terminal-command]').textContent=['$ getent hosts api.example.test','$ ss -lntp | grep :443','$ nft list ruleset'][networkStage];network.querySelector('[data-terminal-output]').textContent=['192.0.2.25 api.example.test','LISTEN 127.0.0.1:443','tcp dport 443 drop  # fixture'][networkStage]}
-  document.querySelectorAll('[data-mode]').forEach(button=>button.addEventListener('click',()=>{map.dataset.mode=button.dataset.mode;document.querySelectorAll('[data-mode]').forEach(other=>other.setAttribute('aria-pressed',String(other===button)));document.querySelector('[data-map-note]').textContent=button.dataset.mode==='path'?'The numbered order is a suggestion. Every route remains open for direct exploration.':'Each node opens a dedicated pillar console. The path is optional, and no route is locked.'}));
-  networkLinks.forEach((link,index)=>link.addEventListener('click',event=>{event.preventDefault();setNetwork(index)}));
-  function highlight(){const actors=[...network.querySelectorAll('#network-trace .actor')];actors.forEach((actor,index)=>actor.classList.toggle('is-current',index===step));network.querySelector('[data-network-result]').textContent=step<0?'All five steps are visible. Advance to inspect one transition.':`Step ${step+1} / ${actors.length}: ${actors[step].querySelector('strong').textContent}`;network.querySelector('[data-terminal-output]').textContent=['192.0.2.25 api.example.test','connect(192.0.2.25:443)','via 10.0.1.1 dev eth0 src 10.0.1.17','local policy: allowed','eth0: transmitted'][Math.max(0,step)]}
-  network.querySelectorAll('[data-step]').forEach(button=>button.addEventListener('click',()=>{const action=button.dataset.step;if(action==='prev'){stop();step=Math.max(0,step-1);highlight()}if(action==='next'){stop();step=Math.min(4,step+1);highlight()}if(action==='play'){if(playTimer){stop();button.textContent='▶ Replay';return}step=-1;step++;highlight();if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;button.textContent='Ⅱ Pause';playTimer=setInterval(()=>{if(step>=4){stop();button.textContent='▶ Replay';return}step++;highlight()},900)}}));
-  network.querySelectorAll('[data-bind]').forEach(button=>button.addEventListener('click',()=>{network.querySelectorAll('[data-bind]').forEach(other=>other.setAttribute('aria-pressed',String(other===button)));const value={loopback:['127.0.0.1','loopback only'],wildcard:['0.0.0.0','all IPv4 interfaces'],eth0:['10.0.1.17','eth0-specific']}[button.dataset.bind];network.querySelector('[data-bind-actor] strong').textContent=value[0]+':443';network.querySelector('[data-bind-actor] small').textContent=value[1];network.querySelector('[data-bind-result]').textContent=`Potential local scope: ${value[1]}. Firewall, routing, and cloud controls still apply.`;network.querySelector('[data-terminal-output]').textContent=`LISTEN ${value[0]}:443`;network.querySelector('[data-network-explainer]').textContent=network.querySelector('[data-bind-result]').textContent}));
-  network.querySelector('[data-network-fix]').addEventListener('click',event=>{const button=event.currentTarget;const fixed=button.getAttribute('aria-pressed')!=='true';button.setAttribute('aria-pressed',String(fixed));network.querySelector('[data-fail-actor]').classList.toggle('is-blocked',!fixed);network.querySelector('[data-fail-actor] small').textContent=fixed?'accept fixture':'DROP fixture';network.querySelector('[data-fail-result]').textContent=fixed?'Guest filter now permits this example; external controls still need checks.':'Default: local DROP blocks this path.';network.querySelector('[data-terminal-output]').textContent=fixed?'tcp dport 443 accept  # fixture':'tcp dport 443 drop  # fixture'});
-  network.querySelector('[data-network-probe]').addEventListener('click',()=>{network.querySelector('[data-terminal-command]').textContent=['$ ip route get 192.0.2.25','$ ip addr show eth0','$ ss -lntp | grep :443'][networkStage];network.querySelector('[data-terminal-output]').textContent=['via 10.0.1.1 dev eth0 src 10.0.1.17','inet 10.0.1.17/24 scope global eth0','LISTEN 0.0.0.0:443'][networkStage];network.querySelector('[data-probe-result]').textContent='The next probe changes command evidence for this view.';networkViews[networkStage].querySelector('.actor:nth-child(3)')?.classList.add('is-current')});
-  document.body.classList.add('enhanced');window.addEventListener('hashchange',route);window.addEventListener('popstate',route);route();
+  // Scenario Switcher for Host Architecture Hub
+  const traces = {
+    http: {
+      activeNodes: ['nic', 'netstack', 'nginx-worker'],
+      copy: '<strong>HTTPS Ingress Flow:</strong> Packet arrives at <code>eth0</code> → NIC DMA writes to RX Ring → NAPI interrupt → Netfilter <code>PREROUTING</code> hook → Routing table confirms local <code>10.0.1.17</code> → Netfilter <code>INPUT</code> hook → Socket receive queue for TCP/443 → <code>epoll_wait()</code> wakes <strong>nginx worker PID 421</strong>.',
+      badge: 'TRACE: PACKET → WORKER'
+    },
+    file: {
+      activeNodes: ['nginx-worker', 'vfs', 'disk', 'ram'],
+      copy: '<strong>Static Asset Read Flow:</strong> Worker calls <code>openat("/srv/site/index.html", O_RDONLY)</code> → Syscall trap to Kernel → VFS validates process UID 33 against directory traversal gates → Inode metadata located → Page Cache checked in RAM (Cache Hit = instant memory read; Cache Miss = ext4 DMA read from NVMe <code>/dev/vdb1</code>).',
+      badge: 'TRACE: WORKER → VFS → NVMe'
+    },
+    container: {
+      activeNodes: ['container-app', 'cgroups', 'sched'],
+      copy: '<strong>Container Isolation Boundary:</strong> The container process is an ordinary Linux task, but the kernel isolates it using <strong>Namespaces</strong> (private PID 1, private Mount table, private virtual <code>veth</code> network) and throttles it using <strong>Cgroups v2</strong> (hard limits: 512MB RAM, 1 CPU quota).',
+      badge: 'TRACE: NAMESPACES & CGROUPS'
+    }
+  };
+
+  document.querySelectorAll('[data-hub-trace]').forEach(button => {
+    button.addEventListener('click', () => {
+      const traceKey = button.dataset.hubTrace;
+      const trace = traces[traceKey];
+      if (!trace) return;
+
+      document.querySelectorAll('[data-hub-trace]').forEach(btn => btn.setAttribute('aria-pressed', String(btn === button)));
+      document.querySelectorAll('.arch-node').forEach(node => {
+        node.classList.toggle('is-active', trace.activeNodes.includes(node.dataset.nodeId));
+      });
+
+      document.getElementById('hub-trace-copy').innerHTML = trace.copy;
+      document.getElementById('hub-step-badge').textContent = trace.badge;
+    });
+  });
+
+  // Bind Address Simulation
+  const bindExplanations = {
+    wildcard: '<strong>Wildcard Bind (0.0.0.0):</strong> The kernel accepts TCP handshakes addressed to any IP configured on any local interface (eth0, lo, or container bridges). This is required for public web services.',
+    loopback: '<strong>Loopback Bind (127.0.0.1):</strong> The kernel drops any packet arriving on <code>eth0</code> at the routing stage because it did not arrive via <code>lo</code>. The service is completely isolated from external network callers.',
+    eth0: '<strong>Interface Bind (10.0.1.17):</strong> The socket only receives traffic addressed specifically to the eth0 IP address. Local calls to 127.0.0.1:443 will fail with Connection Refused.'
+  };
+
+  document.querySelectorAll('[data-bind]').forEach(button => {
+    button.addEventListener('click', () => {
+      document.querySelectorAll('[data-bind]').forEach(btn => {
+        btn.style.borderColor = btn === button ? 'var(--cyan)' : 'var(--line)';
+        btn.style.color = btn === button ? 'var(--cyan)' : 'var(--text)';
+      });
+      document.getElementById('bind-explainer').innerHTML = bindExplanations[button.dataset.bind];
+    });
+  });
+
+  // Traversal Gate Fix Simulation
+  const btnFix = document.getElementById('btn-fix-traversal');
+  if (btnFix) {
+    let fixed = false;
+    btnFix.addEventListener('click', () => {
+      fixed = !fixed;
+      const gate = document.getElementById('gate-site');
+      if (fixed) {
+        gate.style.borderColor = 'var(--green)';
+        gate.style.background = 'rgba(73, 214, 163, 0.08)';
+        gate.querySelector('span').style.color = 'var(--green)';
+        gate.querySelector('span').textContent = 'GATE 3: PARENT DIRECTORY';
+        gate.querySelector('small').innerHTML = 'Mode: 0755 (drwxr-xr-x)<br>Other has +x (search)<br><b style="color: var(--green);">✓ GRANTED</b>';
+        btnFix.textContent = '↺ Reset to chmod 0750 (Blocked)';
+        btnFix.style.borderColor = 'var(--red)';
+        btnFix.style.color = 'var(--red)';
+      } else {
+        gate.style.borderColor = 'var(--red)';
+        gate.style.background = 'rgba(251, 126, 133, 0.08)';
+        gate.querySelector('span').style.color = 'var(--red)';
+        gate.querySelector('span').textContent = 'GATE 3: PARENT DIRECTORY';
+        gate.querySelector('small').innerHTML = 'Mode: 0750 (drwxr-x---)<br>Worker UID 33 not in group<br><b style="color: var(--red);">✗ DENIED (EACCES)</b>';
+        btnFix.textContent = 'Apply chmod 0755 /srv/site →';
+        btnFix.style.borderColor = 'var(--cyan)';
+        btnFix.style.color = 'var(--cyan)';
+      }
+    });
+  }
 </script>
 </body>
 </html>

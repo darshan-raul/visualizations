@@ -5,154 +5,212 @@ export const packagesPillar: LinuxPillar = {
   id: 'packages',
   name: 'Packages & Software',
   short: 'Packages',
-  promise: 'Let\'s follow a package from repository to installed files and see why installing isn\'t the same as running.',
-  hints: 'repos · deps · files · updates · pinning',
-  bridge: 'Understanding Linux packages directly translates to optimizing container image layers, writing reliable Dockerfile install steps, and effective CVE patching.',
+  promise: 'Follow a package from signed repository to unpacked files and runtime dynamic linking, and see why installing is not running.',
+  hints: 'repos · GPG trust · dpkg/rpm · ld.so · dynamic linking · pinning · systemd',
+  bridge: 'Understanding Linux package management directly translates to minimizing container image layers, authoring deterministic Dockerfiles, and patching host CVEs without downtime.',
   groups: [
-    { label: 'Install chain', viewIds: ['repository', 'files', 'libraries'] },
-    { label: 'Runtime', viewIds: ['service', 'versioning', 'missing'] }
+    { label: 'Install pipeline', viewIds: ['repository', 'files', 'libraries'] },
+    { label: 'Runtime lifecycle', viewIds: ['service', 'versioning', 'missing'] }
   ],
   views: [
     {
       id: 'repository',
       label: 'Repository & trust',
-      title: 'A package manager is just a downloader that verifies signatures.',
-      question: 'Where do packages come from and how do we trust them?',
+      title: 'A package manager is a cryptographically verified distribution pipeline.',
+      question: 'Where do deb and rpm packages originate, and how does the system prove authenticity before execution?',
       kind: 'comparison',
       items: [
-        { label: 'Debian / Ubuntu (APT)', detail: 'Uses /etc/apt/sources.list and /etc/apt/sources.list.d/. GPG keys verify Release files.', command: 'apt update && apt install nginx', output: 'Get:1 http://deb.debian.org/debian bookworm InRelease [151 kB]', highlight: 'neutral' },
-        { label: 'RHEL / Fedora (DNF)', detail: 'Uses /etc/yum.repos.d/. GPG keys verify individual RPM packages directly.', command: 'dnf install nginx', output: 'Fedora 39 - x86_64 - Updates  14 MB/s |  22 MB     00:01', highlight: 'neutral' },
+        {
+          label: 'Debian / Ubuntu (APT)',
+          detail: 'Configured in /etc/apt/sources.list.d/. Validated via detached GPG signatures on InRelease metadata in /usr/share/keyrings/. Packages.gz supplies per-package SHA256 checksums.',
+          command: 'apt-cache policy nginx',
+          output: 'nginx:\n  Installed: 1.22.1-9\n  Candidate: 1.22.1-9\n  Version table:\n *** 1.22.1-9 500\n        500 http://deb.debian.org/debian bookworm/main amd64 Packages',
+          highlight: 'neutral'
+        },
+        {
+          label: 'RHEL / Fedora (DNF/RPM)',
+          detail: 'Configured in /etc/yum.repos.d/*.repo. Validated via repomd.xml signatures; individual RPM package headers embed detached GPG signatures verified before unpacking.',
+          command: 'dnf info nginx',
+          output: 'Name         : nginx\nVersion      : 1.24.0\nRelease      : 1.el9\nArchitecture : x86_64\nRepository   : @System\nFrom repo    : epel',
+          highlight: 'neutral'
+        },
+        {
+          label: 'GPG Keyring Security',
+          detail: 'Modern APT stores armored GPG public keys in /usr/share/keyrings/ rather than legacy trusted.gpg. The signed-by directive strictly limits key authority to a single repo.',
+          command: 'gpg --show-keys /usr/share/keyrings/nginx-archive-keyring.gpg',
+          output: 'pub   rsa2048 2011-08-19 [SC] [expires: 2027-04-12]\n      573B FD6B 3D8F BC64 1079  A6AB ABF5 BD82 7BD9 BF62\nuid   nginx signing key <signing-key@nginx.com>',
+          highlight: 'good'
+        },
+        {
+          label: 'Maintainer Script Risk',
+          detail: 'Packages execute maintainer scripts (preinst, postinst, prerm, postrm) as root during installation with zero container sandboxing. Malicious PPAs can compromise the host.',
+          command: 'head -n 15 /var/lib/dpkg/info/nginx.postinst',
+          output: '#!/bin/sh\nset -e\nif [ "$1" = "configure" ]; then\n    if ! getent passwd nginx >/dev/null; then\n        adduser --system --quiet --group --home /var/cache/nginx nginx\n    fi\nfi',
+          highlight: 'bad'
+        }
       ],
-      explanation: 'Package managers don\'t magically create software; they fetch pre-compiled binaries from HTTP servers. Trust is established via GPG signatures. If the signature doesn\'t match, the package manager refuses to install it, preventing man-in-the-middle attacks.',
-      takeaway: 'Repositories are just web servers. GPG signatures ensure the files haven\'t been tampered with in transit.',
+      explanation: 'Package managers do not compile software; they download pre-built binary archives from static HTTP mirrors. Trust is established mathematically: the repository Release file is signed with a private GPG key, which matches a public key in your local keyring. The Release file lists SHA256 hashes for all package index files, which in turn specify hashes for each .deb archive. If a single byte is modified in transit, the package manager halts installation.',
+      takeaway: 'Repositories are static HTTP mirrors; trust is anchored by local GPG keyrings and chained SHA256 checksums.',
       command: 'apt-cache policy nginx',
-      output: 'nginx:\n  Installed: (none)\n  Candidate: 1.22.1-9\n  Version table:\n     1.22.1-9 500\n        500 http://deb.debian.org/debian bookworm/main amd64 Packages',
-      probe: 'cat /etc/apt/sources.list.d/nginx.list',
+      output: 'nginx:\n  Installed: 1.22.1-9\n  Candidate: 1.22.1-9\n  Version table:\n *** 1.22.1-9 500\n        500 http://deb.debian.org/debian bookworm/main amd64 Packages',
+      probe: 'cat /etc/apt/sources.list.d/nginx.sources 2>/dev/null || cat /etc/apt/sources.list.d/nginx.list 2>/dev/null || grep -v "^#" /etc/apt/sources.list | head -n 3',
       probeOutput: 'deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] http://nginx.org/packages/mainline/debian/ bookworm nginx',
-      caveat: 'Adding random PPAs or third-party repositories grants them root execution during package install scripts. Only add trusted sources.',
+      caveat: 'Maintainer scripts (preinst/postinst) run as unrestricted root. Adding random PPAs or running "curl | bash" allows third parties to execute arbitrary code on your system.',
       source: `${debian}apt.html`,
     },
     {
       id: 'files',
       label: 'Installed files',
-      title: 'A package is just a tarball that splatters files across your disk.',
-      question: 'Where did all these files go when I ran apt install?',
+      title: 'A package is an archive that unpacks into the filesystem hierarchy.',
+      question: 'Where do binaries, configs, and unit files land when unpacking, and how does the database track ownership?',
       kind: 'walkthrough',
       steps: [
-        { command: 'dpkg -L nginx', output: '/etc/nginx\n/etc/nginx/nginx.conf\n/usr/sbin/nginx\n/lib/systemd/system/nginx.service', annotation: 'The package manager extracts files into standard filesystem locations. Configuration goes to /etc, binaries to /usr/sbin, and service definitions to /lib/systemd.' },
-        { command: 'dpkg -S /etc/nginx/nginx.conf', output: 'nginx: /etc/nginx/nginx.conf', annotation: 'You can query the package database backwards: "Which package owns this file?" Crucial when you find a weird binary and want to know where it came from.' },
-        { command: 'rpm -ql nginx', output: '/etc/nginx/nginx.conf\n/usr/sbin/nginx', annotation: 'On Red Hat/Fedora systems using RPM, you use rpm -ql for listing files. The concept is identical, just different tooling.' },
-        { command: 'rpm -V nginx', output: 'S.5....T.  c /etc/nginx/nginx.conf', annotation: 'You can verify if installed files have been modified. Here, RPM tells us the size (S), MD5 sum (5), and timestamp (T) of nginx.conf have changed since installation.' }
+        {
+          command: 'dpkg -L nginx',
+          output: '/etc/nginx\n/etc/nginx/nginx.conf\n/lib/systemd/system/nginx.service\n/usr/sbin/nginx\n/usr/share/man/man8/nginx.8.gz',
+          annotation: 'The package database records every file extracted into the Filesystem Hierarchy Standard (FHS). Binaries go to /usr/sbin, configs to /etc, and unit files to /lib/systemd/system.'
+        },
+        {
+          command: 'dpkg -S /etc/nginx/nginx.conf',
+          output: 'nginx: /etc/nginx/nginx.conf',
+          annotation: 'Query the database backwards: "Which package owns this path?" Essential for identifying unknown binaries or validating config file origins during incident response.'
+        },
+        {
+          command: 'dpkg -V nginx',
+          output: '??5?????? c /etc/nginx/nginx.conf',
+          annotation: 'Verifies installed files against database MD5 checksums. "5" denotes that nginx.conf MD5 digest has changed from the upstream maintainer version due to local editing.'
+        },
+        {
+          command: 'dpkg-query -W -f=\'${Package} ${Installed-Size} ${Status}\\n\' nginx',
+          output: 'nginx 1240 install ok installed',
+          annotation: 'Inspect low-level package status in /var/lib/dpkg/status. Status indicates whether the package is cleanly installed, half-configured, or scheduled for removal.'
+        }
       ],
-      explanation: 'Installing a package doesn\'t put everything in one neat folder like Windows or macOS. It distributes files into the standard Linux hierarchy. The package manager keeps a local database mapping every installed file back to its source package.',
-      takeaway: 'Packages distribute files across your system. The package manager\'s database tracks what went where.',
-      command: 'dpkg-query -W -f=\'${Installed-Size} ${Package}\\n\' | sort -n | tail -n 5',
-      output: '111456 linux-image-6.1.0-11-amd64\n157832 libc6-dbg\n195328 gcc-12',
-      probe: 'dpkg -s nginx',
-      probeOutput: 'Package: nginx\nStatus: install ok installed\nVersion: 1.22.1-9\nArchitecture: amd64',
-      caveat: 'Files generated at runtime (like logs or compiled bytecode) are not tracked by the package manager.',
+      explanation: 'Linux packages do not install into isolated application folders like macOS bundles. Instead, the archive extracts files across standard directories: executables into /usr/bin or /usr/sbin, configuration files into /etc, libraries into /usr/lib, and man pages into /usr/share/man. The local database (/var/lib/dpkg or /var/lib/rpm) stores a complete index of all extracted files and MD5 checksums.',
+      takeaway: 'Use dpkg -L to find where files landed, dpkg -S to identify file ownership, and dpkg -V to detect modified configurations.',
+      command: 'dpkg -S /usr/sbin/nginx',
+      output: 'nginx: /usr/sbin/nginx',
+      probe: 'dpkg -V nginx 2>/dev/null || rpm -V nginx 2>/dev/null',
+      probeOutput: '??5?????? c /etc/nginx/nginx.conf',
+      caveat: 'Files generated dynamically at runtime (access logs in /var/log, databases in /var/lib, cache in /var/cache) are not tracked by dpkg and remain on disk after "apt remove".',
       source: `${man}man1/dpkg.1.html`,
     },
     {
       id: 'libraries',
       label: 'Shared libraries',
-      title: 'Having the binary isn\'t enough if the shared libraries are missing.',
-      question: 'Why does my binary fail to run even though the file is there?',
+      title: 'The dynamic linker binds shared ELF libraries at runtime before main().',
+      question: 'Why does an installed binary fail with "error while loading shared libraries" even though the file exists?',
       kind: 'layers',
       actors: [
-        { label: 'Process Execution', detail: 'You run ./my-app' },
-        { label: 'Dynamic Linker', detail: 'Kernel hands control to ld-linux.so' },
-        { label: 'Shared Libraries', detail: 'ld.so searches for required .so files' },
-        { label: 'Main Function', detail: 'App actually starts running' }
+        { label: 'Process Exec', detail: 'Kernel execve() reads ELF binary header' },
+        { label: 'Dynamic Linker', detail: 'Hands control to /lib64/ld-linux-x86-64.so.2' },
+        { label: 'DT_NEEDED Lookup', detail: 'Parses required .so names: libssl.so, libc.so' },
+        { label: 'ld.so Cache', detail: 'Consults /etc/ld.so.cache and maps pages via mmap()' }
       ],
       failure: {
-        label: 'Install missing library',
-        result: 'Dynamic linker resolves all symbols; binary executes',
-        output: 'sudo apt-get install -y libssl-dev && ./my-app\nApplication initialized successfully.',
+        label: 'Rebuild ld.so cache after library install',
+        result: 'Dynamic linker resolves all DT_NEEDED symbols; execution enters application main()',
+        output: 'sudo apt-get install -y libssl3 && sudo ldconfig\n/usr/sbin/nginx -v\nnginx version: nginx/1.22.1',
         blocked: 2,
         afterActors: [
-          { label: 'Process Execution', detail: 'You run ./my-app' },
-          { label: 'Dynamic Linker', detail: 'Kernel hands control to ld-linux.so' },
-          { label: 'Shared Libraries', detail: 'ld.so finds libssl.so' },
-          { label: 'Main Function', detail: 'App starts running cleanly' }
+          { label: 'Process Exec', detail: 'Kernel execve() loads ELF binary' },
+          { label: 'Dynamic Linker', detail: 'ld-linux-x86-64.so.2 active' },
+          { label: 'DT_NEEDED Lookup', detail: 'All library symbols resolved' },
+          { label: 'Application Entry', detail: 'Jumps to application main() cleanly' }
         ]
       },
-      explanation: 'Most Linux binaries are dynamically linked. When you start them, the kernel actually starts the dynamic linker (ld.so), which searches your system for required shared libraries (like libssl or libc). If a library is missing, or the wrong version, the app crashes before its code even starts.',
-      takeaway: 'Check ldd on your binary when it refuses to start with cryptic library errors.',
+      explanation: 'Most Linux binaries are dynamically linked ELF executables. When executed, the kernel starts the dynamic linker (ld-linux.so), which parses the binary\'s DT_NEEDED ELF tags to find required shared libraries (.so files). The linker searches in a strict priority order: DT_RPATH/RUNPATH, LD_LIBRARY_PATH, the compiled binary cache in /etc/ld.so.cache, and standard system paths (/lib, /usr/lib). If any library is missing or incompatible, the process aborts with exit code 127 before main() ever executes.',
+      takeaway: 'Inspect dynamic library requirements with ldd or readelf -d; update the linker cache with ldconfig after installing custom libraries.',
       command: 'ldd /usr/sbin/nginx',
-      output: '\tlinux-vdso.so.1 (0x00007ffe34567000)\n\tlibcrypt.so.1 => /lib/x86_64-linux-gnu/libcrypt.so.1 (0x00)\n\tlibpcre2-8.so.0 => /lib/x86_64-linux-gnu/libpcre2-8.so.0\n\tlibssl.so.3 => /lib/x86_64-linux-gnu/libssl.so.3',
-      probe: 'objdump -p /usr/sbin/nginx | grep NEEDED',
-      probeOutput: '  NEEDED               libcrypt.so.1\n  NEEDED               libpcre2-8.so.0\n  NEEDED               libssl.so.3\n  NEEDED               libc.so.6',
-      caveat: 'Statically linked binaries (like typical Go programs) bundle all dependencies and don\'t rely on ld.so, making them much more portable.',
+      output: '\tlinux-vdso.so.1 (0x00007ffe12345000)\n\tlibcrypt.so.1 => /lib/x86_64-linux-gnu/libcrypt.so.1 (0x00007f1234000000)\n\tlibpcre2-8.so.0 => /lib/x86_64-linux-gnu/libpcre2-8.so.0 (0x00007f1234100000)\n\tlibssl.so.3 => /lib/x86_64-linux-gnu/libssl.so.3 (0x00007f1234200000)\n\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f1234300000)',
+      probe: 'readelf -d /usr/sbin/nginx | grep -E "(NEEDED|RPATH|RUNPATH)"',
+      probeOutput: ' 0x0000000000000001 (NEEDED)             Shared library: [libcrypt.so.1]\n 0x0000000000000001 (NEEDED)             Shared library: [libpcre2-8.so.0]\n 0x0000000000000001 (NEEDED)             Shared library: [libssl.so.3]\n 0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]',
+      caveat: 'ldd may execute untrusted binaries under certain linker configurations; for untrusted binaries, inspect ELF headers safely using "readelf -d" or "objdump -p".',
       source: `${man}man8/ld.so.8.html`,
     },
     {
       id: 'service',
       label: 'Install ≠ running',
-      title: 'Installing a package does not mean the application is running.',
-      question: 'I just ran apt install. Why isn\'t my server working?',
+      title: 'Package installation extracts files; it does not guarantee a running process or socket.',
+      question: 'Why does an application fail to respond immediately after running "apt install" or "dnf install"?',
       kind: 'split',
       actors: [
-        { label: 'Package State', detail: 'dpkg -s nginx (Installed)' },
-        { label: 'Unit State', detail: 'systemctl is-enabled nginx (Enabled)' },
-        { label: 'Service State', detail: 'systemctl is-active nginx (Inactive)' },
-        { label: 'Process State', detail: 'ps aux | grep nginx (Missing)' }
+        { label: 'Package State', detail: 'dpkg -s nginx: Status: install ok installed' },
+        { label: 'Systemd Unit', detail: 'systemctl is-enabled nginx: enabled in multi-user.target' },
+        { label: 'Cgroup Process', detail: 'systemctl is-active nginx: active (running) with PID 418' },
+        { label: 'Network Socket', detail: 'ss -tulpn: LISTEN on 0.0.0.0:80' }
       ],
-      explanation: 'Installing software is just copying files to disk. Actually running it is a separate step usually handled by systemd. Debian/Ubuntu attempt to start services automatically after installation, but RHEL/Fedora do not. Furthermore, if the default config is invalid, the service will fail to start even if it tries.',
-      takeaway: 'Installing provides the files. Systemctl provides the process.',
+      explanation: 'Installing software simply writes files into the filesystem hierarchy. Transforming those static files into an active, listening server requires distinct orchestration steps: the package manager must invoke systemd triggers, systemd must parse the unit file, spawn the executable in an isolated cgroup slice, and the application must successfully bind to its configured network sockets. On Debian/Ubuntu, packages attempt to start immediately upon install; on RHEL/Fedora, services default to disabled and stopped.',
+      takeaway: 'Installing writes files to disk. Running requires systemd service activation and successful socket binding.',
       command: 'systemctl status nginx',
-      output: '○ nginx.service - A high performance web server\n     Loaded: loaded (/lib/systemd/system/nginx.service; enabled; preset: enabled)\n     Active: inactive (dead)',
-      probe: 'systemctl start nginx',
-      probeOutput: '# No output on success, but process is now running',
-      caveat: 'Some package installs trigger post-install scripts that generate configuration, create users, or initialize databases before starting the service.',
+      output: '● nginx.service - A high performance web server\n     Loaded: loaded (/lib/systemd/system/nginx.service; enabled; preset: enabled)\n     Active: active (running) since Wed 2026-09-16 10:00:00 UTC; 2h ago\n   Main PID: 418 (nginx)\n      Tasks: 2 (limit: 4915)\n     Memory: 8.2M\n        CPU: 120ms\n     CGroup: /system.slice/nginx.service\n             ├─418 "nginx: master process /usr/sbin/nginx -g daemon on; master_process on;"\n             └─421 "nginx: worker process"',
+      probe: 'systemctl is-enabled nginx && systemctl is-active nginx',
+      probeOutput: 'enabled\nactive',
+      caveat: 'If the default configuration contains an error or the target port is occupied, the package post-install script may fail, leaving the package in a half-configured state ("iF" in dpkg).',
       source: `${man}man1/systemctl.1.html`,
     },
     {
       id: 'versioning',
       label: 'Version pinning',
-      title: 'Updates can break things. Sometimes you need to freeze time.',
-      question: 'How do I stop apt from upgrading a specific package?',
+      title: 'Package pinning protects production systems from unintended breaking upgrades.',
+      question: 'How do you freeze critical database and runtime packages while applying security patches across the host?',
       kind: 'walkthrough',
       steps: [
-        { command: 'apt list -a postgresql-15', output: 'postgresql-15/stable 15.6-0+deb12u1 amd64 [upgradable from: 15.4-1]\npostgresql-15/now 15.4-1 amd64 [installed,upgradable]', annotation: 'Checking available versions shows we have 15.4 installed, but 15.6 is available in the repository.' },
-        { command: 'apt-mark hold postgresql-15', output: 'postgresql-15 set on hold.', annotation: 'This tells the package manager to ignore this package during global apt upgrade runs. Crucial for sensitive infrastructure like databases.' },
-        { command: 'apt upgrade', output: 'The following packages have been kept back:\n  postgresql-15\n0 upgraded, 0 newly installed, 0 to remove and 1 not upgraded.', annotation: 'When you upgrade the system, the held package is deliberately skipped, preventing unexpected downtime or breaking changes.' },
-        { command: 'apt-mark unhold postgresql-15', output: 'Canceled hold on postgresql-15.', annotation: 'When you are ready for your planned maintenance window, you unhold the package and upgrade it explicitly.' }
+        {
+          command: 'apt list -a postgresql-15',
+          output: 'postgresql-15/stable 15.6-0+deb12u1 amd64 [upgradable from: 15.4-1]\npostgresql-15/now 15.4-1 amd64 [installed,upgradable]',
+          annotation: 'Query repository version candidate table. We have 15.4 installed, while 15.6 is available in upstream repositories.'
+        },
+        {
+          command: 'apt-mark hold postgresql-15',
+          output: 'postgresql-15 set on hold.',
+          annotation: 'Sets the package state flag to "hold" in the package database, instructing apt upgrade to skip this package during automated updates.'
+        },
+        {
+          command: 'apt-get upgrade -s',
+          output: 'The following packages have been kept back:\n  postgresql-15\n0 upgraded, 0 newly installed, 0 to remove and 1 not upgraded.',
+          annotation: 'Simulate system upgrade: apt deliberately skips the held package, preserving database compatibility until the planned maintenance window.'
+        },
+        {
+          command: 'cat /etc/apt/preferences.d/postgres-pin',
+          output: 'Package: postgresql-15\nPin: version 15.4*\nPin-Priority: 1001',
+          annotation: 'For fleet automation, enforce version locks via APT Pin-Priority. A priority > 1000 prevents upgrades even across repository suite transitions.'
+        }
       ],
-      explanation: 'Unattended upgrades are great for security, but terrible for stability if applied to core databases or custom-compiled dependencies. Holding a package (pinning) gives you control over when disruptive updates happen, allowing you to test them in staging first.',
-      takeaway: 'Use apt-mark hold to prevent accidental upgrades of critical infrastructure components.',
+      explanation: 'Unattended upgrades are critical for host security, but automated major or minor version bumps can break database schemas or API contracts. Holding a package (or configuring APT Pin-Priority) instructs the resolver to freeze that specific package at its current version while continuing to patch the rest of the operating system.',
+      takeaway: 'Use apt-mark hold or /etc/apt/preferences.d/ pinning to prevent automated upgrades of stateful databases and critical runtimes.',
       command: 'apt-mark showhold',
-      output: 'postgresql-15\nkubernetes-cni\nkubelet',
+      output: 'postgresql-15\nkubelet\nkubeadm\nkubectl',
       probe: 'dpkg --get-selections | grep hold',
-      probeOutput: 'postgresql-15                                   hold',
-      caveat: 'Holding packages means you will not receive security patches for them. Use this tool selectively and temporarily.',
+      probeOutput: 'postgresql-15                                   hold\nkubelet                                         hold',
+      caveat: 'Held packages do not receive security updates. Track pinned CVEs in your vulnerability management pipeline and schedule explicit upgrade windows.',
       source: `${man}man8/apt-mark.8.html`,
     },
     {
       id: 'missing',
       label: 'Broken runtime',
-      title: 'A logical path to debugging a broken application.',
-      question: 'My app isn\'t working. How do I trace the failure?',
+      title: 'A systematic diagnosis tree to isolate runtime application failures.',
+      question: 'When an application fails to start or respond after an update, how do you isolate where the failure occurred?',
       kind: 'decision',
       decisions: [
-        { id: 'start', label: 'App isn\'t running', type: 'start', next: 'q-pkg' },
-        { id: 'q-pkg', label: 'Is the package actually installed?', type: 'question', yes: 'q-bin', no: 'a-install' },
-        { id: 'a-install', label: 'apt install the package', type: 'action', next: 'q-bin' },
-        { id: 'q-bin', label: 'Does the binary exist and run manually? (Try app --version)', type: 'question', yes: 'q-cfg', no: 'a-libs' },
-        { id: 'a-libs', label: 'Check ldd for missing libraries or path issues', type: 'action', next: 'q-cfg' },
-        { id: 'q-cfg', label: 'Is the configuration valid? (Try app --test-config)', type: 'question', yes: 'q-svc', no: 'a-cfg' },
-        { id: 'a-cfg', label: 'Fix syntax errors in /etc/app/config', type: 'action', next: 'q-svc' },
-        { id: 'q-svc', label: 'Does systemctl start succeed?', type: 'question', yes: 'r-done', no: 'a-journal' },
-        { id: 'a-journal', label: 'Read journalctl -u app.service for exact failure reason', type: 'action', next: 'r-done' },
-        { id: 'r-done', label: 'Verify app is listening on expected ports', type: 'result' }
+        { id: 'start', label: 'Service down / Unresponsive', type: 'start', next: 'q-pkg' },
+        { id: 'q-pkg', label: 'Is package cleanly installed? (dpkg -s app)', type: 'question', yes: 'q-bin', no: 'a-pkg' },
+        { id: 'a-pkg', label: 'Resolve half-installed state: apt-get install -f', type: 'action', next: 'q-bin' },
+        { id: 'q-bin', label: 'Does the binary execute syntax check? (app -t / --version)', type: 'question', yes: 'q-unit', no: 'a-ldd' },
+        { id: 'a-ldd', label: 'Inspect missing libraries with ldd; run ldconfig or install deps', type: 'action', next: 'q-unit' },
+        { id: 'q-unit', label: 'Does systemd service start cleanly? (systemctl start app)', type: 'question', yes: 'q-port', no: 'a-journal' },
+        { id: 'a-journal', label: 'Read journalctl -u app.service -e for exact exit codes or missing dirs', type: 'action', next: 'q-port' },
+        { id: 'q-port', label: 'Is app listening on configured network sockets? (ss -tulpn)', type: 'question', yes: 'r-ok', no: 'a-bind' },
+        { id: 'a-bind', label: 'Check for port conflicts or loopback-only bind address (127.0.0.1)', type: 'action', next: 'r-ok' },
+        { id: 'r-ok', label: 'Service verified: package valid, binary linked, unit active, socket listening', type: 'result' }
       ],
-      explanation: 'Troubleshooting requires isolating the layers. Don\'t blindly restart systemd services without checking if the underlying binary even executes. By testing the package, then the binary, then the config, you isolate exactly where the chain is broken.',
-      takeaway: 'Test from the inside out: binary → config → service wrapper.',
+      explanation: 'Troubleshooting software requires isolating system layers from the inside out: Package database -> Binary dynamic linking -> Configuration syntax -> Systemd unit manager -> Network socket binding. Blindly restarting services without checking these boundaries destroys ephemeral logs and masks the root cause.',
+      takeaway: 'Test from the inside out: Package database -> Binary dynamic linker -> Config syntax -> Systemd unit -> Network socket.',
       command: 'nginx -t',
       output: 'nginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful',
       probe: 'systemctl status nginx --no-pager',
-      probeOutput: '● nginx.service - A high performance web server\n     Loaded: loaded\n     Active: active (running)',
-      caveat: 'AppArmor or SELinux profiles can silently block a perfectly configured application. Check dmesg or audit logs if the app dies mysteriously.',
+      probeOutput: '● nginx.service - A high performance web server\n     Loaded: loaded (/lib/systemd/system/nginx.service; enabled; preset: enabled)\n     Active: active (running)',
+      caveat: 'AppArmor and SELinux policies can silently block an otherwise valid binary from reading configuration files or binding ports. Check dmesg or audit.log for AVC denials.',
       source: `${systemd}systemctl.html`,
     }
   ]
