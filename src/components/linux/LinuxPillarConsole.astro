@@ -9,6 +9,7 @@ import PermissionLab from './interactive/PermissionLab.astro';
 import VfsLab from './interactive/VfsLab.astro';
 import PacketTraceLab from './interactive/PacketTraceLab.astro';
 import PipelineLab from './interactive/PipelineLab.astro';
+import NssLab from './interactive/NssLab.astro';
 
 interface Props { pillar: LinuxPillar; }
 const { pillar } = Astro.props;
@@ -108,6 +109,17 @@ const viewEvidence = (view: LinuxPillar['views'][number]) => view.probe || view.
                 <span data-linux-visual-status>READY TO INSPECT</span>
               </div>
               <PipelineLab pipelineData={view.pipelineData} id={view.id} />
+              <figcaption>{view.takeaway}</figcaption>
+            </figure>
+          )}
+
+          {view.kind === 'interactive-nss' && view.nssData && (
+            <figure class="linux-diagram linux-diagram-interactive" aria-label={`${view.title} on devbox-01`}>
+              <div class="linux-diagram-scope">
+                <span>DEVBOX-01 · NSS RESOLUTION LAB</span>
+                <span data-linux-visual-status>READY TO INSPECT</span>
+              </div>
+              <NssLab nssData={view.nssData} id={view.id} />
               <figcaption>{view.takeaway}</figcaption>
             </figure>
           )}

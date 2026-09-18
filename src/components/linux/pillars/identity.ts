@@ -18,13 +18,20 @@ export const identityPillar: LinuxPillar = {
       label: 'Account lookup',
       title: 'Usernames are human syntax; the kernel only evaluates numeric IDs.',
       question: 'How does Linux translate a username into kernel-enforced credentials?',
-      kind: 'path',
-      actors: [
-        { label: 'Username String', detail: 'Human identifier (e.g., "nginx")' },
-        { label: 'NSS Resolver Engine', detail: 'glibc reads /etc/nsswitch.conf' },
-        { label: 'Database Backend', detail: 'Local /etc/passwd or network SSSD/LDAP' },
-        { label: 'struct passwd Record', detail: 'Parsed UID 33, GID 33, home, and shell' }
-      ],
+      kind: 'interactive-nss',
+      nssData: {
+        config: { files: true, sss: true }, // /etc/nsswitch.conf `passwd: files sss`
+        databases: {
+          files: [
+            { username: 'root', uid: 0, gid: 0, dir: '/root', shell: '/bin/bash' },
+            { username: 'nginx', uid: 33, gid: 33, dir: '/var/cache/nginx', shell: '/sbin/nologin' }
+          ],
+          sss: [ // System Security Services Daemon (LDAP/AD)
+            { username: 'ldap_user', uid: 5001, gid: 5001, dir: '/home/ldap_user', shell: '/bin/bash' },
+            { username: 'nginx', uid: 9999, gid: 9999, dir: '/network/nginx', shell: '/bin/bash' } // Conflict!
+          ]
+        }
+      },
       explanation: 'When a service starts or a user authenticates, glibc calls getpwnam() to resolve the username. The Name Service Switch (/etc/nsswitch.conf) configures the resolution order—typically local files first, then directory services like LDAP, SSSD, or Winbind. The kernel itself has no concept of usernames; all discretionary access checks operate exclusively on 32-bit integer UIDs and GIDs.',
       takeaway: 'Never grep /etc/passwd in automation; use getent passwd to query the full NSS resolution chain.',
       command: 'getent passwd nginx',

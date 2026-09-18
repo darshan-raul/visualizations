@@ -1,0 +1,271 @@
+---
+interface Props {
+  nssData: any;
+  id: string;
+}
+
+const { nssData, id } = Astro.props;
+const jsonString = JSON.stringify(nssData);
+---
+
+<nss-lab data-initial-state={jsonString} data-view-id={id}>
+  <div class="nss-container">
+    
+    <!-- Left Column: System Configuration -->
+    <div class="nss-config-panel">
+      <div class="nss-header">
+        <strong>1. RESOLVER CONFIGURATION</strong>
+        <small>/etc/nsswitch.conf</small>
+      </div>
+      <div class="nss-body">
+        <p style="font-size:12px; margin-bottom:12px; color:var(--muted)">
+          Configure the order <code>glibc</code> searches for users.
+        </p>
+        <div class="nss-config-line">
+          <span style="color:var(--blue)">passwd:</span>
+          <div class="nss-sortable" id={`nss-sortable-${id}`}>
+            <div class="nss-module" data-module="files">
+              <input type="checkbox" id={`chk-files-${id}`} checked> <label for={`chk-files-${id}`}>files (/etc/passwd)</label>
+            </div>
+            <div class="nss-module" data-module="sss">
+              <input type="checkbox" id={`chk-sss-${id}`} checked> <label for={`chk-sss-${id}`}>sss (LDAP/AD via SSSD)</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="nss-header" style="border-top: 1px solid var(--border)">
+        <strong>2. DATABASE CONTENTS</strong>
+      </div>
+      <div class="nss-body">
+        <div class="db-section">
+          <div class="db-title">files (/etc/passwd)</div>
+          <pre class="db-content" id={`db-files-${id}`}>root:x:0:0::/root:/bin/bash
+nginx:x:33:33::/var/cache/nginx:/sbin/nologin</pre>
+        </div>
+        <div class="db-section" style="margin-top:16px;">
+          <div class="db-title">sss (Active Directory / LDAP)</div>
+          <pre class="db-content" id={`db-sss-${id}`}>ldap_user:x:5001:5001::/home/ldap_user:/bin/bash
+nginx:x:9999:9999::/network/nginx:/bin/bash</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Application Execution -->
+    <div class="nss-exec-panel">
+      <div class="nss-header">
+        <strong>3. APPLICATION LOOKUP</strong>
+        <small>glibc <code>getpwnam()</code></small>
+      </div>
+      <div class="nss-body">
+        <div class="lookup-form">
+          <input type="text" id={`lookup-input-${id}`} class="lookup-input" value="ldap_user" placeholder="Enter username...">
+          <button class="pt-btn" id={`btn-getent-${id}`}>$ getent passwd</button>
+        </div>
+        <p style="font-size:11px; margin-top:8px; color:var(--muted)">
+          Try looking up <code>nginx</code>, <code>ldap_user</code>, or <code>root</code>.
+        </p>
+      </div>
+
+      <div class="nss-header" style="border-top: 1px solid var(--border)">
+        <strong>4. RESOLUTION TRACE</strong>
+      </div>
+      <div class="nss-trace" id={`nss-trace-${id}`}>
+        <!-- Trace populated by JS -->
+      </div>
+
+      <div class="nss-result" id={`nss-result-${id}`}>
+        <!-- Result populated by JS -->
+      </div>
+    </div>
+  </div>
+</nss-lab>
+
+<style>
+  nss-lab {
+    display: block;
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-surface);
+    overflow: hidden;
+    font-family: var(--font-mono);
+  }
+
+  .nss-container {
+    display: flex;
+    min-height: 450px;
+  }
+
+  .nss-config-panel {
+    flex: 1;
+    border-right: 1px solid var(--border);
+    background: var(--bg-code);
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .nss-exec-panel {
+    flex: 1;
+    background: var(--bg-surface);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .nss-header {
+    padding: 12px 16px;
+    background: var(--bg-surface-hover);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+  }
+  .nss-header strong { font-size: 13px; color: var(--text-heading); }
+  .nss-header small { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .nss-body { padding: 16px; }
+
+  /* Config */
+  .nss-config-line {
+    display: flex; align-items: flex-start; gap: 12px; font-weight: bold; font-size: 13px;
+  }
+  .nss-sortable {
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .nss-module {
+    background: var(--bg-surface); border: 1px solid var(--border); padding: 4px 8px; border-radius: 4px;
+    display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: default;
+  }
+  .nss-module label { cursor: pointer; }
+
+  .db-section { border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+  .db-title { font-size: 11px; font-weight: bold; padding: 4px 8px; background: var(--bg-surface-hover); border-bottom: 1px solid var(--border); }
+  .db-content { font-size: 11px; padding: 8px; margin: 0; background: var(--bg-surface); white-space: pre-wrap; word-break: break-all; color: var(--muted); }
+  .db-content.highlight-match { background: #1a2f1a; color: #fff; }
+
+  /* Lookup */
+  .lookup-form { display: flex; gap: 8px; }
+  .lookup-input { flex: 1; background: var(--bg-code); border: 1px solid var(--border); color: var(--text-body); padding: 8px; border-radius: 4px; font-family: inherit; font-size: 13px; outline: none; }
+  .lookup-input:focus { border-color: var(--blue); }
+  
+  .pt-btn { background: var(--blue-dim); border: 1px solid var(--blue); color: var(--blue); padding: 8px 16px; border-radius: 4px; font-family: inherit; font-size: 12px; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+  .pt-btn:hover { background: var(--blue); color: #fff; }
+
+  .nss-trace { flex: 1; padding: 16px; background: #000; color: #fff; font-size: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+  
+  .trace-step { padding: 8px; border-left: 2px solid var(--border); background: rgba(255,255,255,0.05); }
+  .trace-step.success { border-color: var(--green); }
+  .trace-step.fail { border-color: var(--red); }
+  
+  .nss-result { padding: 16px; font-weight: bold; font-size: 13px; border-top: 1px solid var(--border); text-align: center; background: var(--bg-surface-hover); }
+  .nss-result.found { color: var(--green); }
+  .nss-result.not-found { color: var(--red); }
+
+  @media (max-width: 768px) {
+    .nss-container { flex-direction: column; }
+    .nss-config-panel { border-right: none; border-bottom: 1px solid var(--border); }
+  }
+</style>
+
+<script>
+  class NssLab extends HTMLElement {
+    data: any;
+    viewId: string;
+
+    constructor() {
+      super();
+      const initialData = this.getAttribute('data-initial-state');
+      this.data = initialData ? JSON.parse(initialData) : null;
+      this.viewId = this.getAttribute('data-view-id') || '';
+      
+      if (this.data) {
+        this.bindEvents();
+        // Initial run
+        setTimeout(() => this.runLookup(), 100);
+      }
+    }
+
+    bindEvents() {
+      const btn = this.querySelector(`#btn-getent-${this.viewId}`);
+      const input = this.querySelector(`#lookup-input-${this.viewId}`) as HTMLInputElement;
+      
+      btn?.addEventListener('click', () => this.runLookup());
+      input?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') this.runLookup();
+      });
+
+      // Checkboxes
+      const chkFiles = this.querySelector(`#chk-files-${this.viewId}`) as HTMLInputElement;
+      const chkSss = this.querySelector(`#chk-sss-${this.viewId}`) as HTMLInputElement;
+
+      chkFiles?.addEventListener('change', () => { this.data.config.files = chkFiles.checked; this.runLookup(); });
+      chkSss?.addEventListener('change', () => { this.data.config.sss = chkSss.checked; this.runLookup(); });
+    }
+
+    runLookup() {
+      const input = this.querySelector(`#lookup-input-${this.viewId}`) as HTMLInputElement;
+      const trace = this.querySelector(`#nss-trace-${this.viewId}`);
+      const result = this.querySelector(`#nss-result-${this.viewId}`);
+      
+      const dbFiles = this.querySelector(`#db-files-${this.viewId}`);
+      const dbSss = this.querySelector(`#db-sss-${this.viewId}`);
+      
+      if (!input || !trace || !result || !dbFiles || !dbSss) return;
+      
+      const username = input.value.trim();
+      if (!username) return;
+
+      trace.innerHTML = '';
+      result.className = 'nss-result';
+      result.textContent = 'Searching...';
+      
+      // Reset highlights
+      dbFiles.classList.remove('highlight-match');
+      dbSss.classList.remove('highlight-match');
+
+      let foundRecord = null;
+      let traceLog = [];
+
+      // Determine order. By default, files then sss
+      const order = [];
+      if (this.data.config.files) order.push('files');
+      if (this.data.config.sss) order.push('sss');
+
+      if (order.length === 0) {
+        traceLog.push(`<div class="trace-step fail"><strong>FATAL:</strong> No modules enabled in /etc/nsswitch.conf!</div>`);
+      } else {
+        traceLog.push(`<div class="trace-step" style="border-color:var(--blue)">glibc getpwnam("${username}") called. NSS Order: [${order.join(', ')}]</div>`);
+
+        for (const mod of order) {
+          traceLog.push(`<div class="trace-step">Querying module: <strong>${mod}</strong>...</div>`);
+          
+          const db = this.data.databases[mod];
+          const match = db.find((r: any) => r.username === username);
+
+          if (match) {
+            traceLog.push(`<div class="trace-step success">✓ FOUND in <strong>${mod}</strong>! (UID: ${match.uid}) Returning immediately.</div>`);
+            foundRecord = match;
+            if (mod === 'files') dbFiles.classList.add('highlight-match');
+            if (mod === 'sss') dbSss.classList.add('highlight-match');
+            break; // SUCCESS! Stop querying.
+          } else {
+            traceLog.push(`<div class="trace-step fail">✗ Not found in <strong>${mod}</strong>. Falling through...</div>`);
+          }
+        }
+      }
+
+      trace.innerHTML = traceLog.join('');
+
+      if (foundRecord) {
+        result.className = 'nss-result found';
+        result.innerHTML = `Kernel Credentials Assigned: <strong>UID ${foundRecord.uid}</strong> | Shell: ${foundRecord.shell}`;
+      } else {
+        result.className = 'nss-result not-found';
+        result.textContent = `User '${username}' does not exist!`;
+      }
+    }
+  }
+
+  if (!customElements.get('nss-lab')) {
+    customElements.define('nss-lab', NssLab);
+  }
+</script>
