@@ -140,6 +140,17 @@ export type LinuxPillar = {
   promise: string;
   hints: string;
   bridge: string;
+  chapter: {
+    number: number;
+    foundation: string;
+    objectives: string[];
+    kernelObjects: string[];
+    practice: string;
+  };
+  checkpoints: {
+    question: string;
+    choices: { label: string; correct: boolean; feedback: string }[];
+  }[];
   groups: { label: string; viewIds: string[] }[];
   views: LinuxView[];
 };

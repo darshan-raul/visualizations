@@ -385,13 +385,13 @@ const jsonString = JSON.stringify(permissionData);
       let usedLevel = '';
 
       if (user.uid === 0) {
-        // Root bypass
+        // This lab models the common DAC override case for a fully privileged host-root process.
         granted = true;
         sOwner?.classList.add('is-active');
         sGroup?.classList.add('is-skipped');
         sOther?.classList.add('is-skipped');
-        if (rOwner) { rOwner.textContent = 'ROOT BYPASS'; rOwner.className = 'step-result res-yes'; }
-        if (badge) { badge.textContent = '✓ GRANTED (ROOT)'; badge.className = 'result-badge granted'; }
+        if (rOwner) { rOwner.textContent = 'DAC OVERRIDE'; rOwner.className = 'step-result res-yes'; }
+        if (badge) { badge.textContent = '✓ GRANTED IN THIS DAC MODEL'; badge.className = 'result-badge granted'; }
         return;
       }
 

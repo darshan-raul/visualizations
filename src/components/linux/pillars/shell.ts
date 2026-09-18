@@ -8,9 +8,15 @@ export const shellPillar: LinuxPillar = {
   promise: 'Peek behind the prompt to see how the shell parses command lines, routes data through kernel pipes, manages file descriptors, and executes child processes.',
   hints: 'expansions · quoting · pipes · FDs · dup2 · exit status · text filters · automation',
   bridge: 'Shell mastery directly translates to writing bulletproof CI/CD runners, crafting secure Dockerfile RUN directives, and debugging user-data cloud-init bootstrap scripts.',
+  chapter: { number: 6, foundation: 'The shell is a parser and process orchestrator, not a text macro. This chapter makes expansion order, descriptors, pipes, exit status, and safe automation visible.', objectives: ['Predict words after quoting and expansion', 'Draw the FD graph created by pipes and redirections', 'Explain pipeline status with and without pipefail', 'Write automation that fails visibly and cleans up safely'], kernelObjects: ['file descriptor table', 'pipe', 'child process', 'exit status', 'signal'], practice: 'Explain why an error bypasses grep and why a failing producer can still leave a zero pipeline status.' },
+  checkpoints: [
+    { question: 'In Bash, what does cmd >out 2>&1 do?', choices: [{ label: 'FD 1 opens out, then FD 2 duplicates the new FD 1 target', correct: true, feedback: 'Correct. Redirections are processed left to right.' }, { label: 'FD 2 always stays on the terminal', correct: false, feedback: '2>&1 duplicates the current FD 1 target after stdout is redirected.' }, { label: 'It creates a kernel pipe', correct: false, feedback: 'This duplicates descriptors to a file; the | operator creates a pipeline.' }] },
+    { question: 'false | true returns which status in default Bash?', choices: [{ label: '0 from the last command', correct: true, feedback: 'Correct. Enable pipefail when the pipeline must expose an earlier non-zero command.' }, { label: '1 from false', correct: false, feedback: 'That requires pipefail for this fixture.' }, { label: 'The sum of both statuses', correct: false, feedback: 'Shell pipeline status is not arithmetic aggregation.' }] },
+  ],
   groups: [
-    { label: 'Command execution', viewIds: ['shell-concepts', 'parse', 'pipeline', 'redirection', 'text-tools'] },
-    { label: 'Scripting & automation', viewIds: ['status', 'bash-patterns', 'here-docs', 'automation'] }
+    { label: 'Parse & execute', viewIds: ['shell-concepts', 'parse', 'pipeline'] },
+    { label: 'Data & status', viewIds: ['redirection', 'text-tools', 'status'] },
+    { label: 'Safe automation', viewIds: ['bash-patterns', 'here-docs', 'automation'] }
   ],
   views: [
     {
@@ -38,7 +44,7 @@ export const shellPillar: LinuxPillar = {
         {
           term: 'Pipe (|)',
           analogy: 'Connecting Two Hoses',
-          definition: 'A pipe is a 64KB chunk of RAM managed by the kernel. It connects the mouth (Output 1) of one process directly to the ears (Input 0) of another process, streaming data in real-time.'
+          definition: 'A pipe is a bounded byte stream managed by the kernel. The shell connects one process\'s standard output to another process\'s standard input; capacity is kernel- and configuration-dependent.'
         }
       ],
       explanation: 'The command line looks like magic, but it\'s just a sequence of text string manipulations. Before any command actually runs, the shell evaluates variables, expands wildcards (*), and wires up File Descriptors for pipes and redirections. The command itself never sees the ">" or the "|" symbols—the shell handles all of that on its behalf.',
@@ -85,7 +91,7 @@ export const shellPillar: LinuxPillar = {
           { name: 'head', pid: 103, fdIn: 0, state: 'RUNNING', outQueue: [] }
         ]
       },
-      explanation: 'The pipeline operator "|" connects the stdout of the upstream process to the stdin of the downstream process. The kernel implements this via the pipe() system call, creating a circular FIFO buffer in kernel RAM (typically 64 KB). Data streams directly between processes in real time. If the producer generates data faster than the consumer reads, the producer blocks on write(). If the consumer exits early (e.g. "head -n 5"), the kernel sends SIGPIPE to the producer to terminate it cleanly.',
+      explanation: 'The pipeline operator "|" connects the stdout of the upstream process to the stdin of the downstream process. The shell creates a kernel pipe, then arranges descriptors before executing both commands. If the bounded buffer fills, a blocking writer waits for space. If every read end closes, a write triggers SIGPIPE by default or fails with EPIPE when that signal is handled or ignored.',
       takeaway: 'Pipes stream data directly through kernel RAM. If the downstream consumer dies, the kernel sends SIGPIPE to prevent wasted computation.',
       command: 'cat /var/log/syslog | grep "error" | wc -l',
       output: '42',

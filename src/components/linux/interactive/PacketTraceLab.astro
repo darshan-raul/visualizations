@@ -27,7 +27,7 @@ const jsonString = JSON.stringify(packetData);
           <small>Break a link in the chain</small>
         </div>
         <div class="pkt-controls" id={`pkt-controls-${id}`}>
-          <!-- Toggles populated by JS -->
+          {packetData.stages.map((stage: any) => <span class="pkt-toggle pkt-toggle-static"><span>{stage.name}</span><strong>{stage.active ? 'OK' : 'FAIL'}</strong></span>)}
         </div>
       </div>
 
@@ -36,7 +36,7 @@ const jsonString = JSON.stringify(packetData);
           <strong>KERNEL EGRESS PIPELINE</strong>
         </div>
         <div class="pkt-stages" id={`pkt-stages-${id}`}>
-          <!-- Stages populated by JS -->
+          {packetData.stages.map((stage: any, index: number) => <div class="pkt-stage"><div class="pkt-stage-icon">{index + 1}</div><div class="pkt-stage-line"></div><div class="pkt-stage-content"><strong>{stage.name}</strong><small>{stage.desc}</small></div></div>)}
         </div>
       </div>
     </div>
@@ -114,8 +114,13 @@ const jsonString = JSON.stringify(packetData);
     border-radius: 4px;
     cursor: pointer;
     user-select: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
   }
   .pkt-toggle:hover { border-color: var(--blue); }
+  .pkt-toggle:focus-visible { outline:2px solid var(--cyan); outline-offset:2px; }
+  .pkt-toggle-static { cursor:default; }
   
   .pkt-toggle.is-broken {
     background: #3a1a1a;
@@ -231,8 +236,11 @@ const jsonString = JSON.stringify(packetData);
 
       this.data.stages.forEach((stage: any, index: number) => {
         // Render Control
-        const btn = document.createElement('div');
+        const btn = document.createElement('button');
+        btn.type = 'button';
         btn.className = `pkt-toggle ${!stage.active ? 'is-broken' : ''}`;
+        btn.setAttribute('aria-pressed', String(!stage.active));
+        btn.setAttribute('aria-label', `${stage.name}: ${stage.active ? 'working; activate to simulate failure' : 'failed; activate to restore'}`);
         btn.innerHTML = `<span>${stage.name}</span> <strong>${stage.active ? 'OK' : 'FAIL'}</strong>`;
         btn.onclick = () => {
           stage.active = !stage.active;

@@ -8,9 +8,15 @@ export const identityPillar: LinuxPillar = {
   promise: 'Follow usernames from human configuration through NSS resolution into the numeric kernel credential vectors (RUID, EUID, FSUID) and hierarchical directory traversal gates.',
   hints: 'UID/GID · struct cred · path traversal · sudo · SSH',
   bridge: 'Kubernetes securityContexts (runAsUser, fsGroup, supplementalGroups) inject numeric IDs directly into the kernel task_struct cred structure explored here.',
+  chapter: { number: 1, foundation: 'Start here if usernames, groups, sudo, SSH, and file permissions feel like one security feature. This chapter separates account lookup, process credentials, authentication, and authorization.', objectives: ['Resolve a name to numeric identity without confusing NSS with authentication', 'Predict which owner, group, or other mode class the kernel selects', 'Locate the first directory that blocks a pathname', 'Explain what sudo and SSH change—and what they do not'], kernelObjects: ['struct cred', 'UID / GID vectors', 'inode ownership', 'supplementary groups'], practice: 'Diagnose why nginx UID 33 cannot read /srv/site/config.json without reaching for chmod 777.' },
+  checkpoints: [
+    { question: 'nginx matches the file owner, whose mode bits deny read. The group bits allow read. Which class applies?', choices: [{ label: 'Owner bits deny the read', correct: true, feedback: 'Correct. DAC chooses the owner class and stops; it does not fall through to more permissive group bits.' }, { label: 'Group bits allow the read', correct: false, feedback: 'Matching the owner selects the owner class. Linux does not choose the most permissive class.' }, { label: 'Other bits decide', correct: false, feedback: 'Other applies only when neither owner nor group matches.' }] },
+    { question: 'index.html is mode 0644, but /srv/site lacks search permission for the process. What happens?', choices: [{ label: 'Path lookup returns EACCES first', correct: true, feedback: 'Correct. Every non-final directory component needs search permission before the leaf can be checked.' }, { label: 'The file read succeeds because 0644 is readable', correct: false, feedback: 'The kernel cannot reach the leaf inode through the blocked parent directory.' }, { label: 'NSS retries another username', correct: false, feedback: 'NSS name lookup is separate from VFS pathname permission checks.' }] },
+  ],
   groups: [
-    { label: 'Credentials', viewIds: ['identity-concepts', 'account', 'process', 'users-groups'] },
-    { label: 'Access', viewIds: ['permission', 'deny', 'privilege', 'ssh-auth'] },
+    { label: 'Identity model', viewIds: ['identity-concepts', 'account', 'process'] },
+    { label: 'Access decisions', viewIds: ['users-groups', 'permission', 'deny'] },
+    { label: 'Privilege & login', viewIds: ['privilege', 'ssh-auth'] },
   ],
   views: [
     {
@@ -47,7 +53,7 @@ export const identityPillar: LinuxPillar = {
       output: 'uid=1000(darshan) gid=1000(darshan) groups=1000(darshan),27(sudo)',
       probe: 'stat -c "%u:%g" /etc/passwd',
       probeOutput: '0:0',
-      caveat: 'UID 0 is mathematically hardcoded in the kernel to bypass all permission checks. There is no magic to the name "root", only to the number 0.',
+      caveat: 'The kernel evaluates numeric credentials, not the spelling of a username. UID 0 conventionally receives a full capability set, but namespaces, dropped capabilities, LSM policy, seccomp, and mount state can still constrain a process.',
       source: `${man}man7/credentials.7.html`
     },
     {
@@ -114,7 +120,7 @@ export const identityPillar: LinuxPillar = {
         ],
         groups: { 0: 'root', 33: 'nginx', 1000: 'dev1', 1001: 'appgroup' }
       },
-      explanation: 'Linux separates identity from access control. Instead of looking up names in /etc/passwd, the kernel tests a process\'s numeric UID/GID against the file\'s owner, group, and mode bits. The DAC (Discretionary Access Control) ladder checks in order: Are you the Owner? If not, are you in the Group? If not, you fall to Other. Root (UID 0) bypasses these checks.',
+      explanation: 'Linux separates identity from access control. For ordinary mode-bit checks, the kernel compares a process\'s effective credentials with inode ownership, selects exactly one class—owner, matching group, or other—and evaluates that class. Relevant capabilities can override specific DAC checks; that is narrower than a universal “root bypass.”',
       takeaway: 'Permissions are evaluated strictly numerically. Changing group memberships requires the process to restart to acquire the new GID.',
       command: 'id',
       output: 'uid=33(nginx) gid=33(nginx) groups=33(nginx),1001(appgroup)',
@@ -181,17 +187,17 @@ export const identityPillar: LinuxPillar = {
     {
       id: 'privilege',
       label: 'sudo in practice',
-      title: 'Controlled privilege escalation with cryptographic accountability.',
+      title: 'Controlled privilege delegation with attributable records.',
       question: 'How does sudo safely elevate process credentials from unprivileged to root?',
       kind: 'walkthrough',
       steps: [
         { command: 'sudo -l', output: 'User dev1 may run the following commands on devbox-01:\n    (ALL : ALL) ALL\n    (root) NOPASSWD: /bin/systemctl restart nginx', annotation: 'sudo -l lists all allowed privileges for the current user, including NOPASSWD exemptions for automated operational commands.' },
         { command: 'sudo id', output: 'uid=0(root) gid=0(root) groups=0(root)', annotation: 'When sudo runs, its setuid bit transitions EUID to 0. It verifies /etc/sudoers policy, prompts for the invoking user password, and executes the target binary.' },
-        { command: 'grep sudo /var/log/auth.log | tail -n 1', output: 'devbox-01 sudo: dev1 : TTY=pts/0 ; PWD=/home/dev1 ; USER=root ; COMMAND=/bin/systemctl restart nginx', annotation: 'Every sudo execution generates a cryptographically authenticated audit log record with invoking user, target command, and working directory.' },
+        { command: 'grep sudo /var/log/auth.log | tail -n 1', output: 'devbox-01 sudo: dev1 : TTY=pts/0 ; PWD=/home/dev1 ; USER=root ; COMMAND=/bin/systemctl restart nginx', annotation: 'With normal logging enabled, sudo records the invoking user, target identity, working directory, and command. Protect and centralize logs if tamper resistance matters.' },
         { command: 'sudo visudo -cf /etc/sudoers', output: '/etc/sudoers: parsed OK', annotation: 'Never edit /etc/sudoers with a standard text editor. visudo locks the file and validates syntax before committing, preventing lockouts.' }
       ],
       explanation: 'The sudo binary relies on the setuid permission bit (mode 04755). When an ordinary user executes /usr/bin/sudo, the kernel transitions the process Effective UID (EUID) to 0 (root) while preserving the Real UID (RUID). sudo reads /etc/sudoers, checks if the invoking user is authorized to run the command, prompts for authentication, and logs the execution to journald or /var/log/auth.log before execve()ing the command.',
-      takeaway: 'sudo enables least-privilege delegation while maintaining an immutable audit trail of who executed what.',
+      takeaway: 'sudo can delegate narrowly scoped commands and produce useful accountability records; the policy and logging pipeline determine how strong that control is.',
       command: 'sudo -u nginx whoami',
       output: 'nginx',
       probe: 'ls -l /usr/bin/sudo',
@@ -212,7 +218,7 @@ export const identityPillar: LinuxPillar = {
         { step: 'Disable password authentication in sshd', command: 'sudo sed -i "s/^#*PasswordAuthentication.*/PasswordAuthentication no/" /etc/ssh/sshd_config', output: '# Password authentication disabled', note: 'Eliminates 100% of brute-force dictionary attacks against the SSH daemon.' },
         { step: 'Reload OpenSSH server daemon', command: 'sudo systemctl reload sshd', output: '# Daemon reloaded without dropping active sessions', note: 'Reloading preserves existing connected SSH sessions while applying key-only policy to new handshakes.' }
       ],
-      explanation: 'SSH public key authentication uses asymmetric cryptography. The client offers its public key identifier to sshd. The server checks if the public key exists in ~/.ssh/authorized_keys. If found, sshd generates a 256-bit random cryptographic challenge, encrypts it with the public key, and sends it to the client. The client decrypts the challenge using its private key (unlocked via passphrase) and returns the signature. The server verifies the signature and spawns an authenticated shell.',
+      explanation: 'SSH public-key authentication uses proof of private-key possession. After the server accepts a permitted public key, the client signs session-bound authentication data with its private key; the private key never crosses the network. The server verifies that signature, then applies account, PAM, and session policy before starting the requested session.',
       takeaway: 'Never expose a production server with PasswordAuthentication enabled; enforce Ed25519 keys and strict file permissions.',
       command: 'cat ~/.ssh/authorized_keys',
       output: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleKeyPayload admin@devbox-01',

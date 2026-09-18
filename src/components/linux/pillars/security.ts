@@ -8,9 +8,15 @@ export const securityPillar: LinuxPillar = {
   promise: 'Untangle Linux security architecture by exploring how independent layers—DAC, ACLs, capabilities, MAC, and firewalls—converge on every process and file operation.',
   hints: 'DAC · ACLs · capabilities · SELinux/AppArmor · firewalls · auditd · hardening',
   bridge: 'Directly connects to container security contexts, Kubernetes PodSecurityStandards (restricted/baseline), Seccomp profiles, and cloud IAM boundary enforcement.',
+  chapter: { number: 7, foundation: 'Linux security is a set of applicable decisions, not one onion where passing an inner layer defeats an outer layer. This chapter separates DAC, ACLs, capabilities, LSMs, seccomp, network policy, and audit evidence.', objectives: ['Identify which control can decide an operation', 'Explain capability sets without treating root as magic', 'Distinguish SELinux and AppArmor policy models', 'Collect evidence for file, network, and authentication denials'], kernelObjects: ['credentials and capabilities', 'LSM hooks', 'seccomp filter', 'Netfilter hook', 'audit context'], practice: 'Explain a file read where DAC allows but an enforcing LSM denies.' },
+  checkpoints: [
+    { question: 'Mode bits allow nginx to read a file, but the audit log records an SELinux AVC denial. Which result wins?', choices: [{ label: 'The operation is denied', correct: true, feedback: 'Correct. DAC permission does not cancel an applicable enforcing LSM decision.' }, { label: 'The mode bits force an allow', correct: false, feedback: 'Passing DAC is not a universal authorization result.' }, { label: 'SELinux changes the file mode to 000', correct: false, feedback: 'LSM policy is a separate decision; it need not rewrite DAC mode bits.' }] },
+    { question: 'A process has CAP_NET_BIND_SERVICE. What does that capability grant?', choices: [{ label: 'The relevant privileged-port bind check in its governing namespace', correct: true, feedback: 'Correct. It does not grant arbitrary root power or bypass unrelated controls.' }, { label: 'Permission to read every file', correct: false, feedback: 'File DAC bypass uses different capabilities and can still face other controls.' }, { label: 'Permission to bypass seccomp', correct: false, feedback: 'Seccomp filters are an independent mechanism.' }] },
+  ],
   groups: [
-    { label: 'Access control layers', viewIds: ['rings', 'dac', 'mac', 'hardening'] },
-    { label: 'Host posture & audit', viewIds: ['network', 'auth-logs', 'decision'] },
+    { label: 'Decision layers', viewIds: ['rings', 'dac', 'mac'] },
+    { label: 'Reduce exposure', viewIds: ['hardening', 'network'] },
+    { label: 'Evidence & diagnosis', viewIds: ['auth-logs', 'decision'] },
   ],
   views: [
     {
@@ -21,7 +27,7 @@ export const securityPillar: LinuxPillar = {
       kind: 'layers',
       actors: [
         { label: 'DAC & POSIX ACLs', detail: 'Checks file owner, group, mode bits (chmod), and extended ACL entries' },
-        { label: 'Linux Capabilities', detail: 'Deconstructs monolithic root into 41 granular privileges (e.g. CAP_NET_BIND_SERVICE)' },
+        { label: 'Linux Capabilities', detail: 'Split many privileged kernel checks into named units such as CAP_NET_BIND_SERVICE; the available set depends on the kernel.' },
         { label: 'LSM / MAC Policy', detail: 'SELinux type enforcement or AppArmor profiles evaluate mandatory security labels' },
         { label: 'Seccomp BPF Sandbox', detail: 'Filters allowed kernel system calls, terminating or blocking unauthorized syscalls' }
       ],
@@ -31,7 +37,7 @@ export const securityPillar: LinuxPillar = {
       output: 'cat: /etc/shadow: Permission denied',
       probe: 'grep Cap /proc/$$/status',
       probeOutput: 'CapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff',
-      caveat: 'Root (UID 0) bypasses standard DAC file permissions, but is completely constrained by Mandatory Access Control (SELinux/AppArmor) and Seccomp system call filters.',
+      caveat: 'A UID 0 process often starts with broad capabilities, but its effective capability sets, user namespace, LSM policy, seccomp filters, and other boundaries determine what a particular operation can do.',
       source: `${kernel}admin-guide/security-bugs.html`
     },
     {
@@ -64,7 +70,7 @@ export const securityPillar: LinuxPillar = {
       items: [
         {
           label: 'DAC (Traditional)',
-          detail: 'Users and applications control file modes. Any process running as root (UID 0) bypasses all permission checks, leaving the host vulnerable if a daemon is compromised.',
+          detail: 'Owners control ordinary file modes. Privileged capability checks can override specific DAC denials, but do not automatically cancel other applicable controls.',
           command: 'ls -l /etc/shadow',
           output: '-rw-r----- 1 root shadow 1234 Sep 16 10:00 /etc/shadow',
           highlight: 'neutral'
@@ -165,13 +171,13 @@ export const securityPillar: LinuxPillar = {
       output: '-P INPUT DROP\n-A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT\n-A INPUT -p tcp -m tcp --dport 22 -j ACCEPT\n-A INPUT -p tcp -m tcp --dport 443 -j ACCEPT',
       probe: 'ss -lnt \'sport = :443\'',
       probeOutput: 'State  Recv-Q Send-Q Local Address:Port Peer Address:Port\nLISTEN 0      511    0.0.0.0:443      0.0.0.0:*',
-      caveat: 'Container runtimes like Docker and Kubernetes insert their own Netfilter chains (DOCKER, KUBE-SERVICES) that may bypass standard UFW or firewalld rules.',
+      caveat: 'Container runtimes and Kubernetes networking components may install Netfilter rules or use other dataplanes. Their hook priority and forwarding behavior can interact unexpectedly with host firewall front ends, so inspect the effective ruleset and actual packet path.',
       source: `${nftables}Main_Page`
     },
     {
       id: 'auth-logs',
       label: 'Authentication & audit',
-      title: 'Authentication events, privilege escalations, and audit records leave immutable audit trails.',
+      title: 'Authentication, privilege, and audit records provide evidence—if you preserve them.',
       question: 'Where does the system record successful logins, brute-force attempts, sudo commands, and kernel audit events?',
       kind: 'walkthrough',
       steps: [
@@ -193,10 +199,10 @@ export const securityPillar: LinuxPillar = {
         {
           command: 'ausearch -m USER_AUTH,USER_CMD -ts recent',
           output: 'type=USER_CMD msg=audit(1694772600.123:45): pid=820 uid=1000 auid=1000 ses=1 subj=unconfined cmd="cat /etc/shadow" terminal=pts/0 res=success',
-          annotation: 'Queries the kernel audit daemon (auditd) for cryptographically structured audit events containing immutable login UIDs (auid).'
+          annotation: 'Queries structured audit events. The login UID (auid) is intended to retain the originating login identity across many privilege changes.'
         }
       ],
-      explanation: 'Linux logs security and authentication activity through multiple complementary subsystems: PAM writes authentication attempts to auth.log/secure; sudo logs every elevated privilege execution; wtmp records session logins; and the Linux kernel audit framework (auditd) generates tamper-evident structured event records with immutable audit IDs (auid) that survive setuid transitions.',
+      explanation: 'Linux security evidence comes from complementary subsystems: PAM-aware services may record authentication events in the journal or distribution-specific files; sudo records configured command events; wtmp stores login history; and the kernel audit framework emits structured records. The login UID helps attribute activity across many setuid transitions, but local logs are not inherently immutable or tamper-proof.',
       takeaway: 'Monitor auth.log for login attempts, journalctl _COMM=sudo for command auditing, and ausearch for tamper-resistant kernel audit logs.',
       command: 'grep -i "Failed password" /var/log/auth.log 2>/dev/null | tail -n 5 || journalctl -u ssh -g "Failed password" -n 5 --no-pager',
       output: '# Displays recent failed password attempts from brute-force scanners',

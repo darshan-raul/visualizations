@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <title>Linux foundations · Educational Architecture & Systems Prototype</title>
+  <title>Linux Foundations · Complete Visual Tutorial Prototype</title>
   <style>
     :root {
       --bg: #090c13;
@@ -210,6 +210,24 @@
     .meter-bar { height: 6px; border-radius: 3px; background: var(--line-subtle); overflow: hidden; margin-top: 6px; }
     .meter-fill { height: 100%; }
 
+    .learning-contract { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; margin-bottom:18px; border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--line); }
+    .learning-contract div { padding:14px; background:#111d2c; }
+    .learning-contract strong { display:block; color:var(--cyan); font:700 .72rem var(--mono); text-transform:uppercase; }
+    .learning-contract span { display:block; margin-top:6px; color:var(--muted); font-size:.78rem; line-height:1.45; }
+    .phase-label { grid-column:1/-1; margin:12px 0 0; color:var(--green); font:700 .72rem var(--mono); letter-spacing:.08em; }
+    .compact-console { padding:24px; }
+    .chapter-guide { display:grid; grid-template-columns:minmax(220px,.7fr) 1fr; gap:20px; padding:18px; border:1px solid var(--line); border-radius:10px; background:#101b29; }
+    .chapter-guide h2 { margin:6px 0 8px; font-size:1.55rem; }
+    .chapter-guide p,.chapter-guide li { color:var(--muted); line-height:1.5; }
+    .chapter-guide ol { margin:0; padding-left:22px; }
+    .lesson-board { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px; }
+    .lesson-board > div { padding:16px; border:1px solid var(--line); border-radius:9px; background:#0e1724; }
+    .lesson-board h3 { margin:0 0 8px; font-size:1rem; }
+    .lesson-board p { margin:0; color:var(--muted); line-height:1.5; }
+    .knowledge-check { margin-top:14px; padding:16px; border:1px solid rgba(246,199,99,.45); border-radius:9px; }
+    .knowledge-check legend { color:var(--amber); font:700 .75rem var(--mono); }
+    .knowledge-check label { display:block; margin-top:9px; }
+
     @media (max-width: 1080px) {
       .console-layout { grid-template-columns: 190px minmax(0, 1fr); }
       .console-inspector { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--line); }
@@ -223,6 +241,7 @@
       .pillar-grid { grid-template-columns: 1fr; }
       .top { flex-direction: column; align-items: start; }
       .head { flex-direction: column; }
+      .learning-contract,.chapter-guide,.lesson-board { grid-template-columns:1fr; }
     }
   </style>
 </head>
@@ -245,20 +264,26 @@
     <header class="head">
       <div>
         <span class="crumb">Library / Foundations / Linux</span>
-        <span class="kicker">LINUX FOUNDATIONS · HOST ARCHITECTURE CANVAS</span>
-        <h1>One Linux Machine.<br>Eight Subsystem Lenses.</h1>
-        <p>Explore how User Space applications invoke the System Call Interface to command Kernel Subsystems and Hardware. This is the shared machine model that underlies cloud VMs, Docker containers, and Kubernetes nodes.</p>
+        <span class="kicker">LINUX FOUNDATIONS · COMPLETE VISUAL TUTORIAL</span>
+        <h1>Understand the Linux machine—not just its commands.</h1>
+        <p>Eight chapters build from identity and files to processes, networking, security, and incident diagnosis. Follow them in order or open any chapter as a working reference.</p>
       </div>
       <a href="#prototype-storage">Inspect Storage Subsystem →</a>
     </header>
 
     <section class="hub-section">
+      <div class="learning-contract" aria-label="Tutorial learning loop">
+        <div><strong>1 · Model</strong><span>Name the objects and boundaries.</span></div>
+        <div><strong>2 · Mechanism</strong><span>Work through a real state change.</span></div>
+        <div><strong>3 · Evidence</strong><span>Connect output to system state.</span></div>
+        <div><strong>4 · Practice</strong><span>Diagnose a failure and explain why.</span></div>
+      </div>
       <div class="canvas-card">
         <div class="scenario-toolbar" role="group" aria-label="Interactive Scenario Trace">
-          <span>SIMULATE SYSTEM FLOW:</span>
-          <button type="button" data-hub-trace="http" aria-pressed="true">1. Inbound HTTPS Request (:443)</button>
-          <button type="button" data-hub-trace="file" aria-pressed="false">2. Open & Read Static File</button>
-          <button type="button" data-hub-trace="container" aria-pressed="false">3. Container Boundary (Namespaces & Cgroups)</button>
+          <span>LESSON 0 · MACHINE ORIENTATION:</span>
+          <button type="button" data-hub-trace="http" aria-pressed="true">Network request</button>
+          <button type="button" data-hub-trace="file" aria-pressed="false">File read</button>
+          <button type="button" data-hub-trace="container" aria-pressed="false">Container limits</button>
         </div>
 
         <div class="arch-diagram" id="hub-arch">
@@ -373,6 +398,7 @@
 
       <!-- Eight Subsystem Navigator -->
       <div class="pillar-grid">
+        <h2 class="phase-label">PHASE I · BUILD THE MACHINE MODEL</h2>
         <a class="pillar-card" href="#prototype-identity">
           <span class="num">01 · IDENTITY</span>
           <strong>Identity & Credentials</strong>
@@ -385,6 +411,7 @@
           <p>Dentry cache, inodes, page cache, ext4 extents, and the open-unlinked file puzzle.</p>
           <span class="arrow">Explore Storage →</span>
         </a>
+        <h2 class="phase-label">PHASE II · RUN AND CONNECT SOFTWARE</h2>
         <a class="pillar-card" href="#prototype-processes">
           <span class="num">03 · PROCESSES</span>
           <strong>Processes & Services</strong>
@@ -406,9 +433,10 @@
         <a class="pillar-card" href="#prototype-shell">
           <span class="num">06 · SHELL</span>
           <strong>Shell & Automation</strong>
-          <p>File descriptor wiring, kernel pipe ring buffers, and pipefail exit statuses.</p>
+          <p>File descriptor wiring, bounded kernel pipes, and pipefail exit statuses.</p>
           <span class="arrow">Explore Shell →</span>
         </a>
+        <h2 class="phase-label">PHASE III · PROTECT AND OPERATE THE HOST</h2>
         <a class="pillar-card" href="#prototype-security">
           <span class="num">07 · SECURITY</span>
           <strong>Host Security Layers</strong>
@@ -780,7 +808,7 @@ lr-x------ 1 www-data 12 -> /srv/site/index.html</pre>
       <aside class="console-inspector">
         <span class="inspector-label">IDENTITY INSPECTOR</span>
         <h3 class="inspector-title">Process Credential Vector</h3>
-        <p style="font-size: 0.85rem; color: var(--muted);">Linux maintains four distinct UIDs per process: Real (who started it), Effective (setuid operations), Saved (temporary privilege drop), and FSUID (used exclusively for filesystem checks).</p>
+        <p style="font-size: 0.85rem; color: var(--muted);">Linux tracks real, effective, saved-set, and filesystem IDs. Effective IDs normally drive access checks; Linux retains FSUID/FSGID for filesystem access semantics and updates them with effective-ID changes.</p>
 
         <div class="terminal-box">
           <div class="terminal-head">$ id www-data</div>
@@ -797,6 +825,42 @@ lr-x------ 1 www-data 12 -> /srv/site/index.html</pre>
         </div>
       </aside>
     </div>
+  </article>
+
+  <article class="prototype" id="prototype-packages">
+    <div class="top"><a class="brand" href="#prototype-hub">▥ Infra, <em>Illustrated.</em></a><nav><a href="#prototype-hub">← Curriculum</a></nav></div>
+    <section class="compact-console">
+      <div class="chapter-guide"><div><span class="kicker">CHAPTER 05 · PACKAGES & SOFTWARE</span><h2>Installed is not running.</h2><p>Follow trust and dependencies into files, the ELF loader, a supervised process, and finally a listening socket.</p></div><ol><li>Verify repository metadata under configured trust.</li><li>Inspect installed files and scripts.</li><li>Trace runtime library resolution.</li><li>Separate enabled, active, healthy, and listening.</li></ol></div>
+      <div class="lesson-board"><div><h3>Repository → package database</h3><p>Signature validation establishes provenance under local trust policy; it does not prove a maintainer script is harmless or compatible.</p></div><div><h3>ELF → loader → libraries</h3><p>A missing shared object can stop execution before nginx reaches application startup.</p></div><div><h3>Unit → process → socket</h3><p><code>systemctl status</code> and <code>ss -lntp</code> answer different runtime questions.</p></div><div><h3>Failure state</h3><p>Package present, unit failed: inspect the unit result and journal before reinstalling.</p></div></div>
+      <fieldset class="knowledge-check"><legend>APPLIED CHECK</legend><label><input type="radio" name="pkg-check"> Installed proves package-managed files and metadata are present.</label><label><input type="radio" name="pkg-check"> Installed proves TCP/443 is healthy.</label></fieldset>
+    </section>
+  </article>
+
+  <article class="prototype" id="prototype-shell">
+    <div class="top"><a class="brand" href="#prototype-hub">▥ Infra, <em>Illustrated.</em></a><nav><a href="#prototype-hub">← Curriculum</a></nav></div>
+    <section class="compact-console">
+      <div class="chapter-guide"><div><span class="kicker">CHAPTER 06 · SHELL & AUTOMATION</span><h2>The shell builds a process and descriptor graph.</h2><p>Parse and expand source, create processes, wire file descriptors, then interpret status.</p></div><ol><li>Predict words after quoting and expansion.</li><li>Draw FD 0, 1, and 2 targets.</li><li>Explain pipeline status and <code>pipefail</code>.</li><li>Make automation fail visibly.</li></ol></div>
+      <div class="lesson-board"><div><h3><code>cmd &gt;out 2&gt;&amp;1</code></h3><p>FD 1 opens <code>out</code>; FD 2 then duplicates the new FD 1 target.</p></div><div><h3><code>cmd 2&gt;&amp;1 &gt;out</code></h3><p>FD 2 first duplicates the terminal; only FD 1 later moves to <code>out</code>.</p></div><div><h3>Bounded kernel pipe</h3><p>Capacity is not a portable 64 KB constant. A full blocking pipe applies backpressure.</p></div><div><h3>Failure state</h3><p><code>false | true</code> returns the last command’s status in default Bash; <code>pipefail</code> exposes the rightmost failure.</p></div></div>
+      <fieldset class="knowledge-check"><legend>APPLIED CHECK</legend><label><input type="radio" name="shell-check"> A normal <code>|</code> connects stdout, not stderr.</label><label><input type="radio" name="shell-check"> A normal <code>|</code> parses every error as text.</label></fieldset>
+    </section>
+  </article>
+
+  <article class="prototype" id="prototype-security">
+    <div class="top"><a class="brand" href="#prototype-hub">▥ Infra, <em>Illustrated.</em></a><nav><a href="#prototype-hub">← Curriculum</a></nav></div>
+    <section class="compact-console">
+      <div class="chapter-guide"><div><span class="kicker">CHAPTER 07 · SECURITY & ACCESS CONTROL</span><h2>Applicable controls converge on one result.</h2><p>DAC, capabilities, LSM policy, seccomp, namespaces, and filtering answer different authorization questions.</p></div><ol><li>Identify which controls can decide.</li><li>Scope capabilities to operation and namespace.</li><li>Distinguish SELinux and AppArmor.</li><li>Preserve denial evidence.</li></ol></div>
+      <div class="lesson-board"><div><h3>Credentials + DAC/ACL</h3><p>Passing the selected mode or ACL class is necessary when applicable, not a universal allow.</p></div><div><h3>Capability check</h3><p><code>CAP_NET_BIND_SERVICE</code> satisfies a particular bind check, not arbitrary root power.</p></div><div><h3>LSM + seccomp</h3><p>An enforcing LSM can deny after DAC allows; seccomp filters syscall attempts independently.</p></div><div><h3>Evidence state</h3><p>Journal and audit records aid attribution but local storage is not inherently immutable.</p></div></div>
+      <fieldset class="knowledge-check"><legend>APPLIED CHECK</legend><label><input type="radio" name="sec-check"> DAC allow plus enforcing SELinux deny produces a denial.</label><label><input type="radio" name="sec-check"> DAC allow cancels every later control.</label></fieldset>
+    </section>
+  </article>
+
+  <article class="prototype" id="prototype-troubleshooting">
+    <div class="top"><a class="brand" href="#prototype-hub">▥ Infra, <em>Illustrated.</em></a><nav><a href="#prototype-hub">← Curriculum</a></nav></div>
+    <section class="compact-console">
+      <div class="chapter-guide"><div><span class="kicker">CHAPTER 08 · OBSERVABILITY & TROUBLESHOOTING</span><h2>Turn symptoms into discriminating evidence.</h2><p>Preserve state, test competing hypotheses, localize the first broken boundary, and verify from the caller.</p></div><ol><li>Translate “site down” into hypotheses.</li><li>Choose a probe that separates them.</li><li>Recognize capacity and queue pressure.</li><li>Change one variable and verify recovery.</li></ol></div>
+      <div class="lesson-board"><div><h3>Caller symptom</h3><p>Timeout, refusal, DNS, TLS, and HTTP failures imply different completed boundaries.</p></div><div><h3>Host evidence</h3><p><code>systemctl</code>, <code>journalctl</code>, <code>ss</code>, and local <code>curl</code> narrow service and socket state.</p></div><div><h3>Resource evidence</h3><p><code>df -h</code>, <code>df -i</code>, PSI, <code>vmstat</code>, limits, and counters test different hypotheses.</p></div><div><h3>Failure state</h3><p>Local curl succeeds while remote calls time out: inspect the network path and filters before reinstalling.</p></div></div>
+      <fieldset class="knowledge-check"><legend>APPLIED CHECK</legend><label><input type="radio" name="trouble-check"> Capture transient evidence before a safe restart.</label><label><input type="radio" name="trouble-check"> Delete logs, then restart until the symptom disappears.</label></fieldset>
+    </section>
   </article>
 </main>
 
@@ -839,7 +903,7 @@ lr-x------ 1 www-data 12 -> /srv/site/index.html</pre>
   // Bind Address Simulation
   const bindExplanations = {
     wildcard: '<strong>Wildcard Bind (0.0.0.0):</strong> The kernel accepts TCP handshakes addressed to any IP configured on any local interface (eth0, lo, or container bridges). This is required for public web services.',
-    loopback: '<strong>Loopback Bind (127.0.0.1):</strong> The kernel drops any packet arriving on <code>eth0</code> at the routing stage because it did not arrive via <code>lo</code>. The service is completely isolated from external network callers.',
+    loopback: '<strong>Loopback Bind (127.0.0.1):</strong> This socket matches the loopback address in this network namespace, not the host interface address. Remote packets to <code>10.0.1.17</code> cannot be delivered to this listener.',
     eth0: '<strong>Interface Bind (10.0.1.17):</strong> The socket only receives traffic addressed specifically to the eth0 IP address. Local calls to 127.0.0.1:443 will fail with Connection Refused.'
   };
 

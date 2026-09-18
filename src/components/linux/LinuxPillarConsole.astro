@@ -11,6 +11,8 @@ import PacketTraceLab from './interactive/PacketTraceLab.astro';
 import PipelineLab from './interactive/PipelineLab.astro';
 import NssLab from './interactive/NssLab.astro';
 import ConceptPrimer from './ConceptPrimer.astro';
+import ChapterGuide from './ChapterGuide.astro';
+import KnowledgeCheck from './KnowledgeCheck.astro';
 
 interface Props { pillar: LinuxPillar; }
 const { pillar } = Astro.props;
@@ -52,7 +54,7 @@ const viewEvidence = (view: LinuxPillar['views'][number]) => view.probe || view.
       {pillar.groups.map((group, groupIndex) => <details data-linux-group={groupIndex} open={groupIndex === 0}><summary><strong>{group.label}</strong><span>{String(group.viewIds.length).padStart(2, '0')} views</span></summary><div>{group.viewIds.map((id) => { const viewIndex = pillar.views.findIndex((view) => view.id === id); const view = pillar.views[viewIndex]; return <a href={`#${view.id}`} data-linux-view-link={view.id} aria-current={viewIndex === 0 ? 'step' : undefined}><span>{String(viewIndex + 1).padStart(2, '0')}</span><strong>{view.label}</strong></a>; })}</div></details>)}
       <a class="linux-index-reference" href="#linux-sources">↗ Sources</a></details>
     </nav>
-    <div slot="main" class="linux-main"><div class="linux-scenario-ribbon" aria-label="Persistent Linux host scenario"><span>SCENARIO · devbox-01 / nginx</span><strong data-linux-view-title>{active.label}</strong><div><span>OBJECT <b data-linux-scenario-object>{viewObject(active)}</b></span><span>STATE <b data-linux-scenario-state>{viewStatus(active)}</b></span><span>OWNER <b data-linux-scenario-owner>{ownerByPillar[pillar.id]}</b></span></div></div>
+    <div slot="main" class="linux-main"><ChapterGuide pillar={pillar} total={pillar.views.length} /><div class="linux-scenario-ribbon" aria-label="Persistent Linux host scenario"><span>SCENARIO · devbox-01 / nginx</span><strong data-linux-view-title>{active.label}</strong><div><span>OBJECT <b data-linux-scenario-object>{viewObject(active)}</b></span><span>STATE <b data-linux-scenario-state>{viewStatus(active)}</b></span><span>OWNER <b data-linux-scenario-owner>{ownerByPillar[pillar.id]}</b></span></div></div>
       <div class="linux-stage">
         {pillar.views.map((view, viewIndex) => <section class={`linux-view linux-kind-${view.kind}`} id={view.id} data-linux-view={view.id} data-view-kind={view.kind} data-view-explanation={view.explanation} data-view-takeaway={view.takeaway} data-view-caveat={view.caveat} data-view-command={view.command || ''} data-view-output={view.output || ''} data-view-probe={view.probe || ''} data-view-probe-output={view.probeOutput || ''} data-view-object={viewObject(view)} data-view-status={viewStatus(view)} data-view-owner={ownerByPillar[pillar.id]} data-view-evidence={viewEvidence(view)} aria-labelledby={`${view.id}-title`}><div class="linux-view-heading"><span>{String(viewIndex + 1).padStart(2, '0')} / {pillar.short.toUpperCase()} · {kindLabel(view.kind)}</span><h2 id={`${view.id}-title`}>{view.title}</h2><p>{view.question}</p></div>
 
@@ -202,7 +204,7 @@ const viewEvidence = (view: LinuxPillar['views'][number]) => view.probe || view.
               {/* Special Educational Diagram: Virtual Address Space for Processes fork */}
               {pillar.id === 'processes' && view.id === 'fork' && (
                 <div class="mem-map-diagram">
-                  <div class="mem-seg mem-seg-kernel"><strong>0xFFFFFFFFFFFFFFFF — KERNEL SPACE (High Memory)</strong><small>Mapped for all processes; accessible only on Ring 0 syscall entry</small></div>
+                  <div class="mem-seg mem-seg-kernel"><strong>CONCEPTUAL KERNEL ADDRESS REGION</strong><small>Address layout and mapping vary by architecture and isolation mitigations</small></div>
                   <div class="mem-seg mem-seg-stack"><strong>STACK (Grows Downward ↓)</strong><small>Local function frames, stack pointers, return addresses</small></div>
                   <div class="mem-seg mem-seg-mmap"><strong>MEMORY MAPPING SEGMENT (mmap)</strong><small>Shared libraries (libc.so, libssl.so), dynamic mmap allocations</small></div>
                   <div class="mem-seg mem-seg-heap"><strong>HEAP (Grows Upward ↑ via brk/malloc)</strong><small>Dynamically allocated application buffers and objects</small></div>
@@ -214,7 +216,7 @@ const viewEvidence = (view: LinuxPillar['views'][number]) => view.probe || view.
               {pillar.id === 'shell' && view.id === 'pipeline' && (
                 <div class="pipe-canvas">
                   <div class="pipe-actor"><span>WRITER PROCESS</span><strong>journalctl (PID 1024)</strong><small>FD 1 (stdout) directed to pipe write-end</small></div>
-                  <div class="pipe-buffer"><strong>KERNEL CIRCULAR PIPE BUFFER</strong><small>64 KB RAM ring buffer</small></div>
+                  <div class="pipe-buffer"><strong>KERNEL PIPE BUFFER</strong><small>Bounded capacity; queryable on Linux with F_GETPIPE_SZ</small></div>
                   <div class="pipe-actor"><span>READER PROCESS</span><strong>grep (PID 1025)</strong><small>FD 0 (stdin) reads from pipe read-end</small></div>
                 </div>
               )}
@@ -278,7 +280,7 @@ const viewEvidence = (view: LinuxPillar['views'][number]) => view.probe || view.
                   <div class="dac-step"><span>STEP 1: OWNER MATCH</span><strong>Is EUID == file.owner?</strong><small>YES → Apply Owner mode (rwx) &amp; STOP</small></div>
                   <div class="dac-step"><span>STEP 2: GROUP MATCH</span><strong>Is GID/Groups == file.group?</strong><small>YES → Apply Group mode (rwx) &amp; STOP</small></div>
                   <div class="dac-step"><span>STEP 3: OTHER MATCH</span><strong>Neither identity matches?</strong><small>Apply Others mode (rwx)</small></div>
-                  <div class="dac-step"><span>ROOT BYPASS</span><strong>UID 0 (Root)</strong><small>Bypasses standard DAC permissions</small></div>
+                  <div class="dac-step"><span>CAPABILITY CHECKS</span><strong>Privileged credentials</strong><small>May override specific DAC checks; other controls still apply</small></div>
                 </div>
               )}
 
@@ -794,7 +796,7 @@ const viewEvidence = (view: LinuxPillar['views'][number]) => view.probe || view.
       <div class="linux-sequence" data-linux-enhancement hidden><button type="button" data-linux-prev aria-label="Previous console view">←</button><div><span>NOW INSPECTING</span><strong data-linux-progress>01 / {active.label}</strong></div><button type="button" data-linux-next aria-label="Next console view">→</button></div>
     </div>
     <aside slot="inspector" class="linux-inspector" aria-label="Context and command inspector"><span class="linux-kicker">SYSTEM INSPECTOR</span><h2 data-linux-inspector-title>{active.title}</h2><p data-linux-inspector-copy>{active.explanation}</p><div class="linux-inspector-facts"><div><span>OBJECT</span><strong data-linux-fact-object>{viewObject(active)}</strong></div><div><span>OWNER</span><strong data-linux-fact-owner>{ownerByPillar[pillar.id]}</strong></div><div><span>STATE</span><strong data-linux-fact-state>{viewStatus(active)}</strong></div><div><span>EVIDENCE</span><strong data-linux-fact-evidence>{viewEvidence(active)}</strong></div></div><div class="linux-command-panel"><div class="linux-command-head"><span>SIMULATED TERMINAL</span><span>LOCAL FIXTURE</span></div><div class="linux-command-actions"><button type="button" data-linux-command="primary">$ {active.command || 'No command for this view'}</button><button type="button" data-linux-command="probe">$ {active.probe || 'No probe for this view'}</button></div><pre data-linux-terminal-output aria-live="polite">{active.output || 'Select a command above.'}</pre><p data-linux-terminal-result>Command evidence highlights the first object in the active diagram.</p></div><div class="linux-inspector-caveat"><span>MODEL NOTE</span><p data-linux-caveat>{active.caveat}</p></div></aside>
-    <div slot="bottom"><div class="linux-takeaway"><span>THE POINT TO KEEP</span><p data-linux-takeaway>{active.takeaway}</p></div><div class="linux-bridge"><span>IN CLOUD AND CONTAINERS</span><p>{pillar.bridge}</p></div><div class="linux-pillar-pager"><a href={previous ? `/linux/${previous.id}` : '/linux'}>← {previous ? previous.short : 'Linux Map'}</a><a href="/linux">Linux Map</a><a href={next ? `/linux/${next.id}` : '/foundations'}>{next ? next.short : 'Foundations'} →</a></div><details id="linux-sources" class="linux-sources"><summary>Sources, scope & related visuals <span aria-hidden="true">↗</span></summary><div><h2>Primary references</h2><ul>{[...new Map(pillar.views.map((view) => [view.source, view.source])).values()].map((source) => <li><a href={source} target="_blank" rel="noopener noreferrer">{new URL(source).hostname} · {new URL(source).pathname.split('/').filter(Boolean).at(-1)} ↗</a></li>)}</ul><p>Linux examples use a generic modern host. systemd and package-tool behavior are labelled where applicable; exact commands and defaults vary by distribution, configuration, and installed utilities.</p><RelatedVisuals currentTopic={topic} topics={topics} /></div></details><div class="linux-sitefoot"><span>Infra, Illustrated. · One Linux machine through eight lenses.</span><a href="/visualizations">Browse all visuals ↗</a></div></div>
+    <div slot="bottom"><div class="linux-takeaway"><span>THE POINT TO KEEP</span><p data-linux-takeaway>{active.takeaway}</p></div><div class="linux-bridge"><span>IN CLOUD AND CONTAINERS</span><p>{pillar.bridge}</p></div><KnowledgeCheck pillar={pillar} /><div class="linux-pillar-pager"><a href={previous ? `/linux/${previous.id}` : '/linux'}>← {previous ? previous.short : 'Linux Map'}</a><a href="/linux">Linux Map</a><a href={next ? `/linux/${next.id}` : '/foundations'}>{next ? next.short : 'Foundations'} →</a></div><details id="linux-sources" class="linux-sources"><summary>Sources, scope & related visuals <span aria-hidden="true">↗</span></summary><div><h2>Primary references</h2><ul>{[...new Map(pillar.views.map((view) => [view.source, view.source])).values()].map((source) => <li><a href={source} target="_blank" rel="noopener noreferrer">{new URL(source).hostname} · {new URL(source).pathname.split('/').filter(Boolean).at(-1)} ↗</a></li>)}</ul><p>Linux examples use a generic modern host. systemd and package-tool behavior are labelled where applicable; exact commands and defaults vary by distribution, configuration, and installed utilities.</p><RelatedVisuals currentTopic={topic} topics={topics} /></div></details><div class="linux-sitefoot"><span>Infra, Illustrated. · One Linux machine through eight lenses.</span><a href="/visualizations">Browse all visuals ↗</a></div></div>
 </TopicConsoleShell>
 
 <script>

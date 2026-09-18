@@ -8,9 +8,15 @@ export const troubleshootingPillar: LinuxPillar = {
   promise: 'Put on your detective hat and diagnose unreachable services, saturated resources, and kernel faults by gathering empirical system evidence.',
   hints: 'USE method · load average · journald · OOM killer · inodes · file descriptors · triage',
   bridge: 'Directly connects to Kubernetes pod triage (CrashLoopBackOff, OOMKilled, Evicted), cloud incident response, and production SRE observability.',
+  chapter: { number: 8, foundation: 'This chapter combines the previous seven. Start from the caller symptom, preserve evidence, localize the first broken boundary, and change one variable at a time.', objectives: ['Turn a vague outage report into competing hypotheses', 'Choose probes that discriminate between layers', 'Recognize CPU, memory, storage, FD, and network saturation', 'Verify recovery from both system and caller perspectives'], kernelObjects: ['pressure counters', 'queues', 'resource limits', 'journal records', 'socket and task state'], practice: 'Diagnose eight “site down” fixtures without restarting the service as the opening move.' },
+  checkpoints: [
+    { question: 'A remote client times out, but ss shows a listener and local curl succeeds. What should you inspect next?', choices: [{ label: 'Network path and firewall evidence', correct: true, feedback: 'Correct. Service and local socket evidence move the boundary outward.' }, { label: 'Reinstall the package', correct: false, feedback: 'The running local service already weakens the package hypothesis.' }, { label: 'Delete the journal', correct: false, feedback: 'That destroys evidence and does not test the network hypothesis.' }] },
+    { question: 'Why collect evidence before restarting?', choices: [{ label: 'Restarting can erase transient state and change the failure', correct: true, feedback: 'Correct. Capture status, queues, counters, limits, and logs before mutation when safe.' }, { label: 'Restarting can never fix anything', correct: false, feedback: 'It may restore service, but it can also hide the mechanism.' }, { label: 'Linux forbids restarts during incidents', correct: false, feedback: 'This is an evidence-preservation practice, not a kernel restriction.' }] },
+  ],
   groups: [
-    { label: 'Triage & localization', viewIds: ['incident', 'probes', 'logs-journald', 'resources'] },
-    { label: 'Root cause & resolution', viewIds: ['memory-cpu', 'scenarios', 'practice'] },
+    { label: 'Frame the incident', viewIds: ['incident', 'probes'] },
+    { label: 'Read the evidence', viewIds: ['logs-journald', 'resources', 'memory-cpu'] },
+    { label: 'Resolve & verify', viewIds: ['scenarios', 'practice'] },
   ],
   views: [
     {

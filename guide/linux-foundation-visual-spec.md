@@ -1,3 +1,7 @@
+# Archived Linux planning specification
+
+> Superseded on 2026-09-18 by the canonical [complete tutorial specification](topics/linux-foundation/linux-foundation-visual-spec.md). This file is retained only to avoid an unapproved deletion; do not use it as implementation authority.
+
 # Infra Illustrated — Linux Foundation Visual System Specification
 
 **Topic:** Linux foundations for cloud, DevOps, SRE, platform engineering, containers, and Kubernetes  

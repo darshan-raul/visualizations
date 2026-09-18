@@ -8,9 +8,15 @@ export const packagesPillar: LinuxPillar = {
   promise: 'Follow a package from signed repository to unpacked files and runtime dynamic linking, and see why installing is not running.',
   hints: 'repos · GPG trust · dpkg/rpm · ld.so · dynamic linking · pinning · systemd',
   bridge: 'Understanding Linux package management directly translates to minimizing container image layers, authoring deterministic Dockerfiles, and patching host CVEs without downtime.',
+  chapter: { number: 5, foundation: 'A package manager is a trust, dependency, filesystem, and lifecycle system. This chapter follows software from repository metadata to a running, linked service.', objectives: ['Explain what repository signatures establish', 'Locate the files and scripts a package installed', 'Trace dynamic library resolution before main()', 'Separate installed, enabled, active, and listening states'], kernelObjects: ['ELF interpreter', 'memory mappings', 'filesystem paths', 'service cgroup', 'socket'], practice: 'Find the first broken boundary when a package is installed but its service will not accept connections.' },
+  checkpoints: [
+    { question: 'The package database says nginx is installed. What does that prove?', choices: [{ label: 'Package-managed files and metadata are present', correct: true, feedback: 'Correct. It does not prove the unit is enabled, active, healthy, or listening.' }, { label: 'TCP/443 is accepting connections', correct: false, feedback: 'A listening socket is a later runtime state.' }, { label: 'Every shared library resolved', correct: false, feedback: 'Runtime loader failure can still prevent execution.' }] },
+    { question: 'What does a valid repository signature primarily establish?', choices: [{ label: 'Metadata or artifacts match a trusted signing identity under configured policy', correct: true, feedback: 'Correct. Trust configuration and key management still matter.' }, { label: 'Maintainer scripts cannot be harmful', correct: false, feedback: 'Signed packages can still execute privileged scripts; signature validity is not behavioral safety.' }, { label: 'The service will remain backward compatible', correct: false, feedback: 'Compatibility is not a cryptographic property.' }] },
+  ],
   groups: [
-    { label: 'Install pipeline', viewIds: ['packages-concepts', 'repository', 'files', 'libraries'] },
-    { label: 'Runtime lifecycle', viewIds: ['service', 'versioning', 'missing'] }
+    { label: 'Trust & install', viewIds: ['packages-concepts', 'repository', 'files'] },
+    { label: 'Runtime', viewIds: ['libraries', 'service'] },
+    { label: 'Versions & failure', viewIds: ['versioning', 'missing'] }
   ],
   views: [
     {

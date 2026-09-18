@@ -1,0 +1,44 @@
+---
+import type { LinuxPillar } from './linux-types';
+interface Props { pillar: LinuxPillar; }
+const { pillar } = Astro.props;
+---
+
+<section class="linux-checkpoint" aria-labelledby={`${pillar.id}-checkpoint-title`} data-linux-checkpoint>
+  <header>
+    <span>CHAPTER CHECKPOINT</span>
+    <h2 id={`${pillar.id}-checkpoint-title`}>Can you predict the system?</h2>
+    <p>Choose an answer before opening the next chapter. The explanation names the mechanism, not just the right option.</p>
+  </header>
+  <div class="linux-checkpoint-grid">
+    {pillar.checkpoints.map((checkpoint, questionIndex) => (
+      <fieldset data-checkpoint-question>
+        <legend><span>{String(questionIndex + 1).padStart(2, '0')}</span>{checkpoint.question}</legend>
+        <div class="linux-checkpoint-choices">
+          {checkpoint.choices.map((choice, choiceIndex) => (
+            <label>
+              <input type="radio" name={`${pillar.id}-checkpoint-${questionIndex}`} value={String(choiceIndex)} data-correct={String(choice.correct)} data-feedback={choice.feedback} />
+              <span>{choice.label}</span>
+            </label>
+          ))}
+        </div>
+        <p class="linux-checkpoint-feedback" data-checkpoint-feedback aria-live="polite">Select one answer to test the model.</p>
+      </fieldset>
+    ))}
+  </div>
+</section>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-linux-checkpoint]').forEach((root) => {
+    root.querySelectorAll<HTMLElement>('[data-checkpoint-question]').forEach((question) => {
+      const feedback = question.querySelector<HTMLElement>('[data-checkpoint-feedback]');
+      question.querySelectorAll<HTMLInputElement>('input[type="radio"]').forEach((input) => {
+        input.addEventListener('change', () => {
+          question.classList.toggle('is-correct', input.dataset.correct === 'true');
+          question.classList.toggle('is-incorrect', input.dataset.correct !== 'true');
+          if (feedback) feedback.textContent = input.dataset.feedback || '';
+        });
+      });
+    });
+  });
+</script>

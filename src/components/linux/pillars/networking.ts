@@ -8,9 +8,15 @@ export const networkingPillar: LinuxPillar = {
   promise: 'Follow network packets from physical wire reception through Netfilter firewall chains, the Forwarding Information Base (FIB), and socket queues into application memory buffers.',
   hints: 'sockets · Netfilter · routing (FIB) · DNS · namespaces · veth',
   bridge: 'Kubernetes Pod networking, AWS ENI multi-homing, and container CNI plugins are built directly on Linux network namespaces, veth pairs, routing tables, and Netfilter rules.',
+  chapter: { number: 4, foundation: 'This chapter builds from sockets and routes to DNS, firewall hooks, listener scope, and network namespaces so “the port is open” stops being the whole diagnosis.', objectives: ['Trace an outbound packet through lookup, route, policy, neighbour, and device', 'Explain what bind address changes', 'Separate DNS, routing, firewall, handshake, and application failures', 'Map container networking to namespaces, veth pairs, and bridges'], kernelObjects: ['socket', 'sk_buff', 'FIB', 'neighbour table', 'network namespace', 'veth'], practice: 'Prove why a service that listens on 127.0.0.1:443 is healthy locally but unreachable remotely.' },
+  checkpoints: [
+    { question: 'ss shows nginx listening only on 127.0.0.1:443. What does that prove?', choices: [{ label: 'Only the namespace-local loopback address is bound', correct: true, feedback: 'Correct. It says nothing about a listener on the host interface address.' }, { label: 'The cloud firewall allows TCP/443', correct: false, feedback: 'Socket state cannot prove an external firewall policy.' }, { label: 'DNS resolves correctly', correct: false, feedback: 'Listener state and name lookup are separate layers.' }] },
+    { question: 'A client times out, while a closed TCP port normally refuses quickly. Which hypothesis fits better?', choices: [{ label: 'A silent drop or path blackhole', correct: true, feedback: 'Correct. Retries without a response commonly point toward DROP or an unreachable path.' }, { label: 'An application returned HTTP 500', correct: false, feedback: 'An HTTP response requires the TCP connection to succeed.' }, { label: 'The listener accepted and closed immediately', correct: false, feedback: 'That would usually create observable TCP behavior rather than a silent timeout.' }] },
+  ],
   groups: [
-    { label: 'Connection path', viewIds: ['networking-concepts', 'socket', 'outbound', 'route', 'dns'] },
-    { label: 'Reachability', viewIds: ['listener', 'firewall-chains', 'net-ns', 'blocked'] },
+    { label: 'Network model', viewIds: ['networking-concepts', 'socket', 'outbound'] },
+    { label: 'Lookup & reach', viewIds: ['route', 'dns', 'listener'] },
+    { label: 'Boundaries & failure', viewIds: ['firewall-chains', 'net-ns', 'blocked'] },
   ],
   views: [
     {
@@ -68,7 +74,7 @@ export const networkingPillar: LinuxPillar = {
       output: 'State  Recv-Q Send-Q Local Address:Port  Peer Address:Port Process\nLISTEN 0      511          0.0.0.0:443        0.0.0.0:*     users:(("nginx",pid=421,fd=11),("nginx",pid=418,fd=11))',
       probe: 'cat /proc/sys/net/core/somaxconn',
       probeOutput: '4096 # Maximum listen backlog queue length',
-      caveat: 'Privileged ports (under 1024) require root or the CAP_NET_BIND_SERVICE capability. Send-Q in ss -lnt shows the configured backlog limit (511), while Recv-Q shows currently queued handshakes.',
+      caveat: 'Linux normally protects ports below the namespace\'s ip_unprivileged_port_start value; CAP_NET_BIND_SERVICE can satisfy that check. Listener queue columns and their exact meaning depend on socket state and the ss view, so corroborate them with socket and kernel counters.',
       source: `${man}man7/socket.7.html`,
     },
     {
@@ -129,7 +135,7 @@ export const networkingPillar: LinuxPillar = {
         { command: 'cat /etc/nsswitch.conf | grep hosts', output: 'hosts: files dns', annotation: 'nsswitch.conf governs system resolution order. files checks /etc/hosts first; dns invokes resolver libraries.' },
         { command: 'cat /etc/resolv.conf', output: 'nameserver 127.0.0.53\noptions edns0 trust-ad\nsearch c.internal', annotation: '127.0.0.53 is the local loopback stub resolver managed by systemd-resolved. It provides local DNS caching and search domain expansion.' },
         { command: 'resolvectl status eth0', output: 'Link 2 (eth0)\n    Current DNS Server: 10.0.0.2\n           DNS Servers: 10.0.0.2\n            DNS Domain: c.internal', annotation: 'resolvectl shows the real upstream recursive DNS servers assigned per-interface via DHCP or cloud metadata.' },
-        { command: 'getent hosts example.com', output: '93.184.215.14   example.com', annotation: 'ALWAYS test with getent hosts instead of dig. dig queries DNS servers directly, bypassing /etc/hosts and NSS configuration completely!' }
+        { command: 'getent hosts example.com', output: '93.184.215.14   example.com', annotation: 'Use getent to test the host\'s configured NSS lookup path. Use dig when the narrower question is what a DNS server returns; the two commands answer different questions.' }
       ],
       explanation: 'Name resolution in modern Linux involves multiple abstraction layers. Applications call glibc getaddrinfo(), which consults /etc/nsswitch.conf. If /etc/hosts has no matching entry, it delegates to the resolver specified in /etc/resolv.conf. In modern distributions, this points to 127.0.0.53—the local systemd-resolved caching daemon—which forwards queries to the interface DNS servers assigned by DHCP.',
       takeaway: 'dig queries DNS servers directly; getent hosts tests the actual NSS lookup pipeline used by real applications.',

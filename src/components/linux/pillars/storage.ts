@@ -8,9 +8,15 @@ export const storagePillar: LinuxPillar = {
   promise: 'Demystify the Linux storage stack by tracing pathnames through the Virtual File System (VFS), directory entry caches, and inode tables down to physical block devices.',
   hints: 'paths · VFS · inodes · page cache · open-unlinked · fstab',
   bridge: 'Container volume mounts, Kubernetes PersistentVolumes (PV/PVC), and AWS EBS attachments all terminate in the exact same kernel VFS and block device structures.',
+  chapter: { number: 2, foundation: 'This chapter turns the “everything is a file” shortcut into a precise model of names, open handles, cached pages, filesystems, mounts, and block devices.', objectives: ['Trace pathname lookup through dentries and inodes', 'Distinguish a directory entry from the open file it names', 'Diagnose block, inode, and open-unlinked exhaustion', 'Expand a cloud volume through every required layer'], kernelObjects: ['dentry', 'inode', 'struct file', 'page cache', 'mount', 'block device'], practice: 'Explain why df reports a full filesystem after a deleted log disappears from du.' },
+  checkpoints: [
+    { question: 'A daemon keeps FD 14 open after access.log is unlinked. When are its blocks reclaimable?', choices: [{ label: 'After the final open reference closes', correct: true, feedback: 'Correct. Unlink removes the name; the open file reference keeps the inode and blocks alive.' }, { label: 'Immediately after rm returns', correct: false, feedback: 'rm removes the directory entry, not an active open reference.' }, { label: 'Only after a reboot', correct: false, feedback: 'Closing or truncating the relevant open description can reclaim space without rebooting.' }] },
+    { question: 'df -h shows free bytes, but creating a file returns ENOSPC on an ext4 fixture. What should you inspect next?', choices: [{ label: 'df -i for inode capacity', correct: true, feedback: 'Correct. Free data blocks and free inode slots are independent capacity dimensions on this fixture.' }, { label: 'Only du -sh', correct: false, feedback: 'du walks reachable names and does not report inode-table exhaustion.' }, { label: 'DNS configuration', correct: false, feedback: 'Name resolution does not explain filesystem ENOSPC.' }] },
+  ],
   groups: [
-    { label: 'Path to bytes', viewIds: ['storage-concepts', 'path', 'mount', 'file-types'] },
-    { label: 'Capacity', viewIds: ['space', 'open-file', 'partitioning', 'volume'] },
+    { label: 'Names & objects', viewIds: ['storage-concepts', 'path', 'mount', 'file-types'] },
+    { label: 'Capacity failures', viewIds: ['space', 'open-file'] },
+    { label: 'Provision storage', viewIds: ['partitioning', 'volume'] },
   ],
   views: [
     {
@@ -47,7 +53,7 @@ export const storagePillar: LinuxPillar = {
       output: 'Inode: 131075',
       probe: 'ls -l /proc/$$/fd',
       probeOutput: 'lrwx------ 1 root root 64 0 -> /dev/pts/0\nlrwx------ 1 root root 64 1 -> /dev/pts/0',
-      caveat: 'In Linux, "Everything is a file". Hardware devices (/dev/sda), process info (/proc/1/cmdline), and sockets all expose themselves as files that can be opened and assigned a File Descriptor.',
+      caveat: '“Everything is a file” is shorthand for a broad descriptor-based interface. Device nodes and procfs entries participate in VFS pathname operations, while sockets usually enter a process through socket()/accept() rather than a filesystem pathname.',
       source: `${man}man7/inode.7.html`
     },
     {

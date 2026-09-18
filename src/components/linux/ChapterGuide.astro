@@ -1,0 +1,23 @@
+---
+import type { LinuxPillar } from './linux-types';
+interface Props { pillar: LinuxPillar; total: number; }
+const { pillar, total } = Astro.props;
+---
+
+<section class="linux-chapter-guide" aria-labelledby={`${pillar.id}-chapter-guide`}>
+  <div class="linux-chapter-number" aria-hidden="true">{String(pillar.chapter.number).padStart(2, '0')}</div>
+  <div class="linux-chapter-intro">
+    <span>CHAPTER {String(pillar.chapter.number).padStart(2, '0')} / 08 · {total} VISUAL LESSONS</span>
+    <h2 id={`${pillar.id}-chapter-guide`}>What this chapter builds</h2>
+    <p>{pillar.chapter.foundation}</p>
+  </div>
+  <div class="linux-chapter-outcomes">
+    <h3>By the end, you can</h3>
+    <ul>{pillar.chapter.objectives.map((objective) => <li>{objective}</li>)}</ul>
+  </div>
+  <div class="linux-chapter-objects">
+    <h3>Objects to keep straight</h3>
+    <div>{pillar.chapter.kernelObjects.map((object) => <code>{object}</code>)}</div>
+    <p><strong>Applied task:</strong> {pillar.chapter.practice}</p>
+  </div>
+</section>

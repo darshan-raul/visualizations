@@ -5,6 +5,11 @@ import ConsoleMasthead from '../ConsoleMasthead.astro';
 const topic = await getEntry('topics', 'linux');
 if (!topic) throw new Error('Linux foundation topic metadata is missing.');
 const date = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
+const curriculum = [
+  { number: 'I', title: 'Build the machine model', summary: 'Learn how Linux names principals and data, then connect paths, permissions, mounts, inodes, and open files.', ids: ['identity', 'storage'] },
+  { number: 'II', title: 'Run and connect software', summary: 'Follow programs as processes, services, sockets, packages, and shell pipelines without losing the kernel objects underneath.', ids: ['processes', 'networking', 'packages', 'shell'] },
+  { number: 'III', title: 'Protect and operate the host', summary: 'Layer security controls, read operational evidence, and isolate failures before changing a live system.', ids: ['security', 'troubleshooting'] },
+];
 ---
 
 <article class="linux-hub" aria-labelledby="linux-hub-title" data-linux-hub>
@@ -14,28 +19,41 @@ const date = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', da
       <nav class="linux-crumb" aria-label="Breadcrumb">
         <a href="/">Library</a><span>/</span><a href="/foundations">Foundations</a><span>/</span><span aria-current="page">Linux</span>
       </nav>
-      <span class="linux-kicker">LINUX FOUNDATIONS · HOST ARCHITECTURE CANVAS</span>
-      <h1 id="linux-hub-title">One Linux Machine. Eight Lenses.</h1>
-      <p>Follow how User Space applications invoke the System Call Interface to command Kernel Subsystems and Hardware. This is the shared machine model that underlies cloud VMs, Docker containers, and Kubernetes nodes.</p>
+      <span class="linux-kicker">LINUX FOUNDATIONS · COMPLETE VISUAL TUTORIAL</span>
+      <h1 id="linux-hub-title">Understand the Linux machine—not just its commands.</h1>
+      <p>Eight chapters build from identity and files to processes, networking, security, and incident diagnosis. Follow them in order for a complete foundation, or open any chapter as a working reference.</p>
     </div>
     <div class="linux-head-context">
       <span>REFERENCE HOST · devbox-01</span>
-      <span>FOUNDATIONAL · INTERACTIVE SYSTEM MODEL</span>
+      <span>8 CHAPTERS · 64 VISUAL LESSONS · APPLIED CHECKS</span>
       <span>Published {date.format(topic.data.published)} · Reviewed {date.format(topic.data.reviewed ?? topic.data.published)}</span>
     </div>
   </header>
 
-  <!-- Interactive System Architecture Canvas -->
+  <section class="linux-learning-contract" aria-labelledby="linux-learning-title">
+    <div>
+      <span class="linux-kicker">HOW TO USE THIS TUTORIAL</span>
+      <h2 id="linux-learning-title">Learn the objects, watch the mechanism, then prove it.</h2>
+    </div>
+    <ol>
+      <li><strong>Model</strong><span>Name the kernel objects and boundaries involved.</span></li>
+      <li><strong>Mechanism</strong><span>Work through a concrete state change or decision.</span></li>
+      <li><strong>Evidence</strong><span>Connect commands and output to the state they expose.</span></li>
+      <li><strong>Practice</strong><span>Resolve a failure and answer a mechanism check.</span></li>
+    </ol>
+  </section>
+
+  <!-- Foundational architecture lesson -->
   <section class="linux-map-section" aria-labelledby="linux-canvas-title">
     <div class="linux-map-heading">
       <div>
-        <span class="linux-kicker">HOST ARCHITECTURE CANVAS</span>
-        <h2 id="linux-canvas-title">The Boundary: User Space, Syscalls, Kernel & Hardware</h2>
+        <span class="linux-kicker">LESSON 0 · MACHINE ORIENTATION</span>
+        <h2 id="linux-canvas-title">Place every later chapter inside one machine</h2>
       </div>
       <div class="linux-map-mode" role="group" aria-label="Simulate system scenarios">
-        <button type="button" data-hub-trace="http" aria-pressed="true">1. Inbound HTTPS (:443)</button>
-        <button type="button" data-hub-trace="file" aria-pressed="false">2. Open & Read File</button>
-        <button type="button" data-hub-trace="container" aria-pressed="false">3. Container Boundary</button>
+        <button type="button" data-hub-trace="http" aria-pressed="true">Network request</button>
+        <button type="button" data-hub-trace="file" aria-pressed="false">File read</button>
+        <button type="button" data-hub-trace="container" aria-pressed="false">Container limits</button>
       </div>
     </div>
 
@@ -151,24 +169,33 @@ const date = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', da
     </div>
   </section>
 
-  <!-- Eight Dedicated Subsystem Consoles Grid -->
-  <section class="linux-map-section" aria-labelledby="subsystem-grid-title">
+  <!-- Complete tutorial curriculum -->
+  <section class="linux-curriculum" aria-labelledby="subsystem-grid-title">
     <div class="linux-map-heading">
       <div>
-        <span class="linux-kicker">SUBSYSTEM DEEP DIVES</span>
-        <h2 id="subsystem-grid-title">Explore the 8 Subsystem Lenses</h2>
+        <span class="linux-kicker">COMPLETE CURRICULUM</span>
+        <h2 id="subsystem-grid-title">Eight chapters, in dependency order</h2>
       </div>
-      <p style="color: var(--muted); font-size: 0.9rem; margin: 0;">Each lens opens a dedicated console with specialized system diagrams, kernel mechanics, and failure diagnostics.</p>
+      <p>Each chapter stands alone, but later chapters deliberately reuse the objects established earlier.</p>
     </div>
 
-    <div class="linux-map" data-map-mode="free" aria-label="Linux eight pillar routes">
-      {linuxPillars.map((pillar, index) => (
-        <a class={`linux-map-node linux-map-node-${pillar.id}`} href={`/linux/${pillar.id}`} aria-label={`Explore Linux ${pillar.name}`} data-linux-map-node={pillar.id}>
-          <span>{String(index + 1).padStart(2, '0')}</span>
-          <strong>{pillar.name}</strong>
-          <small>{pillar.hints}</small>
-          <b aria-hidden="true">↗</b>
-        </a>
+    <div class="linux-curriculum-phases">
+      {curriculum.map((phase) => (
+        <section class="linux-curriculum-phase" aria-labelledby={`phase-${phase.number}`}>
+          <header><span>PHASE {phase.number}</span><h3 id={`phase-${phase.number}`}>{phase.title}</h3><p>{phase.summary}</p></header>
+          <div class="linux-chapter-list">
+            {phase.ids.map((id) => {
+              const pillar = linuxPillars.find((item) => item.id === id)!;
+              return <a href={`/linux/${pillar.id}`} class="linux-chapter-card">
+                <span class="linux-chapter-number">CHAPTER {String(pillar.chapter.number).padStart(2, '0')}</span>
+                <strong>{pillar.name}</strong>
+                <p>{pillar.chapter.foundation}</p>
+                <dl><div><dt>Lessons</dt><dd>{pillar.views.length}</dd></div><div><dt>Applied task</dt><dd>{pillar.chapter.practice}</dd></div></dl>
+                <b>Open chapter <span aria-hidden="true">→</span></b>
+              </a>;
+            })}
+          </div>
+        </section>
       ))}
     </div>
   </section>
@@ -202,15 +229,15 @@ const date = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', da
           <span>sys · hardware & device attributes</span>
           <span>dev · device node special files</span>
         </div>
-        <p>In Linux, "everything is a file" means files, sockets, pipes, and devices all present as File Descriptors (FDs) through the VFS.</p>
+        <p>“Everything is a file” is a useful shorthand, not a literal rule: many resources can be operated through file descriptors, while pathnames, sockets, devices, and kernel objects still have distinct semantics.</p>
       </div>
     </div>
   </section>
 
   <footer class="linux-hub-bottom">
     <div>
-      <span class="linux-kicker">RECOMMENDED LEARNING SEQUENCE</span>
-      <p>Identity → Storage → Processes → Networking → Packages → Shell → Security → Troubleshooting. Jump wherever your question begins.</p>
+      <span class="linux-kicker">FOLLOW END TO END OR USE AS A REFERENCE</span>
+      <p>Start with identity if Linux is new to you. If you are debugging a live host, open the relevant chapter and use its grouped lesson index, evidence panels, and applied check.</p>
     </div>
     <a href="/linux/identity">Start with Identity & Access →</a>
     <div class="linux-sitefoot">

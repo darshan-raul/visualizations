@@ -199,7 +199,7 @@ const jsonString = JSON.stringify(pipelineData);
           const pipe = document.createElement('div');
           const isBroken = this.processes[idx+1].state.startsWith('DEAD');
           pipe.className = `pipe-link ${isBroken ? 'is-broken' : ''}`;
-          pipe.innerHTML = `<span class="pipe-link-text">${isBroken ? 'BROKEN' : 'PIPE (64KB)'}</span>`;
+          pipe.innerHTML = `<span class="pipe-link-text">${isBroken ? 'BROKEN' : 'PIPE (BOUNDED)'}</span>`;
           main.appendChild(pipe);
         }
       });

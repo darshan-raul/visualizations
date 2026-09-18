@@ -33,6 +33,22 @@
 .linux-index details a[aria-current] { color:var(--cyan); background:rgba(66,214,232,.1); border:1px solid rgba(66,214,232,.4); }
 .linux-index-reference { display:block; min-height:44px; padding:13px 9px; border-top:1px solid var(--border); color:var(--cyan); font:.78rem var(--mono); }
 .linux-main { min-width:0; background:repeating-linear-gradient(0deg,transparent,transparent 41px,rgba(255,255,255,.023) 42px),#0e1925; }
+.linux-chapter-guide { display:grid; grid-template-columns:74px minmax(240px,1.15fr) minmax(230px,1fr); grid-template-areas:"num intro outcomes" "num objects objects"; gap:20px 24px; padding:26px 25px 28px; border-bottom:1px solid var(--border-strong); background:radial-gradient(circle at 8% 12%,rgba(66,214,232,.08),transparent 32%),#0c1723; }
+.linux-chapter-number { grid-area:num; align-self:start; color:transparent; -webkit-text-stroke:1px rgba(66,214,232,.48); font:700 clamp(2.8rem,5vw,4.4rem)/1 var(--mono); }
+.linux-chapter-intro { grid-area:intro; }
+.linux-chapter-intro > span { color:var(--cyan); font:.7rem var(--mono); letter-spacing:.1em; }
+.linux-chapter-guide h2 { margin:7px 0 8px; font-size:clamp(1.5rem,2.4vw,2.15rem); letter-spacing:-.035em; }
+.linux-chapter-guide h3 { margin:0 0 10px; color:var(--text); font-size:.86rem; }
+.linux-chapter-guide p { margin:0; color:var(--muted); line-height:1.55; }
+.linux-chapter-outcomes { grid-area:outcomes; padding-left:22px; border-left:1px solid var(--border); }
+.linux-chapter-outcomes ul { display:grid; gap:7px; margin:0; padding:0; list-style:none; }
+.linux-chapter-outcomes li { position:relative; padding-left:18px; color:var(--muted); font-size:.84rem; line-height:1.4; }
+.linux-chapter-outcomes li::before { content:'✓'; position:absolute; left:0; color:var(--green); font-family:var(--mono); }
+.linux-chapter-objects { grid-area:objects; display:grid; grid-template-columns:170px minmax(0,1fr); align-items:start; gap:8px 16px; padding-top:18px; border-top:1px solid var(--border); }
+.linux-chapter-objects h3 { grid-row:1/3; }
+.linux-chapter-objects > div { display:flex; flex-wrap:wrap; gap:6px; }
+.linux-chapter-objects code { padding:4px 7px; border:1px solid rgba(157,124,216,.32); border-radius:4px; background:rgba(157,124,216,.07); color:var(--purple); font:.7rem var(--mono); }
+.linux-chapter-objects p { font-size:.84rem; }
 .linux-scenario-ribbon { display:grid; grid-template-columns:minmax(145px,.55fr) minmax(170px,.8fr) minmax(320px,1.65fr); align-items:center; gap:16px; padding:13px 22px; border-bottom:1px solid var(--border-strong); background:rgba(66,214,232,.035); }
 .linux-scenario-ribbon > span { color:var(--cyan); }
 .linux-scenario-ribbon > strong { font-size:1rem; line-height:1.25; }
@@ -113,6 +129,24 @@
 .linux-bridge { display:grid; grid-template-columns:190px minmax(0,1fr); gap:15px; padding:17px 28px; border-bottom:1px solid var(--border); }
 .linux-bridge span { color:var(--cyan); font:.73rem var(--mono); letter-spacing:.11em; }
 .linux-bridge p { margin:0; color:var(--muted); line-height:1.5; }
+.linux-checkpoint { padding:28px; border-bottom:1px solid var(--border-strong); background:#0c1723; }
+.linux-checkpoint > header { display:grid; grid-template-columns:190px minmax(0,1fr); gap:5px 15px; margin-bottom:20px; }
+.linux-checkpoint > header > span { grid-row:1/3; color:var(--purple); font:.72rem var(--mono); letter-spacing:.1em; }
+.linux-checkpoint > header h2 { margin:0; font-size:1.45rem; }
+.linux-checkpoint > header p { margin:0; color:var(--muted); line-height:1.5; }
+.linux-checkpoint-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.linux-checkpoint fieldset { min-width:0; margin:0; padding:18px; border:1px solid var(--border); border-radius:10px; background:#111f2d; }
+.linux-checkpoint fieldset.is-correct { border-color:rgba(73,214,163,.55); }
+.linux-checkpoint fieldset.is-incorrect { border-color:rgba(246,199,99,.55); }
+.linux-checkpoint legend { padding:0 6px; font-weight:650; line-height:1.4; }
+.linux-checkpoint legend span { margin-right:9px; color:var(--cyan); font:.7rem var(--mono); }
+.linux-checkpoint-choices { display:grid; gap:7px; margin-top:8px; }
+.linux-checkpoint-choices label { display:grid; grid-template-columns:20px minmax(0,1fr); align-items:start; gap:7px; min-height:44px; padding:9px 10px; border:1px solid var(--border); border-radius:7px; color:var(--muted); cursor:pointer; }
+.linux-checkpoint-choices label:hover { border-color:var(--cyan); color:var(--text); }
+.linux-checkpoint-choices input { margin-top:3px; accent-color:var(--cyan); }
+.linux-checkpoint-feedback { min-height:42px; margin:12px 0 0; padding:10px 12px; border-left:3px solid var(--cyan); background:rgba(66,214,232,.05); color:var(--muted); font-size:.84rem; line-height:1.45; }
+.linux-checkpoint fieldset.is-correct .linux-checkpoint-feedback { border-color:var(--green); }
+.linux-checkpoint fieldset.is-incorrect .linux-checkpoint-feedback { border-color:var(--amber); }
 .linux-pillar-pager { display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; padding:16px 28px; border-bottom:1px solid var(--border); }
 .linux-pillar-pager a { min-height:44px; display:flex; align-items:center; color:var(--cyan); font:.8rem var(--mono); }
 .linux-sources summary { display:flex; justify-content:space-between; align-items:center; min-height:60px; padding:12px 28px; cursor:pointer; font-weight:700; }
@@ -292,6 +326,12 @@
 @media (max-width:760px) { .linux-bridge { display:block; padding:17px; } .linux-bridge p { margin-top:9px; } }
 
 .linux-map-section { border-bottom:1px solid var(--border-strong); padding:26px 30px 30px; }
+.linux-learning-contract { display:grid; grid-template-columns:minmax(250px,.72fr) minmax(0,1.6fr); gap:28px; align-items:center; padding:22px 30px; border-bottom:1px solid var(--border-strong); background:rgba(104,163,255,.035); }
+.linux-learning-contract h2 { max-width:580px; margin:5px 0 0; font-size:clamp(1.35rem,2.5vw,1.85rem); letter-spacing:-.035em; }
+.linux-learning-contract ol { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1px; margin:0; padding:0; list-style:none; border:1px solid var(--border); border-radius:12px; overflow:hidden; background:var(--border); }
+.linux-learning-contract li { display:grid; gap:5px; align-content:start; min-height:94px; padding:14px; background:#101a28; }
+.linux-learning-contract li strong { color:var(--cyan); font:.74rem var(--mono); text-transform:uppercase; letter-spacing:.05em; }
+.linux-learning-contract li span { color:var(--muted); font-size:.82rem; line-height:1.45; }
 .linux-hub-head { padding:16px 30px 18px; }
 .linux-hub-head h1 { font-size:clamp(2rem,3.5vw,2.6rem); }
 .linux-hub-head .linux-crumb { margin-bottom:8px; }
@@ -324,6 +364,25 @@
 .linux-map-caption p { line-height:1.5; max-width:800px; }
 .linux-map-caption span { color:var(--green); font:.7rem var(--mono); white-space:nowrap; }
 .linux-machine-basics { padding:30px; }
+.linux-curriculum { padding:30px; border-bottom:1px solid var(--border-strong); }
+.linux-curriculum > .linux-map-heading > p { max-width:530px; margin:0; color:var(--muted); font-size:.9rem; line-height:1.5; }
+.linux-curriculum-phases { display:grid; gap:18px; margin-top:20px; }
+.linux-curriculum-phase { display:grid; grid-template-columns:minmax(210px,.42fr) minmax(0,1.58fr); gap:18px; padding:16px; border:1px solid var(--border); border-radius:14px; background:#0e1724; }
+.linux-curriculum-phase > header { padding:6px; }
+.linux-curriculum-phase > header > span { color:var(--green); font:.7rem var(--mono); letter-spacing:.08em; }
+.linux-curriculum-phase h3 { margin:7px 0 8px; font-size:1.1rem; }
+.linux-curriculum-phase header p { margin:0; color:var(--muted); font-size:.83rem; line-height:1.5; }
+.linux-chapter-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.linux-chapter-card { position:relative; display:grid; grid-template-rows:auto auto 1fr auto auto; gap:7px; min-height:205px; padding:16px; border:1px solid rgba(104,163,255,.28); border-radius:10px; background:#122033; transition:border-color .2s,transform .2s; }
+.linux-chapter-card:hover,.linux-chapter-card:focus-visible { transform:translateY(-3px); border-color:var(--cyan); }
+.linux-chapter-number { color:var(--cyan); font:.68rem var(--mono); letter-spacing:.06em; }
+.linux-chapter-card > strong { font-size:1.05rem; }
+.linux-chapter-card > p { margin:0; color:var(--muted); font-size:.82rem; line-height:1.45; }
+.linux-chapter-card dl { display:grid; gap:6px; margin:3px 0 0; }
+.linux-chapter-card dl div { display:grid; grid-template-columns:72px 1fr; gap:8px; }
+.linux-chapter-card dt { color:var(--dim); font:.65rem var(--mono); text-transform:uppercase; }
+.linux-chapter-card dd { margin:0; color:var(--text); font-size:.74rem; line-height:1.35; }
+.linux-chapter-card > b { color:var(--green); font:.72rem var(--mono); }
 .linux-basics-head h2 { font-size:clamp(1.7rem,3vw,2.45rem); letter-spacing:-.04em; margin:9px 0; }
 .linux-basics-head p, .linux-basics-caveat { color:var(--muted); line-height:1.6; max-width:830px; }
 .linux-basic-layers { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:32px; align-items:center; position:relative; margin-top:23px; }
@@ -350,7 +409,8 @@
 .linux-hub-bottom .linux-sitefoot { grid-column:1/-1; margin:12px -30px 0; }
 @media (max-width:950px) { .linux-map-node { width:160px; } .linux-map-node-identity,.linux-map-node-shell { left:13%; } .linux-map-node-processes,.linux-map-node-troubleshooting { right:13%; } .linux-map-node-storage,.linux-map-node-packages { left:1%; } .linux-map-node-networking,.linux-map-node-security { right:1%; } }
 @media (max-width:520px) { .linux-index-reference { display:none; } }
-@media (max-width:760px) { .linux-console-head,.linux-hub-head { padding:17px; gap:14px; } .linux-crumb { margin-bottom:10px; } .linux-console-head h1,.linux-hub-head h1 { font-size:clamp(2rem,8vw,2.5rem); margin:5px 0 8px; } .linux-head-context { gap:4px; } .linux-head-context span:nth-child(2) { display:none; } .linux-map-section,.linux-machine-basics { padding:22px 17px; } .linux-map-heading,.linux-map-caption { display:grid; } .linux-map-caption span { white-space:normal; } .linux-map { height:auto; padding:16px; display:grid; gap:9px; overflow:visible; } .linux-map::before,.linux-map::after { display:none; } .linux-map-core,.linux-map-node { position:static; width:100%; min-height:75px; transform:none !important; box-shadow:none !important; } .linux-map-core { min-height:125px; order:0; } .linux-map-node { grid-template-columns:30px minmax(0,1fr) 20px; align-items:center; gap:6px; } .linux-map-node > span { grid-row:1/3; } .linux-map-node strong { grid-column:2; } .linux-map-node small { grid-column:2; } .linux-map-node b { position:static; grid-column:3; grid-row:1/3; } .linux-map-node-identity { order:1; }.linux-map-node-storage { order:2; }.linux-map-node-processes { order:3; }.linux-map-node-networking { order:4; }.linux-map-node-packages { order:5; }.linux-map-node-shell { order:6; }.linux-map-node-security { order:7; }.linux-map-node-troubleshooting { order:8; } .linux-basic-layers { grid-template-columns:1fr; gap:26px; } .linux-basic-layers > i { position:static; width:auto; margin:-19px 0; } .linux-orientation-pair { grid-template-columns:1fr; } .linux-hub-bottom { grid-template-columns:1fr; padding:20px 17px 0; } .linux-hub-bottom .linux-sitefoot { margin-inline:-17px; } }
+@media (max-width:760px) { .linux-console-head,.linux-hub-head { padding:17px; gap:14px; } .linux-crumb { margin-bottom:10px; } .linux-console-head h1,.linux-hub-head h1 { font-size:clamp(2rem,8vw,2.5rem); margin:5px 0 8px; } .linux-head-context { gap:4px; } .linux-head-context span:nth-child(2) { display:none; } .linux-learning-contract { grid-template-columns:1fr; padding:20px 17px; } .linux-learning-contract ol { grid-template-columns:1fr 1fr; } .linux-learning-contract li { min-height:86px; } .linux-map-section,.linux-machine-basics,.linux-curriculum { padding:22px 17px; } .linux-map-heading,.linux-map-caption { display:grid; } .linux-map-caption span { white-space:normal; } .linux-map { height:auto; padding:16px; display:grid; gap:9px; overflow:visible; } .linux-map::before,.linux-map::after { display:none; } .linux-map-core,.linux-map-node { position:static; width:100%; min-height:75px; transform:none !important; box-shadow:none !important; } .linux-map-core { min-height:125px; order:0; } .linux-map-node { grid-template-columns:30px minmax(0,1fr) 20px; align-items:center; gap:6px; } .linux-map-node > span { grid-row:1/3; } .linux-map-node strong { grid-column:2; } .linux-map-node small { grid-column:2; } .linux-map-node b { position:static; grid-column:3; grid-row:1/3; } .linux-map-node-identity { order:1; }.linux-map-node-storage { order:2; }.linux-map-node-processes { order:3; }.linux-map-node-networking { order:4; }.linux-map-node-packages { order:5; }.linux-map-node-shell { order:6; }.linux-map-node-security { order:7; }.linux-map-node-troubleshooting { order:8; } .linux-curriculum-phase { grid-template-columns:1fr; } .linux-chapter-list { grid-template-columns:1fr; } .linux-chapter-card { min-height:0; } .linux-basic-layers { grid-template-columns:1fr; gap:26px; } .linux-basic-layers > i { position:static; width:auto; margin:-19px 0; } .linux-orientation-pair { grid-template-columns:1fr; } .linux-hub-bottom { grid-template-columns:1fr; padding:20px 17px 0; } .linux-hub-bottom .linux-sitefoot { margin-inline:-17px; } }
+@media (max-width:760px) { .linux-chapter-guide { grid-template-columns:1fr; grid-template-areas:"num" "intro" "outcomes" "objects"; padding:22px 17px; } .linux-chapter-number { font-size:2.5rem; } .linux-chapter-outcomes { padding:16px 0 0; border-left:0; border-top:1px solid var(--border); } .linux-chapter-objects { grid-template-columns:1fr; } .linux-chapter-objects h3 { grid-row:auto; } .linux-checkpoint { padding:22px 17px; } .linux-checkpoint > header,.linux-checkpoint-grid { grid-template-columns:1fr; } .linux-checkpoint > header > span { grid-row:auto; } }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    HOST ARCHITECTURE CANVAS (Hub)
@@ -675,4 +735,3 @@
   .defense-layer small, .dac-step small { text-align: left; }
   .flow-trace-explainer { flex-direction: column; align-items: start; }
 }
-

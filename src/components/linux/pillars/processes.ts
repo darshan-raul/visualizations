@@ -8,9 +8,15 @@ export const processesPillar: LinuxPillar = {
   promise: 'Watch an executable file on disk wake up and become an active kernel task with virtual memory segments, open file descriptors, signal masks, and a supervised systemd lifecycle.',
   hints: 'PID · task_struct · signals · FDs · systemd · cgroups',
   bridge: 'Containers are not virtual machines; they are ordinary Linux processes isolated by namespaces and throttled by cgroup controllers under the host kernel.',
+  chapter: { number: 3, foundation: 'A program file is passive. This chapter follows it through process creation, execution, scheduling, descriptors, signals, service supervision, and failure.', objectives: ['Separate an executable, process, thread, and service unit', 'Read a process tree and recognize zombie/orphan behavior', 'Predict what common signals can and cannot guarantee', 'Debug a failed systemd service using state and logs'], kernelObjects: ['task_struct', 'mm_struct', 'files_struct', 'signal state', 'cgroup'], practice: 'Determine why nginx is installed but has no healthy worker or listening socket.' },
+  checkpoints: [
+    { question: 'A child exited, but its parent has not called wait(). Which state remains?', choices: [{ label: 'Zombie with exit status retained', correct: true, feedback: 'Correct. Most resources are gone, but the kernel retains termination status for the parent.' }, { label: 'Runnable on a CPU', correct: false, feedback: 'The child has already terminated and cannot run.' }, { label: 'A new systemd unit', correct: false, feedback: 'Process state and unit configuration are different layers.' }] },
+    { question: 'You send SIGTERM to an arbitrary process. What is guaranteed?', choices: [{ label: 'The signal is delivered subject to permissions; disposition determines the result', correct: true, feedback: 'Correct. A process may catch, ignore, block, or act on SIGTERM.' }, { label: 'The process always exits cleanly', correct: false, feedback: 'Graceful termination is application behavior, not a SIGTERM guarantee.' }, { label: 'The kernel skips application handlers', correct: false, feedback: 'That describes SIGKILL, not SIGTERM.' }] },
+  ],
   groups: [
-    { label: 'Runtime', viewIds: ['process-concepts', 'fork', 'tree', 'fds', 'signals'] },
-    { label: 'Services', viewIds: ['unit', 'unit-files', 'env-vars', 'failed'] },
+    { label: 'Process model', viewIds: ['process-concepts', 'fork', 'tree', 'fds'] },
+    { label: 'Control & signals', viewIds: ['signals', 'unit'] },
+    { label: 'Operate services', viewIds: ['unit-files', 'env-vars', 'failed'] },
   ],
   views: [
     {
@@ -220,7 +226,7 @@ export const processesPillar: LinuxPillar = {
       output: 'enabled\nactive',
       probe: 'systemctl status nginx --no-pager',
       probeOutput: '● nginx.service - A high performance web server\n     Loaded: loaded (/lib/systemd/system/nginx.service; enabled; preset: enabled)\n     Active: active (running) since Wed 2026-09-18 19:40:00 UTC\n   Main PID: 418 (nginx)\n      Tasks: 2 (limit: 9514)\n     Memory: 14.2M (max: 512.0M)\n        CPU: 120ms\n     CGroup: /system.slice/nginx.service\n             ├─418 "nginx: master process /usr/sbin/nginx -g daemon on; master_process on;"\n             └─421 "nginx: worker process"',
-      caveat: 'systemd creates a dedicated cgroup slice for every service (e.g. system.slice/nginx.service). When you stop a service, systemd guarantees all child workers in that cgroup are terminated.',
+      caveat: 'systemd normally places a service in a dedicated cgroup. Stop behavior depends on KillMode, configured signals, timeouts, process cooperation, and whether tasks escaped the unit cgroup; inspect the resulting unit and cgroup state rather than assuming every descendant vanished.',
       source: `${systemd}systemctl.html`,
     },
     {
