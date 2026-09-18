@@ -271,7 +271,7 @@ nginx:x:9999:9999::/network/nginx:/bin/bash</pre>
 
       if (order.length === 0) {
         traceLog.push(`<div class="trace-step fail"><strong>FATAL:</strong> No modules enabled in /etc/nsswitch.conf!</div>`);
-        explainer.innerHTML = `<strong>Misconfiguration:</strong> Without any NSS modules enabled, Linux cannot resolve ANY users, effectively breaking authentication and file ownership system-wide.`;
+        explainer.innerHTML = `<strong>Broken Config:</strong> With no modules checked, Linux can't find ANY users. This breaks login and file permissions completely.`;
       } else {
         traceLog.push(`<div class="trace-step" style="border-color:var(--blue)">glibc getpwnam("${username}") called. NSS Order: [${order.join(', ')}]</div>`);
 
@@ -301,19 +301,19 @@ nginx:x:9999:9999::/network/nginx:/bin/bash</pre>
         result.innerHTML = `Kernel Credentials Assigned: <strong>UID ${foundRecord.uid}</strong> | Shell: ${foundRecord.shell}`;
         
         if (username === 'nginx' && foundMod === 'files') {
-          explainer.innerHTML = `<strong>The Override Conflict:</strong> <code>nginx</code> exists in BOTH the local files and the network AD. Because <code>files</code> is listed first in <code>nsswitch.conf</code>, the local UID 33 wins! Try unchecking "files" to see the network user take over.`;
+          explainer.innerHTML = `<strong>The Override Conflict:</strong> <code>nginx</code> exists locally AND on the network. Because <code>files</code> is first, the local user (UID 33) wins. Uncheck "files" to see the network user take over!`;
         } else if (username === 'nginx' && foundMod === 'sss') {
-          explainer.innerHTML = `<strong>Network Fallback:</strong> With <code>files</code> disabled, the network AD user wins, assigning UID 9999 to <code>nginx</code>. This is why UID mismatches happen across fleets!`;
+          explainer.innerHTML = `<strong>Network User Wins:</strong> With local <code>files</code> disabled, the network user takes over and assigns UID 9999. This is how UID mismatches happen across different servers!`;
         } else if (foundMod === 'files') {
           explainer.innerHTML = `<strong>Local Hit:</strong> Found <code>${username}</code> immediately in <code>/etc/passwd</code>. No network query was needed.`;
         } else {
-          explainer.innerHTML = `<strong>Network Fallback:</strong> <code>${username}</code> wasn't found locally, so the kernel seamlessly fell through to the network database. This proves why <code>grep /etc/passwd</code> is dangerous: it completely misses network users!`;
+          explainer.innerHTML = `<strong>Network Fallback:</strong> Not found locally, so the system checked the network. This is why <code>grep /etc/passwd</code> is dangerous—it completely ignores network users!`;
         }
       } else {
         result.className = 'nss-result not-found';
         result.textContent = `User '${username}' does not exist!`;
         if (order.length > 0) {
-          explainer.innerHTML = `<strong>Not Found:</strong> The kernel checked all configured modules (${order.join(', ')}) but <code>${username}</code> doesn't exist anywhere.`;
+          explainer.innerHTML = `<strong>Not Found:</strong> The system checked (${order.join(', ')}) but <code>${username}</code> doesn't exist anywhere.`;
         }
       }
     }
