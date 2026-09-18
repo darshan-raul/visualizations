@@ -3,10 +3,10 @@ import { actors, flows, faults, type ActorId, type EdgeKind } from './api-server
 interface Props { mapId: string; depth?: 'foundation' | 'practitioner' | 'internals'; caption?: string; }
 const { mapId, depth = 'foundation', caption = 'One Kubernetes cluster: clients above, kube-apiserver at the center, etcd behind it, reconcilers and scheduler beside it, and kubelets with running Pods below.' } = Astro.props;
 const positions: Record<ActorId, [number, number]> = {
-  client: [500, 42], endpoint: [500, 105], api: [500, 235], etcd: [500, 352],
-  controller: [206, 250], scheduler: [794, 250], 'node-a': [282, 462], 'node-b': [718, 462],
-  runtime: [500, 453], pod: [500, 516], proxy: [85, 473], csi: [86, 391], cloud: [87, 319],
-  provider: [913, 375], operator: [86, 169], webhook: [916, 165], metrics: [912, 44], aggregated: [915, 95],
+  client: [600, 85], endpoint: [600, 165], api: [600, 280], etcd: [600, 395],
+  controller: [360, 290], scheduler: [840, 290], 'node-a': [360, 530], 'node-b': [840, 530],
+  runtime: [600, 520], pod: [600, 645], proxy: [360, 645], csi: [110, 440], cloud: [110, 290],
+  provider: [1085, 430], operator: [110, 140], webhook: [1085, 285], metrics: [1085, 85], aggregated: [1085, 175],
 };
 const baseline = new Set(['client:api:api','controller:api:watch','controller:api:api','scheduler:api:watch','scheduler:api:api','node-a:api:watch','node-a:api:status','api:etcd:store']);
 const edgeMap = new Map<string, { from: ActorId; to: ActorId; kind: EdgeKind; label: string }>();
@@ -29,23 +29,30 @@ const actorById = Object.fromEntries(actors.map((actor) => [actor.id, actor]));
 const edgeTag = (kind: EdgeKind, from: ActorId) => kind === 'api' && from === 'scheduler' ? 'BIND' : kind === 'api' && from === 'controller' ? 'WRITE' : kind === 'store' ? 'PERSIST' : kind.toUpperCase();
 ---
 <div class="api-map" data-api-map={mapId} data-depth={depth} role="group" aria-label="Canonical Kubernetes cluster topology">
+  <div class="api-map-live" aria-live="polite" data-map-current data-map-state="selected"><span class="api-map-live-icon" aria-hidden="true">●</span><span class="api-map-live-copy"><strong>MAP STATUS</strong><span data-map-current-text>Selected path: kubectl → kube-apiserver</span></span></div>
+  <div class="api-map-explore-cue" aria-hidden="true"><span class="api-map-explore-mark">↓</span><span><strong>Explore the cluster</strong><small><span class="api-map-pointer-copy">Hover any component to preview its role. Click to pin the details.</span><span class="api-map-touch-copy">Tap any component to inspect its role and connections.</span></small></span></div>
   <div class="api-map-viewport" tabindex="0" aria-label="Pannable Kubernetes cluster map; scroll horizontally to inspect the full topology on narrow screens">
     <div class="api-map-scene">
       <div class="api-map-boundary api-map-outside"><span>OUTSIDE CLUSTER · HUMAN / AUTOMATION</span></div>
       <div class="api-map-boundary api-map-control"><span>CONTROL PLANE · SHARED API STATE</span></div>
       <div class="api-map-boundary api-map-workers"><span>WORKER NODES · EXECUTION / DATA PLANE</span></div>
       <div class="api-map-boundary api-map-external"><span>EXTERNAL / EXTENSIONS</span></div>
-      <svg class="api-map-wires" viewBox="0 0 1000 550" aria-hidden="true" focusable="false">
+      <svg class="api-map-wires" viewBox="0 0 1200 740" preserveAspectRatio="none" aria-hidden="true" focusable="false">
         <defs>
           {(['api','watch','status','external','local','data','store','special'] as EdgeKind[]).map((kind) => <marker id={`${mapId}-${kind}-arrow`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" class={`marker-${kind}`} /></marker>)}
         </defs>
         {edges.map((edge) => <path d={edge.path} class:list={['api-map-path',`kind-${edge.kind}`,edge.baseline && 'is-baseline']} data-map-path={edge.key} marker-end={`url(#${mapId}-${edge.kind}-arrow)`} />)}
       </svg>
-      {edges.map((edge) => <button type="button" class:list={['api-map-edge',`kind-${edge.kind}`,edge.baseline && 'is-baseline']} data-map-edge={edge.key} data-edge-from={edge.from} data-edge-to={edge.to} data-edge-kind={edge.kind} data-edge-label={edge.label} style={`--edge-x:${edge.midX}px;--edge-y:${edge.midY}px`} aria-label={`${actorById[edge.from]?.label} to ${actorById[edge.to]?.label}: ${edge.label}`}>{edgeTag(edge.kind,edge.from)}</button>)}
-      {actors.map((actor) => <button type="button" class:list={['api-map-actor',`actor-${actor.id}`,`tier-${actor.tier}`]} data-map-actor={actor.id} data-actor-tier={actor.tier} style={`--actor-x:${positions[actor.id][0]}px;--actor-y:${positions[actor.id][1]}px`} aria-pressed="false" title={actor.role}><span>{actor.label}</span><small>{actor.short}</small></button>)}
-      <div class="api-map-live" aria-live="polite" data-map-current>Selected path: kubectl → kube-apiserver</div>
+      {edges.map((edge) => <button type="button" class:list={['api-map-edge',`kind-${edge.kind}`,edge.baseline && 'is-baseline']} data-map-edge={edge.key} data-edge-from={edge.from} data-edge-to={edge.to} data-edge-kind={edge.kind} data-edge-label={edge.label} style={`--edge-x:${edge.midX / 1200 * 100}%;--edge-y:${edge.midY}px`} aria-label={`${actorById[edge.from]?.label} to ${actorById[edge.to]?.label}: ${edge.label}`}>{edgeTag(edge.kind,edge.from)}</button>)}
+      {actors.map((actor) => <button type="button" class:list={['api-map-actor',`actor-${actor.id}`,`tier-${actor.tier}`]} data-map-actor={actor.id} data-actor-tier={actor.tier} style={`--actor-x:${positions[actor.id][0] / 1200 * 100}%;--actor-y:${positions[actor.id][1]}px`} aria-pressed="false" aria-expanded="false" aria-controls={`${mapId}-actor-popover`} title={actor.role}><span>{actor.label}</span><small>{actor.short}</small></button>)}
     </div>
   </div>
+  <aside class="api-map-popover" id={`${mapId}-actor-popover`} data-map-popover role="group" aria-labelledby={`${mapId}-popover-title`} hidden>
+    <header><div><span data-map-popover-mode>ACTOR DETAILS</span><h3 id={`${mapId}-popover-title`} data-map-popover-title>Actor</h3></div><button type="button" data-map-popover-close aria-label="Close actor details">×</button></header>
+    <p data-map-popover-role></p>
+    <dl><div><dt>READS</dt><dd data-map-popover-field="reads"></dd></div><div><dt>WATCHES</dt><dd data-map-popover-field="watches"></dd></div><div><dt>WRITES</dt><dd data-map-popover-field="writes"></dd></div><div><dt>WHY</dt><dd data-map-popover-field="why"></dd></div><div data-map-popover-external hidden><dt>DIRECT EXTERNAL CALL</dt><dd data-map-popover-field="external"></dd></div></dl>
+  </aside>
   <div class="api-map-legend" aria-label="Connector meanings"><span><i class="kind-api"></i>API REQUEST / WRITE</span><span><i class="kind-watch"></i>LIST / WATCH</span><span><i class="kind-status"></i>STATUS</span><span><i class="kind-external"></i>EXTERNAL CALL</span><span><i class="kind-data"></i>DATA PLANE</span><span><i class="kind-special"></i>SPECIAL API CALL</span></div>
+  <p class="api-map-hint"><span class="api-map-pointer-hint">Hover an actor to preview · click to pin</span><span class="api-map-touch-hint">Tap an actor to inspect</span></p>
   <p class="api-map-caption">{caption}</p>
 </div>

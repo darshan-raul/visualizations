@@ -106,13 +106,13 @@ a { color: inherit; }
 
 .site-console-frame {
   display: flex;
-  width: min(calc(100% - 44px), 1600px);
-  min-height: calc(100dvh - 44px);
+  width: min(calc(100% - 24px), 2560px);
+  min-height: calc(100dvh - 24px);
   flex-direction: column;
   overflow: clip;
-  margin: 22px auto;
+  margin: 12px auto;
   border: 1px solid var(--border-strong);
-  border-radius: 18px;
+  border-radius: 16px;
   background: rgba(11, 17, 27, .94);
   box-shadow: 0 24px 80px rgba(0, 4, 12, .34), inset 0 1px rgba(255, 255, 255, .015);
 }

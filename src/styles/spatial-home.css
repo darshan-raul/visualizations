@@ -7,7 +7,7 @@ body:has(.spatial-home) .ambient {
     var(--bg);
 }
 body:has(.spatial-home) .ambient::after { opacity: .25; mask-image: radial-gradient(circle at center, #000, transparent 82%); }
-body:has(.spatial-home) .site-console-frame { height: calc(100dvh - 32px); min-height: 680px; margin-block: 16px; }
+body:has(.spatial-home) .site-console-frame { height: calc(100dvh - 24px); min-height: 680px; margin-block: 12px; }
 body:has(.spatial-home) .site-console-workspace { min-height: 0; }
 body:has(.spatial-home) .site-footer { display: none; }
 

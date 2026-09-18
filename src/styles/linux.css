@@ -1,4 +1,4 @@
-.linux-console, .linux-hub { width: min(calc(100% - 44px), 1600px); min-height: calc(100dvh - 44px); margin: 22px auto; border: 1px solid var(--border-strong); border-radius: 18px; background: #0b111b; color: var(--text); box-shadow: 0 24px 80px rgba(0,4,12,.34), inset 0 1px rgba(255,255,255,.015); overflow: clip; }
+.linux-console, .linux-hub { width: min(calc(100% - 24px), 2560px); min-height: calc(100dvh - 24px); margin: 12px auto; border: 1px solid var(--border-strong); border-radius: 16px; background: #0b111b; color: var(--text); box-shadow: 0 24px 80px rgba(0,4,12,.34), inset 0 1px rgba(255,255,255,.015); overflow: clip; }
 .linux-console a, .linux-hub a { text-decoration: none; }
 .linux-topbar { display:flex; justify-content:space-between; align-items:center; gap:28px; min-height:70px; padding:0 28px; border-bottom:1px solid var(--border); background:rgba(10,17,27,.78); }
 .linux-brand { font-weight:700; letter-spacing:-.02em; font-size:1rem; white-space:nowrap; }
@@ -9,7 +9,7 @@
 .linux-topbar nav a:hover { color:var(--text); }
 .linux-console-head, .linux-hub-head { display:flex; justify-content:space-between; align-items:end; gap:30px; padding:24px 30px 29px; border-bottom:1px solid var(--border-strong); }
 .linux-crumb { display:flex; align-items:center; gap:8px; flex-wrap:wrap; color:var(--muted); font-size:.78rem; margin-bottom:14px; }
-.linux-kicker, .linux-index-head, .linux-toolbar span, .linux-command-head, .linux-inspector-facts span, .linux-takeaway span, .linux-view-heading > span, .linux-diagram-scope, .linux-special > span, .linux-special > label, .linux-head-context > span { font: .76rem var(--mono); letter-spacing:.11em; }
+.linux-kicker, .linux-index-head, .linux-scenario-ribbon span, .linux-command-head, .linux-inspector-facts span, .linux-takeaway span, .linux-view-heading > span, .linux-diagram-scope, .linux-special > span, .linux-special > label, .linux-head-context > span { font: .76rem var(--mono); letter-spacing:.11em; }
 .linux-kicker { color:var(--cyan); }
 .linux-console-head h1, .linux-hub-head h1 { font-size:clamp(2rem,4.2vw,3.2rem); letter-spacing:-.055em; line-height:1.07; margin:8px 0 10px; }
 .linux-console-head p, .linux-hub-head p { color:var(--muted); font-size:1.05rem; max-width:730px; line-height:1.5; margin:0; }
@@ -33,11 +33,12 @@
 .linux-index details a[aria-current] { color:var(--cyan); background:rgba(66,214,232,.1); border:1px solid rgba(66,214,232,.4); }
 .linux-index-reference { display:block; min-height:44px; padding:13px 9px; border-top:1px solid var(--border); color:var(--cyan); font:.78rem var(--mono); }
 .linux-main { min-width:0; background:repeating-linear-gradient(0deg,transparent,transparent 41px,rgba(255,255,255,.023) 42px),#0e1925; }
-.linux-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 22px; border-bottom:1px solid var(--border-strong); }
-.linux-toolbar > div { display:grid; gap:5px; }
-.linux-toolbar span { color:var(--cyan); }
-.linux-toolbar strong { font-size:1.04rem; }
-.linux-toolbar-object { color:var(--muted) !important; font:.76rem var(--mono) !important; }
+.linux-scenario-ribbon { display:grid; grid-template-columns:minmax(145px,.55fr) minmax(170px,.8fr) minmax(320px,1.65fr); align-items:center; gap:16px; padding:13px 22px; border-bottom:1px solid var(--border-strong); background:rgba(66,214,232,.035); }
+.linux-scenario-ribbon > span { color:var(--cyan); }
+.linux-scenario-ribbon > strong { font-size:1rem; line-height:1.25; }
+.linux-scenario-ribbon > div { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; }
+.linux-scenario-ribbon > div span { display:grid; gap:4px; color:var(--dim); font-size:.64rem; min-width:0; }
+.linux-scenario-ribbon b { color:var(--text); font:.72rem/1.3 var(--mono); letter-spacing:0; overflow-wrap:anywhere; }
 .linux-view { padding:26px 25px 30px; min-height:560px; border-bottom:1px solid var(--border-strong); scroll-margin-top:16px; }
 .linux-view-heading > span { color:var(--cyan); }
 .linux-view-heading h2 { font-size:clamp(1.7rem,3vw,2.65rem); line-height:1.12; letter-spacing:-.045em; margin:8px 0; }
@@ -66,9 +67,9 @@
 .linux-kind-layers .linux-actors { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
 .linux-kind-layers .linux-actor:not(:last-child)::after { content:'↓'; top:auto; bottom:-29px; right:50%; transform:translateX(50%); }
 .linux-kind-split .linux-actors { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
-.linux-kind-split .linux-actor:not(:last-child)::after { content:'↔'; }
+.linux-kind-split .linux-actor:not(:last-child)::after { display:none; }
 .linux-kind-evidence .linux-actors { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
-.linux-kind-evidence .linux-actor:not(:last-child)::after { content:'›'; }
+.linux-kind-evidence .linux-actor:not(:last-child)::after { display:none; }
 .linux-diagram figcaption { margin-top:18px; padding-top:13px; border-top:1px solid var(--border); color:var(--text); line-height:1.5; }
 .linux-special { display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-top:17px; padding:13px; border:1px solid var(--border); border-radius:10px; background:#142230; }
 .linux-special > span, .linux-special > label { width:100%; color:var(--cyan); }
@@ -285,8 +286,8 @@
 @keyframes linux-arrow { to { transform:translateY(-50%) translateX(5px); opacity:.45; } }
 
 @media (max-width:1150px) { .linux-console-grid { grid-template-columns:210px minmax(0,1fr); } .linux-inspector { grid-column:2; border-left:0; border-top:1px solid var(--border-strong); } }
-@media (max-width:760px) { .linux-console, .linux-hub { width:calc(100% - 20px); min-height:calc(100dvh - 20px); margin:10px auto; border-radius:13px; } .linux-topbar { min-height:61px; gap:14px; padding:0 16px; } .linux-topbar nav { gap:14px; } .linux-topbar nav a { display:none; } .linux-topbar nav a:first-child { display:block; } .linux-console-head,.linux-hub-head { display:grid; padding:22px 17px; } .linux-head-context { min-width:0; } .linux-console-grid { display:block; } .linux-index { border-right:0; border-bottom:1px solid var(--border-strong); padding:7px 12px; } .linux-index-menu { display:block !important; width:100% !important; } .linux-index-menu > summary { display:flex !important; justify-content:space-between; align-items:center; min-height:44px; gap:8px; color:var(--cyan); font:.72rem var(--mono); letter-spacing:.04em; } .linux-index-menu > summary strong { white-space:nowrap; } .linux-index-menu > .linux-index-head { display:none; } .linux-index details:not(.linux-index-menu) { display:inline-block; vertical-align:top; width:calc(50% - 4px); } .linux-index details:not(.linux-index-menu):nth-of-type(even) { margin-left:4px; } .linux-index details > div { position:static; } .linux-index summary { font-size:.85rem; } .linux-view { padding:21px 14px; } .linux-inspector { border-top:1px solid var(--border-strong); } .linux-takeaway { display:block; padding:20px 17px; } .linux-takeaway p { margin-top:9px; } .linux-sources summary,.linux-sources > div,.linux-pillar-pager,.linux-sitefoot { padding-inline:17px; } }
-@media (max-width:520px) { .linux-index details:not(.linux-index-menu) { display:block; width:100%; margin:0 !important; } .linux-toolbar { padding:13px; } .linux-toolbar-object { display:none; } .linux-actors,.linux-kind-tree .linux-actors,.linux-kind-layers .linux-actors,.linux-kind-split .linux-actors,.linux-kind-evidence .linux-actors { display:grid; grid-template-columns:1fr; gap:28px; } .linux-actor { min-height:88px; } .linux-actor:not(:last-child)::after,.linux-kind-tree .linux-actor:not(:last-child)::after,.linux-kind-layers .linux-actor:not(:last-child)::after,.linux-kind-split .linux-actor:not(:last-child)::after,.linux-kind-evidence .linux-actor:not(:last-child)::after { content:'↓'; top:auto; bottom:-28px; left:50%; right:auto; transform:translateX(-50%); } .linux-diagram-scope { display:grid; } .linux-sources ul { columns:1; } }
+@media (max-width:760px) { .linux-console, .linux-hub { width:calc(100% - 20px); min-height:calc(100dvh - 20px); margin:10px auto; border-radius:13px; } .linux-topbar { min-height:61px; gap:14px; padding:0 16px; } .linux-topbar nav { gap:14px; } .linux-topbar nav a { display:none; } .linux-topbar nav a:first-child { display:block; } .linux-console-head,.linux-hub-head { display:grid; padding:22px 17px; } .linux-head-context { min-width:0; } .linux-console-grid { display:block; } .linux-index { border-right:0; border-bottom:1px solid var(--border-strong); padding:7px 12px; } .linux-index-menu { display:block !important; width:100% !important; } .linux-index-menu > summary { display:flex !important; justify-content:space-between; align-items:center; min-height:44px; gap:8px; color:var(--cyan); font:.72rem var(--mono); letter-spacing:.04em; } .linux-index-menu > summary strong { white-space:nowrap; } .linux-index-menu > .linux-index-head { display:none; } .linux-index details:not(.linux-index-menu) { display:inline-block; vertical-align:top; width:calc(50% - 4px); } .linux-index details:not(.linux-index-menu):nth-of-type(even) { margin-left:4px; } .linux-index details > div { position:static; } .linux-index summary { font-size:.85rem; } .linux-scenario-ribbon { grid-template-columns:1fr; gap:8px; padding:13px 17px; } .linux-view { padding:21px 14px; } .linux-inspector { border-top:1px solid var(--border-strong); } .linux-takeaway { display:block; padding:20px 17px; } .linux-takeaway p { margin-top:9px; } .linux-sources summary,.linux-sources > div,.linux-pillar-pager,.linux-sitefoot { padding-inline:17px; } }
+@media (max-width:520px) { .linux-index details:not(.linux-index-menu) { display:block; width:100%; margin:0 !important; } .linux-scenario-ribbon > div { grid-template-columns:1fr; } .linux-actors,.linux-kind-tree .linux-actors,.linux-kind-layers .linux-actors,.linux-kind-split .linux-actors,.linux-kind-evidence .linux-actors { display:grid; grid-template-columns:1fr; gap:28px; } .linux-actor { min-height:88px; } .linux-actor:not(:last-child)::after,.linux-kind-tree .linux-actor:not(:last-child)::after,.linux-kind-layers .linux-actor:not(:last-child)::after { content:'↓'; top:auto; bottom:-28px; left:50%; right:auto; transform:translateX(-50%); } .linux-kind-split .linux-actor:not(:last-child)::after,.linux-kind-evidence .linux-actor:not(:last-child)::after { display:none; } .linux-diagram-scope { display:grid; } .linux-sources ul { columns:1; } }
 @media (prefers-reduced-motion: reduce) { .linux-console *, .linux-hub * { animation-duration:.01ms !important; transition-duration:.01ms !important; scroll-behavior:auto !important; } }
 @media (max-width:760px) { .linux-bridge { display:block; padding:17px; } .linux-bridge p { margin-top:9px; } }
 

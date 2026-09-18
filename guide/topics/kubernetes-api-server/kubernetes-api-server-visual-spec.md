@@ -1,36 +1,54 @@
-# Every Conversation Goes Through the Kubernetes API — Visual specification
+# How Kubernetes Coordinates Through API State — Visual specification
 
-**Topic:** Kubernetes API Server. **Status:** Integration design, version 1.0, 2026-09-16.
+**Topic:** Kubernetes API Server. **Status:** Integrated gap-closure design, version 1.1, 2026-09-18.
 **Audience:** Working developers learning Kubernetes from foundation through control-plane internals.
 **Page promise:** Follow a `web` Deployment from one accepted API request to three ready Pods, then use the same cluster map to inspect the other conversations that make Kubernetes work.
 **Persistent scenario:** `web` in namespace `demo`, desired replicas `3`, Pods `web-a`, `web-b`, `web-c`, two worker Nodes, one selector-based Service, and optional PVC. Its request, API objects, desired/observed counts, and current owner remain visible in a scenario ribbon.
-**Scope:** The 23 selectable flows, five exploration modes, request gates, LIST/WATCH, reconciliation, component inspection, 11 failure presets, HA, direct-call exceptions, and control/data-plane boundary in the [locked brief](../../Kubernetes%20API%20Server%20%E2%80%94%20Every%20Conversation%20Goes%20Through%20the%20API%20_%20Detailed%20Visual%20Specification.md).
+**Scope:** The selectable lifecycle and cluster conversations, request gates, LIST/WATCH, object ownership, reconciliation, explainable placement, node execution, readiness, rollout/deletion, component inspection, failure diagnosis, HA, direct-call exceptions, and control/data-plane boundary.
 **Non-goals:** Protocol-level cryptography, exact scheduling plugins, provider-specific controllers, every Kubernetes API kind, and a literal trace of kube-apiserver function calls.
 **Visual thesis:** One exchange, many independent loops. The API server remains the spatial anchor as the selected conversation changes.
+
+## Gap-closure implementation plan
+
+This plan was accepted through direct implementation authorization on 2026-09-18. The production integration and generated approval prototype are the reviewable result.
+
+| Priority | Gap | Implementation | Acceptance evidence |
+| --- | --- | --- | --- |
+| 1 | Container restart was incorrectly taught as ReplicaSet Pod replacement | Split container crash, managed Pod deletion and Node loss into distinct paths. Keep Pod UID for a container restart; create a new Pod only after object loss/deletion or lifecycle handling. | Failure lab names the owner and object identity; restart count rises without a replacement Pod. |
+| 2 | Reconciliation was reduced to desired minus Ready | Replace the state view with Deployment → ReplicaSet → Pod ownership, separate desired/existing/ready counts, and stable, crash, delete and paused-controller cases. | A stable reconcile produces no write; a crash is kubelet-owned; deletion creates a new Pod; a paused loop leaves a durable gap. |
+| 3 | Scheduling and node execution lacked decision depth | Add a bounded placement-to-readiness lab with CPU request, taint/toleration, image availability and readiness inputs. | Every result identifies the owning actor, stopped milestone and representative `kubectl` evidence. |
+| 4 | Creation dominated the lifecycle | Add image rollout, graceful managed-Pod deletion and stale API update conflict conversations. | Flow selector exposes new ReplicaSet overlap, termination/replacement identity and 409 refetch/retry behavior. |
+| 5 | Animation highlighted routes without retaining state | Add a persistent flow ledger for current object, accepted state, desired count and ready count. | Manual/timed steps retain the accumulated state beside the active operation. |
+| 6 | Failure views lacked operational proof and painted recovery red | Add per-failure evidence and apply red/broken styling only to the currently failed operation. | Recovery steps render as recovery; each preset names useful objects, conditions, Events or metrics. |
+| 7 | The full topology delayed mechanism-specific visuals | Hide the repeated topology in gate, watch, ownership, placement, HA and capability canvases while retaining it for orientation, end-to-end flow, component, boundary and failure views. | The selected mechanism and its controls appear directly below the view question. |
+| 8 | Read failures, stale inspector state and no-JavaScript capability copy were incomplete | Keep applicable 401/403/overload cases for reads, reset view context on navigation, and render static capability disclosures before enhancement. | Read gates show exact stoppage; navigation does not retain an unrelated actor; all capability copy is present without JavaScript. |
+
+Implementation sequence: correct data and sources; build object and placement interactions; add lifecycle/update flows and failure evidence; refine layout and responsive states; update specification/prototype/checklist; run static, build, graph, link and browser checks.
 
 ## Semantic grammar and accuracy decisions
 
 Use the brief's dark tokens: cyan solid directed line for direct API calls and responses, violet dashed line for a retained LIST/WATCH relationship, green labelled commit/success, amber labelled pending or degraded, red broken line and `BLOCKED` text for failure. Status updates use a solid directed line plus `STATUS`; external provider calls use a double line and `EXTERNAL`; application traffic uses a heavy line and `DATA PLANE`. Solid arrows never imply scheduler or controller instructions to kubelet. A watch event may pulse back toward a client, but the persistent watch line remains still. On a reduced-motion system, selected actors/edges are outlined without travelling tokens.
 
-The teaching order is authentication → authorization → applicable mutating admission → applicable validating admission → processing/persistence. Ordinary GET/LIST/WATCH bypass admission; API Priority and Fairness and routing are not asserted to be literal fixed positions in that simplified gate sequence. Most Kubernetes clients use the API rather than etcd; an API watch is not drawn as one etcd read per event. Kubernetes supports special API-server-initiated calls to kubelet, webhooks, and aggregated servers; provider controllers may call external APIs. kube-proxy is optional. Node-failure timing is illustrative and never implies one missed Lease instantly recreates Pods. Verified against current Kubernetes documentation on 2026-09-16.
+The teaching order is authentication → authorization → applicable mutating admission → applicable validating admission → processing/persistence. Ordinary GET/LIST/WATCH bypass admission; API Priority and Fairness and routing are not asserted to be literal fixed positions in that simplified gate sequence. Most Kubernetes clients use the API rather than etcd; an API watch is not drawn as one etcd read per event. Kubernetes supports special API-server-initiated calls to kubelet, webhooks, and aggregated servers; provider controllers may call external APIs. kube-proxy is optional. Node-failure timing is illustrative and never implies one missed Lease instantly recreates Pods. Verified against current Kubernetes documentation on 2026-09-18.
 
 ## Console, groups, and narrative
 
-The neutral shared shell holds the title/metadata, the `web` state ribbon, a native grouped disclosure index, one selected canvas, contextual right/bottom inspector, bottom takeaway, related visuals, primary sources, and footer. Groups are **The exchange**, **Reconciliation**, **Boundaries**, and **Internals**. The default active view is **Who talks to the API?** Only the selected group remains open after navigation. Short labels and `01 / 11` count keep the index readable. Five modes from the locked brief map to this console: Explore uses actor inspection in the exchange; Play a Flow uses the flow lab; Request Gates uses the gate view; Fail Something uses the failure view; Advanced uses internals and depth controls. These are conceptual destinations inside the single console, not five competing page frames.
+The neutral shared shell holds the title/metadata, the `web` state ribbon, a native grouped disclosure index, one selected canvas, contextual right/bottom inspector, bottom takeaway, related visuals, primary sources, and footer. Groups are **The exchange**, **Reconciliation**, **Boundaries**, and **Internals**. The default active view is **Who talks to the API?** Only the selected group remains open after navigation. Short labels and `01 / 12` count keep the index readable. Explore uses actor inspection in the exchange; Play a Flow uses the flow lab; Placement to readiness exposes bounded cause and effect; Request Gates uses the gate view; Fail Something uses the failure view; Advanced uses internals and depth controls. These are conceptual destinations inside the single console, not competing page frames.
 
 | # | Index group / view | Core learner question | Visual form | Interaction | Required takeaway |
 | --- | --- | --- | --- | --- | --- |
 | 1 | The exchange / Who talks to the API? | Is kubectl the only API client? | Persistent cluster topology | Select actors and relationships | API state is the common coordination surface. |
 | 2 | The exchange / Request gates | Where can a request stop before state changes? | API-server perimeter / ordered gates | Read/write, gate steps, failure preset | A denied request never reaches later gates or persistence. |
 | 3 | The exchange / Watch and caches | Does a controller repeatedly query etcd? | LIST → WATCH → informer → work queue | Client/server internals disclosure | A watch follows initial state; caches separate decisions from repeated GETs. |
-| 4 | Reconciliation / Spec and status | How does desired state become observed reality? | Desired/observed bars and Observe–Compare–Act loop | Pod A version selection | Spec and status move through different actors and converge over time. |
-| 5 | Reconciliation / Play a flow | Who acts after a Deployment is accepted? | Same topology + selected directed edges + step timeline | Select 23 scenarios, step/back/reset; hero Deployment play/pause | No single component performs the whole Deployment lifecycle. |
-| 6 | Reconciliation / Conversations | What does each component read, watch and write? | Same topology + actor/edge inspector | Select component or edge | Controllers, scheduler and kubelet own different decisions. |
-| 7 | Boundaries / Control or data? | Does application traffic traverse kube-apiserver? | Two-path comparison on same topology | Control/data/both selector | API centrality describes state coordination, not ordinary application traffic. |
-| 8 | Boundaries / Fail something | What survives a control-plane or node failure? | Same topology + faulted edge/actor + seven-field result | Eleven failure presets; hero replay/step | Failure affects state, reconciliation and traffic differently. |
-| 9 | Boundaries / HA and durable state | Does one API leader serve every request? | Endpoint → API replicas → etcd backing layer | One-replica and dependency failure | API replicas can serve concurrently; etcd and endpoint health still matter. |
-| 10 | Internals / API responsibilities | What else lives behind the central API surface? | API-server cutaway and capability rails | Depth and capability selection | Discovery, policy, watch serving, storage and extensions share the API boundary. |
-| 11 | Internals / One picture | Why coordinate through one shared API? | Direct-coupling versus common object model | Step transformation | Kubernetes is repeated reconciliation around a shared versioned API. |
+| 4 | Reconciliation / Objects and ownership | Why does a deleted Pod return, but a crashed container keeps the same Pod? | Ownership chain + desired/existing/ready counts | Stable/crash/delete/paused cases | Reconcilers repair object relationships; container restart and Pod replacement are different paths. |
+| 5 | Reconciliation / Play a flow | Who acts after a Deployment is accepted? | Same topology + selected edges + accumulated state ledger | Select scenario, step/back/reset; hero Deployment play/pause | No single component performs the whole Deployment lifecycle. |
+| 6 | Reconciliation / Placement to readiness | Why is a Pod Pending, Running or excluded from traffic? | Candidate nodes + milestone pipeline + evidence | Change request, toleration, image and probe result | Scheduled, running and ready are separate milestones. |
+| 7 | Reconciliation / Conversations | What does each component read, watch and write? | Same topology + actor/edge inspector | Select component or edge | Controllers, scheduler and kubelet own different decisions. |
+| 8 | Boundaries / Control or data? | Does application traffic traverse kube-apiserver? | Two-path comparison on same topology | Control/data/both selector | API centrality describes state coordination, not ordinary application traffic. |
+| 9 | Boundaries / Fail something | What survives a control-plane or node failure? | Same topology + faulted edge/actor + evidence | Failure presets; hero replay/step | Failure affects state, reconciliation and traffic differently. |
+| 10 | Boundaries / HA and durable state | Does one API leader serve every request? | Endpoint → API replicas → etcd backing layer | One-replica and dependency failure | API replicas can serve concurrently; etcd and endpoint health still matter. |
+| 11 | Internals / API responsibilities | What else lives behind the central API surface? | API-server cutaway and capability rails | Capability selection | Discovery, policy, watch serving, storage and extensions share the API boundary. |
+| 12 | Internals / One picture | Why coordinate through one shared API? | Direct-coupling versus common object model | Step transformation | Kubernetes is repeated reconciliation around a shared versioned API. |
 
 ## Per-visual contracts
 
@@ -130,37 +148,38 @@ Disclosures use `details/summary`; event text remains readable without motion or
 - WATCH is visibly a request/stream involving API server, not periodic controller-to-etcd polling.
 - A stale `resourceVersion` shows re-LIST, not an unexplained missing event.
 
-### Visual 4 — Spec and status
+### Visual 4 — Objects, ownership and reconciliation
 
 #### Purpose
-Make the gap between declared intent and observed execution inspectable.
+Show what a controller actually compares and separate Pod identity from container state.
 #### Learner question
-“Why can a Deployment request three replicas while only one Pod is ready?”
+“Why does deleting a managed Pod create a new Pod, while a container crash usually keeps the same Pod?”
 #### Persistent scenario state
-`web.spec.replicas=3` is accepted; status moves from 0 to 1 to 3 ready as separate loops progress.
+`Deployment/web` owns `ReplicaSet/web-7c9`, which owns three Pod objects. Desired, existing and ready counts remain distinct.
 #### Concepts and actors
-Deployment spec, Deployment status, ReplicaSet desired/current, Pod spec.nodeName, Pod status.phase/Ready, Observe–Compare–Act loop.
+Deployment, ReplicaSet, Pods, owner references, selectors, kubelet restart policy, stable reconciliation and controller availability.
 #### Composition
-Two flat bars at top show desired 3 and observed 0/1/3; below, API-centered actors remain in their canonical places while a compact Observe–Compare–Act loop connects the controller to an API write. A Pod object diff sits at right/bottom. No giant nested object cards.
+A flat ownership chain sits above separate desired/existing/ready meters. An Observe → Compare relationship → Act if needed → Observe loop leads to a decision panel and compact object evidence. The large cluster topology is omitted because object relationships are the mechanism.
 #### Interaction
-Select before schedule / bound / running Pod state. The object inspector changes only `spec.nodeName` or `status.phase`/Ready; text names the actor that made each change. This manual comparison is clearer than autoplay.
+Select Stable, Crash container, Delete Pod or Pause controller. Each case changes object identities, counts, owner, decision and evidence. Stable explicitly produces a no-op.
 #### Data or content states
-`spec.replicas: 3`, `status.readyReplicas: 1`, `web-a.spec.nodeName: worker-a`, `web-a.status.phase: Running`.
+Stable: 3/3/3. Container crash: desired 3, existing 3, ready 2, same Pod UID and increased restart count. Pod deletion: active count 2, then `web-d` with a new UID. Paused controller: desired 3 and existing 2 remain divergent.
 #### Failure or edge state
-If one Pod exits, observed ready falls before replacement converges; the existing spec remains 3.
+A stopped reconciliation loop leaves durable desired state without performing repair. A container crash is owned by kubelet and does not by itself make ReplicaSet create a fourth Pod.
 #### Required copy
-“Spec says what the system should build. Status reports what it can currently see.”
+“Reconcilers repair object relationships.” “Restarting a container and replacing a Pod are different recovery paths.”
 #### Accuracy caveats
-Pod phase Running is not the same as Ready. The visual uses a simplified desired/ready pair, not every Deployment status field.
+The counters omit terminating-Pod nuances and workload-specific semantics. Owner references and selectors are shown as the relevant relationship, not as a complete garbage-collection implementation.
 #### Mobile behavior
-Bars and diff become full-width rows; the loop becomes numbered vertical phases.
+Ownership nodes and meters become full-width rows; arrows turn downward.
 #### Accessibility
-Version controls are buttons with pressed state; diff uses text `unset`, `worker-a`, `Running`, `Ready`.
+Cases are buttons with pressed state; identity, counts, owner and action are textual and announced.
 #### Source anchors
-[Deployment behavior](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/), [Pod lifecycle](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/).
+[Deployments](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/), [owners and dependents](https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/), [Pod lifecycle](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/).
 #### Acceptance checks
-- A stored desired Deployment does not imply any container already runs.
-- Scheduling changes Pod spec; kubelet reports Pod status.
+- A stable loop performs no write.
+- Container crash preserves Pod identity; deletion creates a new Pod identity.
+- Existing and ready counts never collapse into one “observed replicas” number.
 
 ### Visual 5 — Play a flow on the same map
 
@@ -171,9 +190,9 @@ Let the reader trace multiple actors without losing the geography learned in Vis
 #### Persistent scenario state
 The `web` request and objects change at the selected step; desired/observed counts and the current owner update together.
 #### Concepts and actors
-All canonical actors/edges. 23 scenario IDs: Deployment, scheduling, assigned Pod, status return, node join, Lease heartbeat, node failure, Service/EndpointSlice, service proxy, ConfigMap/Secret, ServiceAccount API client, HPA, CSI storage, LoadBalancer, Gateway/Ingress, Operator/CRD, admission webhook, logs, exec/attach/port-forward, leader election, API aggregation, API outage, and API HA.
+All canonical actors/edges. 26 scenario IDs: Deployment creation, rollout, managed-Pod deletion, API conflict, scheduling, assigned Pod, status return, node join, Lease heartbeat, node failure, Service/EndpointSlice, service proxy, ConfigMap/Secret, ServiceAccount API client, HPA, CSI storage, LoadBalancer, Gateway/Ingress, Operator/CRD, admission webhook, logs, exec/attach/port-forward, leader election, API aggregation, API outage, and API HA.
 #### Composition
-One cluster map never moves its principal actors. Only the current actor, directed edge type and object chip become bright; unrelated edges dim. A selected flow title/question and small object state rail sit above; clickable step timeline and transport controls sit below. The right inspector states actor, operation, observed evidence, object change and why the next actor reacts. A selector groups Foundation, Practitioner and Internals scenarios rather than showing 23 flat number buttons. A static summary for every scenario remains below in the no-JavaScript reading path.
+One cluster map never moves its principal actors. Only the current actor, directed edge type and object chip become bright; unrelated edges dim. A selected flow title/question and small object state rail sit above; clickable step timeline and transport controls sit below. The right inspector states actor, operation, observed evidence, object change and why the next actor reacts. A selector groups Foundation, Practitioner and Internals scenarios rather than showing 26 flat number buttons. A static summary for every scenario remains below in the no-JavaScript reading path.
 #### Interaction
 Every scenario supports select, direct step, previous/next and reset. Deployment uses hero play/pause and speed 0.5×/1×/2×; other flows remain manual under the brief's three-hero budget. Switching flow stops playback and resets. `Show API operation`, `Show YAML` and `Explain step` reveal the selected operation/changed fields in the inspector; they are disclosures, not decorative toggles. Query parameter `flow=` deep-links scenario inside `#flow-lab`; browser history restores both.
 #### Data or content states
@@ -191,11 +210,44 @@ Arrow Left/Right step when focus is within the timeline, Space pauses/plays only
 #### Source anchors
 [Components](https://kubernetes.io/docs/concepts/overview/components/), [Deployments](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/), [API concepts](https://kubernetes.io/docs/reference/using-api/api-concepts), [EndpointSlices](https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/), [CSI provisioner](https://kubernetes-csi.github.io/docs/external-provisioner.html), [HPA](https://kubernetes.io/docs/concepts/workloads/autoscaling/horizontal-pod-autoscale/), [Leases](https://kubernetes.io/docs/concepts/architecture/leases/).
 #### Acceptance checks
-- All 23 listed scenarios have representative stages and can be selected and stepped.
+- All 26 listed scenarios have representative stages and can be selected and stepped.
 - All normal state edges touch the API server; external and special paths carry their own labels.
-- Direct query links restore the selected flow and its group; no-JavaScript summaries preserve the 23 narratives.
+- Direct query links restore the selected flow and its group; no-JavaScript summaries preserve all 26 narratives.
 
-### Visual 6 — Component conversations
+### Visual 6 — Placement to readiness
+
+#### Purpose
+Make each boundary between accepted Pod, placement, node execution and Service eligibility independently inspectable.
+#### Learner question
+“Why can a Pod exist but remain Pending, Running or unready?”
+#### Persistent scenario state
+`Pod/web-a` requests either 500m or 3000m CPU. `worker-a` has 2 CPU free; `worker-b` has 4 CPU free and a `dedicated=batch` taint.
+#### Concepts and actors
+Scheduler filtering, resource requests, taints/tolerations, binding, kubelet, image availability, container state, readiness and endpoint eligibility.
+#### Composition
+Four compact inputs lead to two candidate Nodes, then a five-stage Pod object → schedule → prepare → run → ready rail. A result panel shows the owning boundary and representative command/condition evidence. The full topology is omitted.
+#### Interaction
+Change CPU request, toleration, image availability and readiness. The outcome is deterministic: unschedulable, image-pull failure, running/unready or running/ready.
+#### Data or content states
+500m selects worker-a. 3000m requires worker-b and its toleration. Missing image produces `ImagePullBackOff` after binding. Failed readiness keeps the running container out of ready endpoints.
+#### Failure or edge state
+No feasible Node leaves `spec.nodeName` unset with `PodScheduled=False`. Image failure is kubelet-owned after scheduling. Readiness failure continues running and probing the container.
+#### Required copy
+“Scheduled, running and ready are separate milestones owned by different actors.”
+#### Accuracy caveats
+Real scheduling evaluates more plugins; node preparation can also wait for CNI, CSI, Secrets, init containers and runtime health.
+#### Mobile behavior
+Inputs, candidates and stages stack; result and evidence remain directly below the controls.
+#### Accessibility
+Inputs use native labels; every outcome names state, owner and consequence without relying on color.
+#### Source anchors
+[Scheduler](https://kubernetes.io/docs/concepts/scheduling-eviction/kube-scheduler/), [Pod lifecycle](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/), [probes](https://kubernetes.io/docs/concepts/configuration/liveness-readiness-startup-probes/).
+#### Acceptance checks
+- Scheduler failure, image failure and readiness failure stop at different milestones.
+- A running unready container is not described as a missing Pod.
+- Evidence names the condition or event a learner should inspect.
+
+### Visual 7 — Component conversations
 
 #### Purpose
 Prevent “controller manager” and “kubelet” from becoming interchangeable boxes.
@@ -227,7 +279,7 @@ Selected actor and all four field headings are announced; hover alone never cont
 - Controller manager opens multiple loops; scheduler and kubelet never acquire each other's execution responsibility.
 - Provider direct calls are marked `EXTERNAL`, not normal Kubernetes state edges.
 
-### Visual 7 — Control or data?
+### Visual 8 — Control or data?
 
 #### Purpose
 Limit the central-API thesis to cluster state coordination, not ordinary application packets.
@@ -259,7 +311,7 @@ Native radio labels include “Control”, “Data”, “Both”; line style an
 - No ordinary HTTP data edge touches API server.
 - API WATCH and dataplane forwarding are visually and textually distinct.
 
-### Visual 8 — Fail something
+### Visual 9 — Fail something
 
 #### Purpose
 Show why cluster state, reconciliation, execution and workload traffic fail differently.
@@ -291,7 +343,7 @@ Fault buttons have pressed state; broken paths include `BLOCKED`; result is live
 - Kill Pod and API outage produce materially different stop/continue fields.
 - Node failure does not assert instant recreation after one missed heartbeat.
 
-### Visual 9 — HA and durable state
+### Visual 10 — HA and durable state
 
 #### Purpose
 Separate concurrent API serving from controller/scheduler leader election and etcd backing.
@@ -323,7 +375,7 @@ State labels `SERVING`, `FAILED`, `DEPENDENCY DEGRADED`; buttons and inspector w
 - API replicas show concurrent serving; controller/scheduler Lease is a separate coordination model.
 - etcd is backing memory, never the public client API.
 
-### Visual 10 — API responsibilities
+### Visual 11 — API responsibilities
 
 #### Purpose
 Explain why API centrality includes more than a kubectl endpoint without dumping internals into the opening map.
@@ -355,7 +407,7 @@ Native controls, headings and descriptive edge labels; advanced information is n
 - A selected capability names what kube-apiserver handles and what calls another component.
 - `/scale`, `/status`, `/log` and `/exec` are subresource paths, not full-object CRUD shorthand.
 
-### Visual 11 — Kubernetes in one picture
+### Visual 12 — Kubernetes in one picture
 
 #### Purpose
 Turn many flows into one reusable coordination rule and production practice.
@@ -389,13 +441,13 @@ Transformation steps are manual buttons; the final relationship is text in the s
 
 ## Deep links, prototype, integration and page-level acceptance
 
-The public route is `/kubernetes-api-server`; major view fragments are `#exchange`, `#request-gates`, `#watch`, `#spec-status`, `#flow-lab`, `#conversations`, `#control-data`, `#failures`, `#ha-state`, `#responsibilities`, and `#one-picture`. No earlier public aliases exist. The `flow=` query parameter selects one of 23 scenario IDs inside `#flow-lab`; direct link, refresh, Back and Forward reopen its group and restore flow selection. Without JavaScript, all eleven view figures/explanations, every flow summary, the failure-preset explanation, index and sources remain in the same console.
+The public route is `/kubernetes-api-server`; major view fragments are `#exchange`, `#request-gates`, `#watch`, `#spec-status`, `#flow-lab`, `#placement`, `#conversations`, `#control-data`, `#failures`, `#ha-state`, `#responsibilities`, and `#one-picture`. `#spec-status` remains stable while its label and content now teach ownership and reconciliation. The `flow=` query parameter selects one of 26 scenario IDs inside `#flow-lab`; direct link, refresh, Back and Forward reopen its group and restore flow selection. Without JavaScript, all twelve view figures/explanations, every flow summary, the failure-preset explanation, capability descriptions, index and sources remain in the same console.
 
-The self-contained `kubernetes-api-server-visual-prototype.html` contains the full grouped index, canonical map, representative content for eleven views, working Deployment/gate/fault hero traces, a read/write denial, data-plane contrast, sources and 320 px stack. It stays under `guide/topics/`, outside routing/catalogue/search. Production integration completed on 2026-09-16 using the canonical `src/content/topics/kubernetes-api-server.mdx`, `src/pages/kubernetes-api-server.astro`, neutral `TopicConsoleShell.astro`, composable `src/components/k8s/api-server/` topic modules, shared tokens and `src/styles/api-server-console.css`. Browser visual QA remains pending and is recorded below rather than treated as passed.
+The self-contained `kubernetes-api-server-visual-prototype.html` is generated from the production build and contains the full grouped index, representative content for twelve views, working Deployment/gate/fault traces, object ownership cases, placement/readiness decisions, data-plane contrast, operational evidence, sources and 320 px responsive rules. It stays under `guide/topics/`, outside routing/catalogue/search. Production integration was revised on 2026-09-18 using the canonical `src/content/topics/kubernetes-api-server.mdx`, `src/pages/kubernetes-api-server.astro`, neutral `TopicConsoleShell.astro`, composable `src/components/k8s/api-server/` topic modules, shared tokens and `src/styles/api-server-console.css`.
 
-Page acceptance: all 23 flows and 11 faults have named stage/state data; gate outcomes stop at the right boundary; all 20 technical-accuracy rules in the locked brief are preserved; responsive/no-JavaScript/keyboard/reduced-motion/direct-link/history behavior is inspectable; catalogue metadata, primary sources, publish/review dates, and related published routes resolve; `npm run check`, `npm run build`, `npm run check:graph`, and `npm run check:links` pass. Browser review at 320 px, 200% zoom, desktop and touch must be recorded rather than inferred from CSS. A published page stays migration-incomplete in the checklist until that QA is run.
+Page acceptance: all 26 flows and 11 faults have named stage/state data; gate outcomes stop at the right boundary; container restart and Pod replacement remain distinct; placement outcomes name the stopped boundary; responsive/no-JavaScript/keyboard/reduced-motion/direct-link/history behavior is inspectable; catalogue metadata, primary sources, publish/review dates, and related published routes resolve; `npm run check`, `npm run build`, `npm run check:graph`, and `npm run check:links` pass. Browser review at 320 px, 200% zoom, desktop and touch must be recorded rather than inferred from CSS.
 
-Verification record, 2026-09-16: `npm run check` completed with zero diagnostics; the production build generated 31 routes and Pagefind indexed 36 pages; graph and internal-link checks passed. Structural assertions confirmed 11 unique view fragments and index links, 11 map instances, 23 unique flows with 115 named stages, 11 faults with 46 named stages, 11 gate presets, nine actor-filter controls, seven explicit misconception corrections, 11 specification contracts, and a prototype with no remaining `/_astro/` asset dependency. A 1366 × 768 Firefox headless capture of the self-contained prototype crashed before producing a screenshot, even with a dedicated profile, software rendering and the content sandbox disabled. Browser visual, interaction, zoom and touch QA therefore remain pending.
+Verification record, 2026-09-18: `npm run check` completed with zero diagnostics; the production build generated 31 routes and Pagefind indexed 36 pages; graph checked 22 nodes and 159 relationships; internal routes and anchors passed. Structural assertions confirmed 12 unique view fragments, 26 flows, 11 faults and the ownership, state-ledger, placement and evidence controls in built HTML. The self-contained prototype was regenerated with two inline stylesheets and one inline module and has no `/_astro/` dependency. Firefox headless exited with code 139 for both 1440 × 1200 and 360 × 900 captures, so rendered desktop/mobile, 200% zoom and touch QA remain pending in this environment.
 
 Deep-dive handoffs link only published targets: Kubernetes Services for EndpointSlice/traffic details, Kubernetes Networking for CNI/node paths, and Gateway/Ingress for attachment/route ownership. Future API audit policy, scheduler plugins, CSI topology, watch-cache implementation, APF tuning and provider-specific controllers deserve separate canonical pages because each would interrupt the API-centered mental model; proposed links appear only after their targets exist.
 
@@ -419,3 +471,9 @@ Deep-dive handoffs link only published targets: Kubernetes Services for Endpoint
 - [API aggregation](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/apiserver-aggregation/)
 - [API Priority and Fairness](https://kubernetes.io/docs/concepts/cluster-administration/flow-control/)
 - [Auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/)
+- [Owners and dependents](https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/)
+- [Pod lifecycle and container restarts](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/)
+- [Liveness, readiness and startup probes](https://kubernetes.io/docs/concepts/configuration/liveness-readiness-startup-probes/)
+- [Kubernetes scheduler](https://kubernetes.io/docs/concepts/scheduling-eviction/kube-scheduler/)
+- [Pod termination flow](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-termination-flow)
+- [Server-side apply and field ownership](https://kubernetes.io/docs/reference/using-api/server-side-apply/)

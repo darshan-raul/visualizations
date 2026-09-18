@@ -25,6 +25,19 @@ const kindLabel = (kind: string) =>
   kind === 'reference' ? 'KERNEL DISPATCHER & REFERENCE' :
   kind === 'gotcha' ? 'SECURITY ACCESS LAB' :
   kind === 'decision' ? 'DIAGNOSTIC DECISION TREE' : 'SYSTEM MODEL';
+const ownerByPillar: Record<string, string> = {
+  identity: 'process credentials',
+  storage: 'VFS / filesystem',
+  processes: 'kernel / service manager',
+  networking: 'socket / network stack',
+  packages: 'package manager / service manager',
+  shell: 'shell / child processes',
+  security: 'kernel access controls',
+  troubleshooting: 'operator evidence loop',
+};
+const viewObject = (view: LinuxPillar['views'][number]) => view.actors?.[0]?.label ?? view.items?.[0]?.label ?? view.steps?.[0]?.command ?? view.recipeSteps?.[0]?.step ?? view.label;
+const viewStatus = (view: LinuxPillar['views'][number]) => view.failure ? `blocked at ${view.actors?.[view.failure.blocked]?.label ?? 'selected boundary'}` : view.kind === 'decision' ? 'hypothesis selected' : 'ready to inspect';
+const viewEvidence = (view: LinuxPillar['views'][number]) => view.probe || view.command || 'visual state';
 ---
 
 <TopicConsoleShell consoleId={pillar.id} className="linux-console" prefix="linux" collectionHref="/foundations" collectionLabel="Foundations" crumbs={[{ label: 'Library', href: '/' }, { label: 'Foundations', href: '/foundations' }, { label: 'Linux', href: '/linux' }, { label: pillar.short }]} kicker={`LINUX FOUNDATION · ${pillar.short.toUpperCase()} CONSOLE`} title={pillar.name} summary={pillar.promise} referenceLabel="REFERENCE HOST · devbox-01" formatLabel="DEEP DIVE · FOUNDATIONAL" dates={`Published ${date.format(topic.data.published)} · Reviewed ${date.format(topic.data.reviewed ?? topic.data.published)}`} backHref="/linux" backLabel="← Back to Linux Map">
@@ -32,9 +45,9 @@ const kindLabel = (kind: string) =>
       {pillar.groups.map((group, groupIndex) => <details data-linux-group={groupIndex} open={groupIndex === 0}><summary><strong>{group.label}</strong><span>{String(group.viewIds.length).padStart(2, '0')} views</span></summary><div>{group.viewIds.map((id) => { const viewIndex = pillar.views.findIndex((view) => view.id === id); const view = pillar.views[viewIndex]; return <a href={`#${view.id}`} data-linux-view-link={view.id} aria-current={viewIndex === 0 ? 'step' : undefined}><span>{String(viewIndex + 1).padStart(2, '0')}</span><strong>{view.label}</strong></a>; })}</div></details>)}
       <a class="linux-index-reference" href="#linux-sources">↗ Sources</a></details>
     </nav>
-    <div slot="main" class="linux-main"><div class="linux-toolbar"><div><span>ACTIVE VIEW</span><strong data-linux-view-title>{active.label}</strong></div><span class="linux-toolbar-object">devbox-01 · nginx</span></div>
+    <div slot="main" class="linux-main"><div class="linux-scenario-ribbon" aria-label="Persistent Linux host scenario"><span>SCENARIO · devbox-01 / nginx</span><strong data-linux-view-title>{active.label}</strong><div><span>OBJECT <b data-linux-scenario-object>{viewObject(active)}</b></span><span>STATE <b data-linux-scenario-state>{viewStatus(active)}</b></span><span>OWNER <b data-linux-scenario-owner>{ownerByPillar[pillar.id]}</b></span></div></div>
       <div class="linux-stage">
-        {pillar.views.map((view, viewIndex) => <section class={`linux-view linux-kind-${view.kind}`} id={view.id} data-linux-view={view.id} data-view-kind={view.kind} data-view-explanation={view.explanation} data-view-takeaway={view.takeaway} data-view-caveat={view.caveat} data-view-command={view.command || ''} data-view-output={view.output || ''} data-view-probe={view.probe || ''} data-view-probe-output={view.probeOutput || ''} aria-labelledby={`${view.id}-title`}><div class="linux-view-heading"><span>{String(viewIndex + 1).padStart(2, '0')} / {pillar.short.toUpperCase()} · {kindLabel(view.kind)}</span><h2 id={`${view.id}-title`}>{view.title}</h2><p>{view.question}</p></div>
+        {pillar.views.map((view, viewIndex) => <section class={`linux-view linux-kind-${view.kind}`} id={view.id} data-linux-view={view.id} data-view-kind={view.kind} data-view-explanation={view.explanation} data-view-takeaway={view.takeaway} data-view-caveat={view.caveat} data-view-command={view.command || ''} data-view-output={view.output || ''} data-view-probe={view.probe || ''} data-view-probe-output={view.probeOutput || ''} data-view-object={viewObject(view)} data-view-status={viewStatus(view)} data-view-owner={ownerByPillar[pillar.id]} data-view-evidence={viewEvidence(view)} aria-labelledby={`${view.id}-title`}><div class="linux-view-heading"><span>{String(viewIndex + 1).padStart(2, '0')} / {pillar.short.toUpperCase()} · {kindLabel(view.kind)}</span><h2 id={`${view.id}-title`}>{view.title}</h2><p>{view.question}</p></div>
 
           {/* ═══════════════════════════════════════════════════════════════════════
               1. ACTOR-DIAGRAM VIEWS (path, tree, layers, split, evidence)
@@ -318,16 +331,6 @@ const kindLabel = (kind: string) =>
                       <span class="comp-card-index">{String(cIndex + 1).padStart(2, '0')}</span>
                       <strong>{item.label}</strong>
                     </div>
-                    <div class="comp-card-diagram" aria-hidden="true">
-                      <div class="comp-mini-graphic">
-                        <span class="graphic-node source-node">{item.label.split(' ')[0]}</span>
-                        <div class="graphic-connector">
-                          <span class="conn-pulse"></span>
-                          <i>→</i>
-                        </div>
-                        <span class="graphic-node target-node">{item.detail.split('.')[0].slice(0, 24)}</span>
-                      </div>
-                    </div>
                     <p class="comp-card-detail">{item.detail}</p>
                     {item.command && (
                       <div class="comp-card-terminal">
@@ -357,7 +360,6 @@ const kindLabel = (kind: string) =>
                 <div class="linux-signal-dispatcher" data-signal-dispatcher>
                   <div class="dispatcher-top">
                     <div class="dispatcher-process" data-dispatcher-proc>
-                      <div class="proc-icon">⚙</div>
                       <div class="proc-meta">
                         <span class="proc-badge">PID 421</span>
                         <strong>nginx: worker process</strong>
@@ -373,8 +375,8 @@ const kindLabel = (kind: string) =>
                   <div class="dispatcher-triggers">
                     <span>DISPATCH SIGNAL TO PID 421:</span>
                     <div class="trigger-buttons">
-                      <button type="button" data-signal="SIGTERM" class="sig-btn sig-term">⚡ SIGTERM (15)<small>Polite stop</small></button>
-                      <button type="button" data-signal="SIGKILL" class="sig-btn sig-kill">☠ SIGKILL (9)<small>Force kill</small></button>
+                      <button type="button" data-signal="SIGTERM" class="sig-btn sig-term">SIGTERM (15)<small>Request termination</small></button>
+                      <button type="button" data-signal="SIGKILL" class="sig-btn sig-kill">SIGKILL (9)<small>Uncatchable termination</small></button>
                       <button type="button" data-signal="SIGHUP" class="sig-btn sig-hup">↺ SIGHUP (1)<small>Reload config</small></button>
                       <button type="button" data-signal="SIGSTOP" class="sig-btn sig-stop">⏸ SIGSTOP (19)<small>Freeze</small></button>
                       <button type="button" data-signal="SIGCONT" class="sig-btn sig-cont">▶ SIGCONT (18)<small>Resume</small></button>
@@ -507,7 +509,7 @@ const kindLabel = (kind: string) =>
       </div>
       <div class="linux-sequence" data-linux-enhancement hidden><button type="button" data-linux-prev aria-label="Previous console view">←</button><div><span>NOW INSPECTING</span><strong data-linux-progress>01 / {active.label}</strong></div><button type="button" data-linux-next aria-label="Next console view">→</button></div>
     </div>
-    <aside slot="inspector" class="linux-inspector" aria-label="Context and command inspector"><span class="linux-kicker">SYSTEM INSPECTOR</span><h2 data-linux-inspector-title>{active.title}</h2><p data-linux-inspector-copy>{active.explanation}</p><div class="linux-inspector-facts"><div><span>HOST</span><strong>devbox-01</strong></div><div><span>WORKLOAD</span><strong>nginx · TCP/443</strong></div><div><span>LENS</span><strong>{pillar.short}</strong></div></div><div class="linux-command-panel"><div class="linux-command-head"><span>SIMULATED TERMINAL</span><span>LOCAL FIXTURE</span></div><div class="linux-command-actions"><button type="button" data-linux-command="primary">$ {active.command || 'No command for this view'}</button><button type="button" data-linux-command="probe">$ {active.probe || 'No probe for this view'}</button></div><pre data-linux-terminal-output aria-live="polite">{active.output || 'Select a command above.'}</pre><p data-linux-terminal-result>Command evidence highlights the first object in the active diagram.</p></div><div class="linux-inspector-caveat"><span>MODEL NOTE</span><p data-linux-caveat>{active.caveat}</p></div></aside>
+    <aside slot="inspector" class="linux-inspector" aria-label="Context and command inspector"><span class="linux-kicker">SYSTEM INSPECTOR</span><h2 data-linux-inspector-title>{active.title}</h2><p data-linux-inspector-copy>{active.explanation}</p><div class="linux-inspector-facts"><div><span>OBJECT</span><strong data-linux-fact-object>{viewObject(active)}</strong></div><div><span>OWNER</span><strong data-linux-fact-owner>{ownerByPillar[pillar.id]}</strong></div><div><span>STATE</span><strong data-linux-fact-state>{viewStatus(active)}</strong></div><div><span>EVIDENCE</span><strong data-linux-fact-evidence>{viewEvidence(active)}</strong></div></div><div class="linux-command-panel"><div class="linux-command-head"><span>SIMULATED TERMINAL</span><span>LOCAL FIXTURE</span></div><div class="linux-command-actions"><button type="button" data-linux-command="primary">$ {active.command || 'No command for this view'}</button><button type="button" data-linux-command="probe">$ {active.probe || 'No probe for this view'}</button></div><pre data-linux-terminal-output aria-live="polite">{active.output || 'Select a command above.'}</pre><p data-linux-terminal-result>Command evidence highlights the first object in the active diagram.</p></div><div class="linux-inspector-caveat"><span>MODEL NOTE</span><p data-linux-caveat>{active.caveat}</p></div></aside>
     <div slot="bottom"><div class="linux-takeaway"><span>THE POINT TO KEEP</span><p data-linux-takeaway>{active.takeaway}</p></div><div class="linux-bridge"><span>IN CLOUD AND CONTAINERS</span><p>{pillar.bridge}</p></div><div class="linux-pillar-pager"><a href={previous ? `/linux/${previous.id}` : '/linux'}>← {previous ? previous.short : 'Linux Map'}</a><a href="/linux">Linux Map</a><a href={next ? `/linux/${next.id}` : '/foundations'}>{next ? next.short : 'Foundations'} →</a></div><details id="linux-sources" class="linux-sources"><summary>Sources, scope & related visuals <span aria-hidden="true">↗</span></summary><div><h2>Primary references</h2><ul>{[...new Map(pillar.views.map((view) => [view.source, view.source])).values()].map((source) => <li><a href={source} target="_blank" rel="noopener noreferrer">{new URL(source).hostname} · {new URL(source).pathname.split('/').filter(Boolean).at(-1)} ↗</a></li>)}</ul><p>Linux examples use a generic modern host. systemd and package-tool behavior are labelled where applicable; exact commands and defaults vary by distribution, configuration, and installed utilities.</p><RelatedVisuals currentTopic={topic} topics={topics} /></div></details><div class="linux-sitefoot"><span>Infra, Illustrated. · One Linux machine through eight lenses.</span><a href="/visualizations">Browse all visuals ↗</a></div></div>
 </TopicConsoleShell>
 
@@ -574,6 +576,13 @@ const kindLabel = (kind: string) =>
       get('[data-linux-inspector-copy]').textContent = data.viewExplanation || '';
       get('[data-linux-caveat]').textContent = data.viewCaveat || '';
       get('[data-linux-takeaway]').textContent = data.viewTakeaway || '';
+      get('[data-linux-scenario-object]').textContent = data.viewObject || label;
+      get('[data-linux-scenario-state]').textContent = data.viewStatus || 'ready to inspect';
+      get('[data-linux-scenario-owner]').textContent = data.viewOwner || '';
+      get('[data-linux-fact-object]').textContent = data.viewObject || label;
+      get('[data-linux-fact-owner]').textContent = data.viewOwner || '';
+      get('[data-linux-fact-state]').textContent = data.viewStatus || 'ready to inspect';
+      get('[data-linux-fact-evidence]').textContent = data.viewEvidence || 'visual state';
 
       const cmdPrimary = data.viewCommand || '';
       const cmdProbe = data.viewProbe || '';
@@ -617,6 +626,9 @@ const kindLabel = (kind: string) =>
       const isProbe = button.dataset.linuxCommand === 'probe';
       get('[data-linux-terminal-output]').textContent = isProbe ? (data.viewProbeOutput || '') : (data.viewOutput || '');
       get('[data-linux-terminal-result]').textContent = isProbe ? 'The probe command inspects the target boundary in the system.' : 'The primary command inspects the core source state.';
+      get('[data-linux-fact-evidence]').textContent = isProbe ? (data.viewProbe || 'probe result') : (data.viewCommand || 'command result');
+      get('[data-linux-scenario-state]').textContent = isProbe ? 'probe inspected' : 'baseline inspected';
+      get('[data-linux-fact-state]').textContent = get('[data-linux-scenario-state]').textContent || '';
       if (current.querySelector('[data-linux-actors]')) {
         step = isProbe ? Math.min(2, current.querySelectorAll('[data-linux-actor]').length - 1) : 0;
         diagram(current);
@@ -636,6 +648,10 @@ const kindLabel = (kind: string) =>
         get('[data-linux-inspector-copy]').textContent = `${label}: ${detail}. ${current.dataset.viewExplanation || ''}`;
         get('[data-linux-terminal-output]').textContent = step < 2 ? (current.dataset.viewOutput || '') : (current.dataset.viewProbeOutput || '');
         get('[data-linux-terminal-result]').textContent = `Inspecting ${label}.`;
+        get('[data-linux-scenario-object]').textContent = label;
+        get('[data-linux-scenario-state]').textContent = actor.dataset.blocked === 'true' ? 'blocked here' : detail;
+        get('[data-linux-fact-object]').textContent = label;
+        get('[data-linux-fact-state]').textContent = actor.dataset.blocked === 'true' ? 'blocked here' : detail;
       });
     });
 
@@ -651,6 +667,10 @@ const kindLabel = (kind: string) =>
           step = Math.min(actors.length - 1, step + 1);
           diagram(current);
           report.textContent = `Step ${step + 1} / ${actors.length}: ${actors[step].querySelector('strong')?.textContent} — ${actors[step].querySelector('small')?.textContent}`;
+          get('[data-linux-scenario-object]').textContent = actors[step].querySelector('strong')?.textContent || '';
+          get('[data-linux-scenario-state]').textContent = `step ${step + 1} of ${actors.length}`;
+          get('[data-linux-fact-object]').textContent = get('[data-linux-scenario-object]').textContent || '';
+          get('[data-linux-fact-state]').textContent = get('[data-linux-scenario-state]').textContent || '';
         }
         if (action === 'prev') { stopPlayback(); step = Math.max(0, step - 1); diagram(current); report.textContent = `Step ${step + 1} / ${actors.length}: ${actors[step].querySelector('strong')?.textContent}`; }
         if (action === 'next') { stopPlayback(); advance(); }
@@ -783,19 +803,19 @@ const kindLabel = (kind: string) =>
         proc.className = 'dispatcher-process';
         if (sig === 'SIGTERM') {
           proc.classList.add('proc-term');
-          stateEl.textContent = 'State: Terminating gracefully (flushing buffers)...';
-          logEl.textContent = '[kernel] Sent signal 15 (SIGTERM) to PID 421.\n[nginx:421] Caught SIGTERM. Closing worker connections...\n[nginx:421] Clean process exit status 0.';
-          get('[data-linux-terminal-output]').textContent = 'kill -s SIGTERM 421\n# PID 421 gracefully acknowledged signal and exited (status 0)';
+          stateEl.textContent = 'State: SIGTERM delivered; application disposition decides what follows';
+          logEl.textContent = '[kernel] Delivered signal 15 (SIGTERM) to PID 421.\n[fixture nginx:421] Handler begins graceful shutdown.\n[operator] Verify that the process exits; SIGTERM does not guarantee cleanup.';
+          get('[data-linux-terminal-output]').textContent = 'kill -s SIGTERM 421\n# Signal sent. Inspect process state and logs to confirm the outcome.';
         } else if (sig === 'SIGKILL') {
           proc.classList.add('proc-kill');
-          stateEl.textContent = 'State: FORCED PURGE (Instant termination)';
-          logEl.textContent = '[kernel] Sent signal 9 (SIGKILL) to PID 421.\n[kernel scheduler] Process unconditionally deleted from task queue!\n[audit] No cleanup handlers executed. Exit 137.';
-          get('[data-linux-terminal-output]').textContent = 'kill -9 421\nKilled\n# Process evaporated immediately; uncatchable';
+          stateEl.textContent = 'State: SIGKILL delivered; no application handler can run';
+          logEl.textContent = '[kernel] Delivered signal 9 (SIGKILL) to PID 421.\n[process] Cannot catch, block, or ignore SIGKILL.\n[parent] Must still reap the terminated child process.';
+          get('[data-linux-terminal-output]').textContent = 'kill -s SIGKILL 421\n# No target cleanup handler runs. Verify termination and parent reaping.';
         } else if (sig === 'SIGHUP') {
           proc.classList.add('proc-hup');
           stateEl.textContent = 'State: Reloading /etc/nginx/nginx.conf';
-          logEl.textContent = '[kernel] Sent signal 1 (SIGHUP) to PID 421.\n[nginx:421] Configuration re-read. Worker threads updated.\n[nginx:421] Continuing uninterrupted.';
-          get('[data-linux-terminal-output]').textContent = 'kill -HUP 421\n# Worker re-parsed configuration without dropping TCP sockets';
+          logEl.textContent = '[kernel] Delivered signal 1 (SIGHUP) to PID 421.\n[fixture nginx:421] Application-defined handler starts a configuration reload.\n[operator] Other programs may terminate or handle SIGHUP differently.';
+          get('[data-linux-terminal-output]').textContent = 'kill -HUP 421\n# nginx defines reload behavior; SIGHUP is not a universal reload command.';
         } else if (sig === 'SIGSTOP') {
           proc.classList.add('proc-stop');
           stateEl.textContent = 'State: T (Stopped / Frozen by kernel)';
@@ -884,6 +904,9 @@ const kindLabel = (kind: string) =>
       if (alternative) get('[data-linux-terminal-output]').textContent = button.dataset.linuxAlternateOutput || '';
       else get('[data-linux-terminal-output]').textContent = current.dataset.viewOutput || '';
       get('[data-linux-inspector-copy]').textContent = alternative ? alternate : current.dataset.viewExplanation || '';
+      get('[data-linux-scenario-state]').textContent = alternative ? 'alternate state applied' : (current.dataset.viewStatus || 'blocked fixture');
+      get('[data-linux-fact-state]').textContent = get('[data-linux-scenario-state]').textContent || '';
+      get('[data-linux-fact-evidence]').textContent = alternative ? (button.dataset.linuxAlternateOutput || 'alternate fixture') : (current.dataset.viewEvidence || 'baseline fixture');
       diagram(current);
     }));
 
@@ -901,6 +924,10 @@ const kindLabel = (kind: string) =>
       }
       get('[data-linux-terminal-output]').textContent = `LISTEN 0 511 ${mode === 'loopback' ? '127.0.0.1' : mode === 'wildcard' ? '0.0.0.0' : '10.0.1.17'}:443`;
       get('[data-linux-inspector-copy]').textContent = output;
+      get('[data-linux-scenario-object]').textContent = `${mode === 'loopback' ? '127.0.0.1' : mode === 'wildcard' ? '0.0.0.0' : '10.0.1.17'}:443`;
+      get('[data-linux-scenario-state]').textContent = 'listener bound; reachability unproven';
+      get('[data-linux-fact-object]').textContent = get('[data-linux-scenario-object]').textContent || '';
+      get('[data-linux-fact-state]').textContent = get('[data-linux-scenario-state]').textContent || '';
     }));
 
     // Troubleshooting Incident Matrix Selector
@@ -917,6 +944,11 @@ const kindLabel = (kind: string) =>
       get('[data-linux-scenario-result]').textContent = incident.result;
       get('[data-linux-terminal-output]').textContent = incident.output;
       get('[data-linux-inspector-copy]').textContent = incident.result;
+      get('[data-linux-scenario-object]').textContent = incident.actors[incident.blocked][0];
+      get('[data-linux-scenario-state]').textContent = incident.actors[incident.blocked][1];
+      get('[data-linux-fact-object]').textContent = incident.actors[incident.blocked][0];
+      get('[data-linux-fact-state]').textContent = incident.actors[incident.blocked][1];
+      get('[data-linux-fact-evidence]').textContent = incident.output.split('\n')[0];
       const statusEl = views[stage].querySelector<HTMLElement>('[data-linux-visual-status]');
       if (statusEl) statusEl.textContent = key.toUpperCase() + ' FIXTURE';
       views[stage].querySelectorAll<HTMLElement>('[data-linux-actor]').forEach((actor, index) => {
