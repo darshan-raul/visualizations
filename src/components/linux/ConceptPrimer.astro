@@ -1,0 +1,80 @@
+---
+import type { LinuxView } from './linux-types';
+
+interface Props {
+  view: LinuxView;
+}
+
+const { view } = Astro.props;
+---
+
+<div class="concept-primer">
+  <div class="concept-grid">
+    {view.concepts?.map((concept: any) => (
+      <div class="concept-card">
+        <h3 class="concept-term">{concept.term}</h3>
+        <div class="concept-analogy"><strong>Analogy:</strong> {concept.analogy}</div>
+        <p class="concept-def">{concept.definition}</p>
+      </div>
+    ))}
+  </div>
+</div>
+
+<style>
+  .concept-primer {
+    margin: 1.5rem 0;
+  }
+  
+  .concept-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+
+  .concept-card {
+    background: var(--bg-alt);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+  }
+
+  .concept-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--blue);
+  }
+
+  .concept-term {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .concept-analogy {
+    font-size: 0.9rem;
+    color: var(--blue);
+    background: rgba(59, 130, 246, 0.1);
+    padding: 0.4rem 0.75rem;
+    border-radius: 4px;
+    margin-top: 0.25rem;
+  }
+
+  .concept-analogy strong {
+    font-weight: 600;
+    opacity: 0.9;
+  }
+
+  .concept-def {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+    margin: 0;
+    margin-top: 0.25rem;
+  }
+</style>

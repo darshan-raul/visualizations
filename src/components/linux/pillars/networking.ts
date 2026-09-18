@@ -9,10 +9,47 @@ export const networkingPillar: LinuxPillar = {
   hints: 'sockets · Netfilter · routing (FIB) · DNS · namespaces · veth',
   bridge: 'Kubernetes Pod networking, AWS ENI multi-homing, and container CNI plugins are built directly on Linux network namespaces, veth pairs, routing tables, and Netfilter rules.',
   groups: [
-    { label: 'Connection path', viewIds: ['socket', 'outbound', 'route', 'dns'] },
+    { label: 'Connection path', viewIds: ['networking-concepts', 'socket', 'outbound', 'route', 'dns'] },
     { label: 'Reachability', viewIds: ['listener', 'firewall-chains', 'net-ns', 'blocked'] },
   ],
   views: [
+    {
+      id: 'networking-concepts',
+      label: 'Core concepts',
+      title: 'Before looking at the mechanics, what actually is a Socket or a Port?',
+      question: 'What are the foundational primitives of Linux Networking?',
+      kind: 'concept-primer',
+      concepts: [
+        {
+          term: 'IP Address',
+          analogy: 'A Street Address',
+          definition: 'A numerical label assigned to a device (like 10.0.1.17). It ensures packets can find their way across the internet to the correct machine.'
+        },
+        {
+          term: 'Port',
+          analogy: 'An Apartment Number',
+          definition: 'Once a packet reaches the correct machine (IP), the Port (like 443 or 80) tells the kernel WHICH specific application should receive the data.'
+        },
+        {
+          term: 'Socket',
+          analogy: 'A Mailbox',
+          definition: 'A Socket is a software mailbox created by an application. It binds to a Port so the kernel knows to deliver incoming packets for that Port into this specific mailbox.'
+        },
+        {
+          term: 'Netfilter (Firewall)',
+          analogy: 'A Security Guard',
+          definition: 'A kernel subsystem that intercepts every packet arriving or leaving. It checks rules (iptables/nftables) and decides whether to Accept (let it through) or Drop (discard it silently).'
+        }
+      ],
+      explanation: 'Networking in Linux is simply about moving bytes between memory buffers. An application asks the kernel for a Socket (a mailbox). When packets arrive off the physical wire, the kernel checks the IP, checks the Firewall, checks the Port, and finally drops the payload into the Socket\'s buffer for the application to read.',
+      takeaway: 'IPs find the machine, Ports find the application, Sockets hold the data, and Firewalls guard the gates.',
+      command: 'ss -lnt',
+      output: 'State   Recv-Q  Send-Q   Local Address:Port   Peer Address:Port\nLISTEN  0       511          0.0.0.0:443         0.0.0.0:*',
+      probe: 'ip addr show',
+      probeOutput: 'inet 10.0.1.17/24 brd 10.0.1.255 scope global eth0',
+      caveat: 'A "Connection Refused" error means the packet reached the machine, but there was no Socket listening on that Port. A "Timeout" means a Firewall dropped it entirely.',
+      source: `${man}man7/socket.7.html`,
+    },
     {
       id: 'socket',
       label: 'Service socket',

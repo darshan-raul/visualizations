@@ -9,10 +9,47 @@ export const shellPillar: LinuxPillar = {
   hints: 'expansions · quoting · pipes · FDs · dup2 · exit status · text filters · automation',
   bridge: 'Shell mastery directly translates to writing bulletproof CI/CD runners, crafting secure Dockerfile RUN directives, and debugging user-data cloud-init bootstrap scripts.',
   groups: [
-    { label: 'Command execution', viewIds: ['parse', 'pipeline', 'redirection', 'text-tools'] },
+    { label: 'Command execution', viewIds: ['shell-concepts', 'parse', 'pipeline', 'redirection', 'text-tools'] },
     { label: 'Scripting & automation', viewIds: ['status', 'bash-patterns', 'here-docs', 'automation'] }
   ],
   views: [
+    {
+      id: 'shell-concepts',
+      label: 'Core concepts',
+      title: 'Before looking at the mechanics, what actually is a Shell or a Pipeline?',
+      question: 'What are the foundational primitives of the Linux Shell?',
+      kind: 'concept-primer',
+      concepts: [
+        {
+          term: 'The Shell (Bash/Zsh)',
+          analogy: 'A Human-to-Kernel Translator',
+          definition: 'The shell is just a normal program (like a web browser). Its only job is to take text you type, parse it, and translate it into system calls (like fork and exec) that the kernel understands.'
+        },
+        {
+          term: 'Standard Streams (0, 1, 2)',
+          analogy: 'The Mouth, Ears, and Alarm',
+          definition: 'Every process starts with 3 open File Descriptors: Standard Input (0) to hear data, Standard Output (1) to speak data, and Standard Error (2) to yell about errors.'
+        },
+        {
+          term: 'Redirection (>, <)',
+          analogy: 'Rerouting the Plumbing',
+          definition: 'Redirection is how the shell intercepts those streams BEFORE the program starts. Instead of speaking to the screen, the shell wires the program\'s mouth (Output 1) directly to a file.'
+        },
+        {
+          term: 'Pipe (|)',
+          analogy: 'Connecting Two Hoses',
+          definition: 'A pipe is a 64KB chunk of RAM managed by the kernel. It connects the mouth (Output 1) of one process directly to the ears (Input 0) of another process, streaming data in real-time.'
+        }
+      ],
+      explanation: 'The command line looks like magic, but it\'s just a sequence of text string manipulations. Before any command actually runs, the shell evaluates variables, expands wildcards (*), and wires up File Descriptors for pipes and redirections. The command itself never sees the ">" or the "|" symbols—the shell handles all of that on its behalf.',
+      takeaway: 'The shell is a translator. It parses your syntax, sets up the plumbing, and only then asks the kernel to run the program.',
+      command: 'ls -l /proc/$$/fd',
+      output: 'lrwx------ 1 root root 64 0 -> /dev/pts/0  # stdin\nlrwx------ 1 root root 64 1 -> /dev/pts/0  # stdout\nlrwx------ 1 root root 64 2 -> /dev/pts/0  # stderr',
+      probe: 'echo $SHELL',
+      probeOutput: '/bin/bash',
+      caveat: 'Wildcards (like *.txt) are expanded by the SHELL, not by the command (like "ls"). If you run "ls *.txt", the "ls" program just sees a list of file names passed to it.',
+      source: `${bash}Shell-Operation.html`,
+    },
     {
       id: 'parse',
       label: 'Parse & expand',

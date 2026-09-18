@@ -10,6 +10,7 @@ import VfsLab from './interactive/VfsLab.astro';
 import PacketTraceLab from './interactive/PacketTraceLab.astro';
 import PipelineLab from './interactive/PipelineLab.astro';
 import NssLab from './interactive/NssLab.astro';
+import ConceptPrimer from './ConceptPrimer.astro';
 
 interface Props { pillar: LinuxPillar; }
 const { pillar } = Astro.props;
@@ -56,8 +57,19 @@ const viewEvidence = (view: LinuxPillar['views'][number]) => view.probe || view.
         {pillar.views.map((view, viewIndex) => <section class={`linux-view linux-kind-${view.kind}`} id={view.id} data-linux-view={view.id} data-view-kind={view.kind} data-view-explanation={view.explanation} data-view-takeaway={view.takeaway} data-view-caveat={view.caveat} data-view-command={view.command || ''} data-view-output={view.output || ''} data-view-probe={view.probe || ''} data-view-probe-output={view.probeOutput || ''} data-view-object={viewObject(view)} data-view-status={viewStatus(view)} data-view-owner={ownerByPillar[pillar.id]} data-view-evidence={viewEvidence(view)} aria-labelledby={`${view.id}-title`}><div class="linux-view-heading"><span>{String(viewIndex + 1).padStart(2, '0')} / {pillar.short.toUpperCase()} · {kindLabel(view.kind)}</span><h2 id={`${view.id}-title`}>{view.title}</h2><p>{view.question}</p></div>
 
           {/* ═══════════════════════════════════════════════════════════════════════
-              NEW: INTERACTIVE LABS
+              NEW: INTERACTIVE LABS & CONCEPTS
              ═══════════════════════════════════════════════════════════════════════ */}
+          {view.kind === 'concept-primer' && (
+            <figure class="linux-diagram" aria-label={`${view.title} on devbox-01`}>
+              <div class="linux-diagram-scope">
+                <span>DEVBOX-01 · CORE CONCEPTS</span>
+                <span data-linux-visual-status>GLOSSARY</span>
+              </div>
+              <ConceptPrimer view={view} />
+              <figcaption>{view.takeaway}</figcaption>
+            </figure>
+          )}
+
           {view.kind === 'interactive-tree' && view.treeData && (
             <figure class="linux-diagram linux-diagram-interactive" aria-label={`${view.title} on devbox-01`}>
               <div class="linux-diagram-scope">

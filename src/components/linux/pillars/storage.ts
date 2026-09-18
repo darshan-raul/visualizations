@@ -9,10 +9,47 @@ export const storagePillar: LinuxPillar = {
   hints: 'paths · VFS · inodes · page cache · open-unlinked · fstab',
   bridge: 'Container volume mounts, Kubernetes PersistentVolumes (PV/PVC), and AWS EBS attachments all terminate in the exact same kernel VFS and block device structures.',
   groups: [
-    { label: 'Path to bytes', viewIds: ['path', 'mount', 'file-types'] },
+    { label: 'Path to bytes', viewIds: ['storage-concepts', 'path', 'mount', 'file-types'] },
     { label: 'Capacity', viewIds: ['space', 'open-file', 'partitioning', 'volume'] },
   ],
   views: [
+    {
+      id: 'storage-concepts',
+      label: 'Core concepts',
+      title: 'Before looking at the mechanics, what actually is a File or an Inode?',
+      question: 'What are the foundational primitives of Linux Storage?',
+      kind: 'concept-primer',
+      concepts: [
+        {
+          term: 'File Descriptor (FD)',
+          analogy: 'A Ticket to Read/Write',
+          definition: 'When a process opens a file, the kernel hands it an integer (like 3 or 4) called a File Descriptor. The process uses this ticket to read or write data. When it closes the file, the ticket is destroyed.'
+        },
+        {
+          term: 'VFS (Virtual File System)',
+          analogy: 'A Universal Translator',
+          definition: 'Linux supports many filesystems (ext4, XFS, NFS). The VFS is a unified abstraction layer. User programs just call read() or write(), and the VFS translates it for the specific underlying disk format.'
+        },
+        {
+          term: 'Inode',
+          analogy: 'A Passport with Metadata',
+          definition: 'A file name is just a string in a directory. The ACTUAL file is an Inode—a data structure storing permissions, ownership, timestamps, and pointers to where the actual data blocks live on the hard drive.'
+        },
+        {
+          term: 'Mount',
+          analogy: 'Grafting a Branch on a Tree',
+          definition: 'Unlike Windows (C:\\, D:\\), Linux has one single directory tree starting at "/". Disks and network drives are "mounted" (attached) as subdirectories (like /mnt/usb) onto that single tree.'
+        }
+      ],
+      explanation: 'Storage in Linux is heavily abstracted to make everything look like a unified tree. A file path (like /var/log/syslog) is just a human-friendly pointer to an Inode. Processes never interact with Inodes or disk blocks directly; they interact with File Descriptors. The kernel handles all the complex translation in the background.',
+      takeaway: 'Paths point to Inodes. Processes hold File Descriptors. The VFS connects them to the raw disk blocks.',
+      command: 'stat -c "Inode: %i" /etc/passwd',
+      output: 'Inode: 131075',
+      probe: 'ls -l /proc/$$/fd',
+      probeOutput: 'lrwx------ 1 root root 64 0 -> /dev/pts/0\nlrwx------ 1 root root 64 1 -> /dev/pts/0',
+      caveat: 'In Linux, "Everything is a file". Hardware devices (/dev/sda), process info (/proc/1/cmdline), and sockets all expose themselves as files that can be opened and assigned a File Descriptor.',
+      source: `${man}man7/inode.7.html`
+    },
     {
       id: 'path',
       label: 'Path lookup',

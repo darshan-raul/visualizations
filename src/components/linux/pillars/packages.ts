@@ -9,10 +9,47 @@ export const packagesPillar: LinuxPillar = {
   hints: 'repos · GPG trust · dpkg/rpm · ld.so · dynamic linking · pinning · systemd',
   bridge: 'Understanding Linux package management directly translates to minimizing container image layers, authoring deterministic Dockerfiles, and patching host CVEs without downtime.',
   groups: [
-    { label: 'Install pipeline', viewIds: ['repository', 'files', 'libraries'] },
+    { label: 'Install pipeline', viewIds: ['packages-concepts', 'repository', 'files', 'libraries'] },
     { label: 'Runtime lifecycle', viewIds: ['service', 'versioning', 'missing'] }
   ],
   views: [
+    {
+      id: 'packages-concepts',
+      label: 'Core concepts',
+      title: 'Before looking at the mechanics, what actually is a Package or a Dependency?',
+      question: 'What are the foundational primitives of Linux Package Management?',
+      kind: 'concept-primer',
+      concepts: [
+        {
+          term: 'Package (.deb / .rpm)',
+          analogy: 'A Zip File with Instructions',
+          definition: 'A package is just a compressed archive of compiled binaries, config files, and a manifest. It also contains "Maintainer Scripts" that run as root before and after extraction.'
+        },
+        {
+          term: 'Dependency',
+          analogy: 'A Prerequisite Course',
+          definition: 'Software relies on other software. If Nginx requires OpenSSL to handle HTTPS, OpenSSL is a dependency. The package manager downloads and installs these automatically.'
+        },
+        {
+          term: 'Repository',
+          analogy: 'An App Store Server',
+          definition: 'A static HTTP server hosting thousands of packages and a cryptographically signed index file (Release/Packages). Your system checks this index to find what is available.'
+        },
+        {
+          term: 'Shared Library (.so)',
+          analogy: 'A Shared Toolshed',
+          definition: 'Instead of every program containing its own copy of common code (like printing text), they use "Shared Objects" (.so files) stored in /usr/lib. Programs link to them at runtime.'
+        }
+      ],
+      explanation: 'Linux software distribution is fundamentally decentralized. You do not download random installers from websites. Instead, your distribution (Ubuntu, RHEL) compiles the software, signs it with a cryptographic key, and hosts it on a Repository. Tools like APT or DNF download these packages, verify the signature, extract the files to standard locations (/usr/bin, /etc), and wire up Systemd services.',
+      takeaway: 'Packages are just verified zip files. The package manager ensures all required dependencies are present before extracting them to the filesystem.',
+      command: 'dpkg -I /var/cache/apt/archives/nginx_1.22.1-9_amd64.deb',
+      output: ' new Debian package, version 2.0.\n Package: nginx\n Version: 1.22.1-9\n Architecture: amd64\n Depends: libc6 (>= 2.34), libpcre3, libssl3, zlib1g\n Description: small, powerful, scalable web/proxy server',
+      probe: 'apt-cache depends nginx | grep "Depends:"',
+      probeOutput: '  Depends: libc6\n  Depends: libcrypt1\n  Depends: libpcre2-8-0\n  Depends: libssl3',
+      caveat: 'Adding random PPA repositories or running "curl | sudo bash" bypasses this entire trust chain, granting unknown third parties root access to your machine.',
+      source: `${debian}apt.html`,
+    },
     {
       id: 'repository',
       label: 'Repository & trust',

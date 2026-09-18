@@ -9,10 +9,47 @@ export const identityPillar: LinuxPillar = {
   hints: 'UID/GID · struct cred · path traversal · sudo · SSH',
   bridge: 'Kubernetes securityContexts (runAsUser, fsGroup, supplementalGroups) inject numeric IDs directly into the kernel task_struct cred structure explored here.',
   groups: [
-    { label: 'Credentials', viewIds: ['account', 'process', 'users-groups'] },
+    { label: 'Credentials', viewIds: ['identity-concepts', 'account', 'process', 'users-groups'] },
     { label: 'Access', viewIds: ['permission', 'deny', 'privilege', 'ssh-auth'] },
   ],
   views: [
+    {
+      id: 'identity-concepts',
+      label: 'Core concepts',
+      title: 'Before looking at the mechanics, what actually is a User or a Group?',
+      question: 'What are the foundational primitives of Linux Identity?',
+      kind: 'concept-primer',
+      concepts: [
+        {
+          term: 'UID (User ID)',
+          analogy: 'A Social Security Number',
+          definition: 'Linux does not care about your username ("nginx"). It only cares about an integer number (e.g. 33). This integer is stamped onto every process and every file to determine who owns what.'
+        },
+        {
+          term: 'GID (Group ID)',
+          analogy: 'A Company Department Badge',
+          definition: 'Another integer. A single UID can belong to multiple GIDs (like belonging to both HR and Engineering). This allows multiple different users to share access to the same files.'
+        },
+        {
+          term: 'NSS (Name Service Switch)',
+          analogy: 'A Phonebook Directory',
+          definition: 'The system that translates human names (like "nginx") into the integer IDs (like 33). It can look up names in local files (/etc/passwd) or over the network (Active Directory).'
+        },
+        {
+          term: 'Mode Bits (Permissions)',
+          analogy: 'Three Locks on a Door',
+          definition: 'Every file has 3 locks: one for the Owner UID, one for the Group GID, and one for Everyone Else. Each lock grants or denies Read, Write, or Execute access.'
+        }
+      ],
+      explanation: 'Identity in Linux fundamentally reduces to two 32-bit integers: a UID and a GID. Everything you do on a Linux system—starting a web server, reading a file, SSHing in—is evaluated mathematically by the kernel comparing your process\'s UID against a file\'s UID. Human names like "root" are just illusions provided by user-space tools for our convenience.',
+      takeaway: 'Strip away the usernames. At the kernel level, you are just an integer UID knocking on a door with a matching integer lock.',
+      command: 'id',
+      output: 'uid=1000(darshan) gid=1000(darshan) groups=1000(darshan),27(sudo)',
+      probe: 'stat -c "%u:%g" /etc/passwd',
+      probeOutput: '0:0',
+      caveat: 'UID 0 is mathematically hardcoded in the kernel to bypass all permission checks. There is no magic to the name "root", only to the number 0.',
+      source: `${man}man7/credentials.7.html`
+    },
     {
       id: 'account',
       label: 'Account lookup',

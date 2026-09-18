@@ -9,10 +9,47 @@ export const processesPillar: LinuxPillar = {
   hints: 'PID · task_struct · signals · FDs · systemd · cgroups',
   bridge: 'Containers are not virtual machines; they are ordinary Linux processes isolated by namespaces and throttled by cgroup controllers under the host kernel.',
   groups: [
-    { label: 'Runtime', viewIds: ['fork', 'tree', 'fds', 'signals'] },
+    { label: 'Runtime', viewIds: ['process-concepts', 'fork', 'tree', 'fds', 'signals'] },
     { label: 'Services', viewIds: ['unit', 'unit-files', 'env-vars', 'failed'] },
   ],
   views: [
+    {
+      id: 'process-concepts',
+      label: 'Core concepts',
+      title: 'Before looking at the mechanics, what actually is a Process?',
+      question: 'What are the foundational primitives of Linux Processes?',
+      kind: 'concept-primer',
+      concepts: [
+        {
+          term: 'Process',
+          analogy: 'A Running Program in a Box',
+          definition: 'A program is just a dead file on disk. When you execute it, the kernel creates a "Process" — a living instance with its own memory, CPU time, and a unique integer ID called a PID.'
+        },
+        {
+          term: 'Thread',
+          analogy: 'Workers Sharing the Same Box',
+          definition: 'A thread is a lightweight execution unit inside a process. Multiple threads share the same memory space, allowing them to collaborate quickly (unlike separate processes).'
+        },
+        {
+          term: 'Fork & Exec',
+          analogy: 'Cloning and Brainwashing',
+          definition: 'Linux creates processes via a two-step dance. "Fork" clones the parent exactly. "Exec" replaces the clone\'s brain with a brand new program.'
+        },
+        {
+          term: 'Signal',
+          analogy: 'A Tap on the Shoulder',
+          definition: 'A primitive way for the OS or other processes to interrupt a running process. For example, SIGKILL tells the process to drop dead immediately, while SIGTERM asks it to shut down gracefully.'
+        }
+      ],
+      explanation: 'Linux views everything that executes as a "task" represented by a massive C structure in the kernel called task_struct. Whether it is a full-blown process or a lightweight thread, the kernel schedules them all fundamentally the same way. The only difference is what resources (like memory) they are told to share.',
+      takeaway: 'A process is an isolated container for execution, while a thread shares resources. Both are managed as "tasks" by the kernel.',
+      command: 'ps -eLF | head -n 3',
+      output: 'UID        PID  PPID   LWP  C NLWP    SZ   RSS PSR STIME TTY          TIME CMD\nroot         1     0     1  0    1 25484  9636   2 10:00 ?        00:00:02 /sbin/init\nroot       132     1   132  0    1 12344  4321   1 10:00 ?        00:00:00 /lib/systemd/systemd-journald',
+      probe: 'cat /proc/$$/status | grep -E "^(Tgid|Pid)"',
+      probeOutput: 'Tgid:   4512\nPid:    4512',
+      caveat: 'The POSIX standard strictly defines "processes" and "threads", but the Linux kernel internally only knows about "tasks". A thread is just a task that shares its virtual memory pointer with another task.',
+      source: `${man}man2/clone.2.html`
+    },
     {
       id: 'fork',
       label: 'Program to PID',
