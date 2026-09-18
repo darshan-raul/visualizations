@@ -58,13 +58,20 @@ nginx:x:9999:9999::/network/nginx:/bin/bash</pre>
         <small>glibc <code>getpwnam()</code></small>
       </div>
       <div class="nss-body">
+        <div class="nss-scenarios">
+          <div class="scenario-label">GUIDED SCENARIOS:</div>
+          <button class="scenario-btn" data-scenario="local">1. Local User (root)</button>
+          <button class="scenario-btn" data-scenario="network">2. Network User (ldap_user)</button>
+          <button class="scenario-btn" data-scenario="conflict">3. The Override Conflict (nginx)</button>
+        </div>
+        
         <div class="lookup-form">
           <input type="text" id={`lookup-input-${id}`} class="lookup-input" value="ldap_user" placeholder="Enter username...">
           <button class="pt-btn" id={`btn-getent-${id}`}>$ getent passwd</button>
         </div>
-        <p style="font-size:11px; margin-top:8px; color:var(--muted)">
-          Try looking up <code>nginx</code>, <code>ldap_user</code>, or <code>root</code>.
-        </p>
+        <div class="nss-explainer-box" id={`nss-explainer-${id}`}>
+          <!-- Populated by JS -->
+        </div>
       </div>
 
       <div class="nss-header" style="border-top: 1px solid var(--border)">
@@ -142,13 +149,21 @@ nginx:x:9999:9999::/network/nginx:/bin/bash</pre>
   .db-content { font-size: 11px; padding: 8px; margin: 0; background: var(--bg-surface); white-space: pre-wrap; word-break: break-all; color: var(--muted); }
   .db-content.highlight-match { background: #1a2f1a; color: #fff; }
 
+  /* Scenarios */
+  .nss-scenarios { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+  .scenario-label { font-size: 11px; font-weight: bold; color: var(--muted); margin-right: 4px; }
+  .scenario-btn { background: var(--bg-surface-hover); border: 1px solid var(--border); color: var(--text-body); padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; transition: all 0.2s; }
+  .scenario-btn:hover { border-color: var(--blue); color: var(--blue); }
+
   /* Lookup */
-  .lookup-form { display: flex; gap: 8px; }
+  .lookup-form { display: flex; gap: 8px; margin-bottom: 12px; }
   .lookup-input { flex: 1; background: var(--bg-code); border: 1px solid var(--border); color: var(--text-body); padding: 8px; border-radius: 4px; font-family: inherit; font-size: 13px; outline: none; }
   .lookup-input:focus { border-color: var(--blue); }
   
   .pt-btn { background: var(--blue-dim); border: 1px solid var(--blue); color: var(--blue); padding: 8px 16px; border-radius: 4px; font-family: inherit; font-size: 12px; font-weight: bold; cursor: pointer; transition: all 0.2s; }
   .pt-btn:hover { background: var(--blue); color: #fff; }
+
+  .nss-explainer-box { background: rgba(30, 144, 255, 0.1); border-left: 3px solid var(--blue); padding: 12px; font-size: 12px; color: var(--text-body); line-height: 1.4; }
 
   .nss-trace { flex: 1; padding: 16px; background: #000; color: #fff; font-size: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
   
@@ -199,17 +214,40 @@ nginx:x:9999:9999::/network/nginx:/bin/bash</pre>
 
       chkFiles?.addEventListener('change', () => { this.data.config.files = chkFiles.checked; this.runLookup(); });
       chkSss?.addEventListener('change', () => { this.data.config.sss = chkSss.checked; this.runLookup(); });
+
+      // Scenarios
+      const scenarioBtns = this.querySelectorAll('.scenario-btn');
+      scenarioBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const s = (e.target as HTMLElement).dataset.scenario;
+          if (s === 'local') {
+            chkFiles.checked = true; chkSss.checked = true;
+            this.data.config.files = true; this.data.config.sss = true;
+            input.value = 'root';
+          } else if (s === 'network') {
+            chkFiles.checked = true; chkSss.checked = true;
+            this.data.config.files = true; this.data.config.sss = true;
+            input.value = 'ldap_user';
+          } else if (s === 'conflict') {
+            chkFiles.checked = true; chkSss.checked = true;
+            this.data.config.files = true; this.data.config.sss = true;
+            input.value = 'nginx';
+          }
+          this.runLookup();
+        });
+      });
     }
 
     runLookup() {
       const input = this.querySelector(`#lookup-input-${this.viewId}`) as HTMLInputElement;
       const trace = this.querySelector(`#nss-trace-${this.viewId}`);
       const result = this.querySelector(`#nss-result-${this.viewId}`);
+      const explainer = this.querySelector(`#nss-explainer-${this.viewId}`);
       
       const dbFiles = this.querySelector(`#db-files-${this.viewId}`);
       const dbSss = this.querySelector(`#db-sss-${this.viewId}`);
       
-      if (!input || !trace || !result || !dbFiles || !dbSss) return;
+      if (!input || !trace || !result || !dbFiles || !dbSss || !explainer) return;
       
       const username = input.value.trim();
       if (!username) return;
@@ -223,6 +261,7 @@ nginx:x:9999:9999::/network/nginx:/bin/bash</pre>
       dbSss.classList.remove('highlight-match');
 
       let foundRecord = null;
+      let foundMod = null;
       let traceLog = [];
 
       // Determine order. By default, files then sss
@@ -232,6 +271,7 @@ nginx:x:9999:9999::/network/nginx:/bin/bash</pre>
 
       if (order.length === 0) {
         traceLog.push(`<div class="trace-step fail"><strong>FATAL:</strong> No modules enabled in /etc/nsswitch.conf!</div>`);
+        explainer.innerHTML = `<strong>Misconfiguration:</strong> Without any NSS modules enabled, Linux cannot resolve ANY users, effectively breaking authentication and file ownership system-wide.`;
       } else {
         traceLog.push(`<div class="trace-step" style="border-color:var(--blue)">glibc getpwnam("${username}") called. NSS Order: [${order.join(', ')}]</div>`);
 
@@ -244,6 +284,7 @@ nginx:x:9999:9999::/network/nginx:/bin/bash</pre>
           if (match) {
             traceLog.push(`<div class="trace-step success">✓ FOUND in <strong>${mod}</strong>! (UID: ${match.uid}) Returning immediately.</div>`);
             foundRecord = match;
+            foundMod = mod;
             if (mod === 'files') dbFiles.classList.add('highlight-match');
             if (mod === 'sss') dbSss.classList.add('highlight-match');
             break; // SUCCESS! Stop querying.
@@ -258,9 +299,22 @@ nginx:x:9999:9999::/network/nginx:/bin/bash</pre>
       if (foundRecord) {
         result.className = 'nss-result found';
         result.innerHTML = `Kernel Credentials Assigned: <strong>UID ${foundRecord.uid}</strong> | Shell: ${foundRecord.shell}`;
+        
+        if (username === 'nginx' && foundMod === 'files') {
+          explainer.innerHTML = `<strong>The Override Conflict:</strong> <code>nginx</code> exists in BOTH the local files and the network AD. Because <code>files</code> is listed first in <code>nsswitch.conf</code>, the local UID 33 wins! Try unchecking "files" to see the network user take over.`;
+        } else if (username === 'nginx' && foundMod === 'sss') {
+          explainer.innerHTML = `<strong>Network Fallback:</strong> With <code>files</code> disabled, the network AD user wins, assigning UID 9999 to <code>nginx</code>. This is why UID mismatches happen across fleets!`;
+        } else if (foundMod === 'files') {
+          explainer.innerHTML = `<strong>Local Hit:</strong> Found <code>${username}</code> immediately in <code>/etc/passwd</code>. No network query was needed.`;
+        } else {
+          explainer.innerHTML = `<strong>Network Fallback:</strong> <code>${username}</code> wasn't found locally, so the kernel seamlessly fell through to the network database. This proves why <code>grep /etc/passwd</code> is dangerous: it completely misses network users!`;
+        }
       } else {
         result.className = 'nss-result not-found';
         result.textContent = `User '${username}' does not exist!`;
+        if (order.length > 0) {
+          explainer.innerHTML = `<strong>Not Found:</strong> The kernel checked all configured modules (${order.join(', ')}) but <code>${username}</code> doesn't exist anywhere.`;
+        }
       }
     }
   }
