@@ -1,0 +1,300 @@
+---
+import TopicConsoleShell from '../TopicConsoleShell.astro';
+import PrometheusCanvas from './PrometheusCanvas.astro';
+import {
+  promViews,
+  promGroups,
+  simulationPresets,
+  promSources
+} from './prometheus-data';
+
+interface Props {
+  published: Date;
+  reviewed?: Date;
+}
+
+const { published, reviewed } = Astro.props;
+const date = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
+const firstLab = promViews[0];
+
+const relatedVisuals = [
+  { label: 'OpenTelemetry Architecture & Tracing', href: '/opentelemetry' },
+  { label: 'Containers, Namespaces & cgroups', href: '/containers' },
+  { label: 'Git Workspaces & Plumbing', href: '/git' },
+  { label: 'Linux OS Observability & VFS', href: '/linux' }
+];
+---
+
+<TopicConsoleShell
+  consoleId="prometheus"
+  className="prom-console"
+  prefix="prom"
+  collectionHref="/devops-sre"
+  collectionLabel="DevOps & SRE"
+  crumbs={[
+    { label: 'Library', href: '/' },
+    { label: 'DevOps & SRE', href: '/devops-sre' },
+    { label: 'Prometheus: Metrics to PromQL' }
+  ]}
+  kicker="DEVOPS & SRE · OBSERVABILITY & TELEMETRY ARCHITECTURE"
+  title="Prometheus: From Metrics to PromQL"
+  summary="Explore a living Prometheus monitoring system over the persistent ACME Shop microservice architecture. Trace metric exposition, target discovery, relabeling pipelines, TSDB Head and WAL internals, PromQL AST evaluation, Alertmanager routing, and live incident triage."
+  referenceLabel="SYSTEM · ACME Shop Microservices"
+  formatLabel="DEEP DIVE · OBSERVABILITY SIMULATOR"
+  dates={`Published ${date.format(published)} · Reviewed ${date.format(reviewed ?? published)}`}
+>
+  <!-- Slot: Concept-Grouped Sidebar Index -->
+  <nav slot="index" class="prom-index" aria-label="Prometheus Learning Map">
+    <details class="prom-index-menu" open>
+      <summary>
+        <span>LEARNING MAP</span>
+        <strong data-prom-view-count>01 / {String(promViews.length).padStart(2, '0')}</strong>
+      </summary>
+
+      {promGroups.map((group, groupIndex) => {
+        const groupViews = promViews.filter((v) => v.group === group.key);
+        return (
+          <details data-prom-index-group={groupIndex} open={groupIndex === 0}>
+            <summary>
+              <strong>{group.label}</strong>
+              <span>{groupViews.length} views</span>
+            </summary>
+            <div>
+              {groupViews.map((view) => {
+                const totalIndex = promViews.indexOf(view);
+                return (
+                  <a
+                    href={`#${view.id}`}
+                    data-prom-view-link={view.id}
+                    aria-current={totalIndex === 0 ? 'page' : undefined}
+                  >
+                    <span>{String(totalIndex + 1).padStart(2, '0')}</span>
+                    <strong>{view.label}</strong>
+                  </a>
+                );
+              })}
+            </div>
+          </details>
+        );
+      })}
+
+      <a class="prom-sources-jump" href="#prom-sources">↗ Authoritative references</a>
+    </details>
+  </nav>
+
+  <!-- Slot: Main Workspace Body -->
+  <main slot="main" class="prom-main">
+    <!-- Persistent Simulation Control Ribbon -->
+    <div class="prom-simulation-ribbon" aria-label="Persistent Prometheus Simulation Controls">
+      <div class="sim-brand-group">
+        <span class="sim-badge">SIMULATION CLOCK</span>
+        <strong data-prom-sim-clock>14:02:15 UTC</strong>
+        <button type="button" class="sim-pause-btn" data-sim-toggle-pause>Pause</button>
+      </div>
+
+      <div class="sim-scenario-group">
+        <label for="sim-scenario-select">SCENARIO PRESET:</label>
+        <select id="sim-scenario-select" class="sim-select" data-sim-scenario>
+          {Object.values(simulationPresets).map((p) => (
+            <option value={p.id}>{p.label}</option>
+          ))}
+        </select>
+      </div>
+
+      <div class="sim-sliders-group">
+        <div class="sim-slider-item">
+          <span>Traffic:</span>
+          <input type="range" min="0.5" max="4.0" step="0.1" value="1.0" class="mini-slider" data-sim-traffic />
+        </div>
+        <div class="sim-slider-item">
+          <span>Errors:</span>
+          <input type="range" min="0.0" max="0.30" step="0.01" value="0.01" class="mini-slider" data-sim-errors />
+        </div>
+        <div class="sim-slider-item">
+          <span>Latency:</span>
+          <input type="range" min="0.5" max="5.0" step="0.2" value="1.0" class="mini-slider" data-sim-latency />
+        </div>
+      </div>
+
+      <div class="sim-stats-group">
+        <span>HEAD SERIES: <strong data-sim-stat-series>480</strong></span>
+        <span>SAMPLES/S: <strong data-sim-stat-samples>1,421</strong></span>
+      </div>
+    </div>
+
+    <!-- 41 Concept Views -->
+    {promViews.map((lab, index) => (
+      <section
+        id={lab.id}
+        class:list={['prom-view', index === 0 && 'is-active']}
+        data-prom-view={lab.id}
+        data-prom-title={lab.title}
+        data-prom-inspector={lab.inspector}
+        data-prom-takeaway={lab.takeaway}
+        data-prom-caveat={lab.caveat}
+        aria-labelledby={`${lab.id}-title`}
+      >
+        <header class="prom-view-head">
+          <span class="prom-view-group">
+            {String(index + 1).padStart(2, '0')} / {lab.group.toUpperCase()}
+          </span>
+          <h2 id={`${lab.id}-title`}>{lab.title}</h2>
+          <p class="prom-view-question">{lab.question}</p>
+        </header>
+
+        <!-- Interactive Canvas for this specific view -->
+        <PrometheusCanvas lab={lab} />
+
+        <!-- Static Reading Copy for Non-JS / SEO -->
+        <div class="prom-static-copy">
+          <p><strong>Core Mental Model:</strong> {lab.takeaway}</p>
+          <p><strong>Operational Boundary:</strong> {lab.caveat}</p>
+          <p class="prom-source-links">
+            {lab.sources.map((url) => (
+              <a href={url} target="_blank" rel="noopener noreferrer">Official reference ↗</a>
+            ))}
+          </p>
+        </div>
+      </section>
+    ))}
+  </main>
+
+  <!-- Slot: Context Inspector -->
+  <aside slot="inspector" class="prom-inspector" aria-live="polite">
+    <span class="inspector-badge">CONTEXT INSPECTOR</span>
+    <h3 data-prom-inspector-title>{firstLab.title}</h3>
+    <p data-prom-inspector-copy>{firstLab.inspector}</p>
+
+    <div class="prom-inspector-step">
+      <span class="step-badge">RUNTIME STATE</span>
+      <strong data-prom-inspector-state>Observability Engine Online</strong>
+      <p data-prom-inspector-operation>Scraping 11 microservice targets every 15 seconds. Pulling HTTP /metrics endpoints across Kubernetes cluster.</p>
+    </div>
+
+    <div class="prom-inspector-config-box">
+      <span class="config-label">ACTIVE CONFIGURATION / QUERY</span>
+      <pre class="inspector-code" data-prom-inspector-config>scrape_configs:
+  - job_name: 'acme-shop'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['checkout-1:8080', 'checkout-2:8080', 'checkout-3:8080']</pre>
+    </div>
+
+    <div class="prom-inspector-caveat-box">
+      <span class="caveat-label">OPERATIONAL CAVEAT</span>
+      <p class="prom-inspector-caveat" data-prom-inspector-caveat>{firstLab.caveat}</p>
+    </div>
+
+    <div class="prom-inspector-metrics-box">
+      <span class="metrics-label">RELATED EXPOSED METRICS</span>
+      <ul class="inspector-metric-list" data-prom-inspector-metrics>
+        <li><code>up&#123;job="acme-shop"&#125;</code></li>
+        <li><code>http_requests_total&#123;service="checkout"&#125;</code></li>
+        <li><code>scrape_duration_seconds</code></li>
+      </ul>
+    </div>
+  </aside>
+
+  <!-- Slot: Bottom Tray -->
+  <div slot="bottom" class="prom-bottom">
+    <!-- Bottom Drawer (PromQL / Terminal / Events) -->
+    <div class="prom-bottom-drawer" data-bottom-drawer>
+      <div class="drawer-tabs" role="tablist">
+        <button type="button" class="drawer-tab is-active" data-drawer-tab="promql">&gt; PROMQL EVALUATOR</button>
+        <button type="button" class="drawer-tab" data-drawer-tab="terminal">&gt; LINUX CLI TERMINAL</button>
+        <button type="button" class="drawer-tab" data-drawer-tab="events">&gt; EVENT STREAM</button>
+      </div>
+
+      <!-- PromQL Evaluator Tab Content -->
+      <div class="drawer-tab-content is-active" data-drawer-content="promql">
+        <div class="drawer-promql-bar">
+          <div class="drawer-promql-input-wrap">
+            <span class="term-sym">promql&gt;</span>
+            <input type="text" class="drawer-query-input" value="rate(http_requests_total{service='checkout'}[5m])" data-drawer-query-input placeholder="Enter PromQL query expression..." />
+          </div>
+          <button type="button" class="action-btn run-btn" data-drawer-query-run>EXECUTE</button>
+        </div>
+        <div class="drawer-promql-output" data-drawer-query-output>
+          <div class="output-series-item">
+            <code>http_requests_total&#123;service="checkout", instance="checkout-1"&#125;</code>
+            <strong>46.8 req/s</strong>
+          </div>
+          <div class="output-series-item">
+            <code>http_requests_total&#123;service="checkout", instance="checkout-2"&#125;</code>
+            <strong>48.2 req/s</strong>
+          </div>
+          <div class="output-series-item">
+            <code>http_requests_total&#123;service="checkout", instance="checkout-3"&#125;</code>
+            <strong>45.0 req/s</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Terminal Tab Content -->
+      <div class="drawer-tab-content" data-drawer-content="terminal">
+        <div class="terminal-view" data-term-view>
+          <div class="term-history" data-term-history>
+            <div class="term-line">Welcome to the ACME Shop Prometheus Diagnostic Terminal.</div>
+            <div class="term-line">Type <code>help</code> to list available operational commands.</div>
+          </div>
+          <div class="term-prompt-line">
+            <span class="term-user">sre@acme-bastion:~$</span>
+            <input type="text" class="term-input" data-term-input placeholder="curl http://checkout-3:8080/metrics" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Event Stream Tab Content -->
+      <div class="drawer-tab-content" data-drawer-content="events">
+        <div class="events-log-view" data-events-log>
+          <div class="event-item"><span>14:02:00</span> [SCRAPE] Pulled 11 targets in 24.1ms. 1,421 samples ingested.</div>
+          <div class="event-item"><span>14:02:15</span> [SCRAPE] Pulled 11 targets in 22.8ms. 1,421 samples ingested.</div>
+          <div class="event-item highlight"><span>14:02:15</span> [RULE] Evaluated group "acme-rates": service:http_requests:rate5m (1.2ms)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Takeaway and Navigation -->
+    <div class="prom-bottom-takeaway">
+      <span>TAKEAWAY</span>
+      <p data-prom-bottom-takeaway>{firstLab.takeaway}</p>
+    </div>
+
+    <nav class="prom-view-sequence" aria-label="Laboratory sequence navigation">
+      <button type="button" data-prom-view-prev aria-label="Previous laboratory">&larr; Previous</button>
+      <span data-prom-view-counter>01 / {String(promViews.length).padStart(2, '0')}</span>
+      <button type="button" data-prom-view-next aria-label="Next laboratory">Next &rarr;</button>
+    </nav>
+
+    <div class="prom-bottom-related">
+      <span>RELATED VISUALS</span>
+      {relatedVisuals.map((item) => (
+        <a href={item.href}>{item.label} ↗</a>
+      ))}
+    </div>
+
+    <details class="prom-bottom-sources" id="prom-sources">
+      <summary>
+        <strong>Authoritative Sources & Specifications</strong>
+        <span>Official Prometheus documentation and architecture specifications</span>
+      </summary>
+      <ul>
+        {promSources.map((source) => (
+          <li>
+            <a href={source.url} target="_blank" rel="noopener noreferrer">{source.label} ↗</a>
+          </li>
+        ))}
+      </ul>
+    </details>
+
+    <div class="prom-bottom-foot">
+      <span>Infra, Illustrated. · Visual deep dives into cloud infrastructure.</span>
+      <a href="/devops-sre">Back to DevOps & SRE collection</a>
+    </div>
+  </div>
+</TopicConsoleShell>
+
+<script>
+  import { initPromConsoles } from './prometheus-client';
+  initPromConsoles();
+</script>

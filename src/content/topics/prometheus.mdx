@@ -1,0 +1,42 @@
+---
+title: "Prometheus: From Metrics to PromQL"
+summary: "Explore a living Prometheus monitoring system over the ACME Shop production architecture. Step through scraping, relabeling, TSDB Head and WAL internals, PromQL transformations, Alertmanager routing, and production incident response."
+slug: prometheus
+collection: devops-sre
+tags: [Prometheus, PromQL, Observability, Metrics, TSDB, Alertmanager, SRE, Monitoring]
+technologies: [Prometheus, PromQL, Alertmanager, Kubernetes, Linux, Grafana, OpenTelemetry]
+format: deep-dive
+difficulty: intermediate
+published: 2026-09-19
+reviewed: 2026-09-19
+versionScope: Prometheus 3.8+ architecture, TSDB storage engine, native histograms, PromQL RE2 syntax, and Alertmanager routing verified on 2026-09-19
+legacyPath: /prometheus
+featured: true
+state: reviewed
+related: [opentelemetry, containers, linux]
+sources:
+  - label: "Prometheus Documentation: Overview & Architecture"
+    url: https://prometheus.io/docs/introduction/overview/
+  - label: "Prometheus Data Model & Time Series Identity"
+    url: https://prometheus.io/docs/concepts/data_model/
+  - label: "Prometheus Metric Types: Counter, Gauge, Histogram, Summary"
+    url: https://prometheus.io/docs/concepts/metric_types/
+  - label: "Prometheus Scrape Configuration & Relabeling"
+    url: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config
+  - label: "Prometheus TSDB Storage & In-Memory Head Architecture"
+    url: https://prometheus.io/docs/prometheus/latest/storage/
+  - label: "PromQL Query Language: Basics, Operators, Functions"
+    url: https://prometheus.io/docs/prometheus/latest/querying/basics/
+  - label: "Prometheus Recording Rules & Query Precomputation"
+    url: https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/
+  - label: "Prometheus Alerting Rules & State Evaluation"
+    url: https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/
+  - label: "Alertmanager Configuration: Routing, Silences, and Inhibition"
+    url: https://prometheus.io/docs/alerting/latest/configuration/
+  - label: "Prometheus Operator Architecture & CRD Specifications"
+    url: https://prometheus-operator.dev/docs/operator/architecture/
+---
+
+import PrometheusConsole from '../../components/prometheus/PrometheusConsole.astro';
+
+<PrometheusConsole published={props.published} reviewed={props.reviewed} />
