@@ -1,0 +1,195 @@
+---
+import TopicConsoleShell from '../TopicConsoleShell.astro';
+import GitWorkspace from './GitWorkspace.astro';
+import { gitViews, gitGroups, gitRelated } from './git-data';
+
+interface Props {
+  published: Date;
+  reviewed?: Date;
+}
+
+const { published, reviewed } = Astro.props;
+const date = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
+const firstLab = gitViews[0];
+
+const allSources = [
+  { label: 'Git SCM: git-worktree Documentation', url: 'https://git-scm.com/docs/git-worktree' },
+  { label: 'Git SCM: git-status Documentation', url: 'https://git-scm.com/docs/git-status' },
+  { label: 'Git SCM: git-rev-parse Documentation', url: 'https://git-scm.com/docs/git-rev-parse' },
+  { label: 'Git Book: Git Internals - Plumbing and Porcelain', url: 'https://git-scm.com/book/en/v2/Git-Internals-Plumbing-and-Porcelain' },
+  { label: 'Git SCM: git-reflog Documentation', url: 'https://git-scm.com/docs/git-reflog' },
+  { label: 'Git SCM: git-reset Documentation', url: 'https://git-scm.com/docs/git-reset' },
+  { label: 'Git SCM: git-fsck Documentation', url: 'https://git-scm.com/docs/git-fsck' },
+  { label: 'Git SCM: git-gc Documentation', url: 'https://git-scm.com/docs/git-gc' }
+];
+---
+
+<TopicConsoleShell
+  consoleId="git"
+  className="git-console"
+  prefix="git"
+  collectionHref="/devops-sre"
+  collectionLabel="DevOps & SRE"
+  crumbs={[
+    { label: 'Library', href: '/' },
+    { label: 'DevOps & SRE', href: '/devops-sre' },
+    { label: 'Git Workspaces' }
+  ]}
+  kicker="DEVOPS & SRE · DEVELOPER WORKSPACES"
+  title="Git: From Working Tree to Worktrees and Plumbing"
+  summary="Explore Git through a live developer workspace. Step through index staging, object hashes, branching, rebase, three-stage conflict resolution, multi-directory worktrees, and low-level plumbing."
+  referenceLabel="ONE REPO · infra-platform"
+  formatLabel="DEEP DIVE · WORKSPACE SIMULATION"
+  dates={`Published ${date.format(published)} · Reviewed ${date.format(reviewed ?? published)}`}
+>
+  <!-- Slot: Concept-Grouped Sidebar Index -->
+  <nav slot="index" class="git-index" aria-label="Git Laboratories index">
+    <details class="git-index-menu" open>
+      <summary>
+        <span>EXPLORE LABS</span>
+        <strong data-git-view-count>01 / {String(gitViews.length).padStart(2, '0')}</strong>
+      </summary>
+
+      {gitGroups.map((group, groupIndex) => {
+        const groupViews = gitViews.filter((v) => v.group === group);
+        return (
+          <details data-git-index-group={groupIndex} open={groupIndex === 0}>
+            <summary>
+              <strong>{group}</strong>
+              <span>{groupViews.length} labs</span>
+            </summary>
+            <div>
+              {groupViews.map((view) => {
+                const totalIndex = gitViews.indexOf(view);
+                return (
+                  <a
+                    href={`#${view.id}`}
+                    data-git-view-link={view.id}
+                    aria-current={totalIndex === 0 ? 'page' : undefined}
+                  >
+                    <span>{String(totalIndex + 1).padStart(2, '0')}</span>
+                    <strong>{view.label}</strong>
+                  </a>
+                );
+              })}
+            </div>
+          </details>
+        );
+      })}
+
+      <a class="git-sources-jump" href="#git-sources">↗ Primary sources</a>
+    </details>
+  </nav>
+
+  <!-- Slot: Main Workspace Body -->
+  <main slot="main" class="git-main">
+    <!-- Persistent Scenario Ribbon -->
+    <div class="git-scenario-ribbon" aria-label="Persistent workspace scenario context">
+      <span>SCENARIO</span>
+      <strong data-git-scenario-repo>~/repos/infra-platform (feature/cache)</strong>
+      <div>
+        <span>ACTIVE REF <b data-git-scenario-branch>feature/cache</b></span>
+        <span>WORKING PATH <b data-git-scenario-path>app/deployment.yaml</b></span>
+      </div>
+    </div>
+
+    <!-- 12 Concept Views -->
+    {gitViews.map((lab, index) => (
+      <section
+        id={lab.id}
+        class:list={['git-view', index === 0 && 'is-active']}
+        data-git-view={lab.id}
+        data-git-title={lab.title}
+        data-git-inspector={lab.inspector}
+        data-git-takeaway={lab.takeaway}
+        data-git-caveat={lab.caveat}
+        aria-labelledby={`${lab.id}-title`}
+      >
+        <header class="git-view-head">
+          <span class="git-view-group">
+            {String(index + 1).padStart(2, '0')} / {lab.group.toUpperCase()}
+          </span>
+          <h2 id={`${lab.id}-title`}>{lab.title}</h2>
+          <p class="git-view-question">{lab.question}</p>
+        </header>
+
+        <!-- Developer Workspace Simulation -->
+        <GitWorkspace lab={lab} />
+
+        <!-- Static Reading Copy for Non-JS / SEO -->
+        <div class="git-static-copy">
+          <p><strong>Core Mental Model:</strong> {lab.takeaway}</p>
+          <p><strong>Operational Boundary:</strong> {lab.caveat}</p>
+          <p class="git-source-links">
+            {lab.sources.map((url) => (
+              <a href={url} target="_blank" rel="noopener noreferrer">Primary reference ↗</a>
+            ))}
+          </p>
+        </div>
+      </section>
+    ))}
+  </main>
+
+  <!-- Slot: Context Inspector -->
+  <aside slot="inspector" class="git-inspector" aria-live="polite">
+    <span class="inspector-badge">CONTEXT INSPECTOR</span>
+    <h2 data-git-inspector-title>{firstLab.title}</h2>
+    <p data-git-inspector-copy>{firstLab.inspector}</p>
+
+    <div class="git-inspector-step">
+      <span class="step-badge">CURRENT OPERATION</span>
+      <strong data-git-inspector-state>Workspace Initialized</strong>
+      <p data-git-inspector-operation>Choose any command button in the workspace to execute Git actions and observe state transitions.</p>
+    </div>
+
+    <div class="git-inspector-caveat-box">
+      <span class="caveat-label">OPERATIONAL CAVEAT</span>
+      <p class="git-inspector-caveat" data-git-inspector-caveat>{firstLab.caveat}</p>
+    </div>
+  </aside>
+
+  <!-- Slot: Bottom Tray -->
+  <div slot="bottom" class="git-bottom">
+    <div class="git-bottom-takeaway">
+      <span>TAKEAWAY</span>
+      <p data-git-bottom-takeaway>{firstLab.takeaway}</p>
+    </div>
+
+    <nav class="git-view-sequence" aria-label="Laboratory sequence navigation">
+      <button type="button" data-git-view-prev aria-label="Previous laboratory">&larr; Previous</button>
+      <span data-git-view-counter>01 / {String(gitViews.length).padStart(2, '0')}</span>
+      <button type="button" data-git-view-next aria-label="Next laboratory">Next &rarr;</button>
+    </nav>
+
+    <div class="git-bottom-related">
+      <span>RELATED VISUALS</span>
+      {gitRelated.map((item) => (
+        <a href={item.href}>{item.label} ↗</a>
+      ))}
+    </div>
+
+    <details class="git-bottom-sources" id="git-sources">
+      <summary>
+        <strong>Authoritative Sources</strong>
+        <span>Official git-scm documentation and specifications</span>
+      </summary>
+      <ul>
+        {allSources.map((source) => (
+          <li>
+            <a href={source.url} target="_blank" rel="noopener noreferrer">{source.label} ↗</a>
+          </li>
+        ))}
+      </ul>
+    </details>
+
+    <div class="git-bottom-foot">
+      <span>Infra, Illustrated. · Visual deep dives into cloud infrastructure.</span>
+      <a href="/devops-sre">Back to DevOps & SRE collection</a>
+    </div>
+  </div>
+</TopicConsoleShell>
+
+<script>
+  import { initGitConsoles } from './git-client';
+  initGitConsoles();
+</script>

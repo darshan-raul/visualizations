@@ -1,0 +1,1444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Git: From Working Tree to Worktrees and Plumbing · Approval Prototype</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #090c13;
+      --surface: #0f141e;
+      --surface-raised: #141b28;
+      --border: rgba(226, 232, 255, 0.09);
+      --border-strong: rgba(226, 232, 255, 0.17);
+      --text: #f2f5fc;
+      --muted: #97a3b8;
+      --dim: #8592a8;
+      --blue: #68a3ff;
+      --cyan: #42d6e8;
+      --green: #49d6a3;
+      --amber: #f6c763;
+      --red: #fb7e85;
+      --purple: #b79aff;
+      --sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+      --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      -webkit-font-smoothing: antialiased;
+      padding: 16px;
+    }
+
+    /* Masthead Prototype Bar */
+    .proto-masthead {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 20px;
+      background: rgba(10, 17, 27, 0.85);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 16px;
+      font: 0.78rem var(--mono);
+    }
+    .proto-badge {
+      background: rgba(66, 214, 232, 0.15);
+      color: var(--cyan);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+    .proto-links a {
+      color: var(--muted);
+      text-decoration: none;
+      margin-left: 16px;
+      transition: color 0.15s;
+    }
+    .proto-links a:hover { color: var(--cyan); }
+
+    /* Console Shell */
+    .git-console {
+      max-width: 1560px;
+      margin: 0 auto;
+      border: 1px solid var(--border-strong);
+      border-radius: 16px;
+      background: #0b111b;
+      overflow: clip;
+      box-shadow: 0 24px 80px rgba(0, 4, 12, 0.4);
+    }
+
+    .git-console-head {
+      padding: 24px 28px 20px;
+      border-bottom: 1px solid var(--border-strong);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 30px;
+    }
+    .git-crumb {
+      color: var(--muted);
+      font: 0.73rem var(--mono);
+      display: flex;
+      gap: 8px;
+    }
+    .git-kicker {
+      display: block;
+      margin-top: 16px;
+      color: var(--cyan);
+      font: 0.69rem var(--mono);
+      letter-spacing: 0.14em;
+    }
+    .git-console-head h1 {
+      margin: 6px 0 8px;
+      font-size: clamp(1.8rem, 3vw, 2.8rem);
+      letter-spacing: -0.04em;
+    }
+    .git-console-head p {
+      margin: 0;
+      color: var(--muted);
+      max-width: 780px;
+      line-height: 1.5;
+    }
+    .git-head-context {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      justify-content: flex-end;
+      font: 0.68rem var(--mono);
+      color: var(--muted);
+      gap: 5px;
+    }
+    .git-head-context span:first-child { color: var(--cyan); }
+
+    /* Grid Layout */
+    .git-console-grid {
+      display: grid;
+      grid-template-columns: 220px minmax(0, 1fr);
+      min-height: 650px;
+    }
+
+    /* Sidebar Index */
+    .git-index {
+      background: #0d1a27;
+      border-right: 1px solid var(--border-strong);
+      padding: 12px 10px;
+    }
+    .git-index details {
+      border-top: 1px solid var(--border);
+    }
+    .git-index details > summary {
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 8px;
+      font-size: 0.84rem;
+      font-weight: 600;
+    }
+    .git-index details > summary span {
+      color: var(--dim);
+      font: 0.68rem var(--mono);
+    }
+    .git-index a {
+      display: grid;
+      grid-template-columns: 24px minmax(0, 1fr);
+      align-items: center;
+      gap: 6px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.82rem;
+      margin-bottom: 2px;
+    }
+    .git-index a:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+    }
+    .git-index a.is-active {
+      color: var(--cyan);
+      background: rgba(66, 214, 232, 0.1);
+      border: 1px solid rgba(66, 214, 232, 0.35);
+    }
+
+    /* Main Area */
+    .git-main {
+      min-width: 0;
+    }
+    .git-scenario-ribbon {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 22px;
+      background: #102231;
+      border-bottom: 1px solid var(--border-strong);
+      font: 0.72rem var(--mono);
+    }
+    .git-scenario-ribbon > span { color: var(--cyan); letter-spacing: 0.08em; }
+    .git-scenario-ribbon strong { color: var(--text); font-size: 0.88rem; }
+    .git-scenario-ribbon div { color: var(--muted); display: flex; gap: 14px; }
+    .git-scenario-ribbon b { color: var(--text); }
+
+    .git-view {
+      display: none;
+      padding: 22px 26px 28px;
+    }
+    .git-view.is-active {
+      display: block;
+    }
+    .git-view-head {
+      margin-bottom: 18px;
+    }
+    .git-view-group {
+      color: var(--cyan);
+      font: 0.69rem var(--mono);
+      letter-spacing: 0.1em;
+    }
+    .git-view-head h2 {
+      margin: 4px 0 6px;
+      font-size: 1.8rem;
+    }
+    .git-view-question {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    /* Workspace Simulation */
+    .git-workspace {
+      background: #090e17;
+      border: 1px solid #23354a;
+      border-radius: 12px;
+      overflow: hidden;
+    .workspace-topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 16px;
+      background: #0d1624;
+      border-bottom: 1px solid #23354a;
+      font: 0.72rem var(--mono);
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .workspace-identity { display: flex; align-items: center; gap: 8px; }
+    .workspace-badge {
+      background: rgba(66, 214, 232, 0.15);
+      border: 1px solid rgba(66, 214, 232, 0.4);
+      color: var(--cyan);
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+    .workspace-repo { color: #f2f5fc; font-weight: 700; }
+    .workspace-path { color: var(--dim); }
+    .workspace-branch { color: #49d6a3; background: rgba(73, 214, 163, 0.1); padding: 2px 6px; border-radius: 3px; }
+
+    .workspace-mode-switcher {
+      display: flex;
+      gap: 4px;
+      background: #080d16;
+      padding: 3px 6px;
+      border: 1px solid #1c2c3e;
+      border-radius: 7px;
+    }
+    .mode-btn {
+      padding: 4px 10px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--muted);
+      font: 0.72rem var(--mono);
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .mode-btn.is-active { background: #15273b; border-color: #2b4562; color: #f2f5fc; }
+    .mode-btn[data-proto-mode="xray"].is-active { background: rgba(66, 214, 232, 0.15); border-color: var(--cyan); color: var(--cyan); }
+    .mode-btn[data-proto-mode="plumbing"].is-active { background: rgba(246, 199, 99, 0.15); border-color: var(--amber); color: var(--amber); }
+
+    .workspace-body,
+    .workspace-body-3col {
+      display: grid;
+      grid-template-columns: 210px minmax(320px, 1fr) 260px;
+      min-height: 380px;
+      border-bottom: 1px solid #23354a;
+    }
+    .workspace-explorer,
+    .workspace-col-fs {
+      background: #080d16;
+      border-right: 1px solid #23354a;
+      padding: 12px;
+    }
+    .workspace-col-term {
+      background: #060a11;
+      border-right: 1px solid #23354a;
+      display: flex;
+      flex-direction: column;
+    }
+    .workspace-col-internals {
+      background: #090f19;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow-y: auto;
+      max-height: 480px;
+    }
+    .internals-chain { display: flex; flex-direction: column; gap: 6px; }
+    .internals-card {
+      background: #0e1726;
+      border: 1px solid #23354a;
+      border-radius: 6px;
+      padding: 6px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .internals-card .card-tag { font: 0.58rem var(--mono); color: var(--dim); }
+    .internals-card .card-val { font: 0.76rem var(--mono); color: var(--text); word-break: break-all; }
+    .internals-card .card-sub, .internals-card .card-msg { margin: 0; font: 0.65rem var(--mono); color: var(--muted); }
+    .internals-card.card-head { border-left: 3px solid var(--cyan); }
+    .internals-card.card-ref { border-left: 3px solid #68a3ff; }
+    .internals-card.card-commit { border-left: 3px solid var(--green); }
+    .internals-card.card-tree { border-left: 3px solid #8fe7ff; }
+    .internals-card.card-blob { border-left: 3px solid var(--amber); }
+
+    .xray-insight-box {
+      background: rgba(66, 214, 232, 0.08);
+      border: 1px solid rgba(66, 214, 232, 0.35);
+      border-radius: 6px;
+      padding: 8px 10px;
+    }
+    .xray-box-tag { color: var(--cyan); font: 0.62rem var(--mono); font-weight: 700; }
+    .xray-box-text { margin: 4px 0 0; font: 0.7rem var(--mono); color: #e2f4fb; }
+
+    .plumbing-insight-box {
+      background: rgba(246, 199, 99, 0.08);
+      border: 1px solid rgba(246, 199, 99, 0.35);
+      border-radius: 6px;
+      padding: 8px 10px;
+    }
+    .plumbing-box-tag { color: var(--amber); font: 0.62rem var(--mono); font-weight: 700; }
+    .plumbing-box-cmd { background: #080d15; border: 1px solid rgba(246, 199, 99, 0.25); padding: 3px 6px; border-radius: 4px; color: var(--amber); font: 0.7rem var(--mono); display: block; margin-top: 4px; word-break: break-all; }
+
+    .explorer-head, .col-head {
+      display: flex;
+      justify-content: space-between;
+      padding-bottom: 8px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid rgba(226, 232, 255, 0.08);
+      font: 0.68rem var(--mono);
+      color: var(--dim);
+    }
+    .file-tree {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .file-tree-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 8px;
+      padding-left: calc(8px + var(--depth, 0) * 14px);
+      border-radius: 5px;
+      font: 0.76rem var(--mono);
+      color: var(--muted);
+    }
+    .file-tree-item.is-highlighted {
+      background: rgba(66, 214, 232, 0.1);
+      color: var(--text);
+      border-left: 2px solid var(--cyan);
+    }
+    .file-badge {
+      margin-left: auto;
+      font: 0.65rem var(--mono);
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .badge-m { background: rgba(246, 199, 99, 0.2); color: var(--amber); border: 1px solid rgba(246, 199, 99, 0.5); }
+    .badge-a { background: rgba(73, 214, 163, 0.2); color: var(--green); border: 1px solid rgba(73, 214, 163, 0.5); }
+    .badge-mm { background: rgba(183, 154, 255, 0.25); color: var(--purple); border: 1px solid rgba(183, 154, 255, 0.6); }
+    .badge-uu { background: rgba(251, 126, 133, 0.25); color: var(--red); border: 1px solid rgba(251, 126, 133, 0.7); }
+
+    .workspace-terminal {
+      background: #060a11;
+      display: flex;
+      flex-direction: column;
+    }
+    .terminal-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 14px;
+      background: #090f18;
+      border-bottom: 1px solid #1c2b3d;
+      font: 0.68rem var(--mono);
+      color: var(--dim);
+    }
+    .terminal-dots { display: flex; gap: 5px; }
+    .terminal-dots span { width: 9px; height: 9px; border-radius: 50%; background: #475a72; }
+    .terminal-window {
+      flex: 1;
+      padding: 14px 18px;
+      overflow-y: auto;
+      max-height: 280px;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
+    .term-prompt { color: #49d6a3; font-weight: 600; }
+    .term-cmd { color: #f2f5fc; font-weight: 600; }
+    .term-comment { color: #647b95; }
+    .terminal-output {
+      margin: 6px 0 14px 12px;
+      padding-left: 10px;
+      border-left: 1px dashed #24364c;
+      color: #97a3b8;
+    }
+    .terminal-output pre { margin: 0; white-space: pre-wrap; word-break: break-all; }
+    .terminal-cli-form {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      padding-top: 6px;
+      border-top: 1px solid #1a293d;
+      cursor: text;
+    }
+    .terminal-cli-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #f2f5fc;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      padding: 2px 0;
+      caret-color: #42d6e8;
+    }
+
+    /* Action Rail */
+    .workspace-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: #0d1726;
+      border-bottom: 1px solid #23354a;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .action-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+    .git-act-btn {
+      padding: 7px 12px;
+      border: 1px solid #2f435a;
+      background: #122033;
+      color: var(--text);
+      border-radius: 6px;
+      font: 0.74rem var(--mono);
+      cursor: pointer;
+    }
+    .git-act-btn:hover { border-color: var(--cyan); background: #172a43; }
+    .git-act-btn.is-active {
+      border-color: var(--cyan);
+      background: #173d57;
+      color: var(--cyan);
+    }
+    .action-stepper button {
+      padding: 6px 12px;
+      background: #132235;
+      border: 1px solid #2f435a;
+      color: var(--muted);
+      border-radius: 6px;
+      font: 0.72rem var(--mono);
+      cursor: pointer;
+    }
+    .action-stepper button:hover { border-color: var(--cyan); color: var(--text); }
+
+    /* State Shelf */
+    .state-shelf {
+      padding: 14px 16px;
+      background: #0a111c;
+      border-bottom: 1px solid #23354a;
+    }
+    .shelf-tag { display: block; color: var(--cyan); font: 0.64rem var(--mono); letter-spacing: 0.1em; margin-bottom: 10px; }
+    .shelf-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .shelf-cell {
+      background: #0f1828;
+      border: 1px solid #26384d;
+      border-radius: 8px;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .cell-label { color: var(--dim); font: 0.65rem var(--mono); text-transform: uppercase; }
+    .cell-value { color: var(--text); font: 0.88rem var(--mono); word-break: break-all; }
+    .cell-detail { color: var(--muted); font: 0.68rem var(--mono); }
+    .shelf-cell.badge-changed { border-color: var(--cyan); background: rgba(66, 214, 232, 0.08); }
+    .shelf-cell.badge-success { border-color: var(--green); background: rgba(73, 214, 163, 0.08); }
+    .shelf-cell.badge-warning { border-color: var(--amber); background: rgba(246, 199, 99, 0.08); }
+
+    /* Supporting Graph */
+    .supporting-graph {
+      padding: 14px 16px;
+      background: #070c14;
+    }
+    .graph-head {
+      display: flex;
+      justify-content: space-between;
+      font: 0.65rem var(--mono);
+      color: var(--dim);
+      margin-bottom: 8px;
+    }
+    .graph-head span:last-child { color: var(--cyan); }
+    .graph-svg {
+      width: 100%;
+      max-width: 900px;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+    }
+
+    /* Bottom Shelf */
+    .git-bottom {
+      border-top: 1px solid var(--border-strong);
+      background: #0c1824;
+      padding: 18px 26px;
+      font: 0.75rem var(--mono);
+    }
+    .git-bottom-takeaway {
+      display: grid;
+      grid-template-columns: 100px minmax(0, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .git-bottom-takeaway span { color: var(--cyan); font-weight: 700; }
+    .git-bottom-takeaway p { margin: 0; font-family: var(--sans); font-size: 0.95rem; color: var(--text); }
+  </style>
+</head>
+<body>
+
+  <!-- Masthead Prototype Bar -->
+  <header class="proto-masthead">
+    <div>
+      <span class="proto-badge">APPROVAL PROTOTYPE</span>
+      <span>Topic: Git (Fundamentals, Operations, Worktrees, Plumbing)</span>
+    </div>
+    <nav class="proto-links">
+      <a href="/git" target="_blank">Published Route ↗</a>
+      <a href="/visualizations" target="_blank">All Visualizations ↗</a>
+    </nav>
+  </header>
+
+  <!-- Console Shell -->
+  <article class="git-console">
+    <!-- Header -->
+    <header class="git-console-head">
+      <div>
+        <nav class="git-crumb">
+          <span>Library</span> / <span>DevOps & SRE</span> / <span style="color: var(--text);">Git Workspaces</span>
+        </nav>
+        <span class="git-kicker">DEVOPS & SRE · DEVELOPER WORKSPACES</span>
+        <h1>Git: From Working Tree to Worktrees and Plumbing</h1>
+        <p>Explore Git through a live developer workspace. Step through index staging, object hashes, branching, rebase, three-stage conflict resolution, multi-directory worktrees, and low-level plumbing.</p>
+      </div>
+      <div class="git-head-context">
+        <span>ONE REPO · infra-platform</span>
+        <span>DEEP DIVE · WORKSPACE SIMULATION</span>
+        <span>Published Sep 19, 2026 · Reviewed Sep 19, 2026</span>
+      </div>
+    </header>
+
+    <!-- Grid -->
+    <div class="git-console-grid">
+      <!-- Sidebar Index -->
+      <nav class="git-index">
+        <details open>
+          <summary><strong>Foundations: Inside .git</strong><span>3 labs</span></summary>
+          <div>
+            <a href="#where-is-git" class="is-active" data-nav-idx="0"><span>01</span><strong>Where is Git?</strong></a>
+            <a href="#what-git-add-does" data-nav-idx="1"><span>02</span><strong>What git add Does</strong></a>
+            <a href="#what-git-commit-creates" data-nav-idx="2"><span>03</span><strong>What git commit Creates</strong></a>
+          </div>
+        </details>
+        <details>
+          <summary><strong>Navigation & References</strong><span>3 labs</span></summary>
+          <div>
+            <a href="#branches-are-references" data-nav-idx="3"><span>04</span><strong>Branches Are References</strong></a>
+            <a href="#head-pointer-and-detached-head" data-nav-idx="4"><span>05</span><strong>HEAD & Detached HEAD</strong></a>
+            <a href="#checkout-switch-rebuilding-workspace" data-nav-idx="5"><span>06</span><strong>Checkout & Switch</strong></a>
+          </div>
+        </details>
+        <details>
+          <summary><strong>Branch Surgery & Recovery</strong><span>3 labs</span></summary>
+          <div>
+            <a href="#merge-vs-rebase-graph-surgery" data-nav-idx="6"><span>07</span><strong>Merge vs Rebase</strong></a>
+            <a href="#reset-restore-revert" data-nav-idx="7"><span>08</span><strong>Reset, Restore, Revert</strong></a>
+            <a href="#merge-conflicts-three-stage-index" data-nav-idx="8"><span>09</span><strong>Merge Conflicts</strong></a>
+          </div>
+        </details>
+        <details>
+          <summary><strong>Worktrees & Plumbing</strong><span>1 lab</span></summary>
+          <div>
+            <a href="#worktrees-reflog-and-plumbing" data-nav-idx="9"><span>10</span><strong>Worktrees & Plumbing</strong></a>
+          </div>
+        </details>
+      </nav>
+
+      <!-- Main Content -->
+      <main class="git-main">
+        <!-- Scenario Ribbon -->
+        <div class="git-scenario-ribbon">
+          <span>SCENARIO</span>
+          <strong id="proto-scenario-repo">~/repos/infra-platform (main)</strong>
+          <div>
+            <span>ACTIVE REF <b id="proto-scenario-branch">main</b></span>
+            <span>WORKING PATH <b id="proto-scenario-path">.git/</b></span>
+          </div>
+        </div>
+
+        <!-- View Section (Active View Container) -->
+        <section class="git-view is-active" id="proto-active-view">
+          <header class="git-view-head">
+            <span class="git-view-group" id="proto-view-group">01 / FOUNDATIONS: INSIDE .GIT</span>
+            <h2 id="proto-view-title">Level 1: Where Did Git Put Everything?</h2>
+            <p class="git-view-question" id="proto-view-question">When you run git init, where does Git actually live and how does it track your files?</p>
+          </header>
+
+          <!-- Workspace Simulation -->
+          <div class="git-workspace">
+            <header class="workspace-topbar">
+              <div class="workspace-identity">
+                <span class="workspace-badge">REPOSITORY</span>
+                <span class="workspace-repo">infra-platform</span>
+                <span class="workspace-path" id="proto-ws-path">.git/</span>
+                <span class="workspace-branch" id="proto-ws-branch">main</span>
+              </div>
+              <div class="workspace-mode-switcher" role="radiogroup" aria-label="Internals Mode Switcher">
+                <button type="button" class="mode-btn is-active" data-proto-mode="learn" role="radio" aria-checked="true">Normal</button>
+                <button type="button" class="mode-btn" data-proto-mode="xray" role="radio" aria-checked="false">⚡ X-Ray</button>
+                <button type="button" class="mode-btn" data-proto-mode="plumbing" role="radio" aria-checked="false">⚙ Plumbing</button>
+              </div>
+            </header>
+
+            <div class="workspace-body-3col" id="proto-ws-body" data-ws-mode="learn">
+              <!-- Col 1: Filesystem -->
+              <div class="workspace-col-fs">
+                <div class="col-head">
+                  <span class="col-title">FILESYSTEM</span>
+                  <span class="col-count" id="proto-file-count">6 items</span>
+                </div>
+                <ul class="file-tree" id="proto-file-tree"></ul>
+              </div>
+
+              <!-- Col 2: Terminal -->
+              <div class="workspace-col-term">
+                <div class="terminal-bar">
+                  <div class="terminal-dots"><span></span><span></span><span></span></div>
+                  <span>bash · dev@lab:~/repos/infra-platform</span>
+                  <span>UTF-8</span>
+                </div>
+                <div class="terminal-window" id="proto-terminal">
+                  <div id="proto-term-history"></div>
+                  <form class="terminal-cli-form" id="proto-cli-form" autocomplete="off">
+                    <span class="term-prompt" id="proto-cli-prompt">dev@lab:~/repos/infra-platform (main)$</span>
+                    <input
+                      type="text"
+                      class="terminal-cli-input"
+                      id="proto-cli-input"
+                      spellcheck="false"
+                      autocomplete="off"
+                      autocorrect="off"
+                      autocapitalize="off"
+                      aria-label="Interactive terminal shell input"
+                      placeholder="type git command or 'help'..."
+                    />
+                  </form>
+                </div>
+              </div>
+
+              <!-- Col 3: Git Internals -->
+              <div class="workspace-col-internals">
+                <div class="col-head">
+                  <span class="col-title">GIT INTERNALS</span>
+                  <span class="internals-mode-tag" id="proto-internals-mode-tag">PORCELAIN</span>
+                </div>
+                <div class="internals-chain" id="proto-internals-chain">
+                  <div class="internals-card card-head">
+                    <div class="card-tag">HEAD POINTER</div>
+                    <strong class="card-val" id="proto-head-ref">ref: refs/heads/main</strong>
+                    <small class="card-sub">Your "you are here" position</small>
+                  </div>
+                  <div class="internals-card card-ref">
+                    <div class="card-tag">BRANCH REFERENCE</div>
+                    <strong class="card-val" id="proto-branch-ref">refs/heads/main</strong>
+                    <small class="card-sub">Movable 41-byte text file</small>
+                  </div>
+                  <div class="internals-card card-commit">
+                    <div class="card-tag">COMMIT OBJECT</div>
+                    <strong class="card-val" id="proto-commit-hash">4f901ab</strong>
+                    <p class="card-msg" id="proto-commit-msg">Scale cache deployment</p>
+                  </div>
+                  <div class="internals-card card-tree">
+                    <div class="card-tag">ROOT TREE</div>
+                    <strong class="card-val" id="proto-tree-hash">7b2a901</strong>
+                    <small class="card-sub" id="proto-tree-detail">root snapshot</small>
+                  </div>
+                  <div class="internals-card card-blob">
+                    <div class="card-tag">LEAF BLOB</div>
+                    <strong class="card-val" id="proto-blob-hash">b14c80e</strong>
+                    <small class="card-sub" id="proto-blob-detail">app/deployment.yaml</small>
+                  </div>
+                </div>
+                <div class="xray-insight-box" id="proto-xray-box">
+                  <span class="xray-box-tag">⚡ X-RAY REVEAL</span>
+                  <p class="xray-box-text" id="proto-xray-text">Blob contains raw bytes. Filenames are stored in tree objects, never inside blobs.</p>
+                </div>
+                <div class="plumbing-insight-box" id="proto-plumbing-box">
+                  <span class="plumbing-box-tag">⚙ PLUMBING PRIMITIVE</span>
+                  <code class="plumbing-box-cmd" id="proto-plumbing-cmd">git cat-file -p HEAD</code>
+                </div>
+              </div>
+            </div>
+
+            <!-- Action Rail -->
+            <nav class="workspace-actions">
+              <div class="action-buttons" id="proto-action-rail">
+                <!-- Action buttons generated by JS -->
+              </div>
+              <div class="action-stepper">
+                <button type="button" id="proto-btn-prev">&larr; Prev</button>
+                <button type="button" id="proto-btn-play">▶ Play</button>
+                <button type="button" id="proto-btn-next">Next &rarr;</button>
+                <button type="button" id="proto-btn-reset">↺ Reset</button>
+              </div>
+            </nav>
+
+            <!-- State Shelf -->
+            <aside class="state-shelf">
+              <div class="shelf-header">
+                <span class="shelf-tag">4-STAGE REPOSITORY LEDGER</span>
+                <span class="shelf-hint">Track data mutations across the four boundaries of Git</span>
+              </div>
+              <div class="shelf-grid" id="proto-shelf-grid">
+                <!-- State cells generated by JS -->
+              </div>
+            </aside>
+
+            <!-- Supporting Graph -->
+            <section class="supporting-graph">
+              <div class="graph-head">
+                <span>TOPOLOGY & GRAPH SNAPSHOT</span>
+                <span>COMMIT DAG TRAVERSAL</span>
+              </div>
+              <svg viewBox="0 0 900 120" class="graph-svg">
+                <circle cx="150" cy="60" r="22" fill="#132b3d" stroke="#6c879b" stroke-width="2" />
+                <text x="150" y="64" text-anchor="middle" fill="#f2f5fc" font-size="10" font-family="monospace">c3904</text>
+                <line x1="180" y1="60" x2="310" y2="60" stroke="#6c879b" stroke-width="2" />
+                <circle cx="340" cy="60" r="22" fill="#132b3d" stroke="#68a3ff" stroke-width="2" />
+                <text x="340" y="64" text-anchor="middle" fill="#68a3ff" font-size="10" font-family="monospace">e78b2</text>
+                <line x1="370" y1="60" x2="500" y2="60" stroke="#42d6e8" stroke-width="2" />
+                <circle cx="530" cy="60" r="22" fill="#1c4760" stroke="#42d6e8" stroke-width="2.5" />
+                <text x="530" y="64" text-anchor="middle" fill="#42d6e8" font-size="10" font-family="monospace">b14c8</text>
+                <line x1="560" y1="60" x2="690" y2="60" stroke="#49d6a3" stroke-width="2.5" />
+                <circle cx="720" cy="60" r="22" fill="#11372f" stroke="#49d6a3" stroke-width="2.5" />
+                <text x="720" y="64" text-anchor="middle" fill="#49d6a3" font-size="10" font-family="monospace">4f901</text>
+                <rect x="695" y="12" width="50" height="18" rx="4" fill="#49d6a3" />
+                <text x="720" y="24" text-anchor="middle" fill="#090c13" font-size="9" font-family="monospace" font-weight="bold">HEAD</text>
+              </svg>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Bottom Shelf -->
+    <div class="git-bottom">
+      <div class="git-bottom-takeaway">
+        <span>TAKEAWAY</span>
+        <p id="proto-bottom-takeaway">The index is a full-fledged snapshot candidate, not an invisible cache. A file can simultaneously differ across HEAD, index, and working tree.</p>
+      </div>
+      <div>
+        <span>Infra, Illustrated. · Interactive Workspace Reference Approval Prototype</span>
+      </div>
+    </div>
+  </article>
+
+  <!-- Prototype Interactive Driver -->
+  <script>
+    const labs = [
+      {
+        id: 'working-tree-index-commit',
+        title: 'Working Tree, Index, and Commit Staging',
+        group: 'FUNDAMENTALS & OBJECTS',
+        question: 'Why does Git have a staging index between your files and history, and what does the MM badge mean?',
+        path: 'app/deployment.yaml',
+        branch: 'feature/cache',
+        takeaway: 'The index is a full-fledged snapshot candidate, not an invisible cache. A file can simultaneously differ across HEAD, index, and working tree.',
+        steps: [
+          {
+            label: 'git status',
+            command: 'git status',
+            output: ['On branch feature/cache', 'Your branch is up to date with \'origin/feature/cache\'.', '', 'nothing to commit, working tree clean'],
+            files: [
+              { name: 'app/', isDir: true, depth: 0 },
+              { name: 'deployment.yaml', depth: 1 },
+              { name: 'modules/', isDir: true, depth: 0 },
+              { name: 'vpc.tf', depth: 1 },
+              { name: 'routes.tf', depth: 1 },
+              { name: 'README.md', depth: 0 }
+            ],
+            shelf: [
+              { label: 'Working Tree', value: 'replicas: 2', detail: 'Matches HEAD commit' },
+              { label: 'Index (Staging)', value: 'blob 8a3f912', detail: 'Matches HEAD commit' },
+              { label: 'HEAD Commit', value: 'e78b21a', detail: 'Latest commit' },
+              { label: 'Branch Ref', value: 'feature/cache', detail: 'points to e78b21a' }
+            ]
+          },
+          {
+            label: 'edit deployment.yaml (2 -> 3)',
+            command: 'sed -i "s/replicas: 2/replicas: 3/" app/deployment.yaml',
+            output: ['# Modified app/deployment.yaml: replicas changed from 2 to 3', '# Status: unstaged working tree modification'],
+            files: [
+              { name: 'app/', isDir: true, depth: 0 },
+              { name: 'deployment.yaml', depth: 1, status: 'M', highlight: true },
+              { name: 'modules/', isDir: true, depth: 0 },
+              { name: 'vpc.tf', depth: 1 },
+              { name: 'README.md', depth: 0 }
+            ],
+            shelf: [
+              { label: 'Working Tree', value: 'replicas: 3', detail: 'Modified locally', badge: 'badge-changed' },
+              { label: 'Index (Staging)', value: 'blob 8a3f912', detail: 'Points to replicas: 2' },
+              { label: 'HEAD Commit', value: 'e78b21a', detail: 'Contains replicas: 2' },
+              { label: 'Status Badge', value: ' M (unstaged)', detail: 'Working tree modification', badge: 'badge-warning' }
+            ]
+          },
+          {
+            label: 'git add app/deployment.yaml',
+            command: 'git add app/deployment.yaml',
+            output: ['# Staged app/deployment.yaml into the index', '# Blob b14c80e computed and written into .git/objects'],
+            files: [
+              { name: 'app/', isDir: true, depth: 0 },
+              { name: 'deployment.yaml', depth: 1, status: 'A', highlight: true },
+              { name: 'modules/', isDir: true, depth: 0 },
+              { name: 'vpc.tf', depth: 1 },
+              { name: 'README.md', depth: 0 }
+            ],
+            shelf: [
+              { label: 'Working Tree', value: 'replicas: 3', detail: 'Matches staged index' },
+              { label: 'Index (Staging)', value: 'blob b14c80e', detail: 'New blob object staged', badge: 'badge-changed' },
+              { label: 'HEAD Commit', value: 'e78b21a', detail: 'Contains old replicas: 2' },
+              { label: 'Status Badge', value: 'A  (staged)', detail: 'Changes to be committed', badge: 'badge-success' }
+            ]
+          },
+          {
+            label: 'edit again (3 -> 4) => MM',
+            command: 'sed -i "s/replicas: 3/replicas: 4/" app/deployment.yaml',
+            output: ['# Modified working tree again to replicas: 4 WITHOUT running git add', '$ git status -s', 'MM app/deployment.yaml', '# Col 1 = Index vs HEAD (M). Col 2 = Working Tree vs Index (M)!'],
+            files: [
+              { name: 'app/', isDir: true, depth: 0 },
+              { name: 'deployment.yaml', depth: 1, status: 'MM', highlight: true },
+              { name: 'modules/', isDir: true, depth: 0 },
+              { name: 'vpc.tf', depth: 1 },
+              { name: 'README.md', depth: 0 }
+            ],
+            shelf: [
+              { label: 'Working Tree', value: 'replicas: 4', detail: 'Unstaged local edit', badge: 'badge-changed' },
+              { label: 'Index (Staging)', value: 'blob b14c80e (replicas: 3)', detail: 'Staged snapshot', badge: 'badge-changed' },
+              { label: 'HEAD Commit', value: 'blob 8a3f912 (replicas: 2)', detail: 'Committed baseline' },
+              { label: 'Status Badge', value: 'MM (3 distinct states)', detail: 'Staged + Modified!', badge: 'badge-warning' }
+            ]
+          },
+          {
+            label: 'git commit -m "Scale cache"',
+            command: 'git commit -m "Scale cache deployment to 3 replicas"',
+            output: ['[feature/cache 4f901ab] Scale cache deployment to 3 replicas', ' 1 file changed, 1 insertion(+), 1 deletion(-)', '$ git status -s', ' M app/deployment.yaml', '# Replicas: 3 is committed, replicas: 4 remains unstaged!'],
+            files: [
+              { name: 'app/', isDir: true, depth: 0 },
+              { name: 'deployment.yaml', depth: 1, status: 'M', highlight: true },
+              { name: 'modules/', isDir: true, depth: 0 },
+              { name: 'vpc.tf', depth: 1 },
+              { name: 'README.md', depth: 0 }
+            ],
+            shelf: [
+              { label: 'Working Tree', value: 'replicas: 4', detail: 'Still unstaged' },
+              { label: 'Index (Staging)', value: 'blob b14c80e', detail: 'Matches new HEAD' },
+              { label: 'HEAD Commit', value: '4f901ab', detail: 'New commit object minted', badge: 'badge-success' },
+              { label: 'Branch Ref', value: 'feature/cache', detail: 'Advanced to 4f901ab', badge: 'badge-changed' }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'git-object-database',
+        title: 'Git Object Database: Blobs, Trees, and Commits',
+        group: 'Fundamentals & Objects',
+        path: '.git/objects',
+        branch: 'feature/cache',
+        question: 'How does Git physically store data, why are hashes deterministic, and where are filenames kept?',
+        takeaway: 'Git is a content-addressed Merkle store. Blobs hold pure file bytes with zero filename or permission metadata. Trees bind filenames and POSIX modes to hashes. Commits bind root trees to parents, authors, and log messages. Diffs are never stored; they are calculated on demand by comparing trees.',
+        steps: [
+          {
+            label: '1. blob: content-addressed bytes',
+            command: 'git hash-object app/deployment.yaml && git cat-file -p b14c80e',
+            output: [
+              '$ git hash-object app/deployment.yaml',
+              'b14c80e712ad8901ef2b8901aa9901ef3381a90c',
+              '# HASH FORMULA: sha1("blob " + filesize + "\\0" + file_bytes)',
+              '',
+              '$ git cat-file -t b14c80e',
+              'blob',
+              '',
+              '$ git cat-file -p b14c80e',
+              'apiVersion: apps/v1',
+              'kind: Deployment',
+              'metadata:',
+              '  name: redis-cache',
+              'spec:',
+              '  replicas: 3',
+              '',
+              '# KEY INSIGHT: Where is the filename?',
+              '# Look closely: "deployment.yaml" is NOT inside this blob! Neither is mode 100644.',
+              '# Blobs store pure file bytes. Two identical files anywhere in the repo share 1 blob.'
+            ],
+            files: [
+              { name: '.git/objects/b1/4c80e... [blob: replicas: 3]', depth: 1, highlight: true },
+              { name: '.git/objects/8a/3f912... [blob: replicas: 2 (old)]', depth: 1 },
+              { name: '.git/objects/a4/8fe12... [blob: README.md]', depth: 1 },
+              { name: '.git/objects/c9/14aa0... [blob: vpc.tf]', depth: 1 },
+              { name: 'app/deployment.yaml (working tree file)', depth: 0 }
+            ],
+            shelf: [
+              { label: 'Object Type', value: 'blob (pure content)', detail: 'Compressed zlib payload' },
+              { label: 'Calculated SHA', value: 'b14c80e71...', detail: 'sha1("blob 94\\0...")', badge: 'badge-changed' },
+              { label: 'Filename in Blob?', value: 'NO (0 metadata)', detail: 'Only file byte stream', badge: 'badge-warning' },
+              { label: 'Deduplication', value: '100% Hash-Exact', detail: 'Identical files share 1 blob', badge: 'badge-success' }
+            ]
+          },
+          {
+            label: '2. subtree: binding names to blobs',
+            command: 'git cat-file -p 7b2a901',
+            output: [
+              '$ git cat-file -t 7b2a901',
+              'tree',
+              '',
+              '$ git cat-file -p 7b2a901',
+              '100644 blob b14c80e712ad8901ef2b8901aa9901ef3381a90c    deployment.yaml',
+              '100644 blob 3f109ac018902bc01928bc01928bc01a01928bc0    service.yaml',
+              '',
+              '# HOW FILENAMES EXIST IN GIT:',
+              '# A Tree is a directory record table: [file_mode] [type] [SHA-1] [filename].',
+              '# Mode 100644 = normal file (-rw-r--r--)',
+              '# Mode 100755 = executable script (-rwxr-xr-x)',
+              '# Mode 040000 = subdirectory pointer',
+              '# Renaming deployment.yaml to cache.yaml never rewrites the blob—it only writes a new tree entry!'
+            ],
+            files: [
+              { name: '.git/objects/7b/2a901... [tree: app/ directory]', depth: 1, highlight: true },
+              { name: '100644 blob b14c80e deployment.yaml', depth: 2 },
+              { name: '100644 blob 3f109ac service.yaml', depth: 2 },
+              { name: '.git/objects/b1/4c80e... [blob payload]', depth: 1 }
+            ],
+            shelf: [
+              { label: 'Object Type', value: 'tree (directory table)', detail: 'Maps names & modes to SHAs' },
+              { label: 'Tree Hash', value: '7b2a901ee...', detail: 'app/ folder listing', badge: 'badge-changed' },
+              { label: 'POSIX Modes', value: '100644 (rw-r--r--)', detail: 'Permissions stored in tree' },
+              { label: 'Rename Cost', value: '0 Blobs Rewritten', detail: 'Only modifies parent tree', badge: 'badge-success' }
+            ]
+          },
+          {
+            label: '3. root tree: Merkle snapshot & reuse',
+            command: 'git cat-file -p HEAD^{tree}',
+            output: [
+              '$ git cat-file -t HEAD^{tree}',
+              'tree',
+              '',
+              '$ git cat-file -p HEAD^{tree}',
+              '040000 tree 7b2a901ee34a81ba01901ef2b8901aa9901ef338    app',
+              '040000 tree e2018ba991c010a018901ef3381a90c1018901ef    modules',
+              '100644 blob a48fe12018b8109a018901ef3381a90c1018901e    README.md',
+              '100644 blob f810a99182bb190a018901ef3381a90c1018901e    .gitignore',
+              '',
+              '# THE MERKLE ADVANTAGE:',
+              '# Notice: tree 7b2a901 (app) points to our modified deployment.yaml.',
+              '# But look at tree e2018ba (modules): it has 50 files, but was UNCHANGED!',
+              '# Git references the existing modules/ tree SHA without copying any files.',
+              '# Repositories with millions of files commit instantly because unchanged trees are reused as pointers.'
+            ],
+            files: [
+              { name: '.git/objects/f4/19dc8... [root tree snapshot]', depth: 1, highlight: true },
+              { name: '040000 tree 7b2a901 app/ [new SHA]', depth: 2 },
+              { name: '040000 tree e2018ba modules/ [reused SHA]', depth: 2 },
+              { name: '100644 blob a48fe12 README.md [reused SHA]', depth: 2 }
+            ],
+            shelf: [
+              { label: 'Object Type', value: 'tree (root snapshot)', detail: 'Top-level directory' },
+              { label: 'Root Hash', value: 'f419dc822...', detail: 'Project-wide Merkle root', badge: 'badge-changed' },
+              { label: 'Subtree Reuse', value: 'modules/ unchanged', detail: 'Shared pointer across commits', badge: 'badge-success' },
+              { label: 'Merkle Scaling', value: 'O(changed paths)', detail: 'Zero duplication of old trees', badge: 'badge-success' }
+            ]
+          },
+          {
+            label: '4. commit: snapshot envelope (no diffs!)',
+            command: 'git cat-file -p HEAD',
+            output: [
+              '$ git cat-file -t HEAD',
+              'commit',
+              '',
+              '$ git cat-file -p HEAD',
+              'tree f419dc822a10b8921a9901ef2b8901aa9901ef338',
+              'parent e78b21a049182bc018901ef3381a90c1018901ef',
+              'author Dev <dev@lab> 1774011832 +0000',
+              'committer Dev <dev@lab> 1774011832 +0000',
+              '',
+              'Scale cache deployment to 3 replicas',
+              '',
+              '# MYTH BUSTED: Commits do NOT store diffs!',
+              '# A commit is an immutable plain-text envelope with exactly 4 elements:',
+              '# 1. "tree": points to root tree snapshot f419dc8 (entire repository state)',
+              '# 2. "parent": points to previous commit e78b21a (history lineage)',
+              '# 3. "author" & "committer": identity + Unix timestamp + timezone',
+              '# 4. commit message: developer description'
+            ],
+            files: [
+              { name: '.git/objects/4f/901ab... [commit: HEAD]', depth: 1, highlight: true },
+              { name: 'tree pointer -> f419dc8 (root tree)', depth: 2 },
+              { name: 'parent pointer -> e78b21a (previous commit)', depth: 2 },
+              { name: 'refs/heads/feature/cache -> 4f901ab', depth: 1 }
+            ],
+            shelf: [
+              { label: 'Object Type', value: 'commit (envelope)', detail: 'Metadata + tree pointer' },
+              { label: 'Commit Hash', value: '4f901ab3c...', detail: 'Cryptographically sealed', badge: 'badge-success' },
+              { label: 'Tree Pointer', value: 'f419dc822...', detail: 'Full snapshot, NOT a diff', badge: 'badge-changed' },
+              { label: 'Parent Pointer', value: 'e78b21a04...', detail: 'Ancestor DAG node' }
+            ]
+          },
+          {
+            label: '5. diff on demand: Myers tree walk',
+            command: 'git diff-tree -r --name-status e78b21a 4f901ab',
+            output: [
+              '$ git diff-tree -r --name-status e78b21a 4f901ab',
+              'M       app/deployment.yaml',
+              '',
+              '# HOW GIT DIFFS WORK WITHOUT STORING DIFFS:',
+              '# 1. Git loads parent root tree (old) and child root tree (new).',
+              '# 2. modules/ tree SHA is identical? -> SKIP entire folder in 1 CPU check!',
+              '# 3. README.md blob SHA is identical? -> SKIP file in 1 CPU check!',
+              '# 4. app/ tree SHA differs? -> Git enters app/ and compares entries.',
+              '# 5. deployment.yaml blob SHA changed (8a3f912 -> b14c80e)?',
+              '#    Git reads both blobs into memory and calculates the text diff on the fly!',
+              '',
+              '$ git diff 8a3f912 b14c80e',
+              '@@ -6,3 +6,3 @@',
+              '-  replicas: 2',
+              '+  replicas: 3'
+            ],
+            files: [
+              { name: 'Compare Commit e78b21a vs 4f901ab', depth: 0 },
+              { name: 'Compare Root Tree e2910a vs f419dc8', depth: 1 },
+              { name: 'modules/ tree: identical SHA -> PRUNED', depth: 1 },
+              { name: 'app/ tree: SHA changed -> traversed', depth: 1 },
+              { name: 'app/deployment.yaml: 8a3f912 vs b14c80e', depth: 2, highlight: true, status: 'M' }
+            ],
+            shelf: [
+              { label: 'Diff Engine', value: 'On-demand Myers', detail: 'Calculated in memory' },
+              { label: 'Tree Pruning', value: 'O(1) SHA check', detail: 'Skips unchanged folders instantly', badge: 'badge-success' },
+              { label: 'Evaluated Blobs', value: '8a3f912 -> b14c80e', detail: '1 file changed', badge: 'badge-changed' },
+              { label: 'Storage Model', value: 'Snapshots only', detail: 'Zero diffs stored on disk', badge: 'badge-success' }
+            ]
+          }
+        ]
+      }
+    ];
+
+    let currentLabIdx = 0;
+    let currentStepIdx = 0;
+
+    function renderLab(labIdx, stepIdx = 0) {
+      currentLabIdx = labIdx;
+      currentStepIdx = stepIdx;
+      const lab = labs[labIdx] || labs[0];
+      const step = lab.steps[currentStepIdx] || lab.steps[0];
+
+      document.getElementById('proto-view-group').textContent = `01 / ${lab.group}`;
+      document.getElementById('proto-view-title').textContent = lab.title;
+      document.getElementById('proto-view-question').textContent = lab.question;
+      document.getElementById('proto-ws-path').textContent = lab.path;
+      document.getElementById('proto-ws-branch').textContent = lab.branch;
+      document.getElementById('proto-scenario-repo').textContent = `~/repos/infra-platform (${lab.branch})`;
+      document.getElementById('proto-scenario-branch').textContent = lab.branch;
+      document.getElementById('proto-scenario-path').textContent = lab.path;
+      document.getElementById('proto-bottom-takeaway').textContent = lab.takeaway;
+      document.getElementById('proto-file-count').textContent = `${step.files.length} items`;
+
+      // Render files
+      const fileTreeEl = document.getElementById('proto-file-tree');
+      fileTreeEl.innerHTML = '';
+      step.files.forEach(f => {
+        const li = document.createElement('li');
+        li.className = `file-tree-item ${f.highlight ? 'is-highlighted' : ''}`;
+        li.style.setProperty('--depth', f.depth || 0);
+        li.innerHTML = `
+          <span>${f.isDir ? '📁' : '📄'}</span>
+          <span>${f.name}</span>
+          ${f.status ? `<span class="file-badge badge-${f.status.toLowerCase()}">${f.status}</span>` : ''}
+        `;
+        fileTreeEl.appendChild(li);
+      });
+
+      // Render terminal
+      const termEl = document.getElementById('proto-term-history');
+      if (stepIdx === 0) {
+        termEl.innerHTML = `<div class="term-comment"># Initialized developer workspace: ~/repos/infra-platform (${lab.branch})</div>`;
+      }
+      const promptDiv = document.createElement('div');
+      promptDiv.innerHTML = `
+        <div style="margin-top: 8px;">
+          <span class="term-prompt">dev@lab:~/repos/infra-platform (${lab.branch})$</span>
+          <span class="term-cmd">${step.command}</span>
+        </div>
+        <div class="terminal-output">
+          ${step.output.map(l => `<div>${l}</div>`).join('')}
+        </div>
+      `;
+      termEl.appendChild(promptDiv);
+      const win = document.getElementById('proto-terminal');
+      win.scrollTop = win.scrollHeight;
+
+      // Render actions
+      const railEl = document.getElementById('proto-action-rail');
+      railEl.innerHTML = '';
+      lab.steps.forEach((s, idx) => {
+        const btn = document.createElement('button');
+        btn.className = `git-act-btn ${idx === currentStepIdx ? 'is-active' : ''}`;
+        btn.textContent = `${idx + 1}. ${s.label}`;
+        btn.onclick = () => renderLab(labIdx, idx);
+        railEl.appendChild(btn);
+      });
+
+      // Render shelf
+      const shelfEl = document.getElementById('proto-shelf-grid');
+      shelfEl.innerHTML = '';
+      step.shelf.forEach(c => {
+        const div = document.createElement('div');
+        div.className = `shelf-cell ${c.badge || ''}`;
+        div.innerHTML = `
+          <span class="cell-label">${c.label}</span>
+          <strong class="cell-value">${c.value}</strong>
+          <small class="cell-detail">${c.detail}</small>
+        `;
+        shelfEl.appendChild(div);
+      });
+
+      // Update Graph
+      const graphCanvas = document.querySelector('.supporting-graph');
+      if (graphCanvas) {
+        if (labIdx === 1) {
+          graphCanvas.querySelector('.graph-head span:last-child').textContent = 'MERKLE TREE & OBJECT GRAPH';
+          const svgEl = graphCanvas.querySelector('.graph-svg');
+          svgEl.setAttribute('viewBox', '0 0 900 275');
+          svgEl.innerHTML = `
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#42d6e8" /></marker>
+              <marker id="arrow-amber" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#f6c763" /></marker>
+              <marker id="arrow-muted" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#6c879b" /></marker>
+            </defs>
+            <g class="dag-objects">
+              <!-- Tier Column Headers -->
+              <text x="87" y="11" text-anchor="middle" fill="#49d6a3" font-size="8.5" font-family="monospace" letter-spacing="0.08em">COMMIT (ENVELOPE)</text>
+              <text x="282" y="11" text-anchor="middle" fill="#42d6e8" font-size="8.5" font-family="monospace" letter-spacing="0.08em">ROOT TREE (SNAPSHOT)</text>
+              <text x="502" y="11" text-anchor="middle" fill="#42d6e8" font-size="8.5" font-family="monospace" letter-spacing="0.08em">SUBTREES (DIRECTORIES)</text>
+              <text x="767" y="11" text-anchor="middle" fill="#f6c763" font-size="8.5" font-family="monospace" letter-spacing="0.08em">LEAF BLOBS (PURE BYTES)</text>
+
+              <!-- 1. Commit Node -->
+              <g class="obj-group obj-commit" style="opacity: ${stepIdx === 3 || stepIdx === 4 ? 1 : 0.7}">
+                <rect x="15" y="100" width="145" height="70" rx="7" fill="#0d241d" stroke="#49d6a3" stroke-width="1.8" />
+                <rect x="15" y="100" width="145" height="20" rx="7" fill="#11372f" />
+                <text x="87" y="114" text-anchor="middle" fill="#49d6a3" font-size="10" font-family="monospace" font-weight="bold">COMMIT: 4f901ab</text>
+                <text x="23" y="133" fill="#f2f5fc" font-size="9" font-family="monospace">tree: <tspan fill="#42d6e8" font-weight="bold">f419dc8</tspan> ──▶</text>
+                <text x="23" y="148" fill="#8592a8" font-size="8.5" font-family="monospace">parent: e78b21a</text>
+                <text x="23" y="162" fill="#f6c763" font-size="8" font-family="monospace">"Scale cache replicas"</text>
+              </g>
+
+              <line x1="160" y1="135" x2="205" y2="135" stroke="#42d6e8" stroke-width="2.5" marker-end="url(#arrow)" />
+
+              <!-- 2. Root Tree Node -->
+              <g class="obj-group obj-roottree" style="opacity: ${stepIdx === 2 || stepIdx === 4 ? 1 : 0.7}">
+                <rect x="205" y="100" width="155" height="70" rx="7" fill="#081e2b" stroke="#42d6e8" stroke-width="1.8" />
+                <rect x="205" y="100" width="155" height="20" rx="7" fill="#0f3044" />
+                <text x="282" y="114" text-anchor="middle" fill="#42d6e8" font-size="10" font-family="monospace" font-weight="bold">ROOT TREE: f419dc8</text>
+                <text x="215" y="133" fill="#f2f5fc" font-size="9" font-family="monospace">Merkle Root Snapshot</text>
+                <text x="215" y="148" fill="#8592a8" font-size="8.5" font-family="monospace">3 Directory Entries ──▶</text>
+                <text x="215" y="162" fill="#42d6e8" font-size="8" font-family="monospace">Full Snapshot (No Diffs)</text>
+              </g>
+
+              <!-- Branching paths -->
+              <path d="M 360 135 H 385 V 68 H 410" fill="none" stroke="#42d6e8" stroke-width="2" marker-end="url(#arrow)" />
+              <path d="M 385 135 V 174 H 410" fill="none" stroke="#42d6e8" stroke-width="2" marker-end="url(#arrow)" />
+              <path d="M 385 174 V 244 H 410" fill="none" stroke="#6c879b" stroke-width="2" marker-end="url(#arrow-muted)" />
+
+              <!-- 3. Subtree app/ -->
+              <g class="obj-group obj-subtree" style="opacity: ${stepIdx === 1 || stepIdx === 4 ? 1 : 0.7}">
+                <rect x="410" y="38" width="185" height="60" rx="7" fill="#081e2b" stroke="#42d6e8" stroke-width="1.8" />
+                <rect x="410" y="38" width="185" height="20" rx="7" fill="#0f3044" />
+                <text x="502" y="52" text-anchor="middle" fill="#42d6e8" font-size="9.5" font-family="monospace" font-weight="bold">040000 tree app/ (7b2a901)</text>
+                <text x="420" y="72" fill="#f2f5fc" font-size="8.5" font-family="monospace">100644 blob <tspan fill="#f6c763" font-weight="bold">b14c80e</tspan> ──▶</text>
+                <text x="420" y="88" fill="#8592a8" font-size="8" font-family="monospace">Directory Table (Names &amp; Modes)</text>
+              </g>
+
+              <!-- 4. Subtree modules/ [reused] -->
+              <g class="obj-group obj-subtree-reused" style="opacity: 0.85;">
+                <rect x="410" y="145" width="185" height="58" rx="7" fill="#081622" stroke="#314d68" stroke-width="1.5" />
+                <rect x="410" y="145" width="185" height="19" rx="7" fill="#0c2033" />
+                <text x="485" y="159" text-anchor="middle" fill="#6c879b" font-size="9.5" font-family="monospace">040000 tree modules/</text>
+                <rect x="546" y="148" width="44" height="13" rx="3" fill="rgba(73, 214, 163, 0.15)" stroke="rgba(73, 214, 163, 0.4)" stroke-width="0.8" />
+                <text x="568" y="158" text-anchor="middle" fill="#49d6a3" font-size="7.5" font-family="monospace" font-weight="bold">REUSED</text>
+                <text x="420" y="178" fill="#647b95" font-size="8.5" font-family="monospace">SHA: e2018ba (unmodified)</text>
+                <text x="420" y="193" fill="#49d6a3" font-size="8" font-family="monospace">O(1) SHA match · zero duplication</text>
+              </g>
+
+              <!-- 5. Root File: README.md [reused] -->
+              <g class="obj-group obj-rootfile-reused" style="opacity: 0.85;">
+                <rect x="410" y="222" width="185" height="44" rx="7" fill="#141c26" stroke="#3d4d63" stroke-width="1.5" />
+                <text x="420" y="240" fill="#97a3b8" font-size="9" font-family="monospace">100644 blob README.md</text>
+                <text x="420" y="255" fill="#49d6a3" font-size="8" font-family="monospace">blob a48fe12 · [reused SHA]</text>
+              </g>
+
+              <!-- Paths from app/ to Blobs -->
+              <path d="M 595 68 H 622 V 38 H 650" fill="none" stroke="#f6c763" stroke-width="2" marker-end="url(#arrow-amber)" />
+              <path d="M 622 68 V 95 H 650" fill="none" stroke="#f6c763" stroke-width="1.8" marker-end="url(#arrow-amber)" />
+
+              <!-- Paths from modules/ to Blobs -->
+              <path d="M 595 174 H 622 V 154 H 650" fill="none" stroke="#475f7a" stroke-width="1.5" marker-end="url(#arrow-muted)" />
+              <path d="M 622 174 V 202 H 650" fill="none" stroke="#475f7a" stroke-width="1.5" marker-end="url(#arrow-muted)" />
+
+              <!-- 6. Leaf Blob: deployment.yaml -->
+              <g class="obj-group obj-blob" style="opacity: ${stepIdx === 0 || stepIdx === 4 ? 1 : 0.7}">
+                <rect x="650" y="15" width="235" height="46" rx="7" fill="#251c0c" stroke="#f6c763" stroke-width="1.8" />
+                <rect x="650" y="15" width="235" height="18" rx="7" fill="#38290f" />
+                <text x="735" y="28" text-anchor="middle" fill="#f6c763" font-size="9.5" font-family="monospace" font-weight="bold">BLOB: b14c80e</text>
+                <rect x="805" y="18" width="74" height="12" rx="3" fill="rgba(251, 126, 133, 0.2)" stroke="rgba(251, 126, 133, 0.5)" stroke-width="0.8" />
+                <text x="842" y="27" text-anchor="middle" fill="#fb7e85" font-size="7" font-family="monospace" font-weight="bold">NO FILENAME</text>
+                <text x="660" y="45" fill="#f2f5fc" font-size="8.5" font-family="monospace">replicas: 3 · redis:7.0-alpine</text>
+                <text x="660" y="56" fill="#8592a8" font-size="7.5" font-family="monospace">pure byte payload (stored in .git/objects/b1/)</text>
+              </g>
+
+              <!-- 7. Leaf Blob: service.yaml -->
+              <g class="obj-group obj-blob-service" style="opacity: 0.85;">
+                <rect x="650" y="72" width="235" height="46" rx="7" fill="#1c1810" stroke="#6e5a32" stroke-width="1.4" />
+                <text x="660" y="90" fill="#d4b163" font-size="9" font-family="monospace">BLOB: 3f109ac (service.yaml)</text>
+                <text x="660" y="106" fill="#8592a8" font-size="8" font-family="monospace">port: 6379 · targetPort: 6379</text>
+              </g>
+
+              <!-- 8. Leaf Blob: vpc.tf -->
+              <g class="obj-group obj-blob-vpc" style="opacity: 0.75;">
+                <rect x="650" y="135" width="235" height="38" rx="6" fill="#0e141c" stroke="#283b50" stroke-width="1.2" />
+                <text x="660" y="151" fill="#647b95" font-size="8.5" font-family="monospace">BLOB: c914aa0 (vpc.tf)</text>
+                <text x="660" y="164" fill="#52657d" font-size="8" font-family="monospace">resource "aws_vpc" "main" · [reused]</text>
+              </g>
+
+              <!-- 9. Leaf Blob: routes.tf -->
+              <g class="obj-group obj-blob-routes" style="opacity: 0.75;">
+                <rect x="650" y="183" width="235" height="38" rx="6" fill="#0e141c" stroke="#283b50" stroke-width="1.2" />
+                <text x="660" y="199" fill="#647b95" font-size="8.5" font-family="monospace">BLOB: d819bc2 (routes.tf)</text>
+                <text x="660" y="212" fill="#52657d" font-size="8" font-family="monospace">resource "aws_route" "default" · [reused]</text>
+              </g>
+            </g>
+          `;
+        } else {
+          graphCanvas.querySelector('.graph-head span:last-child').textContent = 'COMMIT DAG TRAVERSAL';
+          const svgEl = graphCanvas.querySelector('.graph-svg');
+          svgEl.setAttribute('viewBox', '0 0 900 120');
+          svgEl.innerHTML = `
+            <circle cx="150" cy="60" r="22" fill="#132b3d" stroke="#6c879b" stroke-width="2" />
+            <text x="150" y="64" text-anchor="middle" fill="#f2f5fc" font-size="10" font-family="monospace">c3904</text>
+            <line x1="180" y1="60" x2="310" y2="60" stroke="#6c879b" stroke-width="2" />
+            <circle cx="340" cy="60" r="22" fill="#132b3d" stroke="#68a3ff" stroke-width="2" />
+            <text x="340" y="64" text-anchor="middle" fill="#68a3ff" font-size="10" font-family="monospace">e78b2</text>
+            <line x1="370" y1="60" x2="500" y2="60" stroke="#42d6e8" stroke-width="2" />
+            <circle cx="530" cy="60" r="22" fill="#1c4760" stroke="#42d6e8" stroke-width="2.5" />
+            <text x="530" y="64" text-anchor="middle" fill="#42d6e8" font-size="10" font-family="monospace">b14c8</text>
+            <line x1="560" y1="60" x2="690" y2="60" stroke="#49d6a3" stroke-width="2.5" />
+            <circle cx="720" cy="60" r="22" fill="#11372f" stroke="#49d6a3" stroke-width="2.5" />
+            <text x="720" y="64" text-anchor="middle" fill="#49d6a3" font-size="10" font-family="monospace">4f901</text>
+            <rect x="695" y="12" width="50" height="18" rx="4" fill="#49d6a3" />
+            <text x="720" y="24" text-anchor="middle" fill="#090c13" font-size="9" font-family="monospace" font-weight="bold">HEAD</text>
+          `;
+        }
+      }
+    }
+
+    document.querySelectorAll('[data-nav-idx]').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const idx = parseInt(link.getAttribute('data-nav-idx'), 10);
+        document.querySelectorAll('[data-nav-idx]').forEach(l => l.classList.remove('is-active'));
+        link.classList.add('is-active');
+        renderLab(idx, 0);
+      });
+    });
+
+    document.getElementById('proto-btn-prev').onclick = () => {
+      if (currentStepIdx > 0) renderLab(currentLabIdx, currentStepIdx - 1);
+    };
+    document.getElementById('proto-btn-next').onclick = () => {
+      if (currentStepIdx < labs[0].steps.length - 1) renderLab(currentLabIdx, currentStepIdx + 1);
+    };
+    document.getElementById('proto-btn-reset').onclick = () => renderLab(currentLabIdx, 0);
+
+    // Interactive CLI
+    const cliForm = document.getElementById('proto-cli-form');
+    const cliInput = document.getElementById('proto-cli-input');
+    const cliPrompt = document.getElementById('proto-cli-prompt');
+    const termWindow = document.getElementById('proto-terminal');
+    const termHistory = document.getElementById('proto-term-history');
+    const cmdHistory = [];
+    let historyIdx = -1;
+
+    termWindow.addEventListener('click', (e) => {
+      if (window.getSelection()?.toString().length === 0) {
+        cliInput.focus();
+      }
+    });
+
+    cliForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const raw = cliInput.value.trim();
+      if (!raw) return;
+
+      cmdHistory.push(raw);
+      historyIdx = cmdHistory.length;
+      cliInput.value = '';
+
+      const lab = labs[0];
+      const norm = raw.toLowerCase();
+
+      function appendOutput(lines) {
+        const item = document.createElement('div');
+        item.style.marginTop = '8px';
+        item.innerHTML = `
+          <div>
+            <span class="term-prompt">dev@lab:~/repos/infra-platform (${lab.branch})$</span>
+            <span class="term-cmd">${raw}</span>
+          </div>
+          <div class="terminal-output">
+            ${lines.map(l => `<div>${l}</div>`).join('')}
+          </div>
+        `;
+        termHistory.appendChild(item);
+        termWindow.scrollTop = termWindow.scrollHeight;
+      }
+
+      if (norm === 'clear') {
+        termHistory.innerHTML = `<div class="term-comment"># Screen cleared · dev@lab:~/repos/infra-platform (${lab.branch})</div>`;
+        return;
+      }
+
+      if (norm === 'help') {
+        appendOutput([
+          'Simulated Git Interactive Shell',
+          'Supported commands:',
+          '  git status [-s]    - inspect workspace and index state',
+          '  git add <path>     - stage file modifications into index',
+          '  git commit -m ...  - commit staged snapshot into object store',
+          '  next / prev        - navigate lab sequence',
+          '  clear              - clear terminal display',
+          '  pwd / ls           - shell navigation'
+        ]);
+        return;
+      }
+
+      if (norm === 'pwd') {
+        appendOutput(['/home/dev/repos/infra-platform']);
+        return;
+      }
+
+      if (norm === 'ls') {
+        appendOutput(['README.md  app/  modules/']);
+        return;
+      }
+
+      if (norm === 'next') {
+        if (currentStepIdx < lab.steps.length - 1) renderLab(currentLabIdx, currentStepIdx + 1);
+        return;
+      }
+      if (norm === 'prev') {
+        if (currentStepIdx > 0) renderLab(currentLabIdx, currentStepIdx - 1);
+        return;
+      }
+
+      if (norm.startsWith('git status')) {
+        const curStep = lab.steps[currentStepIdx];
+        appendOutput(curStep.output);
+        return;
+      }
+
+      if (norm.startsWith('git add')) {
+        renderLab(0, 1);
+        return;
+      }
+
+      if (norm.startsWith('git commit')) {
+        renderLab(0, 2);
+        return;
+      }
+
+      appendOutput([
+        `git: '${raw}' is not recognized in this lab simulation step.`,
+        `Try: git status, git add app/deployment.yaml, git commit, or 'help'`
+      ]);
+    });
+
+    cliInput.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (cmdHistory.length > 0 && historyIdx > 0) {
+          historyIdx--;
+          cliInput.value = cmdHistory[historyIdx];
+        }
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (historyIdx < cmdHistory.length - 1) {
+          historyIdx++;
+          cliInput.value = cmdHistory[historyIdx];
+        } else {
+          historyIdx = cmdHistory.length;
+          cliInput.value = '';
+        }
+      }
+    // Prototype mode switcher
+    document.querySelectorAll('[data-proto-mode]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const mode = btn.getAttribute('data-proto-mode');
+        document.querySelectorAll('[data-proto-mode]').forEach(b => {
+          const active = b === btn;
+          b.classList.toggle('is-active', active);
+          b.setAttribute('aria-checked', String(active));
+        });
+        const wsBody = document.getElementById('proto-ws-body');
+        if (wsBody) wsBody.setAttribute('data-ws-mode', mode);
+        const tag = document.getElementById('proto-internals-mode-tag');
+        if (tag) tag.textContent = mode === 'learn' ? 'PORCELAIN' : mode === 'xray' ? '⚡ X-RAY ACTIVE' : '⚙ PLUMBING ENGINE';
+      });
+    });
+
+    renderLab(0, 0);
+  </script>
+</body>
+</html>

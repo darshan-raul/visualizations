@@ -40,6 +40,12 @@ The pilots demonstrate the accepted language; neither is marked fully aligned un
 | --- | --- | --- |
 | Kubernetes API Server — `/kubernetes-api-server` | Canonical [MDX console](../src/content/topics/kubernetes-api-server.mdx): 12 grouped views covering API exchange/gates/watch, object ownership and reconciliation, accumulated lifecycle state, explainable placement through readiness, actor boundaries, failures with operational evidence, HA and API capabilities. Includes 26 selectable flows, 11 request-gate presets, 11 failure presets and a complete no-JavaScript reading path. Container restart, Pod replacement and Node loss are distinct. [Spec and completed implementation plan](topics/kubernetes-api-server/kubernetes-api-server-visual-spec.md) · generated [prototype](topics/kubernetes-api-server/kubernetes-api-server-visual-prototype.html). Revised 2026-09-18; `npm run check`, `npm run build`, `npm run check:graph`, and `npm run check:links` pass. | [ ] Complete browser QA at 320 px and 200% zoom, desktop, keyboard/touch, reduced motion, no JavaScript, direct fragments, flow query state and Back/Forward. Firefox headless exited with code 139 for desktop and mobile captures on 2026-09-18, so visual QA remains pending. |
 
+## New DevOps & SRE console
+
+| Topic and route | Current state | Remaining checks |
+| --- | --- | --- |
+| Git: From Working Tree to Worktrees and Plumbing — `/git` | Canonical [MDX console](../src/content/topics/git.mdx): 10-level progressive X-Ray developer workspace simulations covering where Git lives, `git add` blob staging, `git commit` root trees, branch pointers, symbolic HEAD & detached HEAD, checkout/switch workspace rebuilding, merge vs rebase graph surgery, reset/restore/revert 3-state machine, 3-stage merge conflicts, and multi-directory worktrees with reflog recovery and plumbing. Features 3-column split UI (Filesystem, Linux Terminal, Git Internals), 3 modes (Normal, ⚡ X-Ray, ⚙ Plumbing), 4-stage ledger shelf, and interactive terminal CLI. [Spec](topics/git/git-visual-spec.md) · [prototype](topics/git/git-visual-prototype.html). Integrated 2026-09-19. | [ ] Complete browser QA at 320 px and 200% zoom, desktop, keyboard/touch, reduced motion, no JavaScript, direct fragments, and history. |
+
 ## Topic queue
 
 `MDX article` means an integrated canonical explainer whose **console migration has not begun**. `Draft MDX` is not a publication-complete topic. `Legacy HTML` is a root source copied to `public/` during build. Routes below are the stable public paths to keep.

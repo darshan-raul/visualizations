@@ -1,0 +1,38 @@
+---
+title: "Git: From Working Tree to Worktrees and Plumbing"
+summary: "Explore Git through a live developer workspace. Step through index staging, object hashes, branching, rebase, three-stage conflict resolution, multi-directory worktrees, and low-level plumbing."
+slug: git
+collection: devops-sre
+tags: [Git, Version Control, DevOps, Worktrees, Internals]
+technologies: [Git, Bash, Linux, Terraform, Kubernetes]
+format: deep-dive
+difficulty: intermediate
+published: 2026-09-19
+reviewed: 2026-09-19
+versionScope: Git 2.45+ object database, worktree, index, and ref behavior verified against git-scm documentation on 2026-09-19
+legacyPath: /git
+featured: true
+state: reviewed
+related: [github-actions-cheatsheet, secopspipeline]
+sources:
+  - label: "Git Documentation: git-worktree"
+    url: https://git-scm.com/docs/git-worktree
+  - label: "Git Documentation: git-status"
+    url: https://git-scm.com/docs/git-status
+  - label: "Git Documentation: git-rev-parse"
+    url: https://git-scm.com/docs/git-rev-parse
+  - label: "Git Book: Git Internals - Plumbing and Porcelain"
+    url: https://git-scm.com/book/en/v2/Git-Internals-Plumbing-and-Porcelain
+  - label: "Git Documentation: git-reflog"
+    url: https://git-scm.com/docs/git-reflog
+  - label: "Git Documentation: git-reset"
+    url: https://git-scm.com/docs/git-reset
+  - label: "Git Documentation: git-fsck"
+    url: https://git-scm.com/docs/git-fsck
+  - label: "Git Documentation: git-gc"
+    url: https://git-scm.com/docs/git-gc
+---
+
+import GitConsole from '../../components/git/GitConsole.astro';
+
+<GitConsole published={props.published} reviewed={props.reviewed} />

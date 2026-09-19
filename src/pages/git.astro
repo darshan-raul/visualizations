@@ -1,0 +1,13 @@
+---
+import { getEntry, render } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import '../styles/git-console.css';
+
+const entry = await getEntry('topics', 'git');
+if (!entry) throw new Error('Git topic content is missing.');
+const { Content } = await render(entry);
+---
+
+<BaseLayout title={entry.data.title} description={entry.data.summary} chrome={false}>
+  <Content published={entry.data.published} reviewed={entry.data.reviewed} />
+</BaseLayout>

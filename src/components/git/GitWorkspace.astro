@@ -1,0 +1,437 @@
+---
+import type { GitLab } from './git-data';
+import { getStepInternals } from './git-data';
+
+interface Props {
+  lab: GitLab;
+}
+
+const { lab } = Astro.props;
+const firstStep = lab.steps[0];
+const initialInternals = getStepInternals(lab, 0);
+---
+
+<div class="git-workspace" data-git-workspace={lab.id} data-ws-mode="learn">
+  <!-- Workspace Header Bar -->
+  <header class="workspace-topbar">
+    <div class="workspace-identity">
+      <span class="workspace-badge">REPOSITORY</span>
+      <span class="workspace-repo">infra-platform</span>
+      <span class="workspace-path" data-ws-path>{lab.path}</span>
+      <span class="workspace-branch" data-ws-branch>{lab.branch}</span>
+    </div>
+
+    <!-- 3-Mode Switcher: Learn, X-Ray, Plumbing -->
+    <div class="workspace-mode-switcher" role="radiogroup" aria-label="Internals Mode Switcher">
+      <span class="mode-label">MODE:</span>
+      <button
+        type="button"
+        class="mode-btn is-active"
+        data-ws-mode-btn="learn"
+        role="radio"
+        aria-checked="true"
+        title="Everyday porcelain commands with intuitive mental model"
+      >
+        <span class="mode-icon">📖</span> Normal
+      </button>
+      <button
+        type="button"
+        class="mode-btn"
+        data-ws-mode-btn="xray"
+        role="radio"
+        aria-checked="false"
+        title="Turn on X-Ray mode: watch what Git actually does inside .git, index, and objects"
+      >
+        <span class="mode-icon">⚡</span> X-Ray
+      </button>
+      <button
+        type="button"
+        class="mode-btn"
+        data-ws-mode-btn="plumbing"
+        role="radio"
+        aria-checked="false"
+        title="Plumbing mode: expose raw engine primitives (hash-object, write-tree, commit-tree, update-ref)"
+      >
+        <span class="mode-icon">⚙</span> Plumbing
+      </button>
+    </div>
+
+    {lab.id === 'worktrees-reflog-and-plumbing' && (
+      <nav class="worktree-selector" aria-label="Select active worktree directory">
+        <span class="wt-selector-label">ACTIVE WORKTREE:</span>
+        <button type="button" class="wt-btn is-active" data-wt-target="main" aria-pressed="true">
+          <span class="wt-tag">ROOT</span> /repos/infra-platform <small>[main]</small>
+        </button>
+        <button type="button" class="wt-btn" data-wt-target="networking" aria-pressed="false">
+          <span class="wt-tag">WT 1</span> /wt/networking <small>[feature/networking]</small>
+        </button>
+        <button type="button" class="wt-btn" data-wt-target="iam" aria-pressed="false">
+          <span class="wt-tag">WT 2</span> /wt/iam <small>[feature/iam]</small>
+        </button>
+        <button type="button" class="wt-btn" data-wt-target="hotfix" aria-pressed="false">
+          <span class="wt-tag">WT 3</span> /wt/hotfix <small>[hotfix/alb-healthcheck]</small>
+        </button>
+      </nav>
+    )}
+  </header>
+
+  <!-- Interactive Workspace Body (Persistent 3-Column View) -->
+  <div class="workspace-body-3col">
+    <!-- Column 1: Filesystem (Working Directory + Expandable .git/ in X-Ray) -->
+    <section class="workspace-col-fs" aria-label="Filesystem Explorer">
+      <div class="col-head">
+        <div class="col-title-wrap">
+          <span class="col-title">FILESYSTEM</span>
+          <span class="fs-status-hint" data-ws-fs-hint>[.git/ hidden]</span>
+        </div>
+        <span class="col-count" data-ws-file-count>{firstStep.files.length} items</span>
+      </div>
+
+      <ul class="file-tree" data-ws-file-tree>
+        {firstStep.files.map((file) => (
+          <li
+            class:list={[
+              'file-tree-item',
+              file.isDir && 'is-dir',
+              file.highlight && 'is-highlighted',
+              file.status && `status-${file.status.toLowerCase()}`,
+              file.path.startsWith('.git') && 'is-git-internal'
+            ]}
+            style={`--depth: ${file.depth || 0}`}
+            data-file-path={file.path}
+          >
+            <span class="file-icon" aria-hidden="true">
+              {file.isDir ? '📁' : file.status === 'UU' ? '⚠️' : '📄'}
+            </span>
+            <span class="file-name">{file.name}</span>
+            {file.status && (
+              <span
+                class:list={['file-badge', `badge-${file.status.toLowerCase()}`]}
+                aria-label={`Status: ${file.status}`}
+              >
+                {file.status}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+      <div class="fs-xray-toggle-banner" data-ws-fs-banner>
+        <span class="banner-icon">⚡</span>
+        <button type="button" class="banner-toggle-btn" data-ws-trigger-xray>
+          Toggle X-Ray to inspect hidden .git/
+        </button>
+      </div>
+    </section>
+
+    <!-- Column 2: Linux Terminal (Interactive Bash Shell) -->
+    <section class="workspace-col-term" aria-label="Linux Interactive Terminal">
+      <div class="terminal-bar">
+        <div class="terminal-dots" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </div>
+        <span class="terminal-tab" data-ws-term-tab>bash · dev@lab:~/{lab.path}</span>
+        <span class="terminal-bell" aria-hidden="true">UTF-8</span>
+      </div>
+
+      <div class="terminal-window" data-ws-terminal role="region" aria-label="Interactive Terminal Window">
+        <div class="terminal-history" data-ws-term-history>
+          <div class="terminal-line is-welcome">
+            <span class="term-comment"># Git Internals Lab Interactive Terminal</span>
+            <span class="term-comment"># Repository: ~/repos/infra-platform ({lab.branch})</span>
+            <span class="term-comment"># Mode: Normal | Switch to X-Ray or Plumbing above to inspect internals</span>
+          </div>
+          <div class="terminal-line is-prompt">
+            <span class="term-prompt">dev@lab:~/repos/infra-platform ({lab.branch})$</span>
+            <span class="term-cmd" data-ws-term-cmd>{firstStep.command}</span>
+          </div>
+          <div class="terminal-output" data-ws-term-output>
+            {firstStep.output.map((line) => (
+              <pre class="term-out-line">{line}</pre>
+            ))}
+          </div>
+        </div>
+
+        <form class="terminal-cli-form" data-ws-cli-form onsubmit="return false;">
+          <span class="term-prompt" data-ws-active-prompt>dev@lab:~/repos/infra-platform ({lab.branch})$</span>
+          <div class="term-cli-input-wrapper">
+            <input
+              type="text"
+              class="term-cli-input"
+              data-ws-cli-input
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+              spellcheck="false"
+              aria-label="Interactive Git Command Prompt"
+              placeholder="type git command (e.g. git status, git add)..."
+            />
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- Column 3: Git Internals (HEAD -> Branch -> Commit -> Tree -> Blob Hierarchy) -->
+    <section class="workspace-col-internals" aria-label="Git Internals Merkle Chain">
+      <div class="col-head">
+        <span class="col-title">GIT INTERNALS</span>
+        <span class="internals-mode-tag" data-ws-internals-mode-tag>PORCELAIN</span>
+      </div>
+
+      <div class="internals-chain" data-ws-internals-chain>
+        <!-- HEAD Pointer Card -->
+        <div class="internals-card card-head">
+          <div class="card-tag">HEAD POINTER</div>
+          <strong class="card-val" data-ws-head-ref>{initialInternals.head}</strong>
+          <small class="card-sub">Your "you are here" position in the repository</small>
+        </div>
+
+        <!-- Branch Reference Card -->
+        <div class="internals-card card-ref">
+          <div class="card-tag">BRANCH REFERENCE</div>
+          <strong class="card-val" data-ws-branch-ref>{initialInternals.branchRef}</strong>
+          <small class="card-sub">Movable 41-byte text file inside .git/refs/heads/</small>
+        </div>
+
+        <!-- Commit Envelope Card -->
+        <div class="internals-card card-commit">
+          <div class="card-tag">COMMIT OBJECT</div>
+          <strong class="card-val" data-ws-commit-hash>{initialInternals.commitHash}</strong>
+          <p class="card-msg" data-ws-commit-msg>{initialInternals.commitMsg}</p>
+        </div>
+
+        <!-- Root Tree Card -->
+        <div class="internals-card card-tree">
+          <div class="card-tag">ROOT TREE OBJECT</div>
+          <strong class="card-val" data-ws-tree-hash>{initialInternals.treeHash}</strong>
+          <small class="card-sub" data-ws-tree-detail>{initialInternals.treeDetail}</small>
+        </div>
+
+        <!-- Leaf Blob Card -->
+        <div class="internals-card card-blob">
+          <div class="card-tag">LEAF BLOB OBJECT</div>
+          <strong class="card-val" data-ws-blob-hash>{initialInternals.blobHash}</strong>
+          <small class="card-sub" data-ws-blob-detail>{initialInternals.blobDetail}</small>
+        </div>
+      </div>
+
+      <!-- X-Ray Reveal Banner -->
+      <div class="xray-insight-box" data-ws-xray-box>
+        <span class="xray-box-tag">⚡ X-RAY REVEAL</span>
+        <p class="xray-box-text" data-ws-xray-text>{firstStep.xrayNote || firstStep.internalChange}</p>
+      </div>
+
+      <!-- Plumbing Primitive Box -->
+      <div class="plumbing-insight-box" data-ws-plumbing-box>
+        <span class="plumbing-box-tag">⚙ PLUMBING PRIMITIVE</span>
+        <code class="plumbing-box-cmd" data-ws-plumbing-cmd>{firstStep.plumbingCommand || 'git cat-file -p HEAD'}</code>
+        <button type="button" class="plumbing-run-btn" data-ws-plumbing-run title="Execute in terminal">Run in Terminal ↵</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- Action Rail: Real Git Vocabulary Buttons -->
+  <nav class="workspace-actions" aria-label="Git lab actions">
+    <div class="action-buttons" role="group" aria-label="Interactive steps">
+      {lab.steps.map((step, stepIndex) => (
+        <button
+          type="button"
+          class:list={['git-act-btn', stepIndex === 0 && 'is-active']}
+          data-step-index={stepIndex}
+          aria-pressed={stepIndex === 0 ? 'true' : 'false'}
+        >
+          <span class="act-num">{String(stepIndex + 1).padStart(2, '0')}</span>
+          <span class="act-label">{step.label}</span>
+        </button>
+      ))}
+    </div>
+
+    <div class="action-stepper">
+      <button type="button" class="stepper-btn" data-act-first title="First step">|&larr;</button>
+      <button type="button" class="stepper-btn" data-act-prev title="Previous step">&larr;</button>
+      <button type="button" class="stepper-btn is-play" data-act-play title="Play simulation">▶ Play</button>
+      <button type="button" class="stepper-btn" data-act-next title="Next step">&rarr;</button>
+      <button type="button" class="stepper-btn is-reset" data-act-reset title="Reset lab">↺ Reset</button>
+    </div>
+  </nav>
+
+  <!-- 4-Stage Ledger Shelf (WORKING TREE -> INDEX -> OBJECT DB -> COMMIT GRAPH) -->
+  <aside class="state-shelf" aria-label="Live 4-Stage Git Ledger State">
+    <div class="shelf-header">
+      <span class="shelf-tag">4-STAGE REPOSITORY LEDGER</span>
+      <span class="shelf-hint">Track data mutations across the four boundaries of Git</span>
+    </div>
+    <div class="shelf-grid" data-ws-shelf-grid>
+      {firstStep.shelf.map((item, cellIdx) => (
+        <article class:list={['shelf-cell', item.badge && `badge-${item.badge}`]}>
+          <span class="cell-stage-num">STAGE 0{cellIdx + 1}</span>
+          <span class="cell-label">{item.label}</span>
+          <strong class="cell-value">{item.value}</strong>
+          {item.detail && <small class="cell-detail">{item.detail}</small>}
+        </article>
+      ))}
+    </div>
+  </aside>
+
+  <!-- Supporting Topology & Graph Strip -->
+  <section class="supporting-graph" aria-label="Supporting Git Topology Graph">
+    <div class="graph-head">
+      <span class="graph-tag">TOPOLOGY & GRAPH SNAPSHOT</span>
+      <span class="graph-info" data-ws-graph-info>
+        {lab.id === 'worktrees-reflog-and-plumbing'
+          ? 'WORKTREE ISOLATION BOUNDARY'
+          : lab.id === 'what-git-add-does' || lab.id === 'what-git-commit-creates'
+          ? 'MERKLE TREE & OBJECT GRAPH'
+          : 'COMMIT DAG TRAVERSAL'}
+      </span>
+    </div>
+    <div class="graph-canvas" data-ws-graph-canvas>
+      <svg
+        viewBox={lab.id === 'what-git-add-does' || lab.id === 'what-git-commit-creates' ? "0 0 900 275" : "0 0 900 130"}
+        class="graph-svg"
+        aria-hidden="true"
+        preserveAspectRatio="xMidYMid meet"
+      >
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#42d6e8" />
+          </marker>
+          <marker id="arrow-muted" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#6c879b" />
+          </marker>
+          <marker id="arrow-amber" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#f6c763" />
+          </marker>
+        </defs>
+
+        {lab.id === 'what-git-add-does' || lab.id === 'what-git-commit-creates' ? (
+          <g class="dag-objects">
+            <text x="87" y="11" text-anchor="middle" fill="#49d6a3" font-size="8.5" font-family="monospace" letter-spacing="0.08em">COMMIT (ENVELOPE)</text>
+            <text x="282" y="11" text-anchor="middle" fill="#42d6e8" font-size="8.5" font-family="monospace" letter-spacing="0.08em">ROOT TREE (SNAPSHOT)</text>
+            <text x="502" y="11" text-anchor="middle" fill="#42d6e8" font-size="8.5" font-family="monospace" letter-spacing="0.08em">SUBTREES (DIRECTORIES)</text>
+            <text x="767" y="11" text-anchor="middle" fill="#f6c763" font-size="8.5" font-family="monospace" letter-spacing="0.08em">LEAF BLOBS (PURE BYTES)</text>
+
+            <!-- Commit Node -->
+            <g class="obj-group obj-commit" data-svg-step="3">
+              <rect x="15" y="100" width="145" height="70" rx="7" fill="#0d241d" stroke="#49d6a3" stroke-width="1.8" />
+              <rect x="15" y="100" width="145" height="20" rx="7" fill="#11372f" />
+              <text x="87" y="114" text-anchor="middle" fill="#49d6a3" font-size="10" font-family="monospace" font-weight="bold">COMMIT: 4f901ab</text>
+              <text x="23" y="133" fill="#f2f5fc" font-size="9" font-family="monospace">tree: <tspan fill="#42d6e8" font-weight="bold">f419dc8</tspan> ──▶</text>
+              <text x="23" y="148" fill="#8592a8" font-size="8.5" font-family="monospace">parent: e78b21a</text>
+              <text x="23" y="162" fill="#f6c763" font-size="8" font-family="monospace">"Scale cache replicas"</text>
+            </g>
+
+            <line x1="160" y1="135" x2="205" y2="135" stroke="#42d6e8" stroke-width="2.5" marker-end="url(#arrow)" />
+
+            <!-- Root Tree Node -->
+            <g class="obj-group obj-roottree" data-svg-step="2">
+              <rect x="205" y="100" width="155" height="70" rx="7" fill="#081e2b" stroke="#42d6e8" stroke-width="1.8" />
+              <rect x="205" y="100" width="155" height="20" rx="7" fill="#0f3044" />
+              <text x="282" y="114" text-anchor="middle" fill="#42d6e8" font-size="10" font-family="monospace" font-weight="bold">ROOT TREE: f419dc8</text>
+              <text x="215" y="133" fill="#f2f5fc" font-size="9" font-family="monospace">Merkle Root Snapshot</text>
+              <text x="215" y="148" fill="#8592a8" font-size="8.5" font-family="monospace">3 Directory Entries ──▶</text>
+              <text x="215" y="162" fill="#42d6e8" font-size="8" font-family="monospace">Full Snapshot (No Diffs)</text>
+            </g>
+
+            <path d="M 360 135 H 385 V 68 H 410" fill="none" stroke="#42d6e8" stroke-width="2" marker-end="url(#arrow)" />
+            <path d="M 385 135 V 174 H 410" fill="none" stroke="#42d6e8" stroke-width="2" marker-end="url(#arrow)" />
+            <path d="M 385 174 V 244 H 410" fill="none" stroke="#6c879b" stroke-width="2" marker-end="url(#arrow-muted)" />
+
+            <!-- Subtree app/ -->
+            <g class="obj-group obj-subtree" data-svg-step="1">
+              <rect x="410" y="38" width="185" height="60" rx="7" fill="#081e2b" stroke="#42d6e8" stroke-width="1.8" />
+              <rect x="410" y="38" width="185" height="20" rx="7" fill="#0f3044" />
+              <text x="502" y="52" text-anchor="middle" fill="#42d6e8" font-size="9.5" font-family="monospace" font-weight="bold">040000 tree app/ (7b2a901)</text>
+              <text x="420" y="72" fill="#f2f5fc" font-size="8.5" font-family="monospace">100644 blob <tspan fill="#f6c763" font-weight="bold">b14c80e</tspan> ──▶</text>
+              <text x="420" y="88" fill="#8592a8" font-size="8.5" font-family="monospace">Directory Table (Names &amp; Modes)</text>
+            </g>
+
+            <!-- Subtree modules/ (Reused) -->
+            <g class="obj-group obj-subtree-reused" style="opacity: 0.85;">
+              <rect x="410" y="145" width="185" height="58" rx="7" fill="#081622" stroke="#314d68" stroke-width="1.5" />
+              <rect x="410" y="145" width="185" height="19" rx="7" fill="#0c2033" />
+              <text x="485" y="159" text-anchor="middle" fill="#6c879b" font-size="9.5" font-family="monospace">040000 tree modules/</text>
+              <rect x="546" y="148" width="44" height="13" rx="3" fill="rgba(73, 214, 163, 0.15)" stroke="rgba(73, 214, 163, 0.4)" stroke-width="0.8" />
+              <text x="568" y="158" text-anchor="middle" fill="#49d6a3" font-size="7.5" font-family="monospace" font-weight="bold">REUSED</text>
+              <text x="420" y="178" fill="#647b95" font-size="8.5" font-family="monospace">SHA: e2018ba (unmodified)</text>
+              <text x="420" y="193" fill="#49d6a3" font-size="8" font-family="monospace">O(1) SHA match · zero duplication</text>
+            </g>
+
+            <!-- Leaf Blobs -->
+            <path d="M 595 68 H 622 V 38 H 650" fill="none" stroke="#f6c763" stroke-width="2" marker-end="url(#arrow-amber)" />
+            <path d="M 622 68 V 95 H 650" fill="none" stroke="#f6c763" stroke-width="1.8" marker-end="url(#arrow-amber)" />
+
+            <g class="obj-group obj-blob" data-svg-step="0">
+              <rect x="650" y="15" width="235" height="46" rx="7" fill="#251c0c" stroke="#f6c763" stroke-width="1.8" />
+              <rect x="650" y="15" width="235" height="18" rx="7" fill="#38290f" />
+              <text x="735" y="28" text-anchor="middle" fill="#f6c763" font-size="9.5" font-family="monospace" font-weight="bold">BLOB: b14c80e</text>
+              <rect x="805" y="18" width="74" height="12" rx="3" fill="rgba(251, 126, 133, 0.2)" stroke="rgba(251, 126, 133, 0.5)" stroke-width="0.8" />
+              <text x="842" y="27" text-anchor="middle" fill="#fb7e85" font-size="7" font-family="monospace" font-weight="bold">NO FILENAME</text>
+              <text x="660" y="45" fill="#f2f5fc" font-size="8.5" font-family="monospace">replicas: 3 · redis:7.0-alpine</text>
+              <text x="660" y="56" fill="#8592a8" font-size="7.5" font-family="monospace">pure byte payload (in .git/objects/b1/)</text>
+            </g>
+          </g>
+        ) : lab.id === 'worktrees-reflog-and-plumbing' ? (
+          <g class="dag-worktree">
+            <rect x="260" y="20" width="380" height="90" rx="10" fill="#132b3d" stroke="#42d6e8" stroke-width="1.8" />
+            <text x="450" y="44" text-anchor="middle" fill="#42d6e8" font-size="12" font-family="monospace" font-weight="bold">SHARED REPOSITORY ROOT (.git)</text>
+            <text x="450" y="66" text-anchor="middle" fill="#97a3b8" font-size="11" font-family="monospace">.git/objects (Immutable Object DB) · .git/refs/heads/</text>
+            <text x="450" y="86" text-anchor="middle" fill="#49d6a3" font-size="10" font-family="monospace">Zero disk duplication across checked-out worktrees</text>
+
+            <rect x="30" y="25" width="180" height="80" rx="8" fill="#0d1b29" stroke="#68a3ff" stroke-width="1.5" />
+            <text x="120" y="48" text-anchor="middle" fill="#68a3ff" font-size="11" font-family="monospace" font-weight="bold">/wt/networking</text>
+            <text x="120" y="68" text-anchor="middle" fill="#97a3b8" font-size="10" font-family="monospace">Private HEAD &amp; Index</text>
+            <text x="120" y="88" text-anchor="middle" fill="#f6c763" font-size="10" font-family="monospace">[feature/networking]</text>
+            <line x1="210" y1="65" x2="260" y2="65" stroke="#42d6e8" stroke-width="2" marker-end="url(#arrow)" />
+
+            <rect x="690" y="25" width="180" height="80" rx="8" fill="#0d1b29" stroke="#b79aff" stroke-width="1.5" />
+            <text x="780" y="48" text-anchor="middle" fill="#b79aff" font-size="11" font-family="monospace" font-weight="bold">/wt/iam</text>
+            <text x="780" y="68" text-anchor="middle" fill="#97a3b8" font-size="10" font-family="monospace">Private HEAD &amp; Index</text>
+            <text x="780" y="88" text-anchor="middle" fill="#f6c763" font-size="10" font-family="monospace">[feature/iam]</text>
+            <line x1="690" y1="65" x2="640" y2="65" stroke="#42d6e8" stroke-width="2" marker-end="url(#arrow)" />
+          </g>
+        ) : (
+          <g class="dag-commits">
+            <line x1="160" y1="65" x2="300" y2="65" stroke="#6c879b" stroke-width="2.5" marker-end="url(#arrow-muted)" />
+            <line x1="360" y1="65" x2="500" y2="65" stroke="#42d6e8" stroke-width="2.5" marker-end="url(#arrow)" />
+            <line x1="560" y1="65" x2="700" y2="65" stroke="#49d6a3" stroke-width="2.5" marker-end="url(#arrow)" />
+
+            <circle cx="130" cy="65" r="24" fill="#132b3d" stroke="#6c879b" stroke-width="2" />
+            <text x="130" y="69" text-anchor="middle" fill="#f2f5fc" font-size="11" font-family="monospace" font-weight="bold">c3904</text>
+            <text x="130" y="105" text-anchor="middle" fill="#8592a8" font-size="10" font-family="monospace">Initial root</text>
+
+            <circle cx="330" cy="65" r="24" fill="#132b3d" stroke="#68a3ff" stroke-width="2" />
+            <text x="330" y="69" text-anchor="middle" fill="#68a3ff" font-size="11" font-family="monospace" font-weight="bold">e78b2</text>
+            <text x="330" y="105" text-anchor="middle" fill="#8592a8" font-size="10" font-family="monospace">main tip</text>
+
+            <circle cx="530" cy="65" r="24" fill="#1c4760" stroke="#42d6e8" stroke-width="2.5" />
+            <text x="530" y="69" text-anchor="middle" fill="#42d6e8" font-size="11" font-family="monospace" font-weight="bold">b14c8</text>
+            <text x="530" y="105" text-anchor="middle" fill="#8592a8" font-size="10" font-family="monospace">feature 1</text>
+
+            <circle cx="730" cy="65" r="24" fill="#11372f" stroke="#49d6a3" stroke-width="2.5" />
+            <text x="730" y="69" text-anchor="middle" fill="#49d6a3" font-size="11" font-family="monospace" font-weight="bold">4f901</text>
+            <text x="730" y="105" text-anchor="middle" fill="#49d6a3" font-size="10" font-family="monospace">HEAD (active)</text>
+
+            <rect x="700" y="10" width="60" height="20" rx="4" fill="#49d6a3" />
+            <text x="730" y="24" text-anchor="middle" fill="#090c13" font-size="10" font-family="monospace" font-weight="bold">HEAD</text>
+          </g>
+        )}
+      </svg>
+    </div>
+  </section>
+
+  <!-- Static Reading Fallback (Visible without JS) -->
+  <div class="workspace-static-fallback">
+    <h3>All Interactive Steps for this Laboratory</h3>
+    <ol class="static-steps-list">
+      {lab.steps.map((step, i) => (
+        <li>
+          <strong>Step {i + 1}: {step.label}</strong>
+          <code>{step.command}</code>
+          <pre>{step.output.join('\n')}</pre>
+          <p><strong>Internal mutation:</strong> {step.internalChange}</p>
+          <p><strong>Takeaway:</strong> {step.takeaway}</p>
+        </li>
+      ))}
+    </ol>
+  </div>
+</div>
