@@ -608,7 +608,20 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
-  transition: all 0.2s;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.internals-card:hover {
+  border-color: var(--cyan);
+  background: #121e31;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.internals-card:active {
+  transform: translateY(0);
 }
 
 .internals-card .card-tag {
@@ -815,11 +828,13 @@
   border-radius: 5px;
   font: 0.78rem var(--mono);
   color: var(--muted);
-  transition: background 0.15s;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  user-select: none;
 }
 
 .file-tree-item:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(66, 214, 232, 0.08);
   color: var(--text);
 }
 
@@ -1041,6 +1056,64 @@
 
 .terminal-window {
   cursor: text;
+}
+
+/* Quick Command Chips */
+.terminal-quick-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: #080d16;
+  border-top: 1px dashed #1c2b3d;
+}
+
+.chips-label {
+  font: 0.62rem var(--mono);
+  color: var(--dim);
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  margin-right: 2px;
+}
+
+.term-chip {
+  padding: 4px 9px;
+  background: #0e1826;
+  border: 1px solid #23354a;
+  border-radius: 5px;
+  color: #9cb0c5;
+  font: 0.68rem var(--mono);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  user-select: none;
+}
+
+.term-chip:hover {
+  background: #15273d;
+  border-color: var(--cyan);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.term-chip:active {
+  transform: translateY(0);
+}
+
+.term-chip.is-next-step {
+  background: rgba(73, 214, 163, 0.12);
+  border-color: var(--green);
+  color: var(--green);
+  font-weight: 700;
+}
+
+.term-chip.is-next-step:hover {
+  background: rgba(73, 214, 163, 0.25);
+  color: #fff;
+  box-shadow: 0 0 10px rgba(73, 214, 163, 0.35);
 }
 
 /* Action Rail */
@@ -1276,6 +1349,63 @@
 .dag-objects .obj-blob.is-svg-active rect:first-child {
   stroke: #f6c763;
   filter: drop-shadow(0 0 10px rgba(246, 199, 99, 0.45));
+}
+
+/* Universal SVG Node Inspector Styles */
+[data-git-inspect-cmd] {
+  cursor: pointer;
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+[data-git-inspect-cmd]:hover rect,
+[data-git-inspect-cmd]:hover circle {
+  filter: brightness(1.25) drop-shadow(0 0 8px rgba(66, 214, 232, 0.5));
+  stroke-width: 2.2px;
+}
+
+/* Active SVG step glow across all labs */
+[data-svg-step] {
+  transition: opacity 0.25s ease, filter 0.25s ease;
+}
+
+[data-svg-step].is-svg-active rect:first-child,
+[data-svg-step].is-svg-active circle:first-child {
+  filter: drop-shadow(0 0 10px rgba(66, 214, 232, 0.5));
+  stroke: var(--cyan);
+  stroke-width: 2.4px;
+}
+
+/* Lab 1: Where is Git (The 4 Doors) */
+.dag-where-is-git .door-card {
+  transition: transform 0.2s ease;
+}
+
+.dag-where-is-git .door-card:hover {
+  transform: translateY(-2px);
+}
+
+/* Lab 2: Staging Pipeline */
+.dag-add-pipeline .pipeline-stage {
+  transition: transform 0.2s ease;
+}
+
+.dag-add-pipeline .pipeline-stage:hover {
+  transform: translateY(-2px);
+}
+
+/* Lab 4: Branches are References */
+.dag-branches .branch-card:hover rect {
+  stroke: var(--cyan);
+}
+
+/* Lab 8: Reset / Restore / Revert */
+.dag-reset .undo-card:hover rect {
+  filter: brightness(1.2);
+}
+
+/* Lab 9: Merge Conflicts Three-Stage Index */
+.dag-conflicts .stage-card:hover rect {
+  filter: brightness(1.2);
 }
 
 /* Static Reading Fallback */
@@ -1597,6 +1727,22 @@
   .git-bottom-takeaway {
     grid-template-columns: 1fr;
     padding: 16px;
+  }
+  .terminal-quick-chips {
+    padding: 8px 10px;
+    gap: 5px;
+  }
+  .term-chip {
+    padding: 5px 9px;
+    font-size: 0.72rem;
+  }
+  .git-act-btn {
+    padding: 6px 10px;
+    font-size: 0.72rem;
+  }
+  .worktree-selector {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 

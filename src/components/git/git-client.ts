@@ -143,6 +143,7 @@ function initWorkspace(
   const cliInput = q<HTMLInputElement>(wsEl, '[data-ws-cli-input]');
   const activePromptEl = q<HTMLElement>(wsEl, '[data-ws-active-prompt]');
   const plumbingRunBtn = q<HTMLButtonElement>(wsEl, '[data-ws-plumbing-run]');
+  const svgCanvasEl = q<HTMLElement>(wsEl, '[data-ws-graph-canvas]');
 
   const cmdHistory: string[] = [];
   let historyIdx = -1;
@@ -156,7 +157,7 @@ function initWorkspace(
   };
   globalTimers.add(stopPlay);
 
-  // Mode switching logic
+  // Mode switching logic (Normal / X-Ray / Plumbing)
   const setMode = (newMode: 'learn' | 'xray' | 'plumbing') => {
     wsEl.setAttribute('data-ws-mode', newMode);
 
@@ -207,7 +208,7 @@ function initWorkspace(
     promptDiv.className = 'terminal-line is-prompt';
     const curBranch = promptBranchEl?.textContent || lab.branch;
     promptDiv.innerHTML = `
-      <span class="term-prompt">dev@lab:~/repos/infra-platform (${curBranch})$</span>
+      <span class="term-prompt">dev@lab:~/repos/infra-platform (${escapeHtml(curBranch)})$</span>
       <span class="term-cmd">${escapeHtml(cmd)}</span>
     `;
     const outputDiv = document.createElement('div');
@@ -225,6 +226,7 @@ function initWorkspace(
   const renderStep = (stepIdx: number, appendTerminal = true) => {
     currentStepIdx = Math.max(0, Math.min(lab.steps.length - 1, stepIdx));
     const step = lab.steps[currentStepIdx];
+    const internals = getStepInternals(lab, currentStepIdx);
 
     // Highlight active action button
     actionButtons.forEach((btn, i) => {
@@ -239,8 +241,16 @@ function initWorkspace(
     if (cliInput) {
       const nextStep = lab.steps[currentStepIdx + 1];
       cliInput.placeholder = nextStep
-        ? `Next: type '${nextStep.command}' or try 'git status' / 'help' / 'clear' ...`
-        : `Type git commands or 'clear' / 'help' ...`;
+        ? `Next step: '${nextStep.command}' (or type 'git status' / 'cat .git/HEAD')...`
+        : `All steps complete. Try 'git status', 'git log', 'cat .git/HEAD' or reset!`;
+    }
+
+    // Update Primary Quick-Run Chip
+    const nextStepChip = q<HTMLButtonElement>(wsEl, '.term-chip.is-next-step');
+    if (nextStepChip) {
+      nextStepChip.setAttribute('data-chip-cmd', step.command);
+      nextStepChip.textContent = `▶ Run Step ${currentStepIdx + 1}: ${step.command}`;
+      nextStepChip.title = `Execute: ${step.command}`;
     }
 
     // Update Column 1: Explorer file tree
@@ -260,10 +270,11 @@ function initWorkspace(
           .join(' ');
         li.style.setProperty('--depth', String(file.depth || 0));
         li.setAttribute('data-file-path', file.path);
+        li.title = `Click to inspect ${file.path} in terminal`;
 
         const icon = document.createElement('span');
         icon.className = 'file-icon';
-        icon.textContent = file.isDir ? '📁' : file.status === 'UU' ? '⚠️' : '📄';
+        icon.textContent = file.isDir ? '📁' : file.status === 'UU' ? '⚠️' : isGitInternal ? '⚙️' : '📄';
 
         const name = document.createElement('span');
         name.className = 'file-name';
@@ -294,7 +305,7 @@ function initWorkspace(
           <div class="terminal-line is-welcome">
             <span class="term-comment"># Git Internals Lab Interactive Terminal</span>
             <span class="term-comment"># Target repository: ~/repos/infra-platform (${lab.branch})</span>
-            <span class="term-comment"># Tip: Type Git commands directly or click the action buttons below</span>
+            <span class="term-comment"># Tip: Click buttons, cards, files, or quick chips below to run real Git commands!</span>
           </div>
         `;
       }
@@ -302,7 +313,7 @@ function initWorkspace(
       const promptDiv = document.createElement('div');
       promptDiv.className = 'terminal-line is-prompt';
       promptDiv.innerHTML = `
-        <span class="term-prompt">dev@lab:~/repos/infra-platform (${promptBranchEl?.textContent || lab.branch})$</span>
+        <span class="term-prompt">dev@lab:~/repos/infra-platform (${escapeHtml(promptBranchEl?.textContent || lab.branch)})$</span>
         <span class="term-cmd">${escapeHtml(step.command)}</span>
       `;
 
@@ -314,7 +325,7 @@ function initWorkspace(
         if (line.startsWith('#')) pre.classList.add('term-comment');
         else if (line.includes('fatal:') || line.includes('CONFLICT') || line.includes('error:')) {
           pre.classList.add('term-error');
-        } else if (line.includes('Fast-forward') || line.includes('Successfully') || line.includes('written') || line.includes('Switched')) {
+        } else if (line.includes('Fast-forward') || line.includes('Successfully') || line.includes('written') || line.includes('Switched') || line.includes('Created')) {
           pre.classList.add('term-success');
         }
         pre.textContent = line;
@@ -326,7 +337,6 @@ function initWorkspace(
     }
 
     // Update Column 3: Git Internals Cards
-    const internals = getStepInternals(lab, currentStepIdx);
     setText(wsEl, '[data-ws-head-ref]', internals.head);
     setText(wsEl, '[data-ws-branch-ref]', internals.branchRef);
     setText(wsEl, '[data-ws-commit-hash]', internals.commitHash || 'None');
@@ -392,9 +402,7 @@ function initWorkspace(
     if (svgEl) {
       qa<SVGElement>(svgEl, '[data-svg-step]').forEach((node) => {
         const stepTarget = node.getAttribute('data-svg-step');
-        const isActive =
-          stepTarget === String(currentStepIdx) ||
-          (currentStepIdx === 3 && (stepTarget === '1' || stepTarget === '2' || stepTarget === '3'));
+        const isActive = stepTarget === String(currentStepIdx);
         node.classList.toggle('is-svg-active', isActive);
       });
     }
@@ -416,6 +424,7 @@ function initWorkspace(
     historyIdx = -1;
 
     const norm = cmd.toLowerCase().replace(/\s+/g, ' ');
+    const curInternals = getStepInternals(lab, currentStepIdx);
 
     // 1. Built-in: clear
     if (norm === 'clear') {
@@ -428,13 +437,19 @@ function initWorkspace(
     // 2. Built-in: help
     if (norm === 'help' || norm === 'git help' || norm === 'git --help') {
       appendCustomOutput(cmd, [
-        'GNU bash, interactive Git lab simulator',
-        'Available actions for this laboratory:',
+        'GNU bash, interactive Git lab simulator (Infra Illustrated)',
+        'Laboratory Actions:',
         ...lab.steps.map((s, idx) => `  ${String(idx + 1).padStart(2, '0')}. ${s.command}`),
         '',
-        'Builtins: clear, help, pwd, ls, cat <file>',
-        'Plumbing: git cat-file, git hash-object, git write-tree, git ls-files',
-        'Navigation: Up/Down arrow for history, Tab for autocomplete.'
+        'Inspection commands you can run anytime:',
+        '  git status -s                    - Short working tree status',
+        '  cat .git/HEAD                    - Read "you are here" pointer',
+        '  git ls-files --stage             - Inspect binary staging index',
+        '  git cat-file -p <sha|HEAD>       - Decompress commit envelope, tree, or blob',
+        '  git count-objects -v             - Report object vault statistics',
+        '  git log --oneline                - View commit ancestry history',
+        '  git diff                         - Compare working directory with index',
+        '  clear                            - Clear terminal screen'
       ], false);
       return;
     }
@@ -446,7 +461,7 @@ function initWorkspace(
     }
 
     // 4. Built-in: ls
-    if (norm === 'ls' || norm === 'ls -la' || norm === 'ls -l') {
+    if (norm === 'ls' || norm === 'ls -la' || norm === 'ls -l' || norm.startsWith('ls ')) {
       const curStep = lab.steps[currentStepIdx];
       appendCustomOutput(cmd, [
         'total 16',
@@ -459,7 +474,25 @@ function initWorkspace(
     if (norm.startsWith('cat ')) {
       const target = norm.slice(4).trim();
       if (target.includes('head')) {
-        appendCustomOutput(cmd, [currentStepIdx > 1 ? 'ref: refs/heads/feature/cache' : 'ref: refs/heads/main']);
+        if (curInternals.head.startsWith('ref: ')) {
+          appendCustomOutput(cmd, [
+            curInternals.head,
+            '# [Symbolic Ref]: HEAD points to a branch name, not a raw commit hash directly.'
+          ]);
+        } else {
+          appendCustomOutput(cmd, [
+            curInternals.head,
+            '# ⚠️ DETACHED HEAD: HEAD is storing a raw 40-character commit SHA directly!',
+            '# Any new commits created now are orphans without a branch lifeline.'
+          ]);
+        }
+        return;
+      }
+      if (target.includes('refs/heads/')) {
+        appendCustomOutput(cmd, [
+          curInternals.commitHash || '4f901ab789012345678901234567890123456789',
+          '# 41-byte text file: A Git branch is merely a text file holding the commit SHA!'
+        ]);
         return;
       }
       if (target.includes('deployment.yaml')) {
@@ -470,18 +503,35 @@ function initWorkspace(
           'kind: Deployment',
           'metadata:',
           '  name: cache-redis',
+          '  namespace: default',
           'spec:',
           `  ${replicaVal}`,
           '  selector:',
           '    matchLabels:',
-          '      app: cache'
+          '      app: cache',
+          '  template:',
+          '    spec:',
+          '      containers:',
+          '      - name: redis',
+          '        image: redis:7.0-alpine'
         ]);
         return;
       }
       if (target.includes('readme.md')) {
         appendCustomOutput(cmd, [
           '# Infra Platform Core',
-          'Shared platform infrastructure services and Kubernetes configurations.'
+          'Shared platform infrastructure services and Kubernetes configurations.',
+          'Maintained by the Platform Infrastructure Team.'
+        ]);
+        return;
+      }
+      if (target.includes('.gitignore')) {
+        appendCustomOutput(cmd, [
+          '# Local development overrides',
+          '*.tfstate',
+          '*.tfstate.backup',
+          '.terraform/',
+          '*.log'
         ]);
         return;
       }
@@ -504,7 +554,7 @@ function initWorkspace(
       if (dirtyFiles.length === 0) {
         appendCustomOutput(cmd, [
           `On branch ${lab.branch}`,
-          'Your branch is up to date with \'origin/' + lab.branch + '\'.',
+          `Your branch is up to date with 'origin/${lab.branch}'.`,
           '',
           'nothing to commit, working tree clean'
         ]);
@@ -546,7 +596,7 @@ function initWorkspace(
 
     if (norm.startsWith('git log')) {
       appendCustomOutput(cmd, [
-        `* 4f901ab (HEAD -> ${lab.branch}) Scale cache deployment`,
+        `* ${curInternals.commitHash || '4f901ab'} (HEAD -> ${curInternals.branchRef || lab.branch}) ${curInternals.commitMsg || 'Scale cache deployment'}`,
         '* b14c80e Add redis cache configuration',
         '* e78b21a (main) Add IAM production roles',
         '* c3904e1 Initial infrastructure definition'
@@ -556,8 +606,10 @@ function initWorkspace(
 
     if (norm.startsWith('git branch')) {
       appendCustomOutput(cmd, [
-        `* ${lab.branch}`,
+        `* ${curInternals.branchRef || lab.branch}`,
         '  main',
+        '  feature/networking',
+        '  feature/iam',
         '  remotes/origin/main'
       ]);
       return;
@@ -577,11 +629,16 @@ function initWorkspace(
 
     if (norm.startsWith('git reflog')) {
       appendCustomOutput(cmd, [
-        '4f901ab (HEAD -> main) HEAD@{0}: commit: Scale cache deployment',
-        'b14c80e (feature/cache) HEAD@{1}: commit: Add redis cache configuration',
+        `${curInternals.commitHash || '4f901ab'} (HEAD -> ${curInternals.branchRef || lab.branch}) HEAD@{0}: commit: Scale cache deployment`,
+        'b14c80e HEAD@{1}: commit: Add redis cache configuration',
         'e78b21a HEAD@{2}: checkout: moving from main to feature/cache',
         'c3904e1 HEAD@{3}: commit (initial): Initial infrastructure'
       ]);
+      return;
+    }
+
+    if (norm === 'git rev-parse head' || norm === 'git rev-parse --short head') {
+      appendCustomOutput(cmd, [curInternals.commitHash || '4f901ab']);
       return;
     }
 
@@ -592,21 +649,24 @@ function initWorkspace(
         appendCustomOutput(cmd, [type]);
         return;
       }
+      if (norm.includes('tree') || norm.includes('7b2a901') || norm.includes('f419dc8')) {
+        appendCustomOutput(cmd, [
+          '040000 tree 7b2a901e18ac49b012891ac37890123456789abc	app',
+          '040000 tree 8e14bc2390124789012345678901234567890123	environments',
+          '040000 tree 319ca01234567890123456789012345678901234	modules',
+          '100644 blob a48fe12e89012345678901234567890123456789	README.md',
+          '100644 blob 91c48ea12891ac37890123456789abcdeff01234	.gitignore'
+        ]);
+        return;
+      }
       if (norm.includes('head') || norm.includes('4f901ab') || norm.includes('commit')) {
         appendCustomOutput(cmd, [
-          'tree 7b2a901e18ac49b012891ac37890123456789abc',
+          `tree ${curInternals.treeHash || '7b2a901e18ac49b012891ac37890123456789abc'}`,
           'parent e78b21a89012345678901234567890123456789a',
           'author SRE Engineer <dev@infra.local> 1726750000 +0000',
           'committer SRE Engineer <dev@infra.local> 1726750000 +0000',
           '',
-          'Scale cache deployment'
-        ]);
-        return;
-      }
-      if (norm.includes('tree') || norm.includes('7b2a901')) {
-        appendCustomOutput(cmd, [
-          '100644 blob a48fe12e... README.md',
-          '040000 tree 3e18a20b... app'
+          curInternals.commitMsg || 'Scale cache deployment'
         ]);
         return;
       }
@@ -621,30 +681,52 @@ function initWorkspace(
       return;
     }
 
+    if (norm.startsWith('git count-objects')) {
+      appendCustomOutput(cmd, [
+        'count: 14',
+        'size: 32',
+        'in-pack: 0',
+        'packs: 0',
+        'prune-packable: 0',
+        'garbage: 0',
+        'size-garbage: 0'
+      ]);
+      return;
+    }
+
     if (norm.startsWith('git hash-object')) {
-      appendCustomOutput(cmd, ['7ab38f4a2190cd89e1401bc389012478901234ab']);
+      appendCustomOutput(cmd, [curInternals.blobHash || '7ab38f4a2190cd89e1401bc389012478901234ab']);
       return;
     }
 
     if (norm.startsWith('git write-tree')) {
-      appendCustomOutput(cmd, ['7b2a901e18ac49b012891ac37890123456789abc']);
+      appendCustomOutput(cmd, [curInternals.treeHash || '7b2a901e18ac49b012891ac37890123456789abc']);
       return;
     }
 
     if (norm.startsWith('git commit-tree')) {
-      appendCustomOutput(cmd, ['4f901ab789012345678901234567890123456789']);
+      appendCustomOutput(cmd, [curInternals.commitHash || '4f901ab789012345678901234567890123456789']);
       return;
     }
 
     if (norm.startsWith('git update-ref')) {
-      appendCustomOutput(cmd, ['# Updated ref refs/heads/main to 4f901ab']);
+      appendCustomOutput(cmd, [`# Updated ref refs/heads/${lab.branch} to ${curInternals.commitHash || '4f901ab'}`]);
       return;
     }
 
     if (norm.startsWith('git ls-files')) {
+      if (lab.id === 'merge-conflicts-three-stage-index') {
+        appendCustomOutput(cmd, [
+          '100644 8a12f90123456789012345678901234567890123 1	app/deployment.yaml  (Stage 1: BASE)',
+          '100644 b41c9e2345678901234567890123456789012345 2	app/deployment.yaml  (Stage 2: OURS)',
+          '100644 6d34e81234567890123456789012345678901234 3	app/deployment.yaml  (Stage 3: THEIRS)'
+        ]);
+        return;
+      }
       appendCustomOutput(cmd, [
-        '100644 7ab38f4a2190cd89e1401bc389012478901234ab 0\tapp/deployment.yaml',
-        '100644 a48fe12e89012345678901234567890123456789 0\tREADME.md'
+        `100644 ${curInternals.blobHash || '7ab38f4a2190cd89e1401bc389012478901234ab'} 0	app/deployment.yaml`,
+        '100644 a48fe12e89012345678901234567890123456789 0	README.md',
+        '100644 91c48ea12891ac37890123456789abcdeff01234 0	.gitignore'
       ]);
       return;
     }
@@ -656,7 +738,7 @@ function initWorkspace(
         'status', 'add', 'commit', 'branch', 'checkout', 'switch', 'diff',
         'log', 'fetch', 'pull', 'push', 'merge', 'rebase', 'reset', 'restore',
         'revert', 'worktree', 'reflog', 'fsck', 'gc', 'cat-file', 'hash-object',
-        'write-tree', 'update-index', 'update-ref', 'ls-files', 'ls-tree'
+        'write-tree', 'update-index', 'update-ref', 'ls-files', 'ls-tree', 'rev-parse'
       ];
       const suggestion = known.find(k => k.startsWith(sub.slice(0, 2)) || (sub.length > 3 && k.includes(sub.slice(1, 3))));
       appendCustomOutput(cmd, [
@@ -797,6 +879,54 @@ function initWorkspace(
     });
   }
 
+  // Clickable Quick-Run Chips
+  qa<HTMLButtonElement>(wsEl, '[data-chip-cmd]').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      const cmd = chip.getAttribute('data-chip-cmd');
+      if (cmd) executeCommand(cmd);
+    });
+  });
+
+  // Clickable Filesystem items in Column 1
+  fileTreeEl?.addEventListener('click', (e) => {
+    const item = (e.target as HTMLElement).closest<HTMLElement>('.file-tree-item');
+    if (!item) return;
+    const path = item.getAttribute('data-file-path');
+    if (!path) return;
+    if (item.classList.contains('is-dir')) {
+      executeCommand(`ls -la ${path}`);
+    } else {
+      executeCommand(`cat ${path}`);
+    }
+  });
+
+  // Clickable Internals Cards in Column 3
+  qa<HTMLElement>(wsEl, '[data-inspect-card]').forEach((card) => {
+    card.addEventListener('click', () => {
+      const type = card.getAttribute('data-inspect-card');
+      const curInternals = getStepInternals(lab, currentStepIdx);
+      if (type === 'head') {
+        executeCommand('cat .git/HEAD');
+      } else if (type === 'branch') {
+        executeCommand(`cat .git/refs/heads/${curInternals.branchRef || lab.branch}`);
+      } else if (type === 'commit') {
+        executeCommand(`git cat-file -p ${curInternals.commitHash || 'HEAD'}`);
+      } else if (type === 'tree') {
+        executeCommand(`git cat-file -p ${curInternals.treeHash || 'HEAD^{tree}'}`);
+      } else if (type === 'blob') {
+        executeCommand(`git cat-file -p ${curInternals.blobHash || 'HEAD:app/deployment.yaml'}`);
+      }
+    });
+  });
+
+  // Clickable SVG diagram nodes in Bottom Topology strip
+  svgCanvasEl?.addEventListener('click', (e) => {
+    const node = (e.target as Element).closest<SVGElement>('[data-git-inspect-cmd]');
+    if (!node) return;
+    const cmd = node.getAttribute('data-git-inspect-cmd');
+    if (cmd) executeCommand(cmd);
+  });
+
   // Worktree selector handlers for Lab 10
   if (labId === 'worktrees-reflog-and-plumbing') {
     const wtButtons = qa<HTMLButtonElement>(wsEl, '[data-wt-target]');
@@ -826,13 +956,13 @@ function initWorkspace(
           const switchDiv = document.createElement('div');
           switchDiv.className = 'terminal-line is-prompt';
           switchDiv.innerHTML = `
-            <span class="term-prompt">dev@lab:${cfg.path} (${cfg.branch})$</span>
-            <span class="term-cmd">pwd && git status -s</span>
+            <span class="term-prompt">dev@lab:${escapeHtml(cfg.path)} (${escapeHtml(cfg.branch)})$</span>
+            <span class="term-cmd">pwd &amp;&amp; git status -s</span>
           `;
           const outDiv = document.createElement('div');
           outDiv.className = 'terminal-output';
           outDiv.innerHTML = `
-            <pre class="term-out-line">${cfg.path}</pre>
+            <pre class="term-out-line">${escapeHtml(cfg.path)}</pre>
             <pre class="term-out-line term-success"># Switched active worktree shell. Dedicated HEAD and index loaded.</pre>
           `;
           termHistoryEl.append(switchDiv, outDiv);

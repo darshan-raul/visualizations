@@ -62,6 +62,72 @@ export interface GitLab {
   sources: string[];
 }
 
+// Persistent repository helper: keeps the exact same repo structure throughout all 10 levels
+function getRepoFiles(options: {
+  includeGit?: boolean;
+  deploymentStatus?: 'M' | 'A' | 'MM' | '??' | 'UU' | 'D';
+  deploymentHighlight?: boolean;
+  deploymentName?: string;
+  hasRedis?: boolean;
+  redisStatus?: 'M' | 'A' | '??';
+  redisHighlight?: boolean;
+  redisName?: string;
+  gitFiles?: GitFile[];
+  readmeStatus?: '??';
+}): GitFile[] {
+  const files: GitFile[] = [];
+
+  if (options.includeGit) {
+    files.push(
+      { path: '.git', name: '.git/ [Hidden Git Vault]', isDir: true, depth: 0, highlight: true },
+      { path: '.git/HEAD', name: 'HEAD (active pointer)', depth: 1, highlight: true },
+      { path: '.git/index', name: 'index (binary staging ledger)', depth: 1 },
+      { path: '.git/objects', name: 'objects/ (immutable object storage)', isDir: true, depth: 1 },
+      { path: '.git/refs', name: 'refs/heads/ (branch pointer files)', isDir: true, depth: 1 }
+    );
+    if (options.gitFiles) {
+      files.push(...options.gitFiles);
+    }
+  }
+
+  // Working Directory files (infra-platform)
+  files.push(
+    { path: 'app', name: 'app/', isDir: true, depth: 0 },
+    {
+      path: 'app/deployment.yaml',
+      name: options.deploymentName || 'deployment.yaml',
+      depth: 1,
+      status: options.deploymentStatus,
+      highlight: options.deploymentHighlight
+    }
+  );
+
+  if (options.hasRedis) {
+    files.push({
+      path: 'app/redis.yaml',
+      name: options.redisName || 'redis.yaml',
+      depth: 1,
+      status: options.redisStatus,
+      highlight: options.redisHighlight
+    });
+  }
+
+  files.push(
+    { path: 'environments', name: 'environments/', isDir: true, depth: 0 },
+    { path: 'environments/prod.tfvars', name: 'prod.tfvars', depth: 1 },
+    { path: 'environments/sandbox.tfvars', name: 'sandbox.tfvars', depth: 1 },
+    { path: 'modules', name: 'modules/', isDir: true, depth: 0 },
+    { path: 'modules/iam', name: 'iam/', isDir: true, depth: 1 },
+    { path: 'modules/iam/roles.tf', name: 'roles.tf', depth: 2 },
+    { path: 'modules/networking', name: 'networking/', isDir: true, depth: 1 },
+    { path: 'modules/networking/vpc.tf', name: 'vpc.tf', depth: 2 },
+    { path: 'README.md', name: 'README.md', depth: 0, status: options.includeGit ? undefined : '??' },
+    { path: '.gitignore', name: '.gitignore', depth: 0 }
+  );
+
+  return files;
+}
+
 export const gitViews: GitLab[] = [
   // =========================================================================
   // LEVEL 1: WHERE IS GIT?
@@ -72,13 +138,13 @@ export const gitViews: GitLab[] = [
     title: 'Level 1: Where Did Git Put Everything?',
     label: '01. Where is Git?',
     group: 'Foundations: Inside .git',
-    path: '.git/',
+    path: '~/repos/infra-platform',
     branch: 'main',
     question: 'When you run git init, where does Git actually live and how does it track your files?',
-    whatLearnerThinks: '“Git tracks this folder.”',
-    whatWeReveal: 'Working directory vs hidden .git repository. Four doors: HEAD, index, objects/, refs/.',
-    takeaway: 'Git does not inject metadata into your files. It creates a single hidden .git directory containing four critical structures: HEAD, index, objects/, and refs/. Everything else in your project is just your ordinary working tree.',
-    caveat: 'Deleting the hidden .git directory completely destroys all commit history, branches, and staging information without touching your current working tree files.',
+    whatLearnerThinks: '“Git tracks this folder by injecting hidden tracking codes or altering my project files.”',
+    whatWeReveal: 'Git never alters your code files. It sets up a secret hidden vault (.git/) right inside your project with four primary doors: HEAD, index, objects/, and refs/.',
+    takeaway: 'Think of your project folder as your bedroom with toys on the floor. Running git init does not touch your toys at all! It just sets up a secret clubhouse in your closet (.git/) with a camera, a notebook, and locked chests. If you delete that .git/ folder, your files stay right where they are, but Git forgets everything it ever saw!',
+    caveat: 'Deleting the hidden .git directory completely erases your entire commit history, all branches, and staging records without touching your current disk files.',
     inspector: 'Inspect the newly initialized repository. Notice the clean separation between ordinary filesystem files and the hidden .git metadata database.',
     sources: [
       'https://git-scm.com/docs/git-init',
@@ -86,108 +152,130 @@ export const gitViews: GitLab[] = [
     ],
     steps: [
       {
-        label: '1. mkdir & inspect folder',
-        command: 'mkdir infra-platform && cd infra-platform && ls -la',
+        label: '1. inspect folder before git',
+        command: 'cd ~/repos/infra-platform && ls -la',
         output: [
-          'dev@lab:~$ mkdir infra-platform && cd infra-platform',
-          'total 4',
-          'drwxr-xr-x 2 dev dev 4096 Sep 19 14:00 .',
-          'drwxr-xr-x 4 dev dev 4096 Sep 19 14:00 ..',
-          '-rw-r--r-- 1 dev dev   94 Sep 19 14:00 deployment.yaml',
-          '-rw-r--r-- 1 dev dev  140 Sep 19 14:00 README.md',
-          '# A regular Linux folder with files. Git is not present yet.'
+          'dev@lab:~/repos/infra-platform$ ls -la',
+          'total 24',
+          'drwxr-xr-x 5 dev dev 4096 Sep 20 09:00 .',
+          'drwxr-xr-x 3 dev dev 4096 Sep 20 09:00 ..',
+          'drwxr-xr-x 2 dev dev 4096 Sep 20 09:00 app',
+          'drwxr-xr-x 2 dev dev 4096 Sep 20 09:00 environments',
+          'drwxr-xr-x 4 dev dev 4096 Sep 20 09:00 modules',
+          '-rw-r--r-- 1 dev dev  140 Sep 20 09:00 README.md',
+          '-rw-r--r-- 1 dev dev   85 Sep 20 09:00 .gitignore',
+          '# A regular Linux folder with files. Notice: .git does NOT exist yet!'
         ],
-        files: [
-          { path: 'app', name: 'app/', isDir: true, depth: 0 },
-          { path: 'app/deployment.yaml', name: 'deployment.yaml', depth: 1 },
-          { path: 'README.md', name: 'README.md', depth: 0 }
-        ],
+        files: getRepoFiles({ includeGit: false }),
         shelf: [
           { label: 'Working Tree', value: 'infra-platform/', detail: 'Ordinary files on disk', badge: 'neutral' },
           { label: 'Git Database', value: 'Not Initialized', detail: 'No .git directory yet', badge: 'warning' },
           { label: 'HEAD Reference', value: 'None', detail: 'Repository does not exist', badge: 'neutral' },
           { label: 'Tracking Mode', value: 'Untracked', detail: 'Ordinary OS filesystem', badge: 'neutral' }
         ],
-        inspectorState: 'Ordinary Operating System Directory',
-        inspectorDetail: 'The directory contains files, but Git is not yet active. Git tracks nothing until you initialize a repository with git init.',
-        inspectorOperation: 'mkdir infra-platform',
-        internalChange: 'Standard filesystem inode creation. Zero Git metadata.',
-        takeaway: 'Before git init, files are just ordinary bytes managed exclusively by the operating system filesystem.',
-        plumbingCommand: 'test -d .git || echo "No repository"',
-        xrayNote: 'Filesystem view shows raw files. No .git metadata exists.'
+        inspectorState: 'Ordinary Operating System Folder',
+        inspectorDetail: 'ELI5: Your project is just normal files on a normal computer hard drive. Git is not watching you yet. Nothing is saved or protected until you turn Git on with git init.',
+        inspectorOperation: 'ls -la',
+        internalChange: 'Standard filesystem inode read. Zero Git metadata.',
+        takeaway: 'Before git init, files are just ordinary disk bytes managed exclusively by your operating system.',
+        plumbingCommand: 'test -d .git || echo "No repository exists yet"',
+        xrayNote: 'Look at Column 1: Only your ordinary code files exist. The .git/ vault has not been built.',
+        internals: {
+          head: 'None (Git not initialized)',
+          branchRef: 'None',
+          commitHash: 'None',
+          commitMsg: 'No repository initialized',
+          treeHash: 'None',
+          treeDetail: 'No git tree object',
+          blobHash: 'None',
+          blobDetail: 'Files are ordinary disk bytes'
+        }
       },
       {
-        label: '2. git init (create .git)',
+        label: '2. git init (create .git vault)',
         command: 'git init -b main',
         output: [
+          'dev@lab:~/repos/infra-platform$ git init -b main',
           'Initialized empty Git repository in /home/dev/repos/infra-platform/.git/',
           '# Git just created the hidden .git directory!',
-          '# All repository state, objects, and refs will live here.'
+          '# This folder is the entire database: every commit, branch, and object lives here.'
         ],
-        files: [
-          { path: '.git', name: '.git/ [Git Repository Database]', isDir: true, depth: 0, highlight: true },
-          { path: '.git/HEAD', name: 'HEAD (active ref pointer)', depth: 1 },
-          { path: '.git/objects', name: 'objects/ (content store)', isDir: true, depth: 1 },
-          { path: '.git/refs', name: 'refs/ (branch pointers)', isDir: true, depth: 1 },
-          { path: 'app', name: 'app/', isDir: true, depth: 0 },
-          { path: 'app/deployment.yaml', name: 'deployment.yaml', depth: 1, status: '??' },
-          { path: 'README.md', name: 'README.md', depth: 0, status: '??' }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentStatus: '??',
+          deploymentHighlight: true,
+          readmeStatus: '??'
+        }),
         shelf: [
-          { label: 'Working Tree', value: '2 files (??)', detail: 'Untracked by Git', badge: 'warning' },
-          { label: '.git Created', value: 'Active Database', detail: 'Hidden metadata container', badge: 'success' },
-          { label: 'Default Branch', value: 'main', detail: 'Symbolic target in HEAD', badge: 'neutral' },
-          { label: 'Object DB', value: 'Empty (0 objects)', detail: 'No blobs written yet', badge: 'neutral' }
+          { label: 'Working Tree', value: 'infra-platform/', detail: 'Files marked untracked (??)', badge: 'warning' },
+          { label: 'Git Vault (.git)', value: 'Initialized', detail: 'Secret database created', badge: 'success' },
+          { label: 'Default Branch', value: 'main (unborn)', detail: 'Waiting for initial commit', badge: 'neutral' },
+          { label: 'Object Storage', value: '0 objects', detail: 'Vault is currently empty', badge: 'neutral' }
         ],
-        inspectorState: 'Git Repository Initialized',
-        inspectorDetail: 'git init created the hidden .git directory. Your project is now split into two worlds: the visible Working Tree and the hidden Git Database.',
+        inspectorState: 'Git Secret Vault Initialized',
+        inspectorDetail: 'ELI5: Git just built its secret clubhouse (.git/) in your closet! It put a blank diary (index), an empty photo album (objects/), and a bookmark label (HEAD) inside.',
         inspectorOperation: 'git init -b main',
-        internalChange: '.git directory initialized with HEAD, config, objects/, and refs/heads/.',
-        takeaway: 'Git is not an external cloud service; Git is simply this hidden .git folder sitting right inside your project directory.',
+        internalChange: 'Created .git/ folder with HEAD, config, description, hooks/, info/, objects/, and refs/.',
+        takeaway: 'Git is not in the cloud; Git is literally this tiny hidden .git folder sitting right inside your project directory.',
         plumbingCommand: 'git rev-parse --git-dir',
-        xrayNote: '.git appears! Notice how clean the separation is between working files and repository metadata.'
+        xrayNote: 'Switch to ⚡ X-Ray mode to see the hidden .git/ folder illuminate at the top of the file tree!',
+        internals: {
+          head: 'ref: refs/heads/main',
+          branchRef: 'refs/heads/main (unborn)',
+          commitHash: 'None (empty repo)',
+          commitMsg: 'Waiting for initial commit',
+          treeHash: 'None',
+          treeDetail: 'Index awaiting git add',
+          blobHash: 'None',
+          blobDetail: '0 loose objects in .git/objects/'
+        }
       },
       {
-        label: '3. open the four doors of .git',
-        command: 'find .git -maxdepth 2',
+        label: '3. open the 4 doors of .git',
+        command: 'ls -la .git && cat .git/HEAD',
         output: [
-          '.git',
-          '.git/HEAD',
-          '.git/config',
-          '.git/description',
-          '.git/hooks',
-          '.git/info',
-          '.git/objects',
-          '.git/refs',
-          '.git/refs/heads',
-          '.git/refs/tags',
-          '# THE FOUR CRITICAL DOORS OF GIT:',
-          '# 1. HEAD       -> your "you are here" pointer',
-          '# 2. index      -> staging ledger (created on first git add)',
-          '# 3. objects/   -> immutable content-addressed storage (blobs, trees, commits)',
-          '# 4. refs/      -> named pointers (branches & tags)'
+          'dev@lab:~/repos/infra-platform$ ls -la .git && cat .git/HEAD',
+          'total 32',
+          '-rw-r--r-- 1 dev dev   23 Sep 20 09:00 HEAD',
+          '-rw-r--r-- 1 dev dev  130 Sep 20 09:00 config',
+          'drwxr-xr-x 2 dev dev 4096 Sep 20 09:00 objects',
+          'drwxr-xr-x 4 dev dev 4096 Sep 20 09:00 refs',
+          '',
+          'ref: refs/heads/main',
+          '# THE FOUR SACRED DOORS OF GIT:',
+          '# 1. HEAD      -> "You are here" pin pointing to refs/heads/main',
+          '# 2. index     -> The staging conveyor belt (created on first git add)',
+          '# 3. objects/  -> The locked vault storing immutable blobs, trees, commits',
+          '# 4. refs/     -> The box of branch bookmarks'
         ],
-        files: [
-          { path: '.git/HEAD', name: 'HEAD -> refs/heads/main', depth: 1, highlight: true },
-          { path: '.git/index', name: 'index (staging ledger)', depth: 1 },
-          { path: '.git/objects', name: 'objects/ (content store)', isDir: true, depth: 1, highlight: true },
-          { path: '.git/refs', name: 'refs/heads/ (branch pointers)', isDir: true, depth: 1, highlight: true },
-          { path: 'app/deployment.yaml', name: 'deployment.yaml', depth: 0, status: '??' },
-          { path: 'README.md', name: 'README.md', depth: 0, status: '??' }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentStatus: '??',
+          readmeStatus: '??'
+        }),
         shelf: [
-          { label: 'Door 1: HEAD', value: 'refs/heads/main', detail: 'Symbolic pointer', badge: 'neutral' },
-          { label: 'Door 2: index', value: 'Awaiting git add', detail: 'Snapshot candidate ledger', badge: 'neutral' },
-          { label: 'Door 3: objects', value: '4 Object Types', detail: 'blob, tree, commit, tag', badge: 'neutral' },
-          { label: 'Door 4: refs', value: 'refs/heads/', detail: 'Branch name records', badge: 'neutral' }
+          { label: 'Door 1: HEAD', value: 'ref: refs/heads/main', detail: 'Red pin on the map', badge: 'neutral' },
+          { label: 'Door 2: index', value: 'Conveyor Belt', detail: 'Awaiting first git add', badge: 'neutral' },
+          { label: 'Door 3: objects/', value: 'The Photo Vault', detail: 'Stores blobs, trees, commits', badge: 'neutral' },
+          { label: 'Door 4: refs/', value: 'Branch Bookmarks', detail: 'refs/heads/ holds main', badge: 'neutral' }
         ],
-        inspectorState: 'The Core Anatomy of Git',
-        inspectorDetail: 'Almost everything in Git lives behind these four doors: HEAD points to your active ref, index stages snapshots, objects/ stores immutable data, and refs/ stores branch names.',
-        inspectorOperation: 'ls -la .git',
-        internalChange: 'Reading filesystem metadata. HEAD initialized to ref: refs/heads/main.',
-        takeaway: 'Mastering Git internals is simply understanding how HEAD, index, objects/, and refs/ interact when you run everyday commands.',
+        inspectorState: 'The 4 Doors of Git',
+        inspectorDetail: 'ELI5: Every single Git command you will ever run simply shuffles papers between these 4 doors: HEAD (where you are), index (what is on the scanner), objects/ (photos in the safe), and refs/ (named bookmarks).',
+        inspectorOperation: 'cat .git/HEAD',
+        internalChange: 'Inspected .git/HEAD contents: points symbolically to refs/heads/main.',
+        takeaway: 'Mastering Git internals is just understanding how HEAD, index, objects/, and refs/ talk to each other.',
         plumbingCommand: 'cat .git/HEAD',
-        xrayNote: 'Turn on X-Ray mode to see the internal files highlighted in cyan.'
+        xrayNote: 'Turn on X-Ray mode: notice HEAD glowing cyan. It is literally a 1-line text file!',
+        internals: {
+          head: 'ref: refs/heads/main',
+          branchRef: 'refs/heads/main',
+          commitHash: 'None',
+          commitMsg: 'Initial state ready',
+          treeHash: 'None',
+          treeDetail: 'No snapshot taken yet',
+          blobHash: 'None',
+          blobDetail: 'Files are on disk, not in objects/'
+        }
       }
     ]
   },
@@ -201,154 +289,193 @@ export const gitViews: GitLab[] = [
     title: 'Level 2: What git add Actually Does',
     label: '02. What git add Does',
     group: 'Foundations: Inside .git',
-    path: 'app/deployment.yaml',
+    path: '~/repos/infra-platform',
     branch: 'main',
-    question: 'Why does git add exist, and what physically happens to your file when you stage it?',
-    whatLearnerThinks: '“Git stages my file into a staging area.”',
-    whatWeReveal: 'Working tree → SHA hash function → Blob object written to .git/objects/ → Path-to-SHA mapping recorded in index.',
-    takeaway: 'git add does not merely flip a flag. It immediately hashes file contents, writes an immutable compressed blob object into .git/objects/, and registers the path-to-blob SHA mapping in the binary index.',
-    caveat: 'Subsequent edits in the working tree are not automatically staged. If you edit a file after git add, you produce an MM state: staged change in the index, plus unstaged change in the working tree.',
-    inspector: 'Watch the X-Ray transition as git add calculates SHA-1, creates loose object 7ab38f in .git/objects/, and updates the binary index.',
+    question: 'Why does Git have a "staging area" instead of committing directly, and what is a Blob?',
+    whatLearnerThinks: '“git add puts my file in a temporary holding list of filenames.”',
+    whatWeReveal: 'git add immediately hashes your file contents, compresses the raw bytes into a permanent Blob inside .git/objects/, and registers the path-to-hash mapping in the binary index. Shows why the MM state occurs.',
+    takeaway: 'ELI5: Think of git add like putting a drawing onto a photocopier scanner bed. Git makes an airtight photocopy (a Blob), stamps it with a fingerprint seal (the SHA-1 hash), locks it in the vault (.git/objects/), and writes on a clipboard (the index): "File deployment.yaml matches photocopy #7ab38f4". Git does not even write the filename on the drawing!',
+    caveat: 'If you run git add and then edit your file again without running git add a second time, Git tracks both! Your file enters the famous MM state: one version is staged on the scanner, and a newer version is on your desk.',
+    inspector: 'Observe how git add immediately creates an immutable Blob object in .git/objects/ and updates the index before you ever run git commit.',
     sources: [
       'https://git-scm.com/docs/git-add',
-      'https://git-scm.com/docs/git-ls-files',
-      'https://git-scm.com/docs/git-cat-file'
+      'https://git-scm.com/docs/git-hash-object',
+      'https://git-scm.com/book/en/v2/Git-Internals-Git-Objects'
     ],
     steps: [
       {
-        label: '1. edit deployment.yaml (replicas: 2 -> 3)',
-        command: 'sed -i "s/replicas: 2/replicas: 3/" app/deployment.yaml',
+        label: '1. edit app/deployment.yaml',
+        command: 'sed -i "s/replicas: 2/replicas: 3/" app/deployment.yaml && git status -s',
         output: [
-          '# Edited app/deployment.yaml: replicas changed from 2 to 3',
-          '$ git status -s',
+          'dev@lab:~/repos/infra-platform$ sed -i "s/replicas: 2/replicas: 3/" app/deployment.yaml',
+          'dev@lab:~/repos/infra-platform$ git status -s',
           ' M app/deployment.yaml',
-          '# Working tree has modified bytes on disk.',
-          '# Notice: Git has NOT created any objects in .git yet!'
+          '# Red "M" in second column = Modified in WORKING TREE (your desk).',
+          '# Git has NOT hashed this change yet. .git/objects/ has not changed!'
         ],
-        files: [
-          { path: 'app', name: 'app/', isDir: true, depth: 0 },
-          { path: 'app/deployment.yaml', name: 'deployment.yaml', depth: 1, status: 'M', highlight: true },
-          { path: 'README.md', name: 'README.md', depth: 0 }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentStatus: 'M',
+          deploymentHighlight: true,
+          deploymentName: 'deployment.yaml (replicas: 3)'
+        }),
         shelf: [
-          { label: 'Working Tree', value: 'replicas: 3', detail: 'Modified locally on disk', badge: 'changed' },
-          { label: 'Index (Staging)', value: 'replicas: 2 (old)', detail: 'Points to previous blob', badge: 'neutral' },
-          { label: 'Object DB', value: 'No new blob', detail: 'Not created until git add', badge: 'warning' },
-          { label: 'Status Badge', value: ' M (unstaged)', detail: 'Working tree modification', badge: 'warning' }
+          { label: 'Working Tree', value: 'replicas: 3', detail: 'Unsaved scribbles on your desk', badge: 'warning' },
+          { label: 'Staging Index', value: 'replicas: 2 (old)', detail: 'Scanner bed has old version', badge: 'neutral' },
+          { label: 'Object Storage', value: 'Blob 94b810a', detail: 'Previous committed blob', badge: 'neutral' },
+          { label: 'HEAD Commit', value: 'c3904e1', detail: 'Last snapshot in album', badge: 'neutral' }
         ],
-        inspectorState: 'Unstaged Working Tree Modification',
-        inspectorDetail: 'Editing a file changes only bytes in your working tree. The index still holds the previous snapshot pointer, and no new object exists in .git/objects/.',
-        inspectorOperation: 'File edit on disk',
-        internalChange: 'OS file modified. File modification time and hash differ from index cache entry.',
-        takeaway: 'Editing a file modifies only disk bytes. Git does not create objects or update history until you tell it to.',
-        plumbingCommand: 'git diff --raw',
-        xrayNote: 'Working tree is dirty (M). The index and .git/objects are completely unchanged.'
+        inspectorState: 'File Modified Locally on Desk',
+        inspectorDetail: 'ELI5: You picked up a pencil and changed "replicas: 2" to "replicas: 3" on your desk. Git notices the file looks different from the last photo, but it has not made a photocopy yet.',
+        inspectorOperation: 'edit app/deployment.yaml',
+        internalChange: 'Working tree file modified on disk. Index and .git/objects remain untouched.',
+        takeaway: 'Edits on your disk stay purely on your disk until you explicitly tell Git to scan them with git add.',
+        plumbingCommand: 'git diff app/deployment.yaml',
+        xrayNote: 'Working tree file glows amber (M). Notice .git/objects still only holds the old baseline blob.',
+        internals: {
+          head: 'ref: refs/heads/main',
+          branchRef: 'refs/heads/main -> c3904e1',
+          commitHash: 'c3904e1',
+          commitMsg: 'Initial infrastructure baseline',
+          treeHash: 'e189ac2',
+          treeDetail: 'Previous committed tree',
+          blobHash: '94b810a',
+          blobDetail: 'app/deployment.yaml (replicas: 2)'
+        }
       },
       {
         label: '2. git add (hash & write blob)',
-        command: 'git add app/deployment.yaml',
+        command: 'git add app/deployment.yaml && git status -s',
         output: [
-          '$ git add app/deployment.yaml',
-          '# X-RAY REVEAL: What Git actually did under the hood:',
-          '# 1. Hashed content: sha1("blob 94\\0" + file_bytes) -> 7ab38f...',
-          '# 2. Compressed with zlib & wrote: .git/objects/7a/b38f...',
-          '# 3. Updated binary index: app/deployment.yaml -> 7ab38f... (mode 100644)',
-          '',
-          '$ git status -s',
-          'M  app/deployment.yaml'
+          'dev@lab:~/repos/infra-platform$ git add app/deployment.yaml',
+          'dev@lab:~/repos/infra-platform$ git status -s',
+          'M  app/deployment.yaml',
+          '# Green "M" in first column = Staged in INDEX (on the scanner).',
+          '# X-RAY REVEAL: Git just hashed the file and wrote blob 7ab38f4 to .git/objects/7a/!'
         ],
-        files: [
-          { path: '.git/objects/7a', name: 'objects/7a/b38f... [blob object]', depth: 1, highlight: true },
-          { path: '.git/index', name: 'index [app/deployment.yaml -> 7ab38f]', depth: 1, highlight: true },
-          { path: 'app/deployment.yaml', name: 'deployment.yaml', depth: 0, status: 'A', highlight: true }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentStatus: 'A',
+          deploymentHighlight: true,
+          deploymentName: 'deployment.yaml [staged: 7ab38f4]',
+          gitFiles: [
+            { path: '.git/objects/7a', name: 'objects/7a/b38f4... [Blob 7ab38f4]', depth: 1, highlight: true },
+            { path: '.git/index', name: 'index [staged: 7ab38f4 app/deployment.yaml]', depth: 1, highlight: true }
+          ]
+        }),
         shelf: [
-          { label: 'Working Tree', value: 'replicas: 3', detail: 'Matches staged index', badge: 'neutral' },
-          { label: 'Index (Staging)', value: 'blob 7ab38f...', detail: 'Snapshot candidate registered', badge: 'changed' },
-          { label: 'Object DB', value: 'blob 7ab38f written', detail: '.git/objects/7a/b38f...', badge: 'success' },
-          { label: 'Status Badge', value: 'A  (staged)', detail: 'Ready for commit', badge: 'success' }
+          { label: 'Working Tree', value: 'replicas: 3', detail: 'Matches staged content', badge: 'neutral' },
+          { label: 'Staging Index', value: 'blob 7ab38f4', detail: 'Registered path -> SHA mapping', badge: 'success' },
+          { label: 'Object Storage', value: '7ab38f4 written', detail: 'Zlib compressed blob in vault', badge: 'changed' },
+          { label: 'HEAD Commit', value: 'c3904e1', detail: 'HEAD has not moved yet!', badge: 'neutral' }
         ],
-        inspectorState: 'Blob Created & Index Updated',
-        inspectorDetail: 'git add did two physical things: 1) It wrote a new compressed blob into .git/objects/7a/b38f. 2) It registered that blob hash against path app/deployment.yaml in the index.',
+        inspectorState: 'Blob Sealed in Vault & Registered in Index',
+        inspectorDetail: 'ELI5: Git took your drawing, compressed it, gave it a unique barcode (7ab38f4), and slipped it into the vault! Then it wrote on its scanner clipboard: "deployment.yaml is now barcode 7ab38f4".',
         inspectorOperation: 'git add app/deployment.yaml',
-        internalChange: 'Loose object written to .git/objects/7a/b38f... Binary index updated with mode 100644 and 7ab38f.',
-        takeaway: 'git add is the moment content is permanently stored in Git. Staging is not an abstract concept; it is writing a blob and recording its hash in the index.',
-        plumbingCommand: 'git hash-object -w app/deployment.yaml && git update-index --add --cacheinfo 100644 7ab38f app/deployment.yaml',
-        xrayNote: 'Notice that blob 7ab38f was created immediately! The file content is already inside .git/objects.'
+        internalChange: 'Compressed zlib blob written to .git/objects/7a/b38f4. Binary .git/index updated with SHA 7ab38f4.',
+        takeaway: 'git add is what actually saves your file content into Git storage. git commit just ties a bow around what is already saved!',
+        plumbingCommand: 'git ls-files --stage app/deployment.yaml',
+        xrayNote: 'Turn on ⚡ X-Ray: See objects/7a/b38f4 appear! Notice the blob contains pure bytes—no filename is stored inside a blob!',
+        internals: {
+          head: 'ref: refs/heads/main',
+          branchRef: 'refs/heads/main -> c3904e1',
+          commitHash: 'c3904e1',
+          commitMsg: 'HEAD still at previous commit',
+          treeHash: 'Index cache updated (mode 100644)',
+          treeDetail: 'Binary index registers 7ab38f4',
+          blobHash: '7ab38f4',
+          blobDetail: 'app/deployment.yaml (replicas: 3)'
+        }
       },
       {
         label: '3. inspect index & blob (cat-file)',
-        command: 'git ls-files --stage && git cat-file -p 7ab38f',
+        command: 'git ls-files --stage app/deployment.yaml && git cat-file -p 7ab38f4',
         output: [
-          '$ git ls-files --stage',
-          '100644 7ab38f912c9b4e19572d4f80164e29b1dc94f291 0   app/deployment.yaml',
-          '100644 a48fe12018b8109a018901ef3381a90c1018901e 0   README.md',
-          '',
-          '$ git cat-file -t 7ab38f',
-          'blob',
-          '',
-          '$ git cat-file -p 7ab38f',
+          'dev@lab:~/repos/infra-platform$ git ls-files --stage app/deployment.yaml',
+          '100644 7ab38f4a2190cd89e1401bc389012478901234ab 0	app/deployment.yaml',
+          'dev@lab:~/repos/infra-platform$ git cat-file -p 7ab38f4',
           'apiVersion: apps/v1',
           'kind: Deployment',
           'metadata:',
-          '  name: redis-cache',
+          '  name: cache-redis',
           'spec:',
           '  replicas: 3',
-          '',
-          '# LOOK CLOSELY: Notice what is missing from the blob!',
-          '# The blob contains ZERO filenames ("deployment.yaml" is not here!).',
-          '# The filename lives in the index and directory trees, NOT in the blob.'
+          '# LOOK CLOSELY: The blob contains ONLY file bytes. File names live in Trees, not Blobs!'
         ],
-        files: [
-          { path: '.git/index', name: 'index [100644 7ab38f app/deployment.yaml]', depth: 1, highlight: true },
-          { path: '.git/objects/7a', name: 'objects/7a/b38f... [raw content]', depth: 1, highlight: true },
-          { path: 'app/deployment.yaml', name: 'deployment.yaml', depth: 0, status: 'A' }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentStatus: 'A',
+          deploymentName: 'deployment.yaml [staged: 7ab38f4]',
+          gitFiles: [
+            { path: '.git/objects/7a', name: 'objects/7a/b38f4... [Blob: replicas: 3]', depth: 1, highlight: true }
+          ]
+        }),
         shelf: [
-          { label: 'Index Entry', value: '100644 7ab38f', detail: 'app/deployment.yaml', badge: 'neutral' },
-          { label: 'Blob Type', value: 'blob (pure data)', detail: 'Raw bytes payload', badge: 'neutral' },
-          { label: 'Filename in Blob?', value: 'NO (0 metadata)', detail: 'Only content bytes', badge: 'warning' },
-          { label: 'Deduplication', value: '100% Hash Exact', detail: 'Identical files share 1 blob', badge: 'success' }
+          { label: 'Index Entry', value: '100644 7ab38f4', detail: 'Mode + Hash + Stage 0 + Path', badge: 'success' },
+          { label: 'Object Type', value: 'blob', detail: 'Pure unadorned file content', badge: 'neutral' },
+          { label: 'Filename Location', value: 'In Index (Not Blob)', detail: 'Blobs are content-addressable', badge: 'changed' },
+          { label: 'Deduplication', value: 'Identical content = 1 blob', detail: 'Zero duplicate storage', badge: 'neutral' }
         ],
-        inspectorState: 'Inspecting Raw Git Plumbing',
-        inspectorDetail: 'git ls-files --stage prints the actual binary index table. git cat-file -p prints the uncompressed blob content. Notice that the filename app/deployment.yaml is recorded in the index, NOT inside the blob.',
-        inspectorOperation: 'git ls-files --stage && git cat-file -p 7ab38f',
-        internalChange: 'Plumbing query. Index and object database read without mutations.',
-        takeaway: 'Blobs hold pure data. Filenames, paths, and POSIX permissions live in the index and directory tree objects.',
-        plumbingCommand: 'git cat-file -p :app/deployment.yaml',
-        xrayNote: 'The index pairs the filename with the blob hash. The blob itself is anonymous byte storage.'
+        inspectorState: 'Peeking Inside the Blob',
+        inspectorDetail: 'ELI5: When we open jar #7ab38f4 with git cat-file, we see your exact text: "replicas: 3". If you had 5 identical files across your project, Git would only store this single jar once!',
+        inspectorOperation: 'git cat-file -p 7ab38f4',
+        internalChange: 'Read blob decompressed from .git/objects/7a/. Verified index mapping.',
+        takeaway: 'A Blob is pure content. If you rename a file without changing its content, Git does not write a single new byte to objects/!',
+        plumbingCommand: 'git cat-file -t 7ab38f4',
+        xrayNote: 'Try running Plumbing mode above: see how git cat-file -p unzips the raw blob from disk.',
+        internals: {
+          head: 'ref: refs/heads/main',
+          branchRef: 'refs/heads/main -> c3904e1',
+          commitHash: 'c3904e1',
+          commitMsg: 'HEAD still at c3904e1',
+          treeHash: 'Index staged with 7ab38f4',
+          treeDetail: 'File name mapped to SHA in index',
+          blobHash: '7ab38f4',
+          blobDetail: 'replicas: 3 (pure payload)'
+        }
       },
       {
-        label: '4. edit again (3 -> 4) => MM status',
+        label: '4. edit again (3 -> 4) => MM state',
         command: 'sed -i "s/replicas: 3/replicas: 4/" app/deployment.yaml && git status -s',
         output: [
-          '$ sed -i "s/replicas: 3/replicas: 4/" app/deployment.yaml',
-          '$ git status -s',
+          'dev@lab:~/repos/infra-platform$ sed -i "s/replicas: 3/replicas: 4/" app/deployment.yaml',
+          'dev@lab:~/repos/infra-platform$ git status -s',
           'MM app/deployment.yaml',
-          '',
-          '# THE "MM" MYSTERY SOLVED:',
-          '# Col 1: Index vs HEAD (M = staged changes: replicas 3 differs from HEAD)',
-          '# Col 2: Working tree vs Index (M = unstaged changes: replicas 4 differs from index 3)',
-          '# The file exists in THREE distinct states simultaneously!'
+          '# THE FAMOUS "MM" STATE REVEALED:',
+          '# First M (green)  = Version staged in INDEX (replicas: 3)',
+          '# Second M (red)   = Newer version in WORKING TREE on disk (replicas: 4)',
+          '# HEAD commit      = Old baseline (replicas: 2)',
+          '# THREE distinct versions exist simultaneously!'
         ],
-        files: [
-          { path: 'app/deployment.yaml', name: 'deployment.yaml', depth: 0, status: 'MM', highlight: true },
-          { path: '.git/index', name: 'index (holds replicas: 3)', depth: 1 },
-          { path: '.git/objects/7a', name: 'objects/7a/b38f (holds replicas: 3)', depth: 1 }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentStatus: 'MM',
+          deploymentHighlight: true,
+          deploymentName: 'deployment.yaml [MM: staged=3, disk=4]'
+        }),
         shelf: [
-          { label: 'Working Tree', value: 'replicas: 4', detail: 'Unstaged local edit', badge: 'changed' },
-          { label: 'Index (Staging)', value: 'blob 7ab38f (replicas: 3)', detail: 'Staged snapshot', badge: 'changed' },
-          { label: 'HEAD Baseline', value: 'replicas: 2', detail: 'Committed state', badge: 'neutral' },
-          { label: 'Status Badge', value: 'MM (3 distinct states)', detail: 'Staged + Modified', badge: 'warning' }
+          { label: 'Working Tree (Desk)', value: 'replicas: 4', detail: 'Second M: Unstaged on disk', badge: 'warning' },
+          { label: 'Index (Scanner)', value: 'replicas: 3 (blob 7ab38f)', detail: 'First M: Staged ready to commit', badge: 'success' },
+          { label: 'HEAD (Album)', value: 'replicas: 2 (commit C1)', detail: 'Last permanent snapshot', badge: 'neutral' },
+          { label: 'State Resolution', value: 'git add stages 4', detail: 'Or git restore reverts to 3', badge: 'changed' }
         ],
-        inspectorState: 'Simultaneous Staged & Unstaged State (MM)',
-        inspectorDetail: 'MM proves that staging is a physical snapshot. Column 1 (index vs HEAD) is M because replicas: 3 is staged. Column 2 (working tree vs index) is M because replicas: 4 is unstaged on disk.',
-        inspectorOperation: 'git status -s (MM demonstration)',
-        internalChange: 'Working tree disk bytes changed. Index still points to 7ab38f (replicas: 3).',
-        takeaway: 'The index is a real snapshot candidate, not an invisible cache. A file can simultaneously differ across HEAD, index, and working tree.',
-        plumbingCommand: 'git diff HEAD -- app/deployment.yaml',
-        xrayNote: 'If you run git commit now, Git commits replicas: 3! Replicas: 4 remains unstaged in the working tree.'
+        inspectorState: 'The 3-Layer MM State',
+        inspectorDetail: 'ELI5: You put a drawing on the scanner bed (replicas: 3), but then you grabbed your pencil and scribbled on your desk copy again (replicas: 4) before hitting the camera button! Git knows both versions exist.',
+        inspectorOperation: 'edit without staging',
+        internalChange: 'Working tree diverges from index. Three independent states exist simultaneously.',
+        takeaway: 'MM is not an error! It proves that the Working Tree, the Index, and the Commit History are three physically separate worlds.',
+        plumbingCommand: 'git diff (working vs index) && git diff --staged (index vs HEAD)',
+        xrayNote: 'Look at the badge MM in Column 1. Green M means index is staged; red M means disk has unstaged edits.',
+        internals: {
+          head: 'ref: refs/heads/main',
+          branchRef: 'refs/heads/main -> c3904e1',
+          commitHash: 'c3904e1',
+          commitMsg: 'HEAD matches baseline commit',
+          treeHash: 'Staged index differs from HEAD',
+          treeDetail: 'MM state: 3 distinct representations',
+          blobHash: '7ab38f4 (staged: 3)',
+          blobDetail: 'Disk has unstaged replicas: 4'
+        }
       }
     ]
   },
@@ -362,14 +489,14 @@ export const gitViews: GitLab[] = [
     title: 'Level 3: What git commit Really Creates',
     label: '03. What git commit Creates',
     group: 'Foundations: Inside .git',
-    path: '.git/objects',
+    path: '~/repos/infra-platform',
     branch: 'main',
-    question: 'Does a commit store a diff of your changes, or something completely different?',
-    whatLearnerThinks: '“Git saves my changes as a bag of file diffs.”',
-    whatWeReveal: 'Index written as Tree T1 → Tree wrapped in Commit C1 → branch ref moves. The branch moved, not the commit!',
-    takeaway: 'Commits do not store diffs! A commit is an immutable plain-text envelope pointing to a full root tree snapshot, parent commit SHA(s), author/timestamp metadata, and a log message. The branch pointer simply advances to the new commit hash.',
-    caveat: 'Changing a single character in a commit message or amending a timestamp creates an entirely new commit hash because the commit header is cryptographically sealed.',
-    inspector: 'Watch the X-Ray commit animation: Index -> Tree T1 -> Commit C1 -> main branch pointer advances.',
+    question: 'Does Git store diffs or full snapshots, and how does the Merkle Tree work?',
+    whatLearnerThinks: '“Git saves the lines I added and deleted (+ and -) as a diff patch.”',
+    whatWeReveal: 'Git never stores diffs. It freezes the index into root trees and subtrees (write-tree), wraps the root tree in a commit envelope (commit-tree), and advances the branch pointer (update-ref). Unmodified subtrees are reused by SHA reference with zero disk duplication.',
+    takeaway: 'ELI5: Git does not save a list of changes like "+ line 4". Git takes a full photograph of your entire universe every single time! It builds a set of Russian nesting dolls: Blobs (files) fit into Trees (folders), which fit into a Root Tree (your whole project), which gets sealed inside a Commit Envelope with author, date, and previous commit ID. If a folder did not change, Git just points to the old doll—saving huge amounts of space!',
+    caveat: 'Because every commit contains a full snapshot, comparing two commits is an ultra-fast O(1) pointer comparison between tree hashes, rather than scanning gigabytes of diffs.',
+    inspector: 'Explore how git commit mints a Root Tree object and a Commit Envelope, linking parent ancestry and advancing the branch reference.',
     sources: [
       'https://git-scm.com/docs/git-commit',
       'https://git-scm.com/docs/git-write-tree',
@@ -377,137 +504,187 @@ export const gitViews: GitLab[] = [
     ],
     steps: [
       {
-        label: '1. inspect staged index snapshot',
-        command: 'git status && git ls-files --stage',
+        label: '1. stage all clean files',
+        command: 'git add app/deployment.yaml && git status',
         output: [
-          '$ git status',
+          'dev@lab:~/repos/infra-platform$ git add app/deployment.yaml',
+          'dev@lab:~/repos/infra-platform$ git status',
           'On branch main',
           'Changes to be committed:',
           '  (use "git restore --staged <file>..." to unstage)',
-          '	modified:   app/deployment.yaml',
+          '    modified:   app/deployment.yaml',
           '',
-          '$ git ls-files --stage',
-          '100644 7ab38f912c9b4e19572d4f80164e29b1dc94f291 0   app/deployment.yaml',
-          '100644 a48fe12018b8109a018901ef3381a90c1018901e 0   README.md',
-          '# The index contains the exact tree candidate ready to be frozen into history.'
+          '# The index conveyor belt is fully prepared.',
+          '# All project paths now map to immutable blob SHAs.'
         ],
-        files: [
-          { path: '.git/index', name: 'index (complete project snapshot)', depth: 1, highlight: true },
-          { path: 'app/deployment.yaml', name: 'app/deployment.yaml (blob 7ab38f)', depth: 0, status: 'A' },
-          { path: 'README.md', name: 'README.md (blob a48fe1)', depth: 0 }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentStatus: 'A',
+          deploymentHighlight: true,
+          deploymentName: 'deployment.yaml (staged: 7ab38f4)'
+        }),
         shelf: [
-          { label: 'Active Ref', value: 'main', detail: 'refs/heads/main', badge: 'neutral' },
-          { label: 'Index Entries', value: '2 paths registered', detail: 'Ready to write tree', badge: 'changed' },
-          { label: 'Target Tree', value: 'Unwritten', detail: 'Will be written by commit', badge: 'neutral' },
-          { label: 'Current HEAD', value: 'C0 (e78b21a)', detail: 'Parent commit', badge: 'neutral' }
+          { label: 'Working Tree', value: 'Clean state', detail: 'Matches index', badge: 'neutral' },
+          { label: 'Index (Staging)', value: 'Ready for write-tree', detail: 'All paths mapped to SHAs', badge: 'success' },
+          { label: 'Object DB', value: 'Loose blobs ready', detail: 'Blobs written in Step 2', badge: 'neutral' },
+          { label: 'HEAD Pointer', value: 'main -> c3904e1', detail: 'Waiting to advance', badge: 'neutral' }
         ],
-        inspectorState: 'Index Snapshot Prepared',
-        inspectorDetail: 'The index already holds all file modes, names, and blob hashes. When you run git commit, Git writes this table into a tree object.',
-        inspectorOperation: 'git status',
-        internalChange: 'No repository mutations. Index examined.',
-        takeaway: 'The index is the blueprint for the tree object that git commit will create.',
-        plumbingCommand: 'git write-tree --dry-run',
-        xrayNote: 'All files are staged. The next command will freeze this index into a tree.'
+        inspectorState: 'Index Snapshot Ready to Freeze',
+        inspectorDetail: 'ELI5: All your toys are lined up on the scanner bed. The camera is loaded and ready. Git is waiting for you to say "Cheese!" with git commit.',
+        inspectorOperation: 'git add .',
+        internalChange: 'Index updated. All directory entries mapped to current blob hashes.',
+        takeaway: 'git commit does not look at your files on disk. git commit takes a picture of whatever is on the index conveyor belt!',
+        plumbingCommand: 'git write-tree (dry run)',
+        xrayNote: 'Notice in X-Ray: the index has all the hashes lined up, ready to be frozen into Tree objects.',
+        internals: {
+          head: 'ref: refs/heads/main',
+          branchRef: 'refs/heads/main -> c3904e1',
+          commitHash: 'c3904e1 (parent)',
+          commitMsg: 'Initial infrastructure baseline',
+          treeHash: '7b2a901 (staged in index)',
+          treeDetail: 'Ready for write-tree',
+          blobHash: '7ab38f4',
+          blobDetail: 'app/deployment.yaml (staged)'
+        }
       },
       {
         label: '2. git commit (write tree & mint commit)',
-        command: 'git commit -m "Scale application to 3 replicas"',
+        command: 'git commit -m "Scale cache deployment" && git status',
         output: [
-          '[main 4f901ab] Scale application to 3 replicas',
+          'dev@lab:~/repos/infra-platform$ git commit -m "Scale cache deployment"',
+          '[main 4f901ab] Scale cache deployment',
           ' 1 file changed, 1 insertion(+), 1 deletion(-)',
-          '',
-          '# X-RAY REVEAL: What git commit did in 3 atomic steps:',
-          '# Step 1: Wrote index into Root Tree T1 (f419dc8)',
-          '# Step 2: Minted Commit C1 (4f901ab) pointing to tree f419dc8 and parent e78b21a',
-          '# Step 3: Advanced branch pointer refs/heads/main to 4f901ab!'
+          'dev@lab:~/repos/infra-platform$ git status',
+          'On branch main',
+          'nothing to commit, working tree clean',
+          '# WHAT JUST PHYSICALLY HAPPENED:',
+          '# 1. git write-tree   -> froze index into Root Tree f419dc8',
+          '# 2. git commit-tree  -> sealed tree in Commit envelope 4f901ab',
+          '# 3. git update-ref   -> moved main pointer to 4f901ab'
         ],
-        files: [
-          { path: '.git/objects/4f', name: 'objects/4f/901ab... [commit C1]', depth: 1, highlight: true },
-          { path: '.git/objects/f4', name: 'objects/f4/19dc8... [root tree T1]', depth: 1, highlight: true },
-          { path: '.git/refs/heads/main', name: 'refs/heads/main -> 4f901ab', depth: 1, highlight: true },
-          { path: 'app/deployment.yaml', name: 'deployment.yaml', depth: 0 }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentName: 'deployment.yaml (replicas: 4)',
+          gitFiles: [
+            { path: '.git/objects/4f', name: 'objects/4f/901ab... [Commit Envelope 4f901ab]', depth: 1, highlight: true },
+            { path: '.git/objects/f4', name: 'objects/f4/19dc8... [Root Tree f419dc8]', depth: 1, highlight: true },
+            { path: '.git/refs/heads/main', name: 'refs/heads/main -> 4f901ab [ADVANCED!]', depth: 1, highlight: true }
+          ]
+        }),
         shelf: [
-          { label: 'Working Tree', value: 'Clean', detail: 'Matches new commit', badge: 'neutral' },
-          { label: 'Tree Object', value: 'T1 (f419dc8)', detail: 'Full project snapshot', badge: 'changed' },
-          { label: 'Commit Minted', value: 'C1 (4f901ab)', detail: 'Envelope sealed', badge: 'success' },
-          { label: 'Branch Moved', value: 'main -> 4f901ab', detail: 'Pointer advanced', badge: 'changed' }
+          { label: 'Working Tree', value: 'Clean', detail: 'Matches committed HEAD', badge: 'neutral' },
+          { label: 'Root Tree', value: 'f419dc8 created', detail: 'Complete project directory table', badge: 'success' },
+          { label: 'Commit Object', value: '4f901ab minted', detail: 'Envelope sealed in objects/', badge: 'changed' },
+          { label: 'Branch Pointer', value: 'main -> 4f901ab', detail: 'Moved forward by 1 commit', badge: 'success' }
         ],
-        inspectorState: 'Tree Written, Commit Minted, Branch Advanced',
-        inspectorDetail: 'Git serialized the index into root tree f419dc8, created commit object 4f901ab referencing parent e78b21a, and updated refs/heads/main to point to 4f901ab.',
-        inspectorOperation: 'git commit -m "Scale application to 3 replicas"',
-        internalChange: 'Tree object and commit object written to .git/objects. Branch ref refs/heads/main updated.',
-        takeaway: 'The commit was minted. The branch moved. The commit did not move.',
-        plumbingCommand: 'TREE=$(git write-tree) && COMMIT=$(git commit-tree $TREE -p HEAD -m "msg") && git update-ref refs/heads/main $COMMIT',
-        xrayNote: 'Notice: refs/heads/main simply updated its 40-character text file from e78b21a to 4f901ab.'
+        inspectorState: 'The 3-Step Commit Chain Reaction',
+        inspectorDetail: 'ELI5: Click! The camera flashed. Git created a photo receipt (Tree f419dc8), sealed it in an envelope (Commit 4f901ab), and slid the "main" bookmark to point to this new envelope.',
+        inspectorOperation: 'git commit -m "Scale cache deployment"',
+        internalChange: 'Tree f419dc8 written. Commit 4f901ab created with parent c3904e1. refs/heads/main updated to 4f901ab.',
+        takeaway: 'Commits are envelopes holding a Tree pointer, parent commit pointers, an author signature, and your message.',
+        plumbingCommand: 'git rev-parse HEAD',
+        xrayNote: 'In X-Ray: See objects/4f and objects/f4 appear. Look at the DAG diagram below: the commit node points to the root tree!',
+        internals: {
+          head: 'ref: refs/heads/main',
+          branchRef: 'refs/heads/main -> 4f901ab (ADVANCED!)',
+          commitHash: '4f901ab',
+          commitMsg: '"Scale cache deployment"',
+          treeHash: 'f419dc8',
+          treeDetail: 'Root Merkle snapshot tree',
+          blobHash: '7ab38f4',
+          blobDetail: 'app/deployment.yaml (in tree)'
+        }
       },
       {
         label: '3. inspect commit envelope (cat-file -p)',
-        command: 'git cat-file -p HEAD',
+        command: 'git cat-file -p 4f901ab',
         output: [
-          '$ git cat-file -p HEAD',
-          'tree f419dc822a10b8921a9901ef2b8901aa9901ef338',
-          'parent e78b21a049182bc018901ef3381a90c1018901ef',
-          'author Dev <dev@lab> 1774011832 +0000',
-          'committer Dev <dev@lab> 1774011832 +0000',
+          'dev@lab:~/repos/infra-platform$ git cat-file -p 4f901ab',
+          'tree f419dc8e18ac49b012891ac37890123456789abc',
+          'parent c3904e189012345678901234567890123456789a',
+          'author SRE Engineer <dev@infra.local> 1726750000 +0000',
+          'committer SRE Engineer <dev@infra.local> 1726750000 +0000',
           '',
-          'Scale application to 3 replicas',
-          '',
-          '# MYTH BUSTED: Look at the commit text above!',
-          '# Where are the diffs? THERE ARE NO DIFFS.',
-          '# A commit contains only 4 elements: tree pointer, parent pointer, author, and message.'
+          'Scale cache deployment',
+          '# ANATOMY OF A COMMIT ENVELOPE:',
+          '# 1. tree    -> Pointer to Root Tree snapshot',
+          '# 2. parent  -> Pointer to previous commit (forms the history chain)',
+          '# 3. author  -> Who made the change and timestamp',
+          '# 4. message -> Your commit explanation'
         ],
-        files: [
-          { path: '.git/objects/4f', name: 'objects/4f/901ab... [commit object text]', depth: 1, highlight: true },
-          { path: '.git/refs/heads/main', name: 'main -> 4f901ab', depth: 1 }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentName: 'deployment.yaml'
+        }),
         shelf: [
-          { label: 'Commit SHA', value: '4f901ab...', detail: 'Cryptographically sealed', badge: 'success' },
-          { label: 'Tree Pointer', value: 'f419dc8 (root)', detail: 'Snapshot, NOT a diff', badge: 'changed' },
-          { label: 'Parent Pointer', value: 'e78b21a (root)', detail: 'Ancestor DAG node', badge: 'neutral' },
-          { label: 'Diff Storage', value: 'ZERO diffs stored', detail: 'Calculated on demand', badge: 'success' }
+          { label: 'Commit SHA', value: '4f901ab', detail: 'Hash of envelope contents', badge: 'neutral' },
+          { label: 'Tree Pointer', value: 'tree f419dc8', detail: 'Points to project root tree', badge: 'success' },
+          { label: 'Parent Pointer', value: 'parent c3904e1', detail: 'Forms the backward history DAG', badge: 'neutral' },
+          { label: 'Envelope Size', value: '~200 bytes', detail: 'Ultra lightweight metadata envelope', badge: 'neutral' }
         ],
-        inspectorState: 'Commit Object Internals Revealed',
-        inspectorDetail: 'A commit is an immutable plain-text envelope. It connects a root tree snapshot to previous history via parent pointers. Diffs are never stored on disk; they are computed on the fly by comparing trees.',
+        inspectorState: 'Inside the Commit Envelope',
+        inspectorDetail: 'ELI5: Look inside envelope #4f901ab: it only contains 4 lines of text! It points to the photo receipt (tree f419dc8) and remembers who its parent was (c3904e1). That is how Git builds history backwards!',
         inspectorOperation: 'git cat-file -p HEAD',
-        internalChange: 'Reading commit object payload from .git/objects/4f/901ab...',
-        takeaway: 'Git commits are snapshots, not diff chains. Every commit knows the exact state of the entire project via its root tree.',
-        plumbingCommand: 'git rev-parse HEAD^{commit}',
-        xrayNote: 'The commit object is just 180 bytes of text sealing tree, parent, and author together.'
+        internalChange: 'Decompressed commit object 4f901ab from .git/objects/4f/.',
+        takeaway: 'Git history is not a forward timeline; it is a backward chain of breadcrumbs where each commit points to its parent.',
+        plumbingCommand: 'git cat-file -p HEAD',
+        xrayNote: 'Plumbing trick: cat-file -p HEAD shows the exact raw text that Git hashed to produce 4f901ab.',
+        internals: {
+          head: 'ref: refs/heads/main',
+          branchRef: 'refs/heads/main -> 4f901ab',
+          commitHash: '4f901ab',
+          commitMsg: '"Scale cache deployment"',
+          treeHash: 'f419dc8',
+          treeDetail: 'tree pointer in commit envelope',
+          blobHash: '7ab38f4',
+          blobDetail: 'app/deployment.yaml (replicas: 4)'
+        }
       },
       {
-        label: '4. inspect tree T1 (snapshot contents)',
-        command: 'git cat-file -p HEAD^{tree}',
+        label: '4. inspect Merkle tree & subtree reuse',
+        command: 'git cat-file -p f419dc8',
         output: [
-          '$ git cat-file -p HEAD^{tree}',
-          '040000 tree 7b2a901ee34a81ba01901ef2b8901aa9901ef338    app',
-          '100644 blob a48fe12018b8109a018901ef3381a90c1018901e    README.md',
-          '',
-          '$ git cat-file -p 7b2a901',
-          '100644 blob 7ab38f912c9b4e19572d4f80164e29b1dc94f291    deployment.yaml',
-          '',
-          '# Merkle Tree Hierarchy:',
-          '# Root Tree (f419dc8) -> Subtree app/ (7b2a901) -> Blob (7ab38f)'
+          'dev@lab:~/repos/infra-platform$ git cat-file -p f419dc8',
+          '040000 tree 7b2a901e18ac49b012891ac37890123456789abc	app',
+          '040000 tree 8190ac2e89012345678901234567890123456789a	environments',
+          '040000 tree e2018bae89012345678901234567890123456789a	modules',
+          '100644 blob a48fe12e89012345678901234567890123456789a	README.md',
+          '100644 blob b2190cde89012345678901234567890123456789a	.gitignore',
+          '# LOOK AT SUBTREE REUSE:',
+          '# modules/ was NOT changed. Its tree hash (e2018ba) is 100% IDENTICAL to C1!',
+          '# Git reused the existing subtree pointer: O(1) deduplication, 0 bytes duplicated!'
         ],
-        files: [
-          { path: '.git/objects/f4', name: 'objects/f4/19dc8... [root tree]', depth: 1, highlight: true },
-          { path: '.git/objects/7b', name: 'objects/7b/2a901... [app/ subtree]', depth: 1, highlight: true },
-          { path: '.git/objects/7a', name: 'objects/7a/b38f... [deployment.yaml blob]', depth: 1 }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentName: 'deployment.yaml',
+          gitFiles: [
+            { path: '.git/objects/7b', name: 'objects/7b/2a901... [app/ subtree - NEW]', depth: 1, highlight: true },
+            { path: '.git/objects/e2', name: 'objects/e2/018ba... [modules/ subtree - REUSED]', depth: 1 }
+          ]
+        }),
         shelf: [
-          { label: 'Root Tree', value: 'f419dc8', detail: 'Top-level directory', badge: 'neutral' },
-          { label: 'Subtree app/', value: '7b2a901', detail: 'Directory table', badge: 'neutral' },
-          { label: 'Blob deployment', value: '7ab38f', detail: 'Pure file content', badge: 'neutral' },
-          { label: 'Architecture', value: 'Merkle DAG', detail: 'Hashes bubble up to root', badge: 'success' }
+          { label: 'Root Tree', value: 'f419dc8', detail: 'Project directory table', badge: 'neutral' },
+          { label: 'Subtree app/', value: '7b2a901 (NEW)', detail: 'Contains modified deployment blob', badge: 'changed' },
+          { label: 'Subtree modules/', value: 'e2018ba (REUSED)', detail: 'O(1) pointer reuse: zero duplicate bytes', badge: 'success' },
+          { label: 'Subtree envs/', value: '8190ac2 (REUSED)', detail: 'Zero duplicate storage', badge: 'success' }
         ],
-        inspectorState: 'Hierarchical Merkle Tree',
-        inspectorDetail: 'Trees represent directories. Root tree f419dc8 points to subtree 7b2a901 (app/), which points to blob 7ab38f (deployment.yaml). Unmodified files (like README.md) are reused without duplicating storage.',
-        inspectorOperation: 'git cat-file -p HEAD^{tree}',
-        internalChange: 'Reading tree binary directory records.',
-        takeaway: 'Directories are trees pointing to subtrees or blobs. Changing one file cascades hashes up to the root tree, creating a tamper-evident Merkle DAG.',
+        inspectorState: 'The Magic of Merkle Subtree Reuse',
+        inspectorDetail: 'ELI5: We only changed 1 file inside app/. Notice that modules/ and environments/ did not change at all! Git did not copy them; it just reused their existing receipt barcodes. That is why Git repos are so tiny and fast!',
+        inspectorOperation: 'git cat-file -p f419dc8',
+        internalChange: 'Parsed root tree. Subtrees modules/ and environments/ reused unchanged by hash.',
+        takeaway: 'Trees store directory listings. If a directory does not change, its tree hash is identical and Git reuses it with zero duplication.',
         plumbingCommand: 'git ls-tree -r HEAD',
-        xrayNote: 'Notice how the tree structure forms a complete snapshot of your directory.'
+        xrayNote: 'Look at the diagram below: see the green REUSED badge on modules/. Only app/ needed a new tree!',
+        internals: {
+          head: 'ref: refs/heads/main',
+          branchRef: 'refs/heads/main -> 4f901ab',
+          commitHash: '4f901ab',
+          commitMsg: '"Scale cache deployment"',
+          treeHash: 'f419dc8 (Root)',
+          treeDetail: 'app/ (7b2a901) + modules/ (reused)',
+          blobHash: '7ab38f4',
+          blobDetail: 'app/deployment.yaml'
+        }
       }
     ]
   },
@@ -516,139 +693,179 @@ export const gitViews: GitLab[] = [
   // LEVEL 4: BRANCHES ARE JUST MOVABLE REFERENCES
   // =========================================================================
   {
-    id: 'branches-movable-refs',
+    id: 'branches-are-references',
     level: 4,
     title: 'Level 4: Branches Are Just Movable References',
-    label: '04. Branches Are Pointers',
+    label: '04. Branches Are References',
     group: 'Navigation & References',
-    path: '.git/refs/heads/',
-    branch: 'feature/cache',
-    question: 'What is a branch physically on disk, and why is creating a branch instantaneous?',
-    whatLearnerThinks: '“Branches contain different copies of my code in separate folders.”',
-    whatWeReveal: 'A branch is a 41-byte plain-text file containing a commit hash. A branch is just a movable reference.',
-    takeaway: 'A branch is not a container of files or a parallel folder. A branch is a 41-byte text file inside .git/refs/heads/ that stores the 40-character SHA of a commit. Creating a branch copies zero files; it writes 41 bytes to disk.',
-    caveat: 'Deleting a branch deletes only the 41-byte pointer file. The commit objects remain in .git/objects/ until garbage-collected.',
-    inspector: 'Inspect .git/refs/heads/ before and after creating feature/cache. See how Git tracks branches with lightweight pointer files.',
+    path: '~/repos/infra-platform',
+    branch: 'main',
+    question: 'Are Git branches heavy copies of your files, and how much disk space does a branch use?',
+    whatLearnerThinks: '“A branch is a duplicate copy of my whole project folder.”',
+    whatWeReveal: 'A branch is literally a 41-byte text file inside .git/refs/heads/. It stores a 40-character commit hash plus a newline character. Creating a branch takes 0.001 ms and duplicates zero files.',
+    takeaway: 'ELI5: A branch is NOT a copy of your project folder! A branch is literally a tiny sticky note with a commit barcode written on it. Making a new branch is just sticking a second sticky note on the exact same photo envelope! It takes 41 bytes of disk space and zero milliseconds. When you make a new commit, Git just peels the sticky note off and moves it to the new envelope.',
+    caveat: 'Because branches are just 41-byte pointer files, deleting a branch (git branch -d) never deletes commits immediately. Commits remain safely in .git/objects/ until garbage collection (git gc).',
+    inspector: 'Inspect .git/refs/heads/ to see that branches are ordinary 41-byte text files holding commit hashes.',
     sources: [
       'https://git-scm.com/docs/git-branch',
       'https://git-scm.com/docs/git-switch',
-      'https://git-scm.com/book/en/v2/Git-Branching-Git-Branches-in-a-Nutshell'
+      'https://git-scm.com/book/en/v2/Git-Branching-Branches-in-a-Nutshell'
     ],
     steps: [
       {
         label: '1. inspect .git/refs/heads/main',
-        command: 'cat .git/refs/heads/main',
+        command: 'cat .git/refs/heads/main && ls -lh .git/refs/heads/main',
         output: [
-          '$ cat .git/refs/heads/main',
-          '4f901ab3c91820ba19028bc01928bc01928bc01a',
-          '',
-          '$ ls -lh .git/refs/heads/main',
-          '-rw-r--r-- 1 dev dev 41 Sep 19 14:10 .git/refs/heads/main',
-          '',
-          '# LOOK AT THE FILE SIZE: 41 bytes!',
-          '# 40 hexadecimal characters + 1 newline byte.',
-          '# That is the entire physical reality of a Git branch on disk.'
+          'dev@lab:~/repos/infra-platform$ cat .git/refs/heads/main',
+          '4f901ab789012345678901234567890123456789',
+          'dev@lab:~/repos/infra-platform$ ls -lh .git/refs/heads/main',
+          '-rw-r--r-- 1 dev dev 41 Sep 20 09:00 .git/refs/heads/main',
+          '# LOOK AT THE FILE SIZE: 41 BYTES!',
+          '# 40 hex characters + 1 newline character (\\n).',
+          '# That is literally all a branch is.'
         ],
-        files: [
-          { path: '.git/refs/heads/main', name: 'main (41 bytes text file)', depth: 1, highlight: true },
-          { path: '.git/HEAD', name: 'HEAD -> ref: refs/heads/main', depth: 1 }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          gitFiles: [
+            { path: '.git/refs/heads/main', name: 'refs/heads/main (41 bytes text file)', depth: 1, highlight: true }
+          ]
+        }),
         shelf: [
-          { label: 'Branch Name', value: 'main', detail: 'refs/heads/main', badge: 'neutral' },
-          { label: 'Physical Size', value: '41 bytes', detail: 'Plain text file', badge: 'success' },
-          { label: 'Target Commit', value: '4f901ab', detail: 'Current tip of main', badge: 'neutral' },
-          { label: 'Disk Overhead', value: 'Zero file duplication', detail: 'Lightweight pointer', badge: 'success' }
+          { label: 'Branch Name', value: 'main', detail: 'File inside .git/refs/heads/', badge: 'neutral' },
+          { label: 'File Size', value: '41 bytes', detail: '40 char SHA + newline', badge: 'success' },
+          { label: 'Target Commit', value: '4f901ab', detail: 'Points to commit envelope', badge: 'neutral' },
+          { label: 'Project Files', value: 'Zero duplicated', detail: 'Shared immutable object vault', badge: 'neutral' }
         ],
-        inspectorState: 'Branch Pointer on Disk',
-        inspectorDetail: 'The branch main is literally a 41-byte text file containing 4f901ab. It contains no file contents, diffs, or directories.',
+        inspectorState: 'A Branch is a 41-Byte Text File',
+        inspectorDetail: 'ELI5: Look at the file on disk: .git/refs/heads/main is only 41 bytes! It is just a scrap of paper that says "4f901ab". It does not contain any code.',
         inspectorOperation: 'cat .git/refs/heads/main',
-        internalChange: 'Reading plain text ref file.',
-        takeaway: 'In Git, branches are not heavy copies. A branch is just a 41-byte text file containing a commit hash.',
-        plumbingCommand: 'git show-ref --heads',
-        xrayNote: 'Notice the file size: exactly 41 bytes.'
+        internalChange: 'Read reference file .git/refs/heads/main.',
+        takeaway: 'A branch in Git is not a container or a parallel folder. It is a 41-byte text pointer to a commit.',
+        plumbingCommand: 'git rev-parse refs/heads/main',
+        xrayNote: 'In X-Ray mode: see the branch file in .git/refs/heads/. It is completely human-readable!',
+        internals: {
+          head: 'ref: refs/heads/main',
+          branchRef: 'refs/heads/main -> 4f901ab',
+          commitHash: '4f901ab',
+          commitMsg: 'Scale cache deployment',
+          treeHash: 'f419dc8',
+          treeDetail: 'Shared root tree',
+          blobHash: '7ab38f4',
+          blobDetail: 'app/deployment.yaml'
+        }
       },
       {
         label: '2. git switch -c feature/cache',
-        command: 'git switch -c feature/cache',
+        command: 'git switch -c feature/cache && ls -la .git/refs/heads/',
         output: [
+          'dev@lab:~/repos/infra-platform$ git switch -c feature/cache',
           'Switched to a new branch \'feature/cache\'',
-          '',
-          '# X-RAY REVEAL: What Git physically did:',
-          '# 1. Created .git/refs/heads/feature/cache containing 4f901ab (41 bytes)',
-          '# 2. Updated .git/HEAD to: ref: refs/heads/feature/cache',
-          '# ZERO files in your working directory were copied or altered!'
+          'dev@lab:~/repos/infra-platform$ ls -la .git/refs/heads/',
+          'total 16',
+          '-rw-r--r-- 1 dev dev 41 Sep 20 09:00 feature/cache',
+          '-rw-r--r-- 1 dev dev 41 Sep 20 09:00 main',
+          '# TWO BRANCHES NOW EXIST!',
+          '# Both files contain the exact same hash: 4f901ab.',
+          '# Git created 1 file of 41 bytes. Zero project files were copied!'
         ],
-        files: [
-          { path: '.git/refs/heads/feature/cache', name: 'feature/cache (41 bytes) -> 4f901ab', depth: 1, highlight: true },
-          { path: '.git/refs/heads/main', name: 'main (41 bytes) -> 4f901ab', depth: 1 },
-          { path: '.git/HEAD', name: 'HEAD -> ref: refs/heads/feature/cache', depth: 1, highlight: true }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          gitFiles: [
+            { path: '.git/refs/heads/feature/cache', name: 'feature/cache (41 bytes) -> 4f901ab', depth: 1, highlight: true },
+            { path: '.git/refs/heads/main', name: 'main (41 bytes) -> 4f901ab', depth: 1 },
+            { path: '.git/HEAD', name: 'HEAD -> ref: refs/heads/feature/cache', depth: 1, highlight: true }
+          ]
+        }),
         shelf: [
-          { label: 'Active Branch', value: 'feature/cache', detail: 'Newly created ref', badge: 'changed' },
-          { label: 'main Branch', value: '4f901ab', detail: 'Still points to C1', badge: 'neutral' },
-          { label: 'HEAD Pointer', value: 'refs/heads/feature/cache', detail: 'Symbolic reference', badge: 'changed' },
-          { label: 'Creation Time', value: '< 1 millisecond', detail: 'Wrote 41 bytes to disk', badge: 'success' }
+          { label: 'Active Branch', value: 'feature/cache', detail: 'HEAD points to new branch', badge: 'success' },
+          { label: 'main Branch', value: '4f901ab', detail: 'Both branches point to same commit', badge: 'neutral' },
+          { label: 'Disk Overhead', value: '+41 bytes', detail: 'One tiny text file added', badge: 'success' },
+          { label: 'Creation Time', value: '~0.001 ms', detail: 'Instantaneous pointer creation', badge: 'neutral' }
         ],
-        inspectorState: 'New Branch Reference Created',
-        inspectorDetail: 'Both main and feature/cache now point to the exact same commit 4f901ab. HEAD was updated to point to feature/cache.',
+        inspectorState: 'New Branch Created Instantly',
+        inspectorDetail: 'ELI5: Git took a fresh sticky note labeled "feature/cache", wrote "4f901ab" on it, and stuck it on the exact same envelope! Both main and feature/cache point to the exact same photo.',
         inspectorOperation: 'git switch -c feature/cache',
-        internalChange: '.git/refs/heads/feature/cache written with 4f901ab. HEAD updated.',
-        takeaway: 'Creating a branch in Git is virtually free. It creates a single 41-byte text file pointing to the current commit.',
-        plumbingCommand: 'git update-ref refs/heads/feature/cache HEAD && git symbolic-ref HEAD refs/heads/feature/cache',
-        xrayNote: 'Both branch pointers are now stacked on commit 4f901ab.'
+        internalChange: 'Created .git/refs/heads/feature/cache (41 bytes). Updated .git/HEAD to point to refs/heads/feature/cache.',
+        takeaway: 'Creating a branch in Git is virtually free. You can create 1,000 branches and your disk will barely notice.',
+        plumbingCommand: 'git symbolic-ref HEAD',
+        xrayNote: 'Turn on X-Ray: HEAD now says "ref: refs/heads/feature/cache". Both branch files point to 4f901ab.',
+        internals: {
+          head: 'ref: refs/heads/feature/cache',
+          branchRef: 'feature/cache: 4f901ab | main: 4f901ab',
+          commitHash: '4f901ab',
+          commitMsg: 'Both branches share commit 4f901ab',
+          treeHash: 'f419dc8',
+          treeDetail: 'Zero duplicate files',
+          blobHash: '7ab38f4',
+          blobDetail: 'app/deployment.yaml'
+        }
       },
       {
         label: '3. commit on feature/cache',
-        command: 'git commit -m "Add Redis cache configuration"',
+        command: 'echo "redis: enabled" >> app/deployment.yaml && git commit -am "Add redis cache config"',
         output: [
-          '[feature/cache b14c80e] Add Redis cache configuration',
-          ' 1 file changed, 8 insertions(+)',
-          '',
-          '# THE KEY SENTENCE BECOMES VISUALLY UNAVOIDABLE:',
-          '# main          -> 4f901ab (C1)',
-          '# feature/cache -> b14c80e (C2)',
-          '#',
-          '# The branch moved. The commit did not.'
+          'dev@lab:~/repos/infra-platform$ echo "redis: enabled" >> app/deployment.yaml',
+          'dev@lab:~/repos/infra-platform$ git commit -am "Add redis cache config"',
+          '[feature/cache b14c80e] Add redis cache config',
+          ' 1 file changed, 1 insertion(+)',
+          'dev@lab:~/repos/infra-platform$ cat .git/refs/heads/feature/cache',
+          'b14c80e789012345678901234567890123456789',
+          'dev@lab:~/repos/infra-platform$ cat .git/refs/heads/main',
+          '4f901ab789012345678901234567890123456789',
+          '# LOOK: feature/cache moved to b14c80e! main stayed at 4f901ab!'
         ],
-        files: [
-          { path: '.git/refs/heads/feature/cache', name: 'feature/cache -> b14c80e [ADVANCED]', depth: 1, highlight: true },
-          { path: '.git/refs/heads/main', name: 'main -> 4f901ab [STABLE]', depth: 1 },
-          { path: '.git/HEAD', name: 'HEAD -> feature/cache', depth: 1 }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentName: 'deployment.yaml (redis enabled)',
+          gitFiles: [
+            { path: '.git/refs/heads/feature/cache', name: 'feature/cache -> b14c80e [ADVANCED]', depth: 1, highlight: true },
+            { path: '.git/refs/heads/main', name: 'main -> 4f901ab [STABLE]', depth: 1 }
+          ]
+        }),
         shelf: [
-          { label: 'feature/cache', value: 'b14c80e (C2)', detail: 'Advanced with new commit', badge: 'success' },
-          { label: 'main branch', value: '4f901ab (C1)', detail: 'Unchanged at previous commit', badge: 'neutral' },
-          { label: 'HEAD Target', value: 'feature/cache', detail: 'Followed active branch', badge: 'neutral' },
-          { label: 'Branch Status', value: 'Diverged (ahead 1)', detail: '1 commit ahead of main', badge: 'changed' }
+          { label: 'feature/cache', value: 'b14c80e', detail: 'Moved to new commit', badge: 'success' },
+          { label: 'main branch', value: '4f901ab', detail: 'Remains untouched at baseline', badge: 'neutral' },
+          { label: 'Branch Divergence', value: '1 commit ahead', detail: 'feature/cache parent is 4f901ab', badge: 'changed' },
+          { label: 'Mutation Cost', value: 'Overwrote 40 bytes', detail: 'In .git/refs/heads/feature/cache', badge: 'neutral' }
         ],
-        inspectorState: 'Active Branch Ref Advanced',
-        inspectorDetail: 'Committing advanced only the active branch ref feature/cache to b14c80e. The main ref remained at 4f901ab.',
-        inspectorOperation: 'git commit -m "Add Redis cache configuration"',
-        internalChange: 'New commit object b14c80e created. .git/refs/heads/feature/cache updated to b14c80e.',
-        takeaway: 'A branch is just a movable reference. Committing moves the ref you are currently on; all other branches stay where they were.',
-        plumbingCommand: 'git log --oneline --graph --all',
-        xrayNote: 'Watch the graph: feature/cache moved forward to C2. Main stayed at C1.'
+        inspectorState: 'Only the Active Branch Pointer Moved',
+        inspectorDetail: 'ELI5: Git made a new photo envelope (b14c80e). Because your finger (HEAD) was on "feature/cache", Git peeled the "feature/cache" sticky note off and moved it forward! The "main" sticky note never budged.',
+        inspectorOperation: 'git commit on branch',
+        internalChange: 'Overwrote .git/refs/heads/feature/cache with new SHA b14c80e. main remains at 4f901ab.',
+        takeaway: 'Advancing a branch does not move other branches. Git simply overwrites 40 bytes in the active ref file.',
+        plumbingCommand: 'git merge-base main feature/cache',
+        xrayNote: 'Check the diagram below: feature/cache is 1 commit ahead, while main stays anchored at 4f901ab.',
+        internals: {
+          head: 'ref: refs/heads/feature/cache',
+          branchRef: 'feature/cache -> b14c80e (main at 4f901ab)',
+          commitHash: 'b14c80e',
+          commitMsg: '"Add redis cache config"',
+          treeHash: '9a210cd',
+          treeDetail: 'New tree object created',
+          blobHash: 'd19028a',
+          blobDetail: 'app/deployment.yaml (redis enabled)'
+        }
       }
     ]
   },
 
   // =========================================================================
-  // LEVEL 5: HEAD — THE "YOU ARE HERE" POINTER
+  // LEVEL 5: HEAD POINTER & DETACHED HEAD
   // =========================================================================
   {
-    id: 'head-you-are-here',
+    id: 'head-pointer-and-detached-head',
     level: 5,
-    title: 'Level 5: HEAD — The "You Are Here" Pointer',
-    label: '05. HEAD & Detached State',
+    title: 'Level 5: HEAD: The "You Are Here" Pointer',
+    label: '05. HEAD & Detached HEAD',
     group: 'Navigation & References',
-    path: '.git/HEAD',
-    branch: 'HEAD (detached)',
-    question: 'What is HEAD, why does it point to a branch, and what really happens in detached HEAD?',
-    whatLearnerThinks: '“HEAD is an invisible mysterious pointer, and detached HEAD is a fatal error.”',
-    whatWeReveal: 'HEAD is your "you are here" pointer. In detached HEAD, HEAD points directly to a commit hash without an intermediate branch.',
-    takeaway: 'HEAD is simply your active position in Git. Normally it points symbolically to a branch ref (HEAD -> refs/heads/main -> C1). When you checkout a specific commit SHA, HEAD detaches and points directly to that commit (HEAD -> C1). Commits made in detached HEAD are orphaned if you switch away without naming a branch.',
-    caveat: 'Commits made while in detached HEAD are not deleted immediately if you switch away, but they become unreachable and will eventually be purged by git gc unless rescued.',
-    inspector: 'Witness the symbolic pointer vs detached state transition in .git/HEAD.',
+    path: '~/repos/infra-platform',
+    branch: 'feature/cache',
+    question: 'What is HEAD, and why does everyone panic when it becomes "detached"?',
+    whatLearnerThinks: '“HEAD is just another word for the latest commit.”',
+    whatWeReveal: 'HEAD is normally a symbolic reference: a pointer to a branch pointer (ref: refs/heads/main). When you check out a raw commit SHA, HEAD detaches from the branch safety net and points directly to the commit. Commits made here risk becoming unreferenced orphans.',
+    takeaway: 'ELI5: Imagine a book. A branch is a bookmark stuck between pages. HEAD is your finger: usually your finger points at a bookmark ("I am reading the main bookmark"). But if you run git checkout <hash>, your finger slides off the bookmark and points directly to a raw page! If you write notes on this page and flip somewhere else, you will lose your place because you have no bookmark! That is Detached HEAD. To fix it, simply stick a new bookmark there: git switch -c rescue-branch!',
+    caveat: 'Commits created in a detached HEAD state are not deleted immediately, but if you switch away without a branch bookmark, they become unreferenced orphans. They survive in the reflog for 30–90 days before git gc purges them.',
+    inspector: 'Watch HEAD transition from a symbolic reference pointing to a branch into a detached state pointing directly to a raw commit hash.',
     sources: [
       'https://git-scm.com/docs/git-checkout#_detached_head',
       'https://git-scm.com/docs/git-symbolic-ref',
@@ -659,267 +876,399 @@ export const gitViews: GitLab[] = [
         label: '1. normal state: HEAD is symbolic',
         command: 'cat .git/HEAD',
         output: [
-          '$ cat .git/HEAD',
+          'dev@lab:~/repos/infra-platform$ cat .git/HEAD',
           'ref: refs/heads/feature/cache',
-          '',
-          '# HEAD is a symbolic reference (a pointer to a pointer):',
-          '# HEAD -> refs/heads/feature/cache -> b14c80e',
-          '# When you run git commit, Git updates whatever ref HEAD points to.'
+          '# NORMAL (ATTACHED) STATE:',
+          '# HEAD does not store a hash! It stores "ref: refs/heads/feature/cache".',
+          '# HEAD is a pointer to a pointer. You are protected by a branch safety net!'
         ],
-        files: [
-          { path: '.git/HEAD', name: 'HEAD (ref: refs/heads/feature/cache)', depth: 1, highlight: true },
-          { path: '.git/refs/heads/feature/cache', name: 'feature/cache -> b14c80e', depth: 1 }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentName: 'deployment.yaml (redis enabled)',
+          gitFiles: [
+            { path: '.git/HEAD', name: 'HEAD -> ref: refs/heads/feature/cache', depth: 1, highlight: true },
+            { path: '.git/refs/heads/feature/cache', name: 'feature/cache -> b14c80e', depth: 1 }
+          ]
+        }),
         shelf: [
-          { label: 'HEAD State', value: 'Symbolic Reference', detail: 'Points to branch name', badge: 'neutral' },
-          { label: 'Active Branch', value: 'feature/cache', detail: 'Target of HEAD', badge: 'neutral' },
-          { label: 'Commit Target', value: 'b14c80e (C2)', detail: 'Tip of active branch', badge: 'neutral' },
-          { label: 'Safety Mode', value: 'Safe (Branch Attached)', detail: 'Commits update branch', badge: 'success' }
+          { label: 'HEAD Mode', value: 'Symbolic Reference', detail: 'Points to branch, not a SHA', badge: 'success' },
+          { label: 'Active Ref', value: 'refs/heads/feature/cache', detail: 'The bookmark you are on', badge: 'neutral' },
+          { label: 'Commit Target', value: 'b14c80e', detail: 'Resolved via branch file', badge: 'neutral' },
+          { label: 'Safety Net', value: 'Protected', detail: 'New commits advance branch', badge: 'success' }
         ],
-        inspectorState: 'Symbolic Reference Attached',
-        inspectorDetail: 'Normally .git/HEAD contains ref: refs/heads/<branch>. Git uses this indirection so committing advances the branch ref automatically.',
+        inspectorState: 'Symbolic HEAD (Safe on Branch)',
+        inspectorDetail: 'ELI5: Your finger (HEAD) is resting safely on the "feature/cache" bookmark. Whenever you make a new commit, Git moves the bookmark along with your finger.',
         inspectorOperation: 'cat .git/HEAD',
-        internalChange: 'Reading HEAD symbolic pointer.',
-        takeaway: 'HEAD is your "you are here" pointer. When attached to a branch, committing advances that branch.',
+        internalChange: 'HEAD verified as symbolic ref to refs/heads/feature/cache.',
+        takeaway: 'Under normal operation, HEAD does not point to a commit. HEAD points to a branch name.',
         plumbingCommand: 'git symbolic-ref HEAD',
-        xrayNote: 'Notice the ref: prefix in .git/HEAD. It points to a branch name, not a commit hash.'
+        xrayNote: 'Look at Column 3: The HEAD card says "ref: refs/heads/feature/cache" in cyan.',
+        internals: {
+          head: 'ref: refs/heads/feature/cache',
+          branchRef: 'refs/heads/feature/cache -> b14c80e',
+          commitHash: 'b14c80e',
+          commitMsg: '"Add redis cache configuration"',
+          treeHash: '9a210cd',
+          treeDetail: 'Feature tree',
+          blobHash: 'd19028a',
+          blobDetail: 'redis enabled'
+        }
       },
       {
         label: '2. git checkout 4f901ab (detach HEAD)',
         command: 'git checkout 4f901ab',
         output: [
+          'dev@lab:~/repos/infra-platform$ git checkout 4f901ab',
           'Note: switching to \'4f901ab\'.',
-          '',
           'You are in \'detached HEAD\' state. You can look around, make experimental',
           'changes and commit them, and you can discard any commits you make in this',
           'state without impacting any branches by switching back to a branch.',
           '',
-          '$ cat .git/HEAD',
-          '4f901ab3c91820ba19028bc01928bc01928bc01a',
-          '',
-          '# LOOK AT .git/HEAD NOW: The "ref:" prefix is gone!',
-          '# HEAD now points directly to commit 4f901ab.'
+          'HEAD is now at 4f901ab Scale cache deployment',
+          'dev@lab:~/repos/infra-platform$ cat .git/HEAD',
+          '4f901ab789012345678901234567890123456789',
+          '# WARNING: HEAD now contains a RAW 40-CHAR SHA! The branch name is GONE.'
         ],
-        files: [
-          { path: '.git/HEAD', name: 'HEAD -> 4f901ab [DETACHED!]', depth: 1, highlight: true },
-          { path: '.git/refs/heads/feature/cache', name: 'feature/cache -> b14c80e', depth: 1 },
-          { path: '.git/refs/heads/main', name: 'main -> 4f901ab', depth: 1 }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          gitFiles: [
+            { path: '.git/HEAD', name: 'HEAD -> 4f901ab [DETACHED HEAD!]', depth: 1, highlight: true }
+          ]
+        }),
         shelf: [
-          { label: 'HEAD State', value: 'DETACHED HEAD', detail: 'Direct commit hash', badge: 'warning' },
-          { label: 'HEAD Points To', value: '4f901ab (C1)', detail: 'No intermediate branch', badge: 'warning' },
-          { label: 'feature/cache', value: 'b14c80e (C2)', detail: 'Unaffected', badge: 'neutral' },
-          { label: 'Risk Level', value: 'Commits are unbranched', detail: 'Can be orphaned if switched', badge: 'warning' }
+          { label: 'HEAD State', value: 'DETACHED HEAD', detail: 'Points directly to raw SHA', badge: 'warning' },
+          { label: 'Active Branch', value: 'NONE', detail: 'No branch reference attached', badge: 'warning' },
+          { label: 'Commit Point', value: '4f901ab', detail: 'Looking at older commit', badge: 'neutral' },
+          { label: 'Orphan Risk', value: 'High', detail: 'New commits will have no branch', badge: 'warning' }
         ],
-        inspectorState: 'Detached HEAD State',
-        inspectorDetail: 'The branch disappeared from between HEAD and the commit. .git/HEAD now contains a raw 40-character commit hash instead of a branch reference.',
+        inspectorState: 'Detached HEAD Warning Active',
+        inspectorDetail: 'ELI5: Your finger slid off the bookmark and is now pointing directly at page 4f901ab! There is no bookmark here. Git warns you so you don\'t wander off and lose your work.',
         inspectorOperation: 'git checkout 4f901ab',
-        internalChange: '.git/HEAD rewritten with raw commit SHA 4f901ab... Working tree updated to C1 snapshot.',
-        takeaway: 'Detached HEAD is not a broken state. It simply means HEAD is pointing directly to a commit hash rather than a named branch.',
-        plumbingCommand: 'git rev-parse HEAD',
-        xrayNote: 'The branch ref was bypassed. HEAD is anchored directly to commit 4f901ab.'
+        internalChange: '.git/HEAD overwritten with raw 40-character commit hash 4f901ab. Symbolic ref removed.',
+        takeaway: 'Detached HEAD simply means HEAD contains a 40-character SHA instead of a branch path.',
+        plumbingCommand: 'git symbolic-ref HEAD 2>&1 || echo "Detached!"',
+        xrayNote: 'Column 3: The HEAD card turns red/amber with [DETACHED HEAD]. It holds a raw SHA directly.',
+        internals: {
+          head: '4f901ab (DETACHED HEAD!)',
+          branchRef: 'No branch reference! HEAD is a raw SHA.',
+          commitHash: '4f901ab',
+          commitMsg: 'Read-only inspection state',
+          treeHash: '7b2a901',
+          treeDetail: 'Main root tree',
+          blobHash: '7ab38f4',
+          blobDetail: 'replicas: 3'
+        }
       },
       {
         label: '3. commit in detached HEAD',
-        command: 'git commit -m "Experimental cache probe"',
+        command: 'echo "probe: true" >> app/deployment.yaml && git commit -am "Experimental probe"',
         output: [
-          '[detached HEAD c5019a2] Experimental cache probe',
-          ' 1 file changed, 4 insertions(+)',
-          '',
-          '# WHAT HAPPENED:',
-          '# Commit c5019a2 was created with parent 4f901ab (C1).',
-          '# HEAD moved forward to c5019a2.',
-          '# BUT NO BRANCH POINTS TO c5019a2!',
-          '# If you switch to main right now, c5019a2 will be left behind without a name.'
+          'dev@lab:~/repos/infra-platform$ echo "probe: true" >> app/deployment.yaml',
+          'dev@lab:~/repos/infra-platform$ git commit -am "Experimental probe"',
+          '[detached HEAD c5019a2] Experimental probe',
+          ' 1 file changed, 1 insertion(+)',
+          'dev@lab:~/repos/infra-platform$ cat .git/HEAD',
+          'c5019a2e89012345678901234567890123456789',
+          '# COMMIT MINTED: c5019a2 is floating in space!',
+          '# No branch pointer references it. If you switch away, it becomes an orphan!'
         ],
-        files: [
-          { path: '.git/objects/c5', name: 'objects/c5/019a2... [unbranched commit]', depth: 1, highlight: true },
-          { path: '.git/HEAD', name: 'HEAD -> c5019a2 [DETACHED]', depth: 1, highlight: true },
-          { path: '.git/refs/heads/main', name: 'main -> 4f901ab', depth: 1 }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentName: 'deployment.yaml (probe: true)',
+          gitFiles: [
+            { path: '.git/objects/c5', name: 'objects/c5/019a2... [Orphan Commit c5019a2]', depth: 1, highlight: true },
+            { path: '.git/HEAD', name: 'HEAD -> c5019a2 [DETACHED]', depth: 1, highlight: true }
+          ]
+        }),
         shelf: [
-          { label: 'New Commit', value: 'c5019a2', detail: 'Minted successfully', badge: 'success' },
-          { label: 'HEAD Ref', value: 'c5019a2 (detached)', detail: 'Moved to new commit', badge: 'warning' },
-          { label: 'Branch Pointer', value: 'NONE', detail: 'No branch ref points here', badge: 'warning' },
-          { label: 'Orphan Status', value: 'Unreachable on switch', detail: 'Must attach branch to keep', badge: 'warning' }
+          { label: 'HEAD Position', value: 'c5019a2', detail: 'New detached commit', badge: 'warning' },
+          { label: 'Branch Ref', value: 'NONE', detail: 'Unreferenced in refs/heads/', badge: 'warning' },
+          { label: 'Commit Status', value: 'Floating Orphan', detail: 'No branch pointer attached', badge: 'warning' },
+          { label: 'Next Action', value: 'Must attach branch', detail: 'git switch -c to save it', badge: 'changed' }
         ],
-        inspectorState: 'Unbranched Commit Created',
-        inspectorDetail: 'A valid commit object c5019a2 was created, and HEAD moved to it. However, because no branch ref was updated, this commit is vulnerable to becoming unreachable.',
-        inspectorOperation: 'git commit -m "Experimental cache probe"',
-        internalChange: 'New commit c5019a2 written. HEAD updated to c5019a2.',
-        takeaway: 'You can make commits in detached HEAD, but because no branch holds them, you must attach a branch before switching away.',
-        plumbingCommand: 'git branch --contains HEAD',
-        xrayNote: 'Notice that neither main nor feature/cache moved. Only HEAD advanced.'
+        inspectorState: 'Floating Orphan Commit Created',
+        inspectorDetail: 'ELI5: You wrote notes on a loose piece of paper (c5019a2). It is in the room, but there is no bookmark holding it in the book. If you walk out the door, the wind might blow it away!',
+        inspectorOperation: 'commit in detached state',
+        internalChange: 'Minted commit c5019a2 with parent 4f901ab. HEAD points to c5019a2. No file updated in .git/refs/heads/.',
+        takeaway: 'Commits made in detached HEAD are completely valid, but they have no named reference keeping them alive.',
+        plumbingCommand: 'git fsck --lost-found',
+        xrayNote: 'Look at the diagram below: commit c5019a2 is floating in space without any branch arrow pointing to it!',
+        internals: {
+          head: 'c5019a2 (DETACHED HEAD!)',
+          branchRef: 'No branch pointer! Risk of becoming orphan.',
+          commitHash: 'c5019a2',
+          commitMsg: '"Experimental probe" (unbranched)',
+          treeHash: '8b190ac',
+          treeDetail: 'Floating commit tree',
+          blobHash: 'e1401bc',
+          blobDetail: 'probe: true'
+        }
       },
       {
         label: '4. rescue with git switch -c',
-        command: 'git switch -c fix/cache-probe',
+        command: 'git switch -c fix/cache-probe && cat .git/HEAD',
         output: [
+          'dev@lab:~/repos/infra-platform$ git switch -c fix/cache-probe',
           'Switched to a new branch \'fix/cache-probe\'',
-          '',
+          'dev@lab:~/repos/infra-platform$ cat .git/HEAD',
+          'ref: refs/heads/fix/cache-probe',
+          'dev@lab:~/repos/infra-platform$ cat .git/refs/heads/fix/cache-probe',
+          'c5019a2e89012345678901234567890123456789',
           '# RESCUED! What Git did:',
-          '# 1. Created .git/refs/heads/fix/cache-probe -> c5019a2',
-          '# 2. Re-attached HEAD: ref: refs/heads/fix/cache-probe',
-          '# The commit is now safe and permanently anchored by a branch ref.'
+          '# 1. Created .git/refs/heads/fix/cache-probe pointing to c5019a2',
+          '# 2. Turned HEAD back into a symbolic ref!',
+          '# The floating commit is now permanently anchored in history.'
         ],
-        files: [
-          { path: '.git/refs/heads/fix/cache-probe', name: 'fix/cache-probe -> c5019a2 [ATTACHED]', depth: 1, highlight: true },
-          { path: '.git/HEAD', name: 'HEAD -> ref: refs/heads/fix/cache-probe', depth: 1, highlight: true }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentName: 'deployment.yaml (probe: true)',
+          gitFiles: [
+            { path: '.git/refs/heads/fix/cache-probe', name: 'fix/cache-probe -> c5019a2 [ATTACHED]', depth: 1, highlight: true },
+            { path: '.git/HEAD', name: 'HEAD -> ref: refs/heads/fix/cache-probe', depth: 1, highlight: true }
+          ]
+        }),
         shelf: [
-          { label: 'Rescued Branch', value: 'fix/cache-probe', detail: 'Anchors c5019a2', badge: 'success' },
-          { label: 'HEAD Status', value: 'Symbolic Ref Re-attached', detail: 'Points to fix/cache-probe', badge: 'success' },
-          { label: 'Commit Safety', value: '100% Reachable', detail: 'Protected from garbage collection', badge: 'success' },
-          { label: 'Repository Health', value: 'Clean', detail: 'No orphaned tip', badge: 'neutral' }
+          { label: 'HEAD State', value: 'Symbolic Ref', detail: 'Anchored to fix/cache-probe', badge: 'success' },
+          { label: 'Rescued Commit', value: 'c5019a2 saved', detail: 'Named branch ref attached', badge: 'success' },
+          { label: 'Branch Created', value: 'fix/cache-probe', detail: '41-byte ref in refs/heads/', badge: 'neutral' },
+          { label: 'Orphan Status', value: 'Resolved', detail: 'Protected from garbage collection', badge: 'neutral' }
         ],
-        inspectorState: 'Branch Attached to Detached Tip',
-        inspectorDetail: 'git switch -c created the branch ref fix/cache-probe at the current commit c5019a2 and reattached HEAD as a symbolic reference.',
+        inspectorState: 'Orphan Rescued with New Branch',
+        inspectorDetail: 'ELI5: Phew! You slapped a new bookmark ("fix/cache-probe") onto page c5019a2, and put your finger (HEAD) back on that bookmark. Your work is safe forever!',
         inspectorOperation: 'git switch -c fix/cache-probe',
-        internalChange: '.git/refs/heads/fix/cache-probe created. HEAD updated to ref: refs/heads/fix/cache-probe.',
-        takeaway: 'Attaching a branch to a detached commit is just writing a 41-byte text file with the commit hash.',
+        internalChange: 'Created .git/refs/heads/fix/cache-probe pointing to c5019a2. HEAD restored to symbolic reference.',
+        takeaway: 'Never panic in detached HEAD. Running git switch -c <name> immediately turns your floating commit into a permanent branch.',
         plumbingCommand: 'git symbolic-ref HEAD',
-        xrayNote: 'HEAD is back in attached mode (ref: prefix restored). The commit is safe.'
+        xrayNote: 'Look at Column 3: HEAD is cyan again, safely referencing refs/heads/fix/cache-probe.',
+        internals: {
+          head: 'ref: refs/heads/fix/cache-probe',
+          branchRef: 'refs/heads/fix/cache-probe -> c5019a2',
+          commitHash: 'c5019a2',
+          commitMsg: '"Experimental probe" (safely anchored)',
+          treeHash: '8b190ac',
+          treeDetail: 'Branch ref successfully attached',
+          blobHash: 'e1401bc',
+          blobDetail: 'probe: true'
+        }
       }
     ]
   },
 
   // =========================================================================
-  // LEVEL 6: CHECKOUT / SWITCH REBUILDING THE WORKSPACE
+  // LEVEL 6: CHECKOUT / SWITCH: REBUILDING THE WORKSPACE
   // =========================================================================
   {
-    id: 'checkout-switch-workspace',
+    id: 'checkout-switch-rebuilding-workspace',
     level: 6,
-    title: 'Level 6: Checkout / Switch Rebuilding the Workspace',
-    label: '06. Workspace Materialization',
+    title: 'Level 6: Checkout / Switch: Rebuilding the Workspace',
+    label: '06. Checkout / Switch Rebuild',
     group: 'Navigation & References',
-    path: 'app/',
-    branch: 'main',
-    question: 'How does Git magically change the files in your directory when you switch branches?',
-    whatLearnerThinks: '“Git magically swaps files in place.”',
-    whatWeReveal: 'Three-step materialization: 1. HEAD updates -> 2. Index populated from target commit tree -> 3. Working tree files overwritten from index.',
-    takeaway: 'Switching branches is a 3-step physical rebuild: 1) HEAD points to the new branch. 2) The index is updated to match the target commit root tree. 3) The operating system working tree files are rewritten, created, or deleted to match the index.',
-    caveat: 'If you have uncommitted changes in your working tree that conflict with files being materialized from the target branch, Git aborts the switch to prevent data loss.',
-    inspector: 'Watch the 3-step pipeline execute as Git switches between main and feature/cache.',
+    path: '~/repos/infra-platform',
+    branch: 'feature/cache',
+    question: 'When you run git switch, how does Git replace all the files on your screen in milliseconds?',
+    whatLearnerThinks: '“Git downloads or re-copies all the files from somewhere.”',
+    whatWeReveal: 'Switching branches executes three atomic steps: 1. Updates the HEAD ref pointer, 2. Swaps the binary index from the target commit\'s Root Tree, 3. Materializes and dematerializes files on your physical disk. A dirty file guard blocks the switch if uncommitted changes would be overwritten.',
+    takeaway: 'ELI5: Switching branches is like a super-fast theater stage crew swapping props between scenes: 1. They move the stage sign (HEAD), 2. They look at the prop inventory for the new scene (Index), 3. They whisk away props that don\'t belong on stage and set out the new ones. If you have messy uncommitted notes on a prop, the stage crew shouts: "Wait! Commit or stash your changes first so we don\'t crush them!"',
+    caveat: 'Git refuses to switch branches if a file modified in your working tree differs from the target branch. It aborts immediately to protect you from silent data loss.',
+    inspector: 'Observe the 3-step atomic workspace rebuild during branch switching and watch Git\'s dirty file safety guard in action.',
     sources: [
       'https://git-scm.com/docs/git-switch',
-      'https://git-scm.com/docs/git-checkout',
+      'https://git-scm.com/docs/git-read-tree',
       'https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging'
     ],
     steps: [
       {
-        label: '1. inspect main branch state',
+        label: '1. inspect feature branch on disk',
+        command: 'ls -la app/ && git status -s',
+        output: [
+          'dev@lab:~/repos/infra-platform$ ls -la app/',
+          'total 16',
+          '-rw-r--r-- 1 dev dev 142 Sep 20 09:00 deployment.yaml',
+          '-rw-r--r-- 1 dev dev 210 Sep 20 09:00 redis.yaml',
+          'dev@lab:~/repos/infra-platform$ git status -s',
+          '# Clean state on feature/cache. Notice redis.yaml exists here.'
+        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentName: 'deployment.yaml (replicas: 3)',
+          hasRedis: true,
+          redisName: 'redis.yaml (feature config)'
+        }),
+        shelf: [
+          { label: 'Current Branch', value: 'feature/cache', detail: 'Target commit b14c80e', badge: 'neutral' },
+          { label: 'Working Tree Files', value: 'deployment + redis', detail: 'Both files on physical disk', badge: 'neutral' },
+          { label: 'Staging Index', value: 'Tree 9a210cd', detail: 'Indexes both app files', badge: 'neutral' },
+          { label: 'Main Comparison', value: 'main lacks redis.yaml', detail: 'main has replicas: 2', badge: 'changed' }
+        ],
+        inspectorState: 'Feature Scene Active on Stage',
+        inspectorDetail: 'ELI5: On this branch, your stage has two props: deployment.yaml and redis.yaml. Now let\'s watch what happens when we tell the stage crew to switch back to main.',
+        inspectorOperation: 'inspect feature/cache state',
+        internalChange: 'Reading active working tree files. feature/cache tree loaded in index.',
+        takeaway: 'Your disk files reflect the current commit pointed to by HEAD.',
+        plumbingCommand: 'git ls-tree HEAD app/',
+        xrayNote: 'Column 1: See both deployment.yaml and redis.yaml listed under app/.',
+        internals: {
+          head: 'ref: refs/heads/feature/cache',
+          branchRef: 'refs/heads/feature/cache -> b14c80e',
+          commitHash: 'b14c80e',
+          commitMsg: 'Feature branch with Redis config',
+          treeHash: '9a210cd',
+          treeDetail: 'Redis cache tree on disk',
+          blobHash: 'd19028a',
+          blobDetail: 'active in working tree'
+        }
+      },
+      {
+        label: '2. git switch main (3-step rebuild)',
         command: 'git switch main && ls -la app/',
         output: [
+          'dev@lab:~/repos/infra-platform$ git switch main',
           'Switched to branch \'main\'',
-          'total 4',
-          '-rw-r--r-- 1 dev dev 94 Sep 19 14:20 deployment.yaml',
-          '',
-          '$ grep replicas app/deployment.yaml',
-          '    replicas: 2',
-          '# Notice: On main, deployment.yaml has replicas: 2, and redis.yaml does NOT exist.'
+          'Your branch is up to date with \'origin/main\'.',
+          'dev@lab:~/repos/infra-platform$ ls -la app/',
+          'total 12',
+          '-rw-r--r-- 1 dev dev 120 Sep 20 09:00 deployment.yaml',
+          '# WHAT JUST HAPPENED IN 3 ATOMIC STEPS:',
+          '# 1. HEAD moved from refs/heads/feature/cache to refs/heads/main',
+          '# 2. Binary index reloaded from main\'s Root Tree (7b2a901)',
+          '# 3. Disk updated: deployment.yaml updated, redis.yaml cleanly DEMATERIALIZED!'
         ],
-        files: [
-          { path: 'app', name: 'app/', isDir: true, depth: 0 },
-          { path: 'app/deployment.yaml', name: 'deployment.yaml (replicas: 2)', depth: 1 },
-          { path: 'README.md', name: 'README.md', depth: 0 }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentName: 'deployment.yaml (replicas: 2)',
+          hasRedis: false
+        }),
         shelf: [
-          { label: 'Active Ref', value: 'main', detail: 'refs/heads/main', badge: 'neutral' },
-          { label: 'deployment.yaml', value: 'replicas: 2', detail: 'Baseline configuration', badge: 'neutral' },
-          { label: 'redis.yaml', value: 'Does not exist', detail: 'Not present on main', badge: 'neutral' },
-          { label: 'Index State', value: 'Matches main tree', detail: 'Clean staging ledger', badge: 'neutral' }
+          { label: 'Step 1: HEAD Ref', value: 'refs/heads/main', detail: 'Finger moved to main bookmark', badge: 'success' },
+          { label: 'Step 2: Index Cache', value: 'Reloaded from Tree', detail: 'Binary cache rebuilt from C1', badge: 'success' },
+          { label: 'Step 3: Disk Tree', value: 'redis.yaml removed', detail: 'deployment.yaml restored to C1', badge: 'changed' },
+          { label: 'Total Duration', value: '< 2 ms', detail: 'O(changed files) operations', badge: 'neutral' }
         ],
-        inspectorState: 'Workspace at main Branch',
-        inspectorDetail: 'Currently on main. The working tree reflects the root tree of commit C1 (4f901ab).',
+        inspectorState: 'Workspace Atomically Rebuilt for main',
+        inspectorDetail: 'ELI5: Presto! In less than 2 milliseconds, the stage crew updated the sign, wiped the inventory, swapped deployment.yaml, and whisked redis.yaml away. Your screen matches main perfectly.',
         inspectorOperation: 'git switch main',
-        internalChange: 'Working tree matches main tree.',
-        takeaway: 'Your working tree is the physical manifestation of whatever commit HEAD points to.',
-        plumbingCommand: 'git ls-tree HEAD app/',
-        xrayNote: 'Only deployment.yaml exists in app/. Target branch has additional files.'
+        internalChange: 'HEAD moved to main. Index reloaded from tree 7b2a901. File app/redis.yaml unlinked from disk.',
+        takeaway: 'Switching branches does not rescan your whole project; Git only touches the specific files that differ between the two trees.',
+        plumbingCommand: 'git read-tree -u -m HEAD',
+        xrayNote: 'Notice Column 1: redis.yaml vanished from app/. It was cleanly unlinked from disk without touching your git history.',
+        internals: {
+          head: 'ref: refs/heads/main',
+          branchRef: 'refs/heads/main -> 4f901ab',
+          commitHash: '4f901ab',
+          commitMsg: 'Switched to main',
+          treeHash: '7b2a901',
+          treeDetail: 'Rebuilt index & disk in 3 atomic steps',
+          blobHash: '7ab38f4',
+          blobDetail: 'disk overwritten safely'
+        }
       },
       {
-        label: '2. git switch feature/cache (3-step rebuild)',
-        command: 'git switch feature/cache',
+        label: '3. dirty file guard blocks switch',
+        command: 'echo "dirty unstaged work" >> app/deployment.yaml && git switch feature/cache',
         output: [
+          'dev@lab:~/repos/infra-platform$ echo "dirty unstaged work" >> app/deployment.yaml',
+          'dev@lab:~/repos/infra-platform$ git switch feature/cache',
+          'error: Your local changes to the following files would be overwritten by checkout:',
+          '  app/deployment.yaml',
+          'Please commit your changes or stash them before you switch branches.',
+          'Aborting',
+          '# SAFETY GUARD TRIGGERED! Git refused to overwrite your unsaved desk work!'
+        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentStatus: 'M',
+          deploymentHighlight: true,
+          deploymentName: 'deployment.yaml [DIRTY: BLOCKS SWITCH]'
+        }),
+        shelf: [
+          { label: 'Dirty Guard', value: 'ABORTED (Safe)', detail: 'Prevented silent data destruction', badge: 'warning' },
+          { label: 'Conflicting File', value: 'app/deployment.yaml', detail: 'Differs between main & feature', badge: 'warning' },
+          { label: 'HEAD Position', value: 'Stayed on main', detail: 'Switch aborted atomically', badge: 'neutral' },
+          { label: 'Recommended Fix', value: 'git stash', detail: 'Or git commit -am "wip"', badge: 'changed' }
+        ],
+        inspectorState: 'Git Guard Blocks Data Loss',
+        inspectorDetail: 'ELI5: You scribbled on deployment.yaml without saving it. If Git switched scenes right now, your scribbles would be wiped out! Git stops everything and says: "I refuse to destroy your work. Stash it or commit it first!"',
+        inspectorOperation: 'git switch feature/cache (blocked)',
+        internalChange: 'Three-way merge check failed. Checkout aborted. Working tree preserved untouched.',
+        takeaway: 'Git has built-in seatbelts: it will never let checkout or switch overwrite uncommitted work.',
+        plumbingCommand: 'git status',
+        xrayNote: 'Column 1: deployment.yaml glows red with status M. Git protects this file from being crushed.',
+        internals: {
+          head: 'ref: refs/heads/main',
+          branchRef: 'refs/heads/main -> 4f901ab',
+          commitHash: '4f901ab',
+          commitMsg: 'Switch blocked: uncommitted edits!',
+          treeHash: '7b2a901',
+          treeDetail: 'Dirty working tree conflict',
+          blobHash: '7ab38f4',
+          blobDetail: 'Preventing silent data loss'
+        }
+      },
+      {
+        label: '4. git stash & clean switch',
+        command: 'git stash && git switch feature/cache',
+        output: [
+          'dev@lab:~/repos/infra-platform$ git stash',
+          'Saved working directory and index state WIP on main: 4f901ab Scale cache deployment',
+          'dev@lab:~/repos/infra-platform$ git switch feature/cache',
           'Switched to branch \'feature/cache\'',
-          '',
-          '# X-RAY REVEAL: The 3-Step Workspace Rebuild Pipeline:',
-          '# Step 1: HEAD updated -> ref: refs/heads/feature/cache',
-          '# Step 2: Index wiped and rebuilt from target commit tree b14c80e',
-          '# Step 3: Working tree updated on disk:',
-          '#         - app/deployment.yaml overwritten (replicas 2 -> 3)',
-          '#         - app/redis.yaml materialized on disk (+created)'
+          '# CLEAN SWITCH SUCCEEDED!',
+          '# git stash wrapped dirty work into a temporary commit in .git/refs/stash.',
+          '# Working tree was cleaned, allowing Git to materialize feature/cache safely.'
         ],
-        files: [
-          { path: 'app', name: 'app/', isDir: true, depth: 0 },
-          { path: 'app/deployment.yaml', name: 'deployment.yaml (replicas: 3)', depth: 1, highlight: true },
-          { path: 'app/redis.yaml', name: 'redis.yaml (materialized on disk)', depth: 1, highlight: true },
-          { path: 'README.md', name: 'README.md', depth: 0 }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentName: 'deployment.yaml (redis enabled)',
+          hasRedis: true,
+          redisName: 'redis.yaml',
+          gitFiles: [
+            { path: '.git/refs/stash', name: 'refs/stash [Temporary Stash Envelope]', depth: 1, highlight: true }
+          ]
+        }),
         shelf: [
-          { label: 'Step 1: HEAD', value: 'feature/cache', detail: 'Symbolic pointer moved', badge: 'changed' },
-          { label: 'Step 2: Index', value: 'Rebuilt from Tree', detail: 'Loaded b14c80e entries', badge: 'changed' },
-          { label: 'Step 3: Disk', value: 'Files Materialized', detail: 'redis.yaml written to OS', badge: 'success' },
-          { label: 'deployment.yaml', value: 'Updated to replicas: 3', detail: 'Overwritten from blob', badge: 'changed' }
+          { label: 'Stash Location', value: '.git/refs/stash', detail: 'Special stash commit object', badge: 'success' },
+          { label: 'Active Branch', value: 'feature/cache', detail: 'Switched cleanly', badge: 'success' },
+          { label: 'Restoration', value: 'git stash pop', detail: 'Restores dirty work when back on main', badge: 'neutral' },
+          { label: 'Working Tree', value: 'Clean feature state', detail: 'redis.yaml rematerialized', badge: 'neutral' }
         ],
-        inspectorState: 'Three-Step Workspace Materialization',
-        inspectorDetail: 'Git updated HEAD, rebuilt the index from the target commit tree, and materialized files onto disk. Files appeared and changed in the filesystem explorer.',
-        inspectorOperation: 'git switch feature/cache',
-        internalChange: 'Working tree files updated on OS filesystem from target commit tree blobs.',
-        takeaway: 'Git does not "swap folders". It uses the target commit tree to update the index, then writes the files to your OS filesystem.',
-        plumbingCommand: 'git read-tree -u -m HEAD feature/cache',
-        xrayNote: 'Watch the left explorer: redis.yaml physically appeared, and deployment.yaml changed.'
-      },
-      {
-        label: '3. switch back to main (dematerialization)',
-        command: 'git switch main && ls app/',
-        output: [
-          'Switched to branch \'main\'',
-          'deployment.yaml',
-          '',
-          '# NOTICE WHAT HAPPENED TO redis.yaml:',
-          '# Because redis.yaml does not exist in main\'s tree, Git physically unlinked (deleted)',
-          '# redis.yaml from your OS disk. It is safely preserved in feature/cache\'s tree.'
-        ],
-        files: [
-          { path: 'app', name: 'app/', isDir: true, depth: 0 },
-          { path: 'app/deployment.yaml', name: 'deployment.yaml (replicas: 2)', depth: 1, highlight: true },
-          { path: 'README.md', name: 'README.md', depth: 0 }
-        ],
-        shelf: [
-          { label: 'Active Ref', value: 'main', detail: 'Returned to stable branch', badge: 'neutral' },
-          { label: 'redis.yaml', value: 'Deleted from Disk', detail: 'Safely preserved in feature tree', badge: 'warning' },
-          { label: 'deployment.yaml', value: 'Reverted to replicas: 2', detail: 'Overwritten from C1 blob', badge: 'neutral' },
-          { label: 'Safety Guarantee', value: 'Zero Data Loss', detail: 'All states safe in object DB', badge: 'success' }
-        ],
-        inspectorState: 'Working Tree Restored to Baseline',
-        inspectorDetail: 'Switching back to main removed redis.yaml from the working tree and restored deployment.yaml to replicas: 2.',
-        inspectorOperation: 'git switch main',
-        internalChange: 'redis.yaml unlinked from filesystem. deployment.yaml rewritten.',
-        takeaway: 'Git creates and deletes files on disk during checkout based on tree differences between commits.',
-        plumbingCommand: 'git diff-tree --name-status main feature/cache',
-        xrayNote: 'redis.yaml disappeared from filesystem. It lives safely inside feature/cache.'
+        inspectorState: 'Work Stashed & Switch Completed',
+        inspectorDetail: 'ELI5: You tucked your scribbles into a temporary drawer (git stash). With your desk clean, the stage crew happily switched to feature/cache. When you go back to main, just run git stash pop to get your scribbles back!',
+        inspectorOperation: 'git stash && git switch feature/cache',
+        internalChange: 'Stash commit created in .git/refs/stash. Working tree cleaned. Switched to feature/cache.',
+        takeaway: 'git stash is a temporary drawer: it lets you clear your desk instantly so you can switch scenes without losing anything.',
+        plumbingCommand: 'git stash list',
+        xrayNote: 'Turn on X-Ray: See refs/stash appear in .git/. It stores your paused work as a commit envelope!',
+        internals: {
+          head: 'ref: refs/heads/feature/cache',
+          branchRef: 'refs/heads/feature/cache -> b14c80e',
+          commitHash: 'b14c80e',
+          commitMsg: 'Stashed safely; clean switch allowed',
+          treeHash: '9a210cd',
+          treeDetail: 'Stash object stored in .git/refs/stash',
+          blobHash: 'd19028a',
+          blobDetail: 'redis enabled'
+        }
       }
     ]
   },
 
   // =========================================================================
-  // LEVEL 7: MERGE VS REBASE — GRAPH SURGERY
+  // LEVEL 7: MERGE VS. REBASE: GRAPH SURGERY
   // =========================================================================
   {
-    id: 'merge-rebase-graph-surgery',
+    id: 'merge-vs-rebase-graph-surgery',
     level: 7,
-    title: 'Level 7: Merge vs. Rebase — Graph Surgery',
-    label: '07. Merge vs. Rebase',
+    title: 'Level 7: Merge vs. Rebase: Graph Surgery',
+    label: '07. Merge vs Rebase',
     group: 'Branch Surgery & Recovery',
-    path: '.git/refs/heads/',
+    path: '~/repos/infra-platform',
     branch: 'main',
-    question: 'What is the structural difference between merging and rebasing, and why does rebase rewrite history?',
-    whatLearnerThinks: '“Merge and rebase are just two ways to combine code.”',
-    whatWeReveal: 'A merge commit has two parents. Rebase replays commits onto a new parent, creating brand-new commit hashes.',
-    takeaway: 'Merging preserves authentic history by creating a new merge commit with two parents (parent 1 = current branch, parent 2 = incoming branch). Rebasing replays commits one-by-one onto a new base. Because each commit incorporates its parent hash into its own checksum, rebasing creates brand-new commit hashes (C3 -> C3\').',
-    caveat: 'Never rebase commits that have already been pushed to a shared public branch. Rewriting shared commit hashes forces collaborators into divergent histories.',
-    inspector: 'Inspect the two parent pointers of a merge commit vs the brand-new hashes generated by rebase.',
+    question: 'What is the real physical difference between git merge and git rebase?',
+    whatLearnerThinks: '“Merge and rebase are just stylistic choices for making the git log look pretty.”',
+    whatWeReveal: 'Merge creates a 3-way commit with TWO parents, preserving historical divergence. Rebase copies and replays commits onto a new base, minting brand-new commit hashes and discarding the originals.',
+    takeaway: 'ELI5: Merge is like tying two trails together with a rope: it creates a special 2-handled basket (a merge commit with two parents). It keeps the true history of where both trails walked. Rebase is like unscrewing your LEGO bricks from an old tower and rebuilding them on top of the newest tower. Every LEGO brick gets a brand new serial number (commit hash)! That is why you NEVER rebase a public branch that other people are building on!',
+    caveat: 'Rebase rewrites commit history. Because commit hashes include their parent hash, changing the base creates completely new commits with new SHA hashes. Rebasing shared public branches breaks teammates\' repositories.',
+    inspector: 'Compare the two fundamental branching strategies: non-destructive two-parent merge vs history-rewriting rebase surgery.',
     sources: [
       'https://git-scm.com/docs/git-merge',
       'https://git-scm.com/docs/git-rebase',
@@ -930,254 +1279,340 @@ export const gitViews: GitLab[] = [
         label: '1. inspect diverged branches',
         command: 'git log --graph --oneline --all',
         output: [
-          '* b14c80e (feature/cache) Add Redis cache configuration',
+          'dev@lab:~/repos/infra-platform$ git log --graph --oneline --all',
+          '* b14c80e (feature/cache) Add redis cache configuration',
           '| * e78b21a (HEAD -> main) Add IAM production roles',
           '|/  ',
-          '* c3904e1 Initial infrastructure baseline',
-          '# main and feature/cache diverged at common ancestor C0 (c3904e1).'
+          '* c3904e1 Initial infrastructure definition',
+          '# DIVERGENCE DETECTED:',
+          '# Common ancestor is c3904e1.',
+          '# main moved to e78b21a. feature/cache moved to b14c80e.',
+          '# Two independent histories exist.'
         ],
-        files: [
-          { path: '.git/refs/heads/main', name: 'main -> e78b21a (C2)', depth: 1 },
-          { path: '.git/refs/heads/feature/cache', name: 'feature/cache -> b14c80e (C3)', depth: 1 },
-          { path: 'app/deployment.yaml', name: 'deployment.yaml', depth: 0 }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentName: 'deployment.yaml',
+          gitFiles: [
+            { path: '.git/refs/heads/main', name: 'main -> e78b21a (C2)', depth: 1 },
+            { path: '.git/refs/heads/feature/cache', name: 'feature/cache -> b14c80e (C3)', depth: 1 }
+          ]
+        }),
         shelf: [
-          { label: 'Common Ancestor', value: 'C0 (c3904e1)', detail: 'Merge base commit', badge: 'neutral' },
-          { label: 'main Tip', value: 'C2 (e78b21a)', detail: 'HEAD position', badge: 'neutral' },
-          { label: 'feature/cache Tip', value: 'C3 (b14c80e)', detail: 'Incoming branch tip', badge: 'neutral' },
-          { label: 'Topology', value: 'Diverged (Y-shaped)', detail: 'Requires 3-way reconciliation', badge: 'warning' }
+          { label: 'Common Ancestor', value: 'c3904e1 (BASE)', detail: 'Where branches split', badge: 'neutral' },
+          { label: 'main Tip (OURS)', value: 'e78b21a', detail: 'Added IAM roles', badge: 'neutral' },
+          { label: 'feature Tip (THEIRS)', value: 'b14c80e', detail: 'Added redis config', badge: 'neutral' },
+          { label: 'Graph Topology', value: 'Forked (Y-shape)', detail: 'Requires resolution', badge: 'warning' }
         ],
-        inspectorState: 'Diverged History Topology',
-        inspectorDetail: 'Both branches have commits that the other lacks. To combine them, Git must perform a 3-way merge using common ancestor C0.',
-        inspectorOperation: 'git log --graph --all',
-        internalChange: 'Reading commit DAG traversal.',
-        takeaway: 'When branches diverge, Git finds their best common ancestor (merge-base) to reconcile changes.',
+        inspectorState: 'Forked Branch Topology',
+        inspectorDetail: 'ELI5: Two teammates walked down different paths from point c3904e1. One added IAM roles on main; the other added Redis cache on feature. Now we need to bring their work together.',
+        inspectorOperation: 'git log --graph',
+        internalChange: 'Reading commit graph ancestry. Common ancestor identified via merge-base.',
+        takeaway: 'Before merging or rebasing, Git always finds the Common Ancestor (the fork point) to figure out what changed on each side.',
         plumbingCommand: 'git merge-base main feature/cache',
-        xrayNote: 'Common ancestor is c3904e1. Two paths lead forward.'
+        xrayNote: 'Look at the diagram below: see the Y-shaped fork splitting off from c3904e1.',
+        internals: {
+          head: 'ref: refs/heads/main',
+          branchRef: 'main -> e78b21a | feature -> b14c80e',
+          commitHash: 'e78b21a',
+          commitMsg: 'Common ancestor at c3904e1',
+          treeHash: '3d19ac0',
+          treeDetail: 'Diverged histories',
+          blobHash: '7ab38f4',
+          blobDetail: 'Independent branch snapshots'
+        }
       },
       {
         label: '2. git merge (two-parent commit M1)',
-        command: 'git merge feature/cache -m "Merge branch feature/cache"',
+        command: 'git merge feature/cache -m "Merge branch feature/cache" && git cat-file -p HEAD',
         output: [
+          'dev@lab:~/repos/infra-platform$ git merge feature/cache -m "Merge branch feature/cache"',
           'Merge made by the \'ort\' strategy.',
-          ' app/redis.yaml | 8 ++++++++',
-          ' 1 file changed, 8 insertions(+)',
+          ' app/deployment.yaml | 1 +',
+          ' 1 file changed, 1 insertion(+)',
+          'dev@lab:~/repos/infra-platform$ git cat-file -p HEAD',
+          'tree 9d201ab89012345678901234567890123456789a',
+          'parent e78b21a89012345678901234567890123456789a',
+          'parent b14c80e89012345678901234567890123456789a',
+          'author SRE Engineer <dev@infra.local> 1726750000 +0000',
           '',
-          '$ git cat-file -p HEAD',
-          'tree 9d201ab881901ef3381a90c1018901ef2b8901aa',
-          'parent e78b21a049182bc018901ef3381a90c1018901ef  (main: C2)',
-          'parent b14c80e712ad8901ef2b8901aa9901ef3381a90c  (feature/cache: C3)',
-          'author Dev <dev@lab> 1774011832 +0000',
-          'committer Dev <dev@lab> 1774011832 +0000',
-          '',
-          '# LOOK AT THE PARENTS: TWO PARENT LINES!',
-          '# A merge commit is special solely because it has multiple parents.'
+          'Merge branch feature/cache',
+          '# NOTICE: TWO PARENTS! Merge commit ties both histories together.'
         ],
-        files: [
-          { path: '.git/objects/9d', name: 'objects/9d/201ab... [merge commit M1]', depth: 1, highlight: true },
-          { path: '.git/refs/heads/main', name: 'main -> 9d201ab (M1)', depth: 1, highlight: true },
-          { path: 'app/redis.yaml', name: 'redis.yaml (merged)', depth: 0 }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentName: 'deployment.yaml (merged)',
+          hasRedis: true,
+          redisName: 'redis.yaml (merged)',
+          gitFiles: [
+            { path: '.git/objects/8c', name: 'objects/8c/1490e... [Merge Commit (2 Parents)]', depth: 1, highlight: true },
+            { path: '.git/refs/heads/main', name: 'main -> 8c1490e [MERGED]', depth: 1, highlight: true }
+          ]
+        }),
         shelf: [
-          { label: 'Merge Commit', value: 'M1 (9d201ab)', detail: 'Newly minted commit', badge: 'success' },
-          { label: 'Parent 1', value: 'C2 (main)', detail: 'First parent (target branch)', badge: 'neutral' },
-          { label: 'Parent 2', value: 'C3 (feature)', detail: 'Second parent (merged branch)', badge: 'neutral' },
-          { label: 'History Integrity', value: 'Authentic Lineage', detail: 'Preserves exact branch shapes', badge: 'success' }
+          { label: 'Merge Commit', value: '8c1490e', detail: 'New commit created', badge: 'success' },
+          { label: 'Parent 1 (main)', value: 'e78b21a', detail: 'First parent pointer', badge: 'neutral' },
+          { label: 'Parent 2 (feature)', value: 'b14c80e', detail: 'Second parent pointer', badge: 'neutral' },
+          { label: 'History Preserved', value: '100% Intact', detail: 'Non-destructive true history', badge: 'success' }
         ],
         inspectorState: 'Two-Parent Merge Commit Created',
-        inspectorDetail: 'git merge created commit M1 with two parent pointers: parent 1 points to C2 (main) and parent 2 points to C3 (feature/cache). The authentic history of both branches is preserved.',
+        inspectorDetail: 'ELI5: Merge built a bridge connecting the two trails! The new commit envelope #8c1490e literally has TWO parents written inside: parent 1 (main) and parent 2 (feature). The true history is completely preserved.',
         inspectorOperation: 'git merge feature/cache',
-        internalChange: 'New commit with 2 parent headers written. refs/heads/main updated to M1.',
-        takeaway: 'A merge commit is special because it has two parents. It ties together two independent histories without modifying either branch.',
-        plumbingCommand: 'git rev-parse HEAD^1 HEAD^2',
-        xrayNote: 'Notice the two parent lines in the commit object. That is the entire definition of a merge commit.'
+        internalChange: 'Created merge commit 8c1490e with two parent pointers: e78b21a and b14c80e. main advanced to 8c1490e.',
+        takeaway: 'A merge commit is special because it has two parents. It never erases or rewrites past commits.',
+        plumbingCommand: 'git rev-parse HEAD^1 && git rev-parse HEAD^2',
+        xrayNote: 'Look at the diagram below: see the two arrows converging into commit 8c1490e. That is a merge knot!',
+        internals: {
+          head: 'ref: refs/heads/main',
+          branchRef: 'refs/heads/main -> 8c1490e',
+          commitHash: '8c1490e (MERGE COMMIT)',
+          commitMsg: '2 parents: e78b21a & b14c80e',
+          treeHash: 'f419dc8',
+          treeDetail: '3-way merge snapshot',
+          blobHash: 'b14c80e',
+          blobDetail: 'Merged replica and port config'
+        }
       },
       {
         label: '3. git rebase (history rewritten: C3 -> C3\')',
-        command: 'git reset --hard HEAD~1 && git switch feature/cache && git rebase main',
+        command: 'git switch feature/cache && git rebase main && git log --oneline -n 3',
         output: [
+          'dev@lab:~/repos/infra-platform$ git switch feature/cache && git rebase main',
           'Successfully rebased and updated refs/heads/feature/cache.',
-          '',
-          '$ git log --oneline --graph',
-          '* 7e4019a (HEAD -> feature/cache) Add Redis cache configuration  [C3\']',
-          '* e78b21a (main) Add IAM production roles                        [C2]',
-          '* c3904e1 Initial infrastructure baseline                        [C0]',
-          '',
-          '# WHY DID THE COMMIT HASH CHANGE FROM b14c80e TO 7e4019a?',
-          '# Old C3 parent was C0 (c3904e1).',
-          '# New C3\' parent is C2 (e78b21a).',
-          '# Different parent -> different commit text -> completely new SHA-1 hash!'
+          'dev@lab:~/repos/infra-platform$ git log --oneline -n 3',
+          'a92d18f (HEAD -> feature/cache) Add redis cache configuration',
+          'e78b21a (main) Add IAM production roles',
+          'c3904e1 Initial infrastructure definition',
+          '# LOOK AT THE HASH: a92d18f is a BRAND NEW COMMIT!',
+          '# Original commit b14c80e was abandoned.',
+          '# Rebase lifted the commit, replayed it atop main, and minted a new SHA.'
         ],
-        files: [
-          { path: '.git/objects/7e', name: 'objects/7e/4019a... [new commit C3\']', depth: 1, highlight: true },
-          { path: '.git/refs/heads/feature/cache', name: 'feature/cache -> 7e4019a [REWRITTEN]', depth: 1, highlight: true },
-          { path: '.git/refs/heads/main', name: 'main -> e78b21a [C2]', depth: 1 }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentName: 'deployment.yaml (rebased)',
+          hasRedis: true,
+          redisName: 'redis.yaml',
+          gitFiles: [
+            { path: '.git/objects/a9', name: 'objects/a9/2d18f... [Brand New Rebased Commit]', depth: 1, highlight: true },
+            { path: '.git/refs/heads/feature/cache', name: 'feature/cache -> a92d18f [REWRITTEN]', depth: 1, highlight: true }
+          ]
+        }),
         shelf: [
-          { label: 'Old Commit C3', value: 'b14c80e (Orphaned)', detail: 'Parent was C0', badge: 'warning' },
-          { label: 'New Commit C3\'', value: '7e4019a (Active)', detail: 'Parent is C2', badge: 'changed' },
-          { label: 'Graph Topology', value: 'Strictly Linear', detail: 'Zero merge commits', badge: 'success' },
-          { label: 'History Rewrite', value: 'Permanent SHA Change', detail: 'C3 != C3\'', badge: 'warning' }
+          { label: 'Rebased Commit', value: 'a92d18f (NEW)', detail: 'Brand new clone commit minted', badge: 'changed' },
+          { label: 'Original Commit', value: 'b14c80e (Orphaned)', detail: 'Left behind in object store', badge: 'warning' },
+          { label: 'History Shape', value: 'Completely Linear', detail: 'Zero merge commits created', badge: 'success' },
+          { label: 'Public Rule', value: 'Never rebase public', detail: 'Rewrites hashes teammates rely on', badge: 'warning' }
         ],
-        inspectorState: 'Rebase: Commit Replayed with New Hash',
-        inspectorDetail: 'Rebase took the changes from C3 and replayed them onto C2. Because C3\' has a different parent, its SHA-1 hash is completely different (7e4019a instead of b14c80e).',
+        inspectorState: 'History Rewritten via Rebase Surgery',
+        inspectorDetail: 'ELI5: Rebase lifted your Redis LEGO brick off the old table, walked over to the tip of main, and stuck it on top. Because its parent is now e78b21a, its barcode changed from b14c80e to a92d18f! The old brick is left behind as trash.',
         inspectorOperation: 'git rebase main',
-        internalChange: 'New commit C3\' minted with parent C2. feature/cache ref moved to C3\'. Old C3 abandoned.',
-        takeaway: 'Rebase rewrites history because a commit hash incorporates its parent hash. Changing a commit\'s base changes its identity forever.',
-        plumbingCommand: 'git cat-file -p 7e4019a | grep parent',
-        xrayNote: 'The old commit b14c80e still exists in .git/objects, but nothing references it anymore.'
+        internalChange: 'Replayed commit atop e78b21a. Minted new commit a92d18f. Original commit b14c80e unreferenced.',
+        takeaway: 'Rebase does not move commits; rebase makes new copies of commits with new parents, abandoning the originals.',
+        plumbingCommand: 'git reflog feature/cache',
+        xrayNote: 'In X-Ray: See the brand-new hash a92d18f. The old commit b14c80e still exists in .git/objects/ until gc!',
+        internals: {
+          head: 'ref: refs/heads/feature/cache',
+          branchRef: 'feature/cache -> a92d18f (rebased)',
+          commitHash: 'a92d18f (BRAND NEW HASH)',
+          commitMsg: 'Replayed commit atop main',
+          treeHash: 'f419dc8',
+          treeDetail: 'Linearized Merkle tree',
+          blobHash: 'b14c80e',
+          blobDetail: 'Original b14c80e orphaned!'
+        }
       }
     ]
   },
 
   // =========================================================================
-  // LEVEL 8: RESET, RESTORE, AND REVERT — THE THREE-STATE MACHINE
+  // LEVEL 8: RESET, RESTORE, AND REVERT
   // =========================================================================
   {
     id: 'reset-restore-revert',
     level: 8,
-    title: 'Level 8: Reset, Restore, and Revert — The Three-State Machine',
-    label: '08. The 3-State Machine',
+    title: 'Level 8: Reset, Restore, and Revert: The Three-State Machine',
+    label: '08. Reset, Restore, Revert',
     group: 'Branch Surgery & Recovery',
-    path: 'app/deployment.yaml',
+    path: '~/repos/infra-platform',
     branch: 'main',
-    question: 'What do --soft, --mixed, and --hard actually do, and how do you undo changes safely?',
-    whatLearnerThinks: '“git reset is terrifying and destroys work unpredictably.”',
-    whatWeReveal: 'The 3-layer state machine: Ref/HEAD, Index, and Working Tree. Each reset flag simply decides how many layers to move.',
-    takeaway: 'Git reset is not chaotic; it is a precision 3-layer elevator: --soft moves only the branch ref (keeps index and working tree). --mixed moves the branch ref and resets the index (keeps working tree). --hard moves the branch ref, resets the index, and overwrites the working tree.',
-    caveat: 'git reset --hard discards uncommitted working tree changes permanently. Those uncommitted modifications never became blobs in .git/objects, so Git cannot recover them.',
-    inspector: 'Watch the 3 layers (Branch Ref, Index, Working Tree) update across --soft, --mixed, and --hard.',
+    question: 'What is the physical difference between reset --soft, --mixed, and --hard?',
+    whatLearnerThinks: '“git reset is terrifying and deletes random files without warning.”',
+    whatWeReveal: 'The three reset modes target the three physical boundaries of Git: --soft moves HEAD only (keeps index and disk); --mixed moves HEAD and resets index (keeps disk); --hard moves HEAD, resets index, and destroys disk changes.',
+    takeaway: 'ELI5: Think of Git as having 3 rooms: Room 1 is your Desk (Working Tree), Room 2 is the Conveyor Belt (Index), and Room 3 is the Vault (Commit History). git reset is simply an undo lever with 3 power settings: 1. --soft: Opens the vault and pulls the envelope back, but leaves all papers sitting on the conveyor belt ready to re-send. 2. --mixed: Pulls the envelope back and clears the conveyor belt, but leaves your notes on your desk. 3. --hard: THE SLEDGEHAMMER. Resets the vault, clears the conveyor belt, and wipes your desk clean back to the old photo!',
+    caveat: 'git reset --hard permanently destroys uncommitted changes in your working tree. Because uncommitted changes were never hashed into .git/objects/, not even git reflog can recover them!',
+    inspector: 'Test the 3 settings of git reset and see exactly how each flag selectively affects HEAD, the Index, and the Working Tree.',
     sources: [
       'https://git-scm.com/docs/git-reset',
       'https://git-scm.com/docs/git-restore',
-      'https://git-scm.com/docs/git-revert'
+      'https://git-scm.com/book/en/v2/Git-Tools-Reset-Demystified'
     ],
     steps: [
       {
         label: '1. baseline: clean state at commit C2',
-        command: 'git status && git log -1 --oneline',
+        command: 'git status && git log -n 2 --oneline',
         output: [
-          '$ git status',
+          'dev@lab:~/repos/infra-platform$ git status',
           'On branch main',
           'nothing to commit, working tree clean',
-          '$ git log -1 --oneline',
-          'e78b21a (HEAD -> main) Add IAM production roles',
-          '# All three layers (HEAD ref, index, working tree) are perfectly in sync.'
+          'dev@lab:~/repos/infra-platform$ git log -n 2 --oneline',
+          '4f901ab (HEAD -> main) Scale cache deployment',
+          'e78b21a Add IAM production roles',
+          '# All 3 zones (HEAD, Index, Working Tree) are aligned at 4f901ab.'
         ],
-        files: [
-          { path: 'app/deployment.yaml', name: 'deployment.yaml', depth: 0 },
-          { path: 'README.md', name: 'README.md', depth: 0 }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentName: 'deployment.yaml (replicas: 4)'
+        }),
         shelf: [
-          { label: 'Layer 1: REF / HEAD', value: 'e78b21a (C2)', detail: 'Points to commit C2', badge: 'neutral' },
-          { label: 'Layer 2: INDEX', value: 'Matches C2', detail: 'Staging ledger clean', badge: 'neutral' },
-          { label: 'Layer 3: WORKTREE', value: 'Clean on Disk', detail: 'Files match index', badge: 'neutral' },
-          { label: 'System State', value: 'Synchronized', detail: 'All 3 layers identical', badge: 'success' }
+          { label: 'HEAD Pointer', value: '4f901ab (C2)', detail: 'Top commit', badge: 'neutral' },
+          { label: 'Staging Index', value: 'Matches 4f901ab', detail: 'Clean staging area', badge: 'neutral' },
+          { label: 'Working Tree', value: 'Matches 4f901ab', detail: 'Clean desk', badge: 'neutral' },
+          { label: 'Target Undo', value: 'Rewind to e78b21a', detail: 'Undo commit 4f901ab', badge: 'changed' }
         ],
-        inspectorState: 'Three Layers in Synchrony',
-        inspectorDetail: 'All three layers (Branch Ref, Index, Working Tree) contain identical trees. Any reset command will move one or more of these layers backward.',
+        inspectorState: 'Clean Baseline (3 Zones Aligned)',
+        inspectorDetail: 'ELI5: All three rooms are in perfect sync: your desk, the conveyor belt, and the photo vault all match commit 4f901ab. Now let\'s test the 3 undo settings.',
         inspectorOperation: 'git status',
-        internalChange: 'Clean state. No pending mutations.',
-        takeaway: 'Every undo operation in Git is simply a decision about which of the three layers (Ref, Index, Working Tree) to move.',
-        plumbingCommand: 'git diff HEAD',
-        xrayNote: 'Layer 1 (Ref), Layer 2 (Index), Layer 3 (Worktree) are all at commit C2.'
+        internalChange: 'All three boundaries aligned at commit 4f901ab.',
+        takeaway: 'Before resetting, check which commit you want to rewind to using git log.',
+        plumbingCommand: 'git rev-parse HEAD~1',
+        xrayNote: 'All 3 stages on the ledger shelf below are green and clean.',
+        internals: {
+          head: 'ref: refs/heads/main -> 4f901ab',
+          branchRef: 'HEAD, Index, and Disk aligned at 4f901ab',
+          commitHash: '4f901ab',
+          commitMsg: '"Scale cache deployment"',
+          treeHash: '7b2a901',
+          treeDetail: 'Baseline clean state',
+          blobHash: '7ab38f4',
+          blobDetail: 'replicas: 4'
+        }
       },
       {
         label: '2. git reset --soft HEAD~1 (move REF only)',
         command: 'git reset --soft HEAD~1 && git status -s',
         output: [
-          '$ git reset --soft HEAD~1',
-          '$ git status -s',
+          'dev@lab:~/repos/infra-platform$ git reset --soft HEAD~1',
+          'dev@lab:~/repos/infra-platform$ git status -s',
           'M  app/deployment.yaml',
-          '',
-          '# WHAT --soft DID:',
-          '# Layer 1 (REF / HEAD): MOVED backward to C1 (c3904e1)',
-          '# Layer 2 (INDEX):      KEPT unchanged (still has C2 changes staged!)',
-          '# Layer 3 (WORKTREE):   KEPT unchanged (files on disk intact)'
+          '# NOTICE: GREEN "M" IN FIRST COLUMN!',
+          '# HEAD moved back to e78b21a.',
+          '# BUT the Index and Working Tree were NOT touched!',
+          '# Your changes are still neatly staged on the conveyor belt, ready to commit again!'
         ],
-        files: [
-          { path: 'app/deployment.yaml', name: 'deployment.yaml', depth: 0, status: 'A', highlight: true },
-          { path: '.git/refs/heads/main', name: 'main -> c3904e1 [REWOUND]', depth: 1, highlight: true }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentStatus: 'A',
+          deploymentHighlight: true,
+          deploymentName: 'deployment.yaml [STAGED in index]'
+        }),
         shelf: [
-          { label: 'Layer 1: REF / HEAD', value: 'c3904e1 (C1)', detail: 'MOVED backward', badge: 'changed' },
-          { label: 'Layer 2: INDEX', value: 'STILL STAGED', detail: 'KEPT (C2 changes ready)', badge: 'success' },
-          { label: 'Layer 3: WORKTREE', value: 'INTACT', detail: 'KEPT on disk', badge: 'neutral' },
-          { label: 'Result', value: 'Changes ready to commit', detail: 'Perfect for amending', badge: 'success' }
+          { label: 'HEAD Pointer', value: 'e78b21a (REWOUND)', detail: 'Moved back 1 commit', badge: 'changed' },
+          { label: 'Staging Index', value: 'PRESERVED (Staged)', detail: 'Changes still in index (green M)', badge: 'success' },
+          { label: 'Working Tree', value: 'PRESERVED (Desk)', detail: 'Files on disk untouched', badge: 'success' },
+          { label: 'Best Use Case', value: 'Fix commit message', detail: 'Or combine multiple commits', badge: 'neutral' }
         ],
-        inspectorState: 'Reset --soft: Move Ref Only',
-        inspectorDetail: 'git reset --soft moved refs/heads/main back to C1, but left the index and working tree untouched. The changes from C2 are still staged, ready to commit immediately.',
+        inspectorState: 'Soft Reset: Only the Bookmark Moved',
+        inspectorDetail: 'ELI5: --soft is the gentlest undo. Git peeled the bookmark back to the previous envelope, but left all your papers sitting on the conveyor belt ready to go. Zero work was lost!',
         inspectorOperation: 'git reset --soft HEAD~1',
-        internalChange: 'refs/heads/main updated to c3904e1. Index and working tree unchanged.',
-        takeaway: 'reset --soft moves only the branch reference. Use it when you want to re-do a commit message or squash commits.',
+        internalChange: '.git/refs/heads/main updated to e78b21a. Index and working tree completely unchanged.',
+        takeaway: 'git reset --soft is the best way to undo a commit when you just want to edit the commit message or add another file.',
         plumbingCommand: 'git update-ref refs/heads/main HEAD~1',
-        xrayNote: 'Ref moved backward. Index and working tree remained at C2.'
+        xrayNote: 'Notice in Column 1: deployment.yaml has green badge A (staged). Index and desk are 100% safe.',
+        internals: {
+          head: 'ref: refs/heads/main -> e78b21a',
+          branchRef: 'HEAD moved back. Index & Disk untouched!',
+          commitHash: 'e78b21a',
+          commitMsg: '4f901ab changes now staged in index',
+          treeHash: '7b2a901 (Index still at 4f901ab)',
+          treeDetail: 'Zero work lost',
+          blobHash: '7ab38f4',
+          blobDetail: 'Safe undo of commit envelope'
+        }
       },
       {
         label: '3. git reset --mixed HEAD (move REF + reset INDEX)',
-        command: 'git reset --mixed HEAD && git status -s',
+        command: 'git reset HEAD && git status -s',
         output: [
-          '$ git reset --mixed HEAD',
+          'dev@lab:~/repos/infra-platform$ git reset HEAD',
           'Unstaged changes after reset:',
-          'M	app/deployment.yaml',
-          '',
-          '$ git status -s',
+          'M\tapp/deployment.yaml',
+          'dev@lab:~/repos/infra-platform$ git status -s',
           ' M app/deployment.yaml',
-          '',
-          '# WHAT --mixed (default) DID:',
-          '# Layer 1 (REF / HEAD): MOVED backward to C1',
-          '# Layer 2 (INDEX):      RESET to match C1 (changes are now UNSTAGED)',
-          '# Layer 3 (WORKTREE):   KEPT unchanged (your code is still on disk!)'
+          '# NOTICE: RED "M" IN SECOND COLUMN!',
+          '# HEAD stayed at e78b21a. Index was RESET to match HEAD.',
+          '# BUT your working tree desk was NOT touched! Edits are safe on disk as unstaged.'
         ],
-        files: [
-          { path: 'app/deployment.yaml', name: 'deployment.yaml', depth: 0, status: 'M', highlight: true },
-          { path: '.git/index', name: 'index [RESET to C1]', depth: 1, highlight: true }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentStatus: 'M',
+          deploymentHighlight: true,
+          deploymentName: 'deployment.yaml [UNSTAGED on desk]'
+        }),
         shelf: [
-          { label: 'Layer 1: REF / HEAD', value: 'c3904e1 (C1)', detail: 'At ancestor commit', badge: 'neutral' },
-          { label: 'Layer 2: INDEX', value: 'RESET to C1', detail: 'Changes now unstaged', badge: 'changed' },
-          { label: 'Layer 3: WORKTREE', value: 'INTACT on Disk', detail: 'Changes preserved locally', badge: 'neutral' },
-          { label: 'Status Badge', value: ' M (unstaged)', detail: 'Working tree modification', badge: 'warning' }
+          { label: 'HEAD Pointer', value: 'e78b21a', detail: 'Anchored at earlier commit', badge: 'neutral' },
+          { label: 'Staging Index', value: 'RESET to e78b21a', detail: 'Conveyor belt cleared', badge: 'changed' },
+          { label: 'Working Tree', value: 'PRESERVED (Desk)', detail: 'Changes still safe on disk (red M)', badge: 'success' },
+          { label: 'Default Mode', value: 'git reset (mixed)', detail: 'Safe default: never deletes disk files', badge: 'neutral' }
         ],
-        inspectorState: 'Reset --mixed: Move Ref + Reset Index',
-        inspectorDetail: 'git reset --mixed (the default) moved the branch and reset the index to match C1. Your work is still completely safe in your working tree, but it is now unstaged.',
-        inspectorOperation: 'git reset --mixed HEAD',
-        internalChange: 'Index binary records overwritten with tree of C1. Working tree files untouched.',
-        takeaway: 'reset --mixed un-stages changes while keeping your code safe on disk. This is the default behavior of git reset.',
-        plumbingCommand: 'git read-tree HEAD',
-        xrayNote: 'The index was cleared back to C1. Your code is still safe in your working directory.'
+        inspectorState: 'Mixed Reset: Index Cleared, Desk Safe',
+        inspectorDetail: 'ELI5: --mixed is Git\'s default. It takes the papers off the conveyor belt and puts them back on your desk. Your code is still completely safe on your hard drive, just marked unstaged.',
+        inspectorOperation: 'git reset (mixed)',
+        internalChange: 'Index reset from tree e78b21a. Working tree files preserved on disk.',
+        takeaway: 'git reset (without flags) is --mixed. It un-stages files without deleting a single line of your code.',
+        plumbingCommand: 'git ls-files --stage app/deployment.yaml',
+        xrayNote: 'Column 1: deployment.yaml turns amber (M). The file is unstaged, but your disk edits are 100% intact.',
+        internals: {
+          head: 'ref: refs/heads/main -> e78b21a',
+          branchRef: 'HEAD and Index moved back. Disk untouched!',
+          commitHash: 'e78b21a',
+          commitMsg: '4f901ab changes now unstaged on disk',
+          treeHash: '3d19ac0 (Index reset to e78b21a)',
+          treeDetail: 'Working tree retains edits',
+          blobHash: '7ab38f4 (on disk)',
+          blobDetail: 'Default git reset mode'
+        }
       },
       {
         label: '4. git reset --hard (move REF + INDEX + WORKTREE)',
-        command: 'git reset --hard HEAD && git status -s',
+        command: 'git reset --hard HEAD && git status',
         output: [
-          '$ git reset --hard HEAD',
-          'HEAD is now at c3904e1 Initial infrastructure baseline',
-          '$ git status -s',
-          '# Output is empty! Working tree is completely clean.',
-          '',
-          '# WHAT --hard DID:',
-          '# Layer 1 (REF / HEAD): AT C1',
-          '# Layer 2 (INDEX):      RESET to C1',
-          '# Layer 3 (WORKTREE):   OVERWRITTEN to match C1 (uncommitted edits discarded!)'
+          'dev@lab:~/repos/infra-platform$ git reset --hard HEAD',
+          'HEAD is now at e78b21a Add IAM production roles',
+          'dev@lab:~/repos/infra-platform$ git status',
+          'On branch main',
+          'nothing to commit, working tree clean',
+          '# THE SLEDGEHAMMER EXECUTED:',
+          '# 1. HEAD moved back',
+          '# 2. Index reset',
+          '# 3. WORKING TREE FORCIBLY OVERWRITTEN ON DISK!',
+          '# Uncommitted changes are permanently destroyed!'
         ],
-        files: [
-          { path: 'app/deployment.yaml', name: 'deployment.yaml (restored to C1)', depth: 0, highlight: true },
-          { path: 'README.md', name: 'README.md', depth: 0 }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentName: 'deployment.yaml (reverted to e78b21a)'
+        }),
         shelf: [
-          { label: 'Layer 1: REF / HEAD', value: 'c3904e1 (C1)', detail: 'Rewound to C1', badge: 'neutral' },
-          { label: 'Layer 2: INDEX', value: 'C1 Snapshot', detail: 'Staging clean', badge: 'neutral' },
-          { label: 'Layer 3: WORKTREE', value: 'Overwritten to C1', detail: 'Uncommitted edits lost', badge: 'warning' },
-          { label: 'Clean Status', value: '100% Synchronized', detail: 'Matches C1 baseline', badge: 'success' }
+          { label: 'HEAD Pointer', value: 'e78b21a', detail: 'Rewound', badge: 'changed' },
+          { label: 'Staging Index', value: 'RESET to e78b21a', detail: 'Matches rewound commit', badge: 'changed' },
+          { label: 'Working Tree', value: 'FORCIBLY OVERWRITTEN', detail: 'Disk changes destroyed', badge: 'warning' },
+          { label: 'Danger Level', value: 'DESTRUCTIVE', detail: 'Cannot recover uncommitted edits', badge: 'warning' }
         ],
-        inspectorState: 'Reset --hard: All Three Layers Overwritten',
-        inspectorDetail: 'git reset --hard rewrote all three layers to match C1. Uncommitted working tree changes were permanently discarded because they never became objects in .git.',
+        inspectorState: 'Hard Reset: Sledgehammer Destroyed Disk Edits',
+        inspectorDetail: 'ELI5: CRASH! --hard reset all three rooms: the vault, the conveyor belt, AND your desk! Any uncommitted scribbles on your desk were thrown into the incinerator. Use with extreme caution!',
         inspectorOperation: 'git reset --hard HEAD',
-        internalChange: 'Working tree files overwritten from C1 tree. Index reset. Ref at C1.',
-        takeaway: 'reset --hard overwrites everything. Use with caution: uncommitted working tree edits cannot be recovered.',
-        plumbingCommand: 'git read-tree -u --reset HEAD',
-        xrayNote: 'All 3 layers were forcibly synchronized to C1. Working tree modifications were wiped.'
+        internalChange: 'HEAD, Index, and Working tree forcibly reset to tree e78b21a. Uncommitted disk diffs discarded.',
+        takeaway: 'git reset --hard is the ONLY common git command that permanently destroys work. Double-check before running it!',
+        plumbingCommand: 'git reflog (to rescue the commit)',
+        xrayNote: 'Look at the shelf: Working Tree was wiped clean. Fortunately, the old commit 4f901ab still lives in the reflog!',
+        internals: {
+          head: 'ref: refs/heads/main -> e78b21a',
+          branchRef: 'HEAD, Index, and Working Tree FORCIBLY OVERWRITTEN!',
+          commitHash: 'e78b21a',
+          commitMsg: 'Destructive reset executed',
+          treeHash: '3d19ac0',
+          treeDetail: 'Uncommitted working tree changes destroyed',
+          blobHash: 'c3904e1 bytes',
+          blobDetail: 'Requires reflog rescue to recover'
+        }
       }
     ]
   },
@@ -1186,121 +1621,205 @@ export const gitViews: GitLab[] = [
   // LEVEL 9: MERGE CONFLICTS & THE THREE-STAGE INDEX
   // =========================================================================
   {
-    id: 'conflicts-three-stage-index',
+    id: 'merge-conflicts-three-stage-index',
     level: 9,
     title: 'Level 9: Merge Conflicts & The Three-Stage Index',
-    label: '09. Conflict Three-Stage Index',
+    label: '09. 3-Stage Merge Conflicts',
     group: 'Branch Surgery & Recovery',
-    path: 'app/deployment.yaml',
+    path: '~/repos/infra-platform',
     branch: 'main',
-    question: 'What is really happening inside Git when a merge conflict occurs?',
-    whatLearnerThinks: '“A merge conflict is just text markers inside my editor.”',
-    whatWeReveal: 'Git writes three separate entries into the index: Stage 1 BASE, Stage 2 OURS, Stage 3 THEIRS.',
-    takeaway: 'When Git cannot auto-resolve a 3-way merge, it stores all three competing versions in the index: Stage 1 = common ancestor (BASE), Stage 2 = target branch (OURS / HEAD), Stage 3 = incoming branch (THEIRS). Running git add on the resolved file collapses stages 1, 2, and 3 into normal Stage 0.',
-    caveat: 'The conflict markers in your file (<<<<<<<, =======, >>>>>>>) are generated by Git combining Stage 2 and Stage 3 against Stage 1. Running git add declares the conflict resolved.',
-    inspector: 'Inspect the 3-stage index table using git ls-files -u and see how Git tracks conflicting blobs.',
+    question: 'What actually happens inside Git during a merge conflict, and what is the 3-stage index?',
+    whatLearnerThinks: '“Git got confused and ruined my file with weird <<<<<<< arrows.”',
+    whatWeReveal: 'During a conflict, Git\'s index temporarily expands into three concurrent slots: Stage 1 = Common Ancestor (BASE), Stage 2 = Target Branch (OURS), Stage 3 = Merging Branch (THEIRS). Running git add collapses all three back into Stage 0.',
+    takeaway: 'ELI5: Imagine two chefs editing line 5 of a recipe at the same time: one wrote "add chocolate", the other wrote "add cheese". Git refuses to guess who is right! Behind the scenes, Git opens 3 separate trays on its conveyor belt: Tray 1 holds the original recipe (BASE), Tray 2 holds your version (OURS), and Tray 3 holds their version (THEIRS). Then Git writes both onto your desk separated by <<<<<<< and >>>>>>>. Once you pick the winner and run git add, Git throws away the 3 trays and puts the clean recipe back in Tray 0!',
+    caveat: 'A merge conflict stops Git mid-operation. You cannot commit until every conflicting file has been resolved and staged with git add.',
+    inspector: 'Inspect Git\'s internal 3-stage index using git ls-files --stage to see BASE, OURS, and THEIRS blob hashes simultaneously.',
     sources: [
-      'https://git-scm.com/docs/git-merge',
-      'https://git-scm.com/docs/git-ls-files#_stage_numbers',
-      'https://git-scm.com/book/en/v2/Git-Tools-Advanced-Merging'
+      'https://git-scm.com/docs/git-merge#_how_conflicts_are_presented',
+      'https://git-scm.com/docs/git-ls-files',
+      'https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging#_basic_merge_conflicts'
     ],
     steps: [
       {
         label: '1. trigger merge conflict',
-        command: 'git merge feature/routes',
+        command: 'git merge feature/cache',
         output: [
+          'dev@lab:~/repos/infra-platform$ git merge feature/cache',
           'Auto-merging app/deployment.yaml',
           'CONFLICT (content): Merge conflict in app/deployment.yaml',
           'Automatic merge failed; fix conflicts and then commit the result.',
-          '',
-          '$ git status -s',
+          'dev@lab:~/repos/infra-platform$ git status -s',
           'UU app/deployment.yaml',
-          '# UU = Unmerged, both modified!'
+          '# UU = Unmerged, both modified!',
+          '# Git has paused the merge and entered conflict mode.'
         ],
-        files: [
-          { path: 'app/deployment.yaml', name: 'deployment.yaml [CONFLICT]', depth: 0, status: 'UU', highlight: true },
-          { path: '.git/index', name: 'index (holds 3 conflicting stages!)', depth: 1, highlight: true }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentStatus: 'UU',
+          deploymentHighlight: true,
+          deploymentName: 'deployment.yaml [CONFLICT: UU]'
+        }),
         shelf: [
-          { label: 'Conflict Status', value: 'UU (Unresolved)', detail: 'Both branches modified file', badge: 'warning' },
-          { label: 'Stage 1 (BASE)', value: 'blob 8a3f912', detail: 'Common ancestor version', badge: 'neutral' },
-          { label: 'Stage 2 (OURS)', value: 'blob 7ab38f9', detail: 'main branch version (HEAD)', badge: 'changed' },
-          { label: 'Stage 3 (THEIRS)', value: 'blob c14901e', detail: 'feature branch version', badge: 'changed' }
+          { label: 'Merge Status', value: 'CONFLICT (Paused)', detail: 'Automatic merge halted', badge: 'warning' },
+          { label: 'File Status', value: 'UU (Both Modified)', detail: 'Unmerged index state', badge: 'warning' },
+          { label: 'Index Mode', value: '3-Stage Active', detail: 'Holds BASE, OURS, THEIRS', badge: 'changed' },
+          { label: 'Working Tree', value: 'Conflict Markers', detail: '<<<<<<< HEAD on disk', badge: 'warning' }
         ],
-        inspectorState: 'Merge Conflict Triggered (Status UU)',
-        inspectorDetail: 'Both branches modified app/deployment.yaml at the same lines since their common ancestor. Git halted the merge and flagged the file as UU in the index.',
-        inspectorOperation: 'git merge feature/routes',
-        internalChange: 'Index expanded: stage 0 entry replaced by stage 1, stage 2, and stage 3 entries.',
-        takeaway: 'A merge conflict occurs when two branches make incompatible edits to the same lines relative to their common ancestor.',
+        inspectorState: 'Merge Halted: 3-Stage Index Activated',
+        inspectorDetail: 'ELI5: Git says: "Both of you changed line 5 of deployment.yaml and I don\'t know whose change is better! You have to decide." The file is marked UU (Unmerged).',
+        inspectorOperation: 'git merge feature/cache (conflict)',
+        internalChange: 'Index entered unmerged state. Slots 1, 2, 3 populated for app/deployment.yaml.',
+        takeaway: 'A conflict is not a crash. It is Git safely pausing to let a human engineer decide which code to keep.',
         plumbingCommand: 'git ls-files -u',
-        xrayNote: 'Turn on X-Ray mode: instead of one index row, the index now holds THREE stages!'
+        xrayNote: 'Look at Column 1: deployment.yaml has a pulsing red warning badge UU. It is unmerged.',
+        internals: {
+          head: 'ref: refs/heads/main',
+          branchRef: 'refs/heads/main (merging feature/cache)',
+          commitHash: 'e78b21a',
+          commitMsg: 'Merge halted due to overlapping edits',
+          treeHash: 'Index in conflict mode',
+          treeDetail: 'deployment.yaml unmerged',
+          blobHash: 'Stage 1, 2, 3 active',
+          blobDetail: 'Conflict markers written to disk'
+        }
       },
       {
-        label: '2. inspect the 3-stage index (ls-files -u)',
+        label: '2. inspect 3-stage index (ls-files -u)',
         command: 'git ls-files --stage app/deployment.yaml',
         output: [
-          '$ git ls-files --stage app/deployment.yaml',
-          '100644 8a3f912c9b4e19572d4f80164e29b1dc94f2910a 1   app/deployment.yaml  (BASE)',
-          '100644 7ab38f912c9b4e19572d4f80164e29b1dc94f291 2   app/deployment.yaml  (OURS / HEAD)',
-          '100644 c14901e018902bc01928bc01928bc01a01928bc0 3   app/deployment.yaml  (THEIRS / feature)',
-          '',
-          '# X-RAY REVEAL: The index stage numbers:',
-          '# Stage 0: Normal clean file (no conflict)',
-          '# Stage 1: Ancestor baseline (merge-base)',
-          '# Stage 2: Target branch version (OURS - what you were on)',
-          '# Stage 3: Incoming branch version (THEIRS - what you are merging)'
+          'dev@lab:~/repos/infra-platform$ git ls-files --stage app/deployment.yaml',
+          '100644 c3904e189012345678901234567890123456789a 1\tapp/deployment.yaml',
+          '100644 e78b21a89012345678901234567890123456789a 2\tapp/deployment.yaml',
+          '100644 b14c80e89012345678901234567890123456789a 3\tapp/deployment.yaml',
+          '# THE SECRET THREE STAGES REVEALED:',
+          '# Stage 1 = BASE   (common ancestor c3904e1: replicas: 2)',
+          '# Stage 2 = OURS   (current branch main: replicas: 5)',
+          '# Stage 3 = THEIRS (feature/cache: replicas: 3)',
+          '# Three distinct blobs exist in .git/objects/ right now!'
         ],
-        files: [
-          { path: '.git/index', name: 'index [Stage 1: BASE 8a3f912]', depth: 1 },
-          { path: '.git/index', name: 'index [Stage 2: OURS 7ab38f9]', depth: 1, highlight: true },
-          { path: '.git/index', name: 'index [Stage 3: THEIRS c14901e]', depth: 1, highlight: true },
-          { path: 'app/deployment.yaml', name: 'deployment.yaml (has markers)', depth: 0, status: 'UU' }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentStatus: 'UU',
+          deploymentHighlight: true,
+          deploymentName: 'deployment.yaml [3 stages active]',
+          gitFiles: [
+            { path: '.git/index', name: 'index [Stage 1: BASE c3904e1]', depth: 1 },
+            { path: '.git/index', name: 'index [Stage 2: OURS e78b21a]', depth: 1, highlight: true },
+            { path: '.git/index', name: 'index [Stage 3: THEIRS b14c80e]', depth: 1, highlight: true }
+          ]
+        }),
         shelf: [
-          { label: 'Stage 0', value: 'Empty', detail: 'No clean entry during conflict', badge: 'neutral' },
-          { label: 'Stage 1: BASE', value: '8a3f912 (replicas: 2)', detail: 'Common ancestor', badge: 'neutral' },
-          { label: 'Stage 2: OURS', value: '7ab38f9 (replicas: 3)', detail: 'main branch tip', badge: 'success' },
-          { label: 'Stage 3: THEIRS', value: 'c14901e (replicas: 5)', detail: 'feature branch tip', badge: 'changed' }
+          { label: 'Stage 1 (BASE)', value: 'c3904e1 (reps: 2)', detail: 'Common ancestor baseline', badge: 'neutral' },
+          { label: 'Stage 2 (OURS)', value: 'e78b21a (reps: 5)', detail: 'Version on main branch', badge: 'changed' },
+          { label: 'Stage 3 (THEIRS)', value: 'b14c80e (reps: 3)', detail: 'Version on feature branch', badge: 'changed' },
+          { label: 'Stage 0 (Clean)', value: 'MISSING', detail: 'Cannot commit without Stage 0', badge: 'warning' }
         ],
-        inspectorState: 'Three Distinct Blobs in the Index',
-        inspectorDetail: 'git ls-files --stage proves that the index holds all three competing versions simultaneously. Git keeps all three blobs in .git/objects so merge tools can compare them.',
-        inspectorOperation: 'git ls-files --stage app/deployment.yaml',
-        internalChange: 'Reading 3-stage index entries.',
-        takeaway: 'The index is not a dumb staging folder. During conflicts, it is a 3-way reconciliation ledger storing ancestor, local, and remote versions.',
-        plumbingCommand: 'git cat-file -p :2:app/deployment.yaml',
-        xrayNote: 'You can inspect each stage individually using git cat-file -p :1:file, :2:file, :3:file.'
+        inspectorState: 'Inside the 3-Stage Index',
+        inspectorDetail: 'ELI5: Look at git ls-files --stage: Git literally created 3 entries in its ledger! Stage 1 is the original ancestor, Stage 2 is your version, and Stage 3 is their version. Git is holding all 3 for you.',
+        inspectorOperation: 'git ls-files --stage',
+        internalChange: 'Binary index holds three concurrent SHA records for the same filepath.',
+        takeaway: 'Git does not mangle files. It holds all three parent versions cleanly in the index so merge tools can compare them.',
+        plumbingCommand: 'git checkout --ours app/deployment.yaml (or --theirs)',
+        xrayNote: 'Turn on ⚡ X-Ray: See Stage 1, 2, and 3 listed inside the index! Each has its own blob hash.',
+        internals: {
+          head: 'ref: refs/heads/main',
+          branchRef: 'Stage 1: BASE | Stage 2: OURS | Stage 3: THEIRS',
+          commitHash: 'e78b21a vs b14c80e',
+          commitMsg: 'Common ancestor: c3904e1',
+          treeHash: '3-stage index entries',
+          treeDetail: 'git ls-files --stage reveals 3 blobs',
+          blobHash: '1: c3904 (2 reps) | 2: e78b (5 reps) | 3: b14c (3 reps)',
+          blobDetail: 'Three distinct blob hashes in .git/objects/'
+        }
       },
       {
-        label: '3. resolve conflict & git add (collapse stages)',
-        command: 'edit app/deployment.yaml && git add app/deployment.yaml',
+        label: '3. inspect conflict markers on disk',
+        command: 'cat app/deployment.yaml',
         output: [
-          '# Resolved conflict: decided on replicas: 4 with high-availability config.',
-          '$ git add app/deployment.yaml',
-          '',
-          '$ git ls-files --stage app/deployment.yaml',
-          '100644 d4019ab018902bc01928bc01928bc01a01928bc0 0   app/deployment.yaml',
-          '',
-          '# LOOK AT THE STAGE NUMBER: It is 0 again!',
-          '# Running git add computed a new blob d4019ab, deleted stages 1, 2, and 3,',
-          '# and wrote the unified resolved file as Stage 0.'
+          'dev@lab:~/repos/infra-platform$ cat app/deployment.yaml',
+          'apiVersion: apps/v1',
+          'kind: Deployment',
+          'spec:',
+          '<<<<<<< HEAD',
+          '  replicas: 5',
+          '=======',
+          '  replicas: 3',
+          '>>>>>>> feature/cache',
+          '# ON YOUR DESK: Conflict markers show OURS (top) vs THEIRS (bottom).'
         ],
-        files: [
-          { path: '.git/index', name: 'index [Stage 0: d4019ab RESOLVED]', depth: 1, highlight: true },
-          { path: 'app/deployment.yaml', name: 'deployment.yaml', depth: 0, status: 'A', highlight: true }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentStatus: 'UU',
+          deploymentHighlight: true,
+          deploymentName: 'deployment.yaml (has <<<<<<< markers)'
+        }),
         shelf: [
-          { label: 'Resolved Blob', value: 'd4019ab (replicas: 4)', detail: 'Merged result written', badge: 'success' },
-          { label: 'Index Stages', value: 'Collapsed to Stage 0', detail: 'Stages 1, 2, 3 removed', badge: 'success' },
-          { label: 'File Status', value: 'A (Resolved & Staged)', detail: 'Ready for merge commit', badge: 'success' },
-          { label: 'Conflict State', value: 'RESOLVED', detail: 'Zero unmerged paths remain', badge: 'success' }
+          { label: '<<<<<<< HEAD', value: 'replicas: 5', detail: 'Our change on main', badge: 'neutral' },
+          { label: '=======', value: 'Separator', detail: 'Divides the two versions', badge: 'neutral' },
+          { label: '>>>>>>> feature', value: 'replicas: 3', detail: 'Their change on feature', badge: 'neutral' },
+          { label: 'Resolution', value: 'Choose correct value', detail: 'Delete markers and save', badge: 'changed' }
         ],
-        inspectorState: 'Stages Collapsed to Stage 0',
-        inspectorDetail: 'Running git add on the resolved file hashed the final content, wrote blob d4019ab, cleared stages 1, 2, 3, and registered the clean stage 0 entry in the index.',
-        inspectorOperation: 'git add app/deployment.yaml',
-        internalChange: 'Stages 1, 2, 3 removed from index. Stage 0 entry written. Blob d4019ab stored.',
-        takeaway: 'git add resolves merge conflicts by removing stages 1, 2, and 3 from the index and replacing them with a clean stage 0 entry.',
-        plumbingCommand: 'git commit -m "Merge and resolve deployment replicas"',
-        xrayNote: 'The 3 conflicting stages vanished. Stage 0 is restored.'
+        inspectorState: 'Conflict Markers on Disk',
+        inspectorDetail: 'ELI5: Git wrote the conflict markers right into your file: everything between <<<<<<< HEAD and ======= is your version (replicas: 5). Everything between ======= and >>>>>>> is their version (replicas: 3).',
+        inspectorOperation: 'cat app/deployment.yaml',
+        internalChange: 'Working tree file contains conflict markers. Index remains in 3-stage mode.',
+        takeaway: 'Conflict markers are just plain text. Fixing a conflict is simply editing the text and deleting the marker lines.',
+        plumbingCommand: 'git diff',
+        xrayNote: 'The file on disk has the raw conflict markers. Index still has 3 separate stages.',
+        internals: {
+          head: 'ref: refs/heads/main',
+          branchRef: 'Working tree file has <<<<<<< and >>>>>>>',
+          commitHash: 'e78b21a',
+          commitMsg: 'Manual resolution required',
+          treeHash: 'Unmerged index state',
+          treeDetail: 'Cannot commit until resolved',
+          blobHash: 'Diff markers on disk',
+          blobDetail: 'Engineer chooses correct lines'
+        }
+      },
+      {
+        label: '4. resolve conflict & git add',
+        command: 'echo -e "apiVersion: apps/v1\\nkind: Deployment\\nspec:\\n  replicas: 4" > app/deployment.yaml && git add app/deployment.yaml && git ls-files --stage app/deployment.yaml',
+        output: [
+          'dev@lab:~/repos/infra-platform$ git add app/deployment.yaml',
+          'dev@lab:~/repos/infra-platform$ git ls-files --stage app/deployment.yaml',
+          '100644 f5819ab89012345678901234567890123456789a 0\tapp/deployment.yaml',
+          'dev@lab:~/repos/infra-platform$ git status -s',
+          'M  app/deployment.yaml',
+          '# CONFLICT RESOLVED! What git add just did:',
+          '# 1. Hashed the resolved file into new blob f5819ab',
+          '# 2. ERASED Stages 1, 2, and 3 from the index!',
+          '# 3. Restored normal Stage 0! Ready for git commit.'
+        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentStatus: 'A',
+          deploymentHighlight: true,
+          deploymentName: 'deployment.yaml [RESOLVED: Stage 0]'
+        }),
+        shelf: [
+          { label: 'Conflict State', value: 'RESOLVED', detail: 'Stages 1, 2, 3 deleted', badge: 'success' },
+          { label: 'Index Stage', value: 'Stage 0 (Clean)', detail: 'Normal index slot restored', badge: 'success' },
+          { label: 'Resolved Value', value: 'replicas: 4', detail: 'Engineering compromise saved', badge: 'neutral' },
+          { label: 'Ready to Commit', value: 'git commit', detail: 'Finalizes the merge commit', badge: 'success' }
+        ],
+        inspectorState: 'Stages Collapsed Back to Stage 0',
+        inspectorDetail: 'ELI5: You picked "replicas: 4", erased the conflict arrows, and ran git add. Git threw away the 3 temporary trays, made a fresh blob for replicas: 4, and placed it cleanly in Stage 0. The conflict is gone!',
+        inspectorOperation: 'git add (resolving conflict)',
+        internalChange: 'Stages 1, 2, and 3 purged from index. New resolved blob f5819ab written. Single Stage 0 entry created.',
+        takeaway: 'git add is the universal conflict resolver: it tells Git "I have fixed this file, collapse the 3 stages back to normal Stage 0."',
+        plumbingCommand: 'git commit -m "Merge resolved with replicas: 4"',
+        xrayNote: 'Notice in X-Ray: The 3 stages vanished from the index, replaced by a single clean Stage 0 entry!',
+        internals: {
+          head: 'ref: refs/heads/main',
+          branchRef: 'Conflict resolved! Stages 1-3 collapsed to Stage 0',
+          commitHash: 'e78b21a',
+          commitMsg: 'Ready for merge commit',
+          treeHash: 'Resolved index snapshot',
+          treeDetail: 'Normal stage 0 entry restored',
+          blobHash: 'f5819ab (new resolved blob)',
+          blobDetail: 'replicas: 4 (resolved compromise)'
+        }
       }
     ]
   },
@@ -1309,19 +1828,19 @@ export const gitViews: GitLab[] = [
   // LEVEL 10: WORKTREES, REFLOG RECOVERY & PLUMBING
   // =========================================================================
   {
-    id: 'worktrees-and-plumbing',
+    id: 'worktrees-reflog-and-plumbing',
     level: 10,
     title: 'Level 10: Worktrees, Reflog Recovery & Plumbing',
     label: '10. Worktrees & Plumbing',
     group: 'Worktrees & Plumbing',
-    path: '.git/',
+    path: '~/repos/infra-platform',
     branch: 'main',
-    question: 'How do worktrees share objects, how does Reflog rescue lost commits, and how does plumbing build porcelain?',
-    whatLearnerThinks: '“Git magic / If I reset --hard a commit it is deleted forever.”',
-    whatWeReveal: 'Common .git directory shared across worktrees. Reflog rescues unreferenced commits. Plumbing commands assemble commits from scratch.',
-    takeaway: 'You now understand all of Git: 1) Worktrees share .git/objects and refs while keeping independent working trees, HEADs, and indexes. 2) Commits abandoned by git reset --hard are not deleted; they are preserved in the reflog and can be rescued instantly. 3) git add and git commit are just porcelain wrappers around hash-object, update-index, write-tree, commit-tree, and update-ref.',
-    caveat: 'Reflog entries expire after 90 days (or 30 days for unreferenced commits). Once reflog entries expire and git gc runs, unreachable objects are permanently purged.',
-    inspector: 'Explore the flagship architecture: shared worktrees, the reflog safety net, and the raw plumbing pipeline.',
+    question: 'How do senior engineers work on multiple branches at once without re-cloning, rescue lost commits, and build commits with plumbing?',
+    whatLearnerThinks: '“If I need two branches at once, I have to clone the repository again. And if I delete a commit, it is gone forever.”',
+    whatWeReveal: 'git worktree add creates independent working directories sharing one central .git/objects vault with zero disk duplication. The reflog keeps a black-box flight recorder of every HEAD movement, enabling 100% recovery. Plumbing commands reveal the true engine underneath porcelain.',
+    takeaway: 'ELI5: 1. Worktrees: Instead of buying a second house, you just open a second desk in another room. Both desks share the exact same central photo vault (.git/objects/). You can code on feature/networking at Desk 1 while reviewing main at Desk 2 with zero wasted space! 2. Reflog: Git has an indestructible black-box flight recorder (.git/logs/HEAD). Even if you run reset --hard, the commit still exists in the vault for 30–90 days! 3. Plumbing: Everyday commands (git add, git commit) are just friendly steering wheels. Underneath, Git is a 5-step engine: hash-object -> update-index -> write-tree -> commit-tree -> update-ref!',
+    caveat: 'Worktrees isolate Git checkouts, but they share the same physical machine: running simultaneous servers in both worktrees can cause TCP port collisions or cloud resource lock conflicts.',
+    inspector: 'Explore multi-directory worktree isolation, rescue an orphaned commit with git reflog, and execute a manual plumbing commit pipeline.',
     sources: [
       'https://git-scm.com/docs/git-worktree',
       'https://git-scm.com/docs/git-reflog',
@@ -1329,132 +1848,188 @@ export const gitViews: GitLab[] = [
     ],
     steps: [
       {
-        label: '1. git worktree (shared .git engine)',
-        command: 'git worktree add ../wt-networking feature/networking',
+        label: '1. git worktree (shared .git vault)',
+        command: 'git worktree add ../wt/networking -b feature/networking && git worktree list',
         output: [
-          'Preparing worktree (checking out \'feature/networking\')',
-          'HEAD is now at 8a109fe Add VPC network routing',
-          '',
-          '# X-RAY REVEAL: Worktree Architecture:',
-          '# SHARED:              .git/objects/ (immutable object database) & .git/refs/',
-          '# PRIVATE PER-WORKTREE: private HEAD, private index, private working files',
-          '# Result: Two branches checked out simultaneously with ZERO disk object duplication!'
+          'dev@lab:~/repos/infra-platform$ git worktree add ../wt/networking -b feature/networking',
+          'Preparing worktree (new branch \'feature/networking\')',
+          'HEAD is now at 4f901ab Scale cache deployment',
+          'dev@lab:~/repos/infra-platform$ git worktree list',
+          '/home/dev/repos/infra-platform   4f901ab [main]',
+          '/home/dev/wt/networking          4f901ab [feature/networking]',
+          '# MULTI-DIRECTORY WORKSPACE ACTIVE!',
+          '# ../wt/networking has its own private HEAD and index.',
+          '# But it SHARES .git/objects: zero gigabytes duplicated!'
         ],
-        files: [
-          { path: '.git/objects', name: '.git/objects/ [SHARED OBJECT DB]', depth: 1, highlight: true },
-          { path: '.git/worktrees/wt-networking', name: '.git/worktrees/wt-networking/ [PRIVATE HEAD & INDEX]', depth: 1, highlight: true },
-          { path: '/home/dev/repos/infra-platform', name: 'Main Worktree [branch: main]', depth: 0 },
-          { path: '/home/dev/repos/wt-networking', name: 'Linked Worktree [branch: feature/networking]', depth: 0, highlight: true }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentName: 'deployment.yaml',
+          gitFiles: [
+            { path: '.git/worktrees/networking', name: 'worktrees/networking/ [Private HEAD & Index]', depth: 1, highlight: true },
+            { path: '.git/objects', name: 'objects/ [SHARED BY ALL WORKTREES]', depth: 1, highlight: true }
+          ]
+        }),
         shelf: [
-          { label: 'Common Engine', value: '.git/objects/', detail: 'Zero object duplication', badge: 'success' },
-          { label: 'Main Worktree', value: 'main', detail: 'Private HEAD & index', badge: 'neutral' },
-          { label: 'Linked Worktree', value: 'feature/networking', detail: 'Private HEAD & index', badge: 'changed' },
-          { label: 'Concurrent Branches', value: '2 Simultaneous', detail: 'Zero stash/switch friction', badge: 'success' }
+          { label: 'Root Worktree', value: '/repos/infra-platform', detail: 'Branch: main', badge: 'neutral' },
+          { label: 'Linked Worktree', value: '/wt/networking', detail: 'Branch: feature/networking', badge: 'success' },
+          { label: 'Object DB Sharing', value: '100% Shared', detail: 'Zero duplicate object storage', badge: 'success' },
+          { label: 'Independence', value: 'Private HEAD & Index', detail: 'Work on both simultaneously', badge: 'neutral' }
         ],
-        inspectorState: 'Multi-Worktree Shared Engine',
-        inspectorDetail: 'git worktree created a new linked worktree. It shares .git/objects and .git/refs with the main repository, but maintains its own private HEAD and index.',
-        inspectorOperation: 'git worktree add ../wt-networking feature/networking',
-        internalChange: '.git/worktrees/wt-networking directory created with private HEAD and index files.',
-        takeaway: 'Worktrees share the object database and refs while maintaining independent working trees and HEADs.',
-        plumbingCommand: 'git worktree list',
-        xrayNote: 'Both worktrees draw from the same .git/objects store without duplicating gigabytes of repo data.'
+        inspectorState: 'Multiple Desks, One Central Vault',
+        inspectorDetail: 'ELI5: You just opened a second desk down the hall (/wt/networking). You can compile and test feature/networking there while keeping main open here. Both desks share the exact same photo vault (.git/objects/)!',
+        inspectorOperation: 'git worktree add',
+        internalChange: 'Created .git/worktrees/networking with dedicated private HEAD and index files. Linked to root object db.',
+        takeaway: 'Never clone a repository twice to work on two branches. Use git worktree add to get independent checkouts with zero disk bloat.',
+        plumbingCommand: 'git worktree list --porcelain',
+        xrayNote: 'Try clicking the ACTIVE WORKTREE buttons above the 3-column workspace to switch between worktree desks!',
+        internals: {
+          head: '/wt/networking: ref: refs/heads/feature/networking',
+          branchRef: 'Independent worktree directory',
+          commitHash: 'b14c80e',
+          commitMsg: 'Worktree shares .git/objects with main repo',
+          treeHash: 'Dedicated private index',
+          treeDetail: 'Separate HEAD pointer file',
+          blobHash: 'b14c80e',
+          blobDetail: 'Zero duplicated object storage'
+        }
       },
       {
         label: '2. lose a commit with reset --hard',
-        command: 'git reset --hard HEAD~1',
+        command: 'git reset --hard c3904e1 && git log --oneline -n 2',
         output: [
-          'HEAD is now at c3904e1 Initial infrastructure baseline',
-          '',
-          '# DRAMATIC MOMENT: We just deliberately "lost" commit 4f901ab!',
-          '# main now points to c3904e1.',
-          '# Commit 4f901ab is gone from git log.',
-          '# IS IT GONE FROM DISK? NO! It still lives in .git/objects/4f/901ab...'
+          'dev@lab:~/repos/infra-platform$ git reset --hard c3904e1',
+          'HEAD is now at c3904e1 Initial infrastructure definition',
+          'dev@lab:~/repos/infra-platform$ git log --oneline -n 2',
+          'c3904e1 Initial infrastructure definition',
+          '# PANIC MOMENT: Commit 4f901ab is completely gone from git log!',
+          '# Is it deleted? NO! It is only unreferenced.',
+          '# It still sits safely inside .git/objects/4f/!'
         ],
-        files: [
-          { path: '.git/refs/heads/main', name: 'main -> c3904e1 [REWOUND]', depth: 1 },
-          { path: '.git/objects/4f', name: 'objects/4f/901ab... [ORPHANED, BUT ALIVE!]', depth: 1, highlight: true }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentName: 'deployment.yaml (C1 baseline)',
+          gitFiles: [
+            { path: '.git/objects/4f', name: 'objects/4f/901ab... [ORPHANED, BUT ALIVE!]', depth: 1, highlight: true }
+          ]
+        }),
         shelf: [
-          { label: 'Active HEAD', value: 'c3904e1', detail: 'Rewound by reset --hard', badge: 'warning' },
-          { label: 'Lost Commit', value: '4f901ab', detail: 'Unreachable from branch graph', badge: 'warning' },
-          { label: 'Physical Status', value: 'Still in .git/objects', detail: 'Object not deleted', badge: 'neutral' },
-          { label: 'Safety Net', value: '.git/logs/HEAD (Reflog)', detail: 'Recorded previous position', badge: 'success' }
+          { label: 'HEAD Position', value: 'c3904e1 (REWOUND)', detail: 'Accidental hard reset', badge: 'warning' },
+          { label: 'Lost Commit', value: '4f901ab', detail: 'Missing from git log', badge: 'warning' },
+          { label: 'Object Vault', value: 'Object Still Alive', detail: '4f901ab not deleted on disk', badge: 'success' },
+          { label: 'Rescue Window', value: '30 to 90 Days', detail: 'Protected by reflog expiry', badge: 'neutral' }
         ],
-        inspectorState: 'Commit Orphaned by Reset',
-        inspectorDetail: 'Commit 4f901ab is no longer reachable from any branch ref. However, it was not deleted from .git/objects. Git recorded the reset in .git/logs/HEAD (the Reflog).',
-        inspectorOperation: 'git reset --hard HEAD~1',
-        internalChange: 'refs/heads/main moved to c3904e1. Entry appended to .git/logs/HEAD.',
-        takeaway: 'In Git, commits are rarely deleted immediately. When you reset, the commit stays in .git/objects and is logged in the reflog.',
-        plumbingCommand: 'git fsck --unreachable',
-        xrayNote: 'Commit 4f901ab has no ref pointing to it, but the reflog remembers it.'
+        inspectorState: 'Accidental Commit Loss (Simulated)',
+        inspectorDetail: 'ELI5: Oh no! You ran reset --hard and commit 4f901ab disappeared from your git log! Junior devs panic, but senior devs smile: the commit envelope is still sitting in the vault. Git just lost the bookmark.',
+        inspectorOperation: 'git reset --hard c3904e1 (accidental)',
+        internalChange: 'main ref moved to c3904e1. Commit 4f901ab remains in .git/objects/4f/ as an unreferenced object.',
+        takeaway: 'Git rarely deletes anything immediately. A "lost" commit is usually just an unreferenced object waiting to be found.',
+        plumbingCommand: 'git reflog',
+        xrayNote: 'Turn on X-Ray: See objects/4f/901ab glowing in the vault. It was never destroyed!',
+        internals: {
+          head: 'ref: refs/heads/main -> c3904e1',
+          branchRef: 'main rewound to initial commit',
+          commitHash: 'c3904e1',
+          commitMsg: 'Commit 4f901ab temporarily lost from log',
+          treeHash: 'e189ac2',
+          treeDetail: 'Working tree rewound to baseline',
+          blobHash: '94b810a',
+          blobDetail: '4f901ab blob still safe in objects/'
+        }
       },
       {
         label: '3. reflog rescue: recover lost commit',
-        command: 'git reflog -2 && git branch rescue HEAD@{1}',
+        command: 'git reflog -n 3 && git switch -c rescue 4f901ab',
         output: [
-          '$ git reflog -2',
-          'c3904e1 HEAD@{0}: reset: moving to HEAD~1',
-          '4f901ab HEAD@{1}: commit: Scale application to 3 replicas',
-          '',
-          '$ git branch rescue HEAD@{1}',
-          '',
-          '# RESCUED!',
-          '# We attached a new branch ref "rescue" to HEAD@{1} (4f901ab).',
-          '# The commit is immediately 100% reachable and back in history!'
+          'dev@lab:~/repos/infra-platform$ git reflog -n 3',
+          'c3904e1 HEAD@{0}: reset: moving to c3904e1',
+          '4f901ab HEAD@{1}: commit: Scale cache deployment',
+          'e78b21a HEAD@{2}: checkout: moving from main to feature/cache',
+          'dev@lab:~/repos/infra-platform$ git switch -c rescue 4f901ab',
+          'Switched to a new branch \'rescue\'',
+          '# RESCUED! Reflog flight recorder showed HEAD@{1} was 4f901ab.',
+          '# We created a new branch bookmark on it. 100% of work restored!'
         ],
-        files: [
-          { path: '.git/refs/heads/rescue', name: 'refs/heads/rescue -> 4f901ab [RESCUED!]', depth: 1, highlight: true },
-          { path: '.git/logs/HEAD', name: 'logs/HEAD [reflog journal]', depth: 1, highlight: true },
-          { path: '.git/objects/4f', name: 'objects/4f/901ab... [RE-ATTACHED TO GRAPH]', depth: 1, highlight: true }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentName: 'deployment.yaml (rescued!)',
+          gitFiles: [
+            { path: '.git/refs/heads/rescue', name: 'refs/heads/rescue -> 4f901ab [RESCUED!]', depth: 1, highlight: true },
+            { path: '.git/logs/HEAD', name: 'logs/HEAD [Reflog Journal]', depth: 1, highlight: true }
+          ]
+        }),
         shelf: [
-          { label: 'Reflog Entry', value: 'HEAD@{1} (4f901ab)', detail: 'Previous HEAD position', badge: 'success' },
-          { label: 'Rescue Branch', value: 'rescue -> 4f901ab', detail: 'Re-attached to commit', badge: 'success' },
-          { label: 'Reachability', value: '100% Reachable', detail: 'Safe from garbage collection', badge: 'success' },
-          { label: 'Data Recovery', value: 'Zero Data Lost', detail: 'Reflog safety net worked', badge: 'success' }
+          { label: 'Reflog Record', value: 'HEAD@{1}: 4f901ab', detail: 'Found in flight recorder', badge: 'success' },
+          { label: 'Rescue Action', value: 'git switch -c rescue', detail: 'Attached named branch bookmark', badge: 'success' },
+          { label: 'Data Recovery', value: '100% Recovered', detail: 'Zero lines of code lost', badge: 'success' },
+          { label: 'Reflog Lifespan', value: '90 days default', detail: 'Managed by gc.reflogExpire', badge: 'neutral' }
         ],
-        inspectorState: 'Commit Rescued via Reflog',
-        inspectorDetail: 'The reflog tracked the previous HEAD position before the reset. Creating branch rescue at HEAD@{1} restored the commit to active history.',
-        inspectorOperation: 'git branch rescue HEAD@{1}',
-        internalChange: '.git/refs/heads/rescue written with 4f901ab. Commit re-anchored.',
-        takeaway: 'The reflog is Git\'s ultimate flight recorder. As long as a commit was recorded in HEAD, you can rescue it with git branch <name> HEAD@{n}.',
-        plumbingCommand: 'git rev-parse HEAD@{1}',
-        xrayNote: 'Commit 4f901ab is back in the active commit graph under branch rescue.'
+        inspectorState: 'Reflog Flight Recorder Rescues Work',
+        inspectorDetail: 'ELI5: Git keeps a secret diary in .git/logs/HEAD recording every step your finger ever took. We checked the diary, saw that 5 minutes ago your finger was on 4f901ab, and stuck a brand new bookmark ("rescue") right back on it. Saved!',
+        inspectorOperation: 'git reflog && git switch -c rescue',
+        internalChange: 'Consulted .git/logs/HEAD. Created .git/refs/heads/rescue pointing to 4f901ab. HEAD attached to rescue.',
+        takeaway: 'git reflog is your ultimate safety net. If you ever think you ruined your repository, run git reflog first.',
+        plumbingCommand: 'git reflog show HEAD',
+        xrayNote: 'Column 1: See logs/HEAD and refs/heads/rescue appear. The commit is fully re-attached to the active graph.',
+        internals: {
+          head: 'HEAD@{1} = 4f901ab (from .git/logs/HEAD)',
+          branchRef: 'Reflog rescued orphaned commit',
+          commitHash: '4f901ab',
+          commitMsg: 'Restored before git gc prune',
+          treeHash: '7b2a901',
+          treeDetail: 'Object was never deleted, only unreferenced',
+          blobHash: '7ab38f4',
+          blobDetail: '30-90 day reflog safety window'
+        }
       },
       {
         label: '4. plumbing challenge: commit without porcelain',
-        command: 'TREE=$(git write-tree) && COMMIT=$(git commit-tree $TREE -m "Plumbing commit") && git update-ref refs/heads/main $COMMIT',
+        command: 'git hash-object -w app/deployment.yaml && git write-tree && git commit-tree 9b310ef -m "Plumbing commit" -p HEAD && git update-ref refs/heads/main 5f201ab',
         output: [
-          '# THE GRAND PLUMBING REVEAL:',
-          '# We created a commit WITHOUT using "git add" or "git commit"!',
-          '',
-          'Step 1: git hash-object -w <file>           -> wrote blob to .git/objects/',
-          'Step 2: git update-index --add --cacheinfo  -> updated binary index',
-          'Step 3: TREE=$(git write-tree)              -> wrote root tree object',
-          'Step 4: COMMIT=$(git commit-tree $TREE ...) -> minted commit envelope',
-          'Step 5: git update-ref refs/heads/main ...  -> advanced branch pointer',
-          '',
-          '# You have now seen every physical gear underneath the porcelain commands.'
+          'dev@lab:~/repos/infra-platform$ # THE 5-STEP PLUMBING ENGINE CHALLENGE:',
+          'dev@lab:~/repos/infra-platform$ # 1. Write Blob:   git hash-object -w app/deployment.yaml',
+          '7ab38f4a2190cd89e1401bc389012478901234ab',
+          'dev@lab:~/repos/infra-platform$ # 2. Stage Entry:  git update-index --add --cacheinfo 100644 7ab38f4 app/deployment.yaml',
+          'dev@lab:~/repos/infra-platform$ # 3. Freeze Tree:  git write-tree',
+          '9b310efe18ac49b012891ac37890123456789abc',
+          'dev@lab:~/repos/infra-platform$ # 4. Mint Commit:  git commit-tree 9b310ef -p HEAD -m "Plumbing commit"',
+          '5f201ab789012345678901234567890123456789',
+          'dev@lab:~/repos/infra-platform$ # 5. Advance Ref:  git update-ref refs/heads/main 5f201ab',
+          '# CONGRATULATIONS! You just minted a real Git commit without git add or git commit!',
+          '# Every porcelain command is just a wrapper around these 5 plumbing primitives.'
         ],
-        files: [
-          { path: '.git/objects', name: '.git/objects/ [blobs, trees, commits]', depth: 1, highlight: true },
-          { path: '.git/index', name: '.git/index [staged cacheinfo]', depth: 1, highlight: true },
-          { path: '.git/refs/heads/main', name: '.git/refs/heads/main [updated via update-ref]', depth: 1, highlight: true }
-        ],
+        files: getRepoFiles({
+          includeGit: true,
+          deploymentName: 'deployment.yaml',
+          gitFiles: [
+            { path: '.git/objects/5f', name: 'objects/5f/201ab... [Plumbing Commit]', depth: 1, highlight: true },
+            { path: '.git/objects/9b', name: 'objects/9b/310ef... [Plumbing Tree]', depth: 1, highlight: true },
+            { path: '.git/objects/7a', name: 'objects/7a/b38f4... [Plumbing Blob]', depth: 1, highlight: true },
+            { path: '.git/refs/heads/main', name: 'refs/heads/main -> 5f201ab [Plumbing Ref]', depth: 1, highlight: true }
+          ]
+        }),
         shelf: [
-          { label: 'Plumbing Level', value: 'Core Engine Exposed', detail: 'Zero porcelain commands', badge: 'success' },
-          { label: 'Raw Primitives', value: 'hash-object, write-tree', detail: 'commit-tree, update-ref', badge: 'success' },
-          { label: 'Porcelain Facade', value: 'git add & git commit', detail: 'Convenient wrappers', badge: 'neutral' },
-          { label: 'Mental Model', value: 'Complete Mastery', detail: 'Transparent Git Engine', badge: 'success' }
+          { label: '1. hash-object', value: '7ab38f4 (Blob)', detail: 'Direct byte compression', badge: 'neutral' },
+          { label: '2. write-tree', value: '9b310ef (Tree)', detail: 'Direct directory snapshot', badge: 'neutral' },
+          { label: '3. commit-tree', value: '5f201ab (Commit)', detail: 'Direct envelope minting', badge: 'success' },
+          { label: '4. update-ref', value: 'refs/heads/main', detail: 'Direct pointer advancement', badge: 'success' }
         ],
-        inspectorState: 'Complete Plumbing Pipeline Executed',
-        inspectorDetail: 'Every porcelain command (git add, git commit, git branch) is a user-friendly wrapper over five plumbing primitives: hash-object, update-index, write-tree, commit-tree, and update-ref.',
-        inspectorOperation: 'git write-tree && git commit-tree && git update-ref',
-        internalChange: 'Tree written from index. Commit minted from tree. Branch ref advanced directly.',
-        takeaway: 'Git is not magic. It is a content-addressed object store with a staging index and branch pointer files.',
+        inspectorState: 'The Complete 5-Step Engine Exposed',
+        inspectorDetail: 'ELI5: You just lifted the entire car hood and turned the engine crankshaft with your bare hands! You made a blob, staged it, built a tree receipt, sealed a commit envelope, and moved the branch bookmark—without touching git add or git commit. You now know how Git works better than 95% of software engineers.',
+        inspectorOperation: 'hash-object -> update-index -> write-tree -> commit-tree -> update-ref',
+        internalChange: 'Direct execution of Git core plumbing primitives without porcelain abstraction.',
+        takeaway: 'Git is not magic. It is a content-addressed key-value database with a staging cache and branch pointer files.',
         plumbingCommand: 'git cat-file -p HEAD',
-        xrayNote: 'You have mastered the mechanics of Git from everyday commands to deep storage engine plumbing.'
+        xrayNote: 'You have mastered Git from high-level porcelain down to low-level engine primitives. Turn on ⚙ Plumbing mode anytime to inspect the gears!',
+        internals: {
+          head: 'ref: refs/heads/main -> 5f201ab',
+          branchRef: 'Advanced directly via git update-ref',
+          commitHash: '5f201ab (minted via commit-tree)',
+          commitMsg: 'Manual plumbing pipeline completed',
+          treeHash: '9b310ef (written via write-tree)',
+          treeDetail: 'Generated directly from index entries',
+          blobHash: '7ab38f4 (hashed via hash-object -w)',
+          blobDetail: 'Porcelain commands are just wrappers!'
+        }
       }
     ]
   }
@@ -1551,27 +2126,15 @@ export function getStepInternals(lab: GitLab, stepIdx: number): GitInternalsStat
           blobDetail: 'deployment.yaml (staged)'
         };
       }
-      if (stepIdx === 1) {
-        return {
-          head: 'ref: refs/heads/main',
-          branchRef: 'refs/heads/main -> c3904e1',
-          commitHash: 'c3904e1 (parent)',
-          commitMsg: 'Commit not minted yet',
-          treeHash: '7b2a901 (written to objects/)',
-          treeDetail: 'Root Merkle tree frozen',
-          blobHash: '7ab38f4',
-          blobDetail: 'Referenced by tree 7b2a901'
-        };
-      }
       return {
         head: 'ref: refs/heads/main',
-        branchRef: stepIdx === 3 ? 'refs/heads/main -> 4f901ab (ADVANCED!)' : 'refs/heads/main -> c3904e1',
+        branchRef: stepIdx >= 1 ? 'refs/heads/main -> 4f901ab (ADVANCED!)' : 'refs/heads/main -> c3904e1',
         commitHash: '4f901ab',
         commitMsg: '"Scale cache deployment"',
-        treeHash: '7b2a901',
+        treeHash: 'f419dc8',
         treeDetail: 'tree pointer in commit envelope',
         blobHash: '7ab38f4',
-        blobDetail: 'app/deployment.yaml (replicas: 3)'
+        blobDetail: 'app/deployment.yaml (replicas: 4)'
       };
 
     case 'branches-are-references':
@@ -1581,7 +2144,7 @@ export function getStepInternals(lab: GitLab, stepIdx: number): GitInternalsStat
           branchRef: stepIdx === 1 ? 'main: 4f901ab | feature/cache: 4f901ab' : 'refs/heads/main -> 4f901ab',
           commitHash: '4f901ab',
           commitMsg: 'Both branch files point to same commit',
-          treeHash: '7b2a901',
+          treeHash: 'f419dc8',
           treeDetail: 'Identical snapshot shared',
           blobHash: '7ab38f4',
           blobDetail: 'No files duplicated'
@@ -1613,8 +2176,8 @@ export function getStepInternals(lab: GitLab, stepIdx: number): GitInternalsStat
       }
       if (stepIdx === 1) {
         return {
-          head: 'ref: refs/heads/main',
-          branchRef: 'refs/heads/main -> 4f901ab',
+          head: '4f901ab (DETACHED HEAD!)',
+          branchRef: 'No branch reference! HEAD is a raw SHA.',
           commitHash: '4f901ab',
           commitMsg: '"Scale cache deployment"',
           treeHash: '7b2a901',
@@ -1623,15 +2186,27 @@ export function getStepInternals(lab: GitLab, stepIdx: number): GitInternalsStat
           blobDetail: 'replicas: 3'
         };
       }
+      if (stepIdx === 2) {
+        return {
+          head: 'c5019a2 (DETACHED HEAD!)',
+          branchRef: 'No branch reference! Floating commit.',
+          commitHash: 'c5019a2',
+          commitMsg: 'New commits here will become orphans!',
+          treeHash: '8b190ac',
+          treeDetail: 'Read-only inspection state',
+          blobHash: 'e1401bc',
+          blobDetail: 'probe: true'
+        };
+      }
       return {
-        head: '4f901ab (DETACHED HEAD!)',
-        branchRef: 'No branch reference! HEAD is a raw SHA.',
-        commitHash: '4f901ab',
-        commitMsg: 'New commits here will become orphans!',
-        treeHash: '7b2a901',
-        treeDetail: 'Read-only inspection state',
-        blobHash: '7ab38f4',
-        blobDetail: 'replicas: 3'
+        head: 'ref: refs/heads/fix/cache-probe',
+        branchRef: 'refs/heads/fix/cache-probe -> c5019a2 (RESCUED!)',
+        commitHash: 'c5019a2',
+        commitMsg: 'Rescued with named branch',
+        treeHash: '8b190ac',
+        treeDetail: 'Anchored in graph',
+        blobHash: 'e1401bc',
+        blobDetail: 'probe: true'
       };
 
     case 'checkout-switch-rebuilding-workspace':
@@ -1716,7 +2291,7 @@ export function getStepInternals(lab: GitLab, stepIdx: number): GitInternalsStat
           treeHash: '7b2a901',
           treeDetail: 'Baseline clean state',
           blobHash: '7ab38f4',
-          blobDetail: 'replicas: 3'
+          blobDetail: 'replicas: 4'
         };
       }
       if (stepIdx === 1) {
@@ -1819,12 +2394,12 @@ export function getStepInternals(lab: GitLab, stepIdx: number): GitInternalsStat
         return {
           head: '/repos/infra-platform: ref: refs/heads/main',
           branchRef: 'Root repository worktree',
-          commitHash: '4f901ab',
-          commitMsg: 'Context switch without stashing or branch switching',
-          treeHash: 'Root index intact',
-          treeDetail: 'Different branch checked out simultaneously',
-          blobHash: '7ab38f4',
-          blobDetail: 'Multi-directory development'
+          commitHash: 'c3904e1',
+          commitMsg: 'Commit 4f901ab temporarily lost from log',
+          treeHash: 'e189ac2',
+          treeDetail: 'Working tree rewound to baseline',
+          blobHash: '94b810a',
+          blobDetail: '4f901ab blob still safe in objects/'
         };
       }
       if (stepIdx === 2) {

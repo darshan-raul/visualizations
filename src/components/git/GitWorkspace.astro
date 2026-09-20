@@ -9,6 +9,32 @@ interface Props {
 const { lab } = Astro.props;
 const firstStep = lab.steps[0];
 const initialInternals = getStepInternals(lab, 0);
+
+const graphTitles: Record<string, string> = {
+  'where-is-git': 'THE 4 DOORS OF .GIT (VAULT ANATOMY)',
+  'what-git-add-does': 'STAGING PIPELINE & THE 3-LAYER MM STATE',
+  'what-git-commit-creates': 'MERKLE TREE HIERARCHY & SUBTREE REUSE',
+  'branches-are-references': '41-BYTE BRANCH POINTERS (refs/heads/)',
+  'head-pointer-and-detached-head': 'SYMBOLIC REF VS DETACHED HEAD',
+  'checkout-switch-rebuilding-workspace': '3-STEP ATOMIC WORKSPACE REBUILD',
+  'merge-vs-rebase-graph-surgery': '2-PARENT MERGE VS REBASE COMMIT REPLAY',
+  'reset-restore-revert': 'THE 3 PHYSICAL BOUNDARIES UNDO MATRIX',
+  'merge-conflicts-three-stage-index': '3-STAGE CONFLICT RESOLUTION (BASE/OURS/THEIRS)',
+  'worktrees-reflog-and-plumbing': 'MULTI-WORKTREE SHARED VAULT & PLUMBING'
+};
+
+const svgViewBoxes: Record<string, string> = {
+  'where-is-git': '0 0 900 180',
+  'what-git-add-does': '0 0 900 240',
+  'what-git-commit-creates': '0 0 900 275',
+  'branches-are-references': '0 0 900 180',
+  'head-pointer-and-detached-head': '0 0 900 200',
+  'checkout-switch-rebuilding-workspace': '0 0 900 210',
+  'merge-vs-rebase-graph-surgery': '0 0 900 240',
+  'reset-restore-revert': '0 0 900 220',
+  'merge-conflicts-three-stage-index': '0 0 900 230',
+  'worktrees-reflog-and-plumbing': '0 0 900 250'
+};
 ---
 
 <div class="git-workspace" data-git-workspace={lab.id} data-ws-mode="learn">
@@ -99,9 +125,10 @@ const initialInternals = getStepInternals(lab, 0);
             ]}
             style={`--depth: ${file.depth || 0}`}
             data-file-path={file.path}
+            title={`Click to inspect ${file.path} in terminal`}
           >
             <span class="file-icon" aria-hidden="true">
-              {file.isDir ? '📁' : file.status === 'UU' ? '⚠️' : '📄'}
+              {file.isDir ? '📁' : file.status === 'UU' ? '⚠️' : file.path.startsWith('.git') ? '⚙️' : '📄'}
             </span>
             <span class="file-name">{file.name}</span>
             {file.status && (
@@ -138,7 +165,7 @@ const initialInternals = getStepInternals(lab, 0);
           <div class="terminal-line is-welcome">
             <span class="term-comment"># Git Internals Lab Interactive Terminal</span>
             <span class="term-comment"># Repository: ~/repos/infra-platform ({lab.branch})</span>
-            <span class="term-comment"># Mode: Normal | Switch to X-Ray or Plumbing above to inspect internals</span>
+            <span class="term-comment"># Tip: Click buttons, cards, files, or quick chips below to run real Git commands!</span>
           </div>
           <div class="terminal-line is-prompt">
             <span class="term-prompt">dev@lab:~/repos/infra-platform ({lab.branch})$</span>
@@ -167,6 +194,29 @@ const initialInternals = getStepInternals(lab, 0);
             />
           </div>
         </form>
+
+        <!-- Interactive Quick Command Chips -->
+        <div class="terminal-quick-chips" aria-label="Quick Command Suggestions">
+          <span class="chips-label">QUICK:</span>
+          <button type="button" class="term-chip is-next-step" data-chip-cmd={firstStep.command} title="Run current laboratory step command">
+            ▶ Run Step
+          </button>
+          <button type="button" class="term-chip" data-chip-cmd="git status -s" title="Check short status">
+            git status -s
+          </button>
+          <button type="button" class="term-chip" data-chip-cmd="cat .git/HEAD" title="Inspect active HEAD pointer">
+            cat .git/HEAD
+          </button>
+          <button type="button" class="term-chip" data-chip-cmd="git ls-files --stage" title="Inspect binary staging index">
+            ls-files --stage
+          </button>
+          <button type="button" class="term-chip" data-chip-cmd="git log --oneline -n 3" title="View latest commits">
+            git log
+          </button>
+          <button type="button" class="term-chip" data-chip-cmd="clear" title="Clear terminal screen">
+            clear
+          </button>
+        </div>
       </div>
     </section>
 
@@ -179,36 +229,36 @@ const initialInternals = getStepInternals(lab, 0);
 
       <div class="internals-chain" data-ws-internals-chain>
         <!-- HEAD Pointer Card -->
-        <div class="internals-card card-head">
-          <div class="card-tag">HEAD POINTER</div>
+        <div class="internals-card card-head" data-inspect-card="head" title="Click to inspect HEAD in terminal" style="cursor:pointer;">
+          <div class="card-tag">HEAD POINTER ↵</div>
           <strong class="card-val" data-ws-head-ref>{initialInternals.head}</strong>
           <small class="card-sub">Your "you are here" position in the repository</small>
         </div>
 
         <!-- Branch Reference Card -->
-        <div class="internals-card card-ref">
-          <div class="card-tag">BRANCH REFERENCE</div>
+        <div class="internals-card card-ref" data-inspect-card="branch" title="Click to inspect branch in terminal" style="cursor:pointer;">
+          <div class="card-tag">BRANCH REFERENCE ↵</div>
           <strong class="card-val" data-ws-branch-ref>{initialInternals.branchRef}</strong>
           <small class="card-sub">Movable 41-byte text file inside .git/refs/heads/</small>
         </div>
 
         <!-- Commit Envelope Card -->
-        <div class="internals-card card-commit">
-          <div class="card-tag">COMMIT OBJECT</div>
+        <div class="internals-card card-commit" data-inspect-card="commit" title="Click to cat-file commit envelope in terminal" style="cursor:pointer;">
+          <div class="card-tag">COMMIT ENVELOPE ↵</div>
           <strong class="card-val" data-ws-commit-hash>{initialInternals.commitHash}</strong>
           <p class="card-msg" data-ws-commit-msg>{initialInternals.commitMsg}</p>
         </div>
 
         <!-- Root Tree Card -->
-        <div class="internals-card card-tree">
-          <div class="card-tag">ROOT TREE OBJECT</div>
+        <div class="internals-card card-tree" data-inspect-card="tree" title="Click to cat-file tree in terminal" style="cursor:pointer;">
+          <div class="card-tag">ROOT TREE OBJECT ↵</div>
           <strong class="card-val" data-ws-tree-hash>{initialInternals.treeHash}</strong>
           <small class="card-sub" data-ws-tree-detail>{initialInternals.treeDetail}</small>
         </div>
 
         <!-- Leaf Blob Card -->
-        <div class="internals-card card-blob">
-          <div class="card-tag">LEAF BLOB OBJECT</div>
+        <div class="internals-card card-blob" data-inspect-card="blob" title="Click to cat-file blob in terminal" style="cursor:pointer;">
+          <div class="card-tag">LEAF BLOB OBJECT ↵</div>
           <strong class="card-val" data-ws-blob-hash>{initialInternals.blobHash}</strong>
           <small class="card-sub" data-ws-blob-detail>{initialInternals.blobDetail}</small>
         </div>
@@ -277,16 +327,12 @@ const initialInternals = getStepInternals(lab, 0);
     <div class="graph-head">
       <span class="graph-tag">TOPOLOGY & GRAPH SNAPSHOT</span>
       <span class="graph-info" data-ws-graph-info>
-        {lab.id === 'worktrees-reflog-and-plumbing'
-          ? 'WORKTREE ISOLATION BOUNDARY'
-          : lab.id === 'what-git-add-does' || lab.id === 'what-git-commit-creates'
-          ? 'MERKLE TREE & OBJECT GRAPH'
-          : 'COMMIT DAG TRAVERSAL'}
+        {graphTitles[lab.id] || 'COMMIT DAG TRAVERSAL'}
       </span>
     </div>
     <div class="graph-canvas" data-ws-graph-canvas>
       <svg
-        viewBox={lab.id === 'what-git-add-does' || lab.id === 'what-git-commit-creates' ? "0 0 900 275" : "0 0 900 130"}
+        viewBox={svgViewBoxes[lab.id] || "0 0 900 180"}
         class="graph-svg"
         aria-hidden="true"
         preserveAspectRatio="xMidYMid meet"
@@ -303,7 +349,129 @@ const initialInternals = getStepInternals(lab, 0);
           </marker>
         </defs>
 
-        {lab.id === 'what-git-add-does' || lab.id === 'what-git-commit-creates' ? (
+        {lab.id === 'where-is-git' ? (
+          <g class="dag-where-is-git">
+            <!-- Left: Working Directory -->
+            <rect x="20" y="20" width="320" height="140" rx="8" fill="#0b1522" stroke="#2b4562" stroke-width="1.5" />
+            <rect x="20" y="20" width="320" height="24" rx="8" fill="#122338" />
+            <text x="180" y="36" text-anchor="middle" fill="#68a3ff" font-size="10.5" font-family="monospace" font-weight="bold">WORKING DIRECTORY (YOUR DESK)</text>
+            <text x="35" y="62" fill="#f2f5fc" font-size="9.5" font-family="monospace">📁 infra-platform/</text>
+            <text x="50" y="80" fill="#8592a8" font-size="9" font-family="monospace">├── 📁 app/ (deployment.yaml)</text>
+            <text x="50" y="98" fill="#8592a8" font-size="9" font-family="monospace">├── 📁 environments/ &amp; 📁 modules/</text>
+            <text x="50" y="116" fill="#8592a8" font-size="9" font-family="monospace">└── 📄 README.md &amp; .gitignore</text>
+            <text x="35" y="145" fill="#f6c763" font-size="8.5" font-family="monospace">Ordinary OS hard drive files. Git tracks nothing yet.</text>
+
+            <!-- Arrow: git init -->
+            <path d="M 345 90 H 400" stroke="#42d6e8" stroke-width="2.5" marker-end="url(#arrow)" />
+            <text x="372" y="80" text-anchor="middle" fill="#42d6e8" font-size="8.5" font-family="monospace" font-weight="bold">git init</text>
+
+            <!-- Right: The 4 Doors of .git Vault -->
+            <rect x="405" y="20" width="475" height="140" rx="8" fill="#081b28" stroke="#42d6e8" stroke-width="1.8" />
+            <rect x="405" y="20" width="475" height="24" rx="8" fill="#0d2c42" />
+            <text x="642" y="36" text-anchor="middle" fill="#42d6e8" font-size="10.5" font-family="monospace" font-weight="bold">THE HIDDEN REPOSITORY VAULT (.git/)</text>
+
+            <!-- Door 1: HEAD -->
+            <g class="door-card" data-git-inspect-cmd="cat .git/HEAD" style="cursor:pointer;">
+              <rect x="415" y="52" width="105" height="98" rx="6" fill="#0d2233" stroke="#42d6e8" stroke-width="1.4" />
+              <text x="467" y="68" text-anchor="middle" fill="#42d6e8" font-size="9" font-family="monospace" font-weight="bold">DOOR 1: HEAD</text>
+              <text x="467" y="85" text-anchor="middle" fill="#f2f5fc" font-size="8" font-family="monospace">"You are here"</text>
+              <text x="467" y="105" text-anchor="middle" fill="#49d6a3" font-size="7.5" font-family="monospace">ref: refs/heads/</text>
+              <text x="467" y="120" text-anchor="middle" fill="#49d6a3" font-size="8" font-family="monospace">main</text>
+              <text x="467" y="140" text-anchor="middle" fill="#6c879b" font-size="7" font-family="monospace">[Symbolic Ref]</text>
+            </g>
+
+            <!-- Door 2: INDEX -->
+            <g class="door-card" data-git-inspect-cmd="git ls-files --stage" style="cursor:pointer;">
+              <rect x="530" y="52" width="105" height="98" rx="6" fill="#0d2233" stroke="#68a3ff" stroke-width="1.4" />
+              <text x="582" y="68" text-anchor="middle" fill="#68a3ff" font-size="9" font-family="monospace" font-weight="bold">DOOR 2: INDEX</text>
+              <text x="582" y="85" text-anchor="middle" fill="#f2f5fc" font-size="8" font-family="monospace">Conveyor Belt</text>
+              <text x="582" y="105" text-anchor="middle" fill="#97a3b8" font-size="7.5" font-family="monospace">Binary Staging</text>
+              <text x="582" y="120" text-anchor="middle" fill="#97a3b8" font-size="8" font-family="monospace">Cache Ledger</text>
+              <text x="582" y="140" text-anchor="middle" fill="#6c879b" font-size="7" font-family="monospace">[git add target]</text>
+            </g>
+
+            <!-- Door 3: OBJECTS -->
+            <g class="door-card" data-git-inspect-cmd="git count-objects -v" style="cursor:pointer;">
+              <rect x="645" y="52" width="115" height="98" rx="6" fill="#0d2233" stroke="#f6c763" stroke-width="1.4" />
+              <text x="702" y="68" text-anchor="middle" fill="#f6c763" font-size="9" font-family="monospace" font-weight="bold">DOOR 3: OBJECTS/</text>
+              <text x="702" y="85" text-anchor="middle" fill="#f2f5fc" font-size="8" font-family="monospace">Immutable Vault</text>
+              <text x="702" y="105" text-anchor="middle" fill="#f6c763" font-size="7.5" font-family="monospace">blobs (files)</text>
+              <text x="702" y="120" text-anchor="middle" fill="#42d6e8" font-size="7.5" font-family="monospace">trees (folders)</text>
+              <text x="702" y="135" text-anchor="middle" fill="#49d6a3" font-size="7.5" font-family="monospace">commits (snapshots)</text>
+            </g>
+
+            <!-- Door 4: REFS -->
+            <g class="door-card" data-git-inspect-cmd="cat .git/refs/heads/main" style="cursor:pointer;">
+              <rect x="770" y="52" width="100" height="98" rx="6" fill="#0d2233" stroke="#49d6a3" stroke-width="1.4" />
+              <text x="820" y="68" text-anchor="middle" fill="#49d6a3" font-size="9" font-family="monospace" font-weight="bold">DOOR 4: REFS/</text>
+              <text x="820" y="85" text-anchor="middle" fill="#f2f5fc" font-size="8" font-family="monospace">Branch Tips</text>
+              <text x="820" y="105" text-anchor="middle" fill="#49d6a3" font-size="7.5" font-family="monospace">refs/heads/main</text>
+              <text x="820" y="120" text-anchor="middle" fill="#97a3b8" font-size="7.5" font-family="monospace">41-byte files</text>
+              <text x="820" y="140" text-anchor="middle" fill="#6c879b" font-size="7" font-family="monospace">[Commit Pointers]</text>
+            </g>
+          </g>
+        ) : lab.id === 'what-git-add-does' ? (
+          <g class="dag-add-pipeline">
+            <!-- Stage 1: Working Tree File on Desk -->
+            <g class="pipeline-stage" data-svg-step="0" data-git-inspect-cmd="cat app/deployment.yaml" style="cursor:pointer;">
+              <rect x="15" y="20" width="220" height="95" rx="7" fill="#141c28" stroke="#f6c763" stroke-width="1.8" />
+              <rect x="15" y="20" width="220" height="22" rx="7" fill="#222b15" />
+              <text x="125" y="35" text-anchor="middle" fill="#f6c763" font-size="9.5" font-family="monospace" font-weight="bold">STAGE 01: WORKING TREE</text>
+              <text x="25" y="58" fill="#f2f5fc" font-size="9" font-family="monospace">📄 app/deployment.yaml</text>
+              <text x="25" y="75" fill="#8592a8" font-size="8.5" font-family="monospace">Edits on disk: <tspan fill="#f6c763" font-weight="bold">replicas: 3</tspan></text>
+              <text x="25" y="95" fill="#f6c763" font-size="8" font-family="monospace">Dirty byte buffer on OS disk</text>
+            </g>
+
+            <!-- Arrow: hash-object -->
+            <path d="M 235 68 H 305" stroke="#f6c763" stroke-width="2.2" marker-end="url(#arrow-amber)" />
+            <text x="270" y="58" text-anchor="middle" fill="#f6c763" font-size="7.5" font-family="monospace">hash-object -w</text>
+
+            <!-- Stage 2: Object Storage Blob -->
+            <g class="pipeline-stage" data-svg-step="1" data-git-inspect-cmd="git cat-file -p 7ab38f4" style="cursor:pointer;">
+              <rect x="305" y="20" width="270" height="95" rx="7" fill="#081a26" stroke="#42d6e8" stroke-width="1.8" />
+              <rect x="305" y="20" width="270" height="22" rx="7" fill="#0d2e42" />
+              <text x="440" y="35" text-anchor="middle" fill="#42d6e8" font-size="9.5" font-family="monospace" font-weight="bold">STAGE 02: OBJECT VAULT (.git)</text>
+              <text x="315" y="58" fill="#42d6e8" font-size="9" font-family="monospace">📦 BLOB: 7ab38f4a2190cd...</text>
+              <text x="315" y="75" fill="#f2f5fc" font-size="8.5" font-family="monospace">Payload: "replicas: 3" (zlib)</text>
+              <text x="315" y="92" fill="#fb7e85" font-size="8" font-family="monospace">★ NO FILENAME IS STORED INSIDE BLOB!</text>
+              <text x="315" y="106" fill="#8592a8" font-size="7.5" font-family="monospace">Content-addressed storage in .git/objects/7a/</text>
+            </g>
+
+            <!-- Arrow: update-index -->
+            <path d="M 575 68 H 645" stroke="#49d6a3" stroke-width="2.2" marker-end="url(#arrow)" />
+            <text x="610" y="58" text-anchor="middle" fill="#49d6a3" font-size="7.5" font-family="monospace">update-index</text>
+
+            <!-- Stage 3: Binary Staging Index -->
+            <g class="pipeline-stage" data-svg-step="2" data-git-inspect-cmd="git ls-files --stage app/deployment.yaml" style="cursor:pointer;">
+              <rect x="645" y="20" width="240" height="95" rx="7" fill="#0a1f18" stroke="#49d6a3" stroke-width="1.8" />
+              <rect x="645" y="20" width="240" height="22" rx="7" fill="#0f3629" />
+              <text x="765" y="35" text-anchor="middle" fill="#49d6a3" font-size="9.5" font-family="monospace" font-weight="bold">STAGE 03: BINARY INDEX</text>
+              <text x="655" y="58" fill="#f2f5fc" font-size="8.5" font-family="monospace">Mode: 100644 (regular file)</text>
+              <text x="655" y="75" fill="#42d6e8" font-size="8.5" font-family="monospace">SHA: 7ab38f4 (points to blob)</text>
+              <text x="655" y="92" fill="#49d6a3" font-size="8.5" font-family="monospace">Path: app/deployment.yaml</text>
+              <text x="655" y="106" fill="#8592a8" font-size="7.5" font-family="monospace">Binary staging cache in .git/index</text>
+            </g>
+
+            <!-- Bottom: The MM State Comparison Strip -->
+            <rect x="15" y="130" width="870" height="95" rx="8" fill="#101826" stroke="#b79aff" stroke-width="1.4" />
+            <text x="30" y="148" fill="#b79aff" font-size="9.5" font-family="monospace" font-weight="bold">THE 3-LAYER MM PHENOMENON (STAGED VS UNSTAGED)</text>
+
+            <rect x="30" y="158" width="260" height="55" rx="5" fill="#0d1b28" stroke="#68a3ff" stroke-width="1" />
+            <text x="40" y="174" fill="#68a3ff" font-size="8.5" font-family="monospace" font-weight="bold">1. COMMITTED HEAD</text>
+            <text x="40" y="190" fill="#f2f5fc" font-size="8" font-family="monospace">Blob 94b810a · replicas: 2</text>
+            <text x="40" y="204" fill="#8592a8" font-size="7.5" font-family="monospace">Unmodified repository baseline</text>
+
+            <rect x="315" y="158" width="260" height="55" rx="5" fill="#0a1f18" stroke="#49d6a3" stroke-width="1.2" />
+            <text x="325" y="174" fill="#49d6a3" font-size="8.5" font-family="monospace" font-weight="bold">2. STAGED INDEX (First 'M')</text>
+            <text x="325" y="190" fill="#49d6a3" font-size="8" font-family="monospace">Blob 7ab38f4 · replicas: 3</text>
+            <text x="325" y="204" fill="#49d6a3" font-size="7.5" font-family="monospace">Sealed in objects/ via git add</text>
+
+            <rect x="600" y="158" width="270" height="55" rx="5" fill="#241b0d" stroke="#f6c763" stroke-width="1.2" />
+            <text x="610" y="174" fill="#f6c763" font-size="8.5" font-family="monospace" font-weight="bold">3. WORKING TREE (Second 'M')</text>
+            <text x="610" y="190" fill="#f6c763" font-size="8" font-family="monospace">Disk bytes · replicas: 4</text>
+            <text x="610" y="204" fill="#f6c763" font-size="7.5" font-family="monospace">Unstaged edits waiting for git add</text>
+          </g>
+        ) : lab.id === 'what-git-commit-creates' ? (
           <g class="dag-objects">
             <text x="87" y="11" text-anchor="middle" fill="#49d6a3" font-size="8.5" font-family="monospace" letter-spacing="0.08em">COMMIT (ENVELOPE)</text>
             <text x="282" y="11" text-anchor="middle" fill="#42d6e8" font-size="8.5" font-family="monospace" letter-spacing="0.08em">ROOT TREE (SNAPSHOT)</text>
@@ -311,19 +479,19 @@ const initialInternals = getStepInternals(lab, 0);
             <text x="767" y="11" text-anchor="middle" fill="#f6c763" font-size="8.5" font-family="monospace" letter-spacing="0.08em">LEAF BLOBS (PURE BYTES)</text>
 
             <!-- Commit Node -->
-            <g class="obj-group obj-commit" data-svg-step="3">
+            <g class="obj-group obj-commit" data-svg-step="2" data-git-inspect-cmd="git cat-file -p 4f901ab" style="cursor:pointer;">
               <rect x="15" y="100" width="145" height="70" rx="7" fill="#0d241d" stroke="#49d6a3" stroke-width="1.8" />
               <rect x="15" y="100" width="145" height="20" rx="7" fill="#11372f" />
               <text x="87" y="114" text-anchor="middle" fill="#49d6a3" font-size="10" font-family="monospace" font-weight="bold">COMMIT: 4f901ab</text>
               <text x="23" y="133" fill="#f2f5fc" font-size="9" font-family="monospace">tree: <tspan fill="#42d6e8" font-weight="bold">f419dc8</tspan> ──▶</text>
               <text x="23" y="148" fill="#8592a8" font-size="8.5" font-family="monospace">parent: e78b21a</text>
-              <text x="23" y="162" fill="#f6c763" font-size="8" font-family="monospace">"Scale cache replicas"</text>
+              <text x="23" y="162" fill="#f6c763" font-size="8" font-family="monospace">"Scale cache deployment"</text>
             </g>
 
             <line x1="160" y1="135" x2="205" y2="135" stroke="#42d6e8" stroke-width="2.5" marker-end="url(#arrow)" />
 
             <!-- Root Tree Node -->
-            <g class="obj-group obj-roottree" data-svg-step="2">
+            <g class="obj-group obj-roottree" data-svg-step="1" data-git-inspect-cmd="git cat-file -p f419dc8" style="cursor:pointer;">
               <rect x="205" y="100" width="155" height="70" rx="7" fill="#081e2b" stroke="#42d6e8" stroke-width="1.8" />
               <rect x="205" y="100" width="155" height="20" rx="7" fill="#0f3044" />
               <text x="282" y="114" text-anchor="middle" fill="#42d6e8" font-size="10" font-family="monospace" font-weight="bold">ROOT TREE: f419dc8</text>
@@ -334,19 +502,18 @@ const initialInternals = getStepInternals(lab, 0);
 
             <path d="M 360 135 H 385 V 68 H 410" fill="none" stroke="#42d6e8" stroke-width="2" marker-end="url(#arrow)" />
             <path d="M 385 135 V 174 H 410" fill="none" stroke="#42d6e8" stroke-width="2" marker-end="url(#arrow)" />
-            <path d="M 385 174 V 244 H 410" fill="none" stroke="#6c879b" stroke-width="2" marker-end="url(#arrow-muted)" />
 
             <!-- Subtree app/ -->
-            <g class="obj-group obj-subtree" data-svg-step="1">
+            <g class="obj-group obj-subtree" data-svg-step="0" data-git-inspect-cmd="git cat-file -p 7b2a901" style="cursor:pointer;">
               <rect x="410" y="38" width="185" height="60" rx="7" fill="#081e2b" stroke="#42d6e8" stroke-width="1.8" />
               <rect x="410" y="38" width="185" height="20" rx="7" fill="#0f3044" />
               <text x="502" y="52" text-anchor="middle" fill="#42d6e8" font-size="9.5" font-family="monospace" font-weight="bold">040000 tree app/ (7b2a901)</text>
-              <text x="420" y="72" fill="#f2f5fc" font-size="8.5" font-family="monospace">100644 blob <tspan fill="#f6c763" font-weight="bold">b14c80e</tspan> ──▶</text>
+              <text x="420" y="72" fill="#f2f5fc" font-size="8.5" font-family="monospace">100644 blob <tspan fill="#f6c763" font-weight="bold">7ab38f4</tspan> ──▶</text>
               <text x="420" y="88" fill="#8592a8" font-size="8.5" font-family="monospace">Directory Table (Names &amp; Modes)</text>
             </g>
 
             <!-- Subtree modules/ (Reused) -->
-            <g class="obj-group obj-subtree-reused" style="opacity: 0.85;">
+            <g class="obj-group obj-subtree-reused" data-git-inspect-cmd="git cat-file -p e2018ba" style="cursor:pointer; opacity: 0.85;">
               <rect x="410" y="145" width="185" height="58" rx="7" fill="#081622" stroke="#314d68" stroke-width="1.5" />
               <rect x="410" y="145" width="185" height="19" rx="7" fill="#0c2033" />
               <text x="485" y="159" text-anchor="middle" fill="#6c879b" font-size="9.5" font-family="monospace">040000 tree modules/</text>
@@ -358,36 +525,282 @@ const initialInternals = getStepInternals(lab, 0);
 
             <!-- Leaf Blobs -->
             <path d="M 595 68 H 622 V 38 H 650" fill="none" stroke="#f6c763" stroke-width="2" marker-end="url(#arrow-amber)" />
-            <path d="M 622 68 V 95 H 650" fill="none" stroke="#f6c763" stroke-width="1.8" marker-end="url(#arrow-amber)" />
 
-            <g class="obj-group obj-blob" data-svg-step="0">
+            <g class="obj-group obj-blob" data-svg-step="0" data-git-inspect-cmd="git cat-file -p 7ab38f4" style="cursor:pointer;">
               <rect x="650" y="15" width="235" height="46" rx="7" fill="#251c0c" stroke="#f6c763" stroke-width="1.8" />
               <rect x="650" y="15" width="235" height="18" rx="7" fill="#38290f" />
-              <text x="735" y="28" text-anchor="middle" fill="#f6c763" font-size="9.5" font-family="monospace" font-weight="bold">BLOB: b14c80e</text>
+              <text x="735" y="28" text-anchor="middle" fill="#f6c763" font-size="9.5" font-family="monospace" font-weight="bold">BLOB: 7ab38f4</text>
               <rect x="805" y="18" width="74" height="12" rx="3" fill="rgba(251, 126, 133, 0.2)" stroke="rgba(251, 126, 133, 0.5)" stroke-width="0.8" />
               <text x="842" y="27" text-anchor="middle" fill="#fb7e85" font-size="7" font-family="monospace" font-weight="bold">NO FILENAME</text>
-              <text x="660" y="45" fill="#f2f5fc" font-size="8.5" font-family="monospace">replicas: 3 · redis:7.0-alpine</text>
-              <text x="660" y="56" fill="#8592a8" font-size="7.5" font-family="monospace">pure byte payload (in .git/objects/b1/)</text>
+              <text x="660" y="45" fill="#f2f5fc" font-size="8.5" font-family="monospace">replicas: 4 · redis:7.0-alpine</text>
+              <text x="660" y="56" fill="#8592a8" font-size="7.5" font-family="monospace">pure byte payload (in .git/objects/7a/)</text>
             </g>
+          </g>
+        ) : lab.id === 'branches-are-references' ? (
+          <g class="dag-branches">
+            <!-- Commit Chain -->
+            <circle cx="120" cy="70" r="22" fill="#0d1b28" stroke="#6c879b" stroke-width="2" data-git-inspect-cmd="git cat-file -p c3904e1" style="cursor:pointer;" />
+            <text x="120" y="74" text-anchor="middle" fill="#f2f5fc" font-size="9.5" font-family="monospace" font-weight="bold">c3904</text>
+            <text x="120" y="108" text-anchor="middle" fill="#8592a8" font-size="8.5" font-family="monospace">Initial</text>
+
+            <line x1="145" y1="70" x2="295" y2="70" stroke="#42d6e8" stroke-width="2.2" marker-end="url(#arrow)" />
+
+            <circle cx="320" cy="70" r="22" fill="#081e2b" stroke="#42d6e8" stroke-width="2.2" data-git-inspect-cmd="git cat-file -p 4f901ab" style="cursor:pointer;" />
+            <text x="320" y="74" text-anchor="middle" fill="#42d6e8" font-size="9.5" font-family="monospace" font-weight="bold">4f901</text>
+            <text x="320" y="108" text-anchor="middle" fill="#8592a8" font-size="8.5" font-family="monospace">Scale cache</text>
+
+            <line x1="345" y1="70" x2="495" y2="70" stroke="#49d6a3" stroke-width="2.2" marker-end="url(#arrow)" />
+
+            <circle cx="520" cy="70" r="22" fill="#0d241d" stroke="#49d6a3" stroke-width="2.2" data-git-inspect-cmd="git cat-file -p b14c80e" style="cursor:pointer;" />
+            <text x="520" y="74" text-anchor="middle" fill="#49d6a3" font-size="9.5" font-family="monospace" font-weight="bold">b14c8</text>
+            <text x="520" y="108" text-anchor="middle" fill="#49d6a3" font-size="8.5" font-family="monospace">Add redis</text>
+
+            <!-- Branch Pointer: main -->
+            <g class="branch-pointer" data-git-inspect-cmd="cat .git/refs/heads/main" style="cursor:pointer;">
+              <rect x="250" y="130" width="140" height="42" rx="6" fill="#122033" stroke="#42d6e8" stroke-width="1.5" />
+              <text x="320" y="148" text-anchor="middle" fill="#42d6e8" font-size="9" font-family="monospace" font-weight="bold">refs/heads/main</text>
+              <text x="320" y="163" text-anchor="middle" fill="#8592a8" font-size="8" font-family="monospace">41 bytes: "4f901ab\n"</text>
+              <line x1="320" y1="130" x2="320" y2="95" stroke="#42d6e8" stroke-width="2" marker-end="url(#arrow)" />
+            </g>
+
+            <!-- Branch Pointer: feature/cache -->
+            <g class="branch-pointer" data-git-inspect-cmd="cat .git/refs/heads/feature/cache" style="cursor:pointer;">
+              <rect x="450" y="130" width="150" height="42" rx="6" fill="#112820" stroke="#49d6a3" stroke-width="1.8" />
+              <text x="525" y="148" text-anchor="middle" fill="#49d6a3" font-size="9" font-family="monospace" font-weight="bold">feature/cache</text>
+              <text x="525" y="163" text-anchor="middle" fill="#8592a8" font-size="8" font-family="monospace">41 bytes: "b14c80e\n"</text>
+              <line x1="525" y1="130" x2="525" y2="95" stroke="#49d6a3" stroke-width="2" marker-end="url(#arrow)" />
+            </g>
+
+            <!-- HEAD Pointer -->
+            <g class="head-pointer" data-git-inspect-cmd="cat .git/HEAD" style="cursor:pointer;">
+              <rect x="670" y="45" width="210" height="75" rx="7" fill="#081e2b" stroke="#42d6e8" stroke-width="1.8" />
+              <rect x="670" y="45" width="210" height="20" rx="7" fill="#0f3044" />
+              <text x="775" y="59" text-anchor="middle" fill="#42d6e8" font-size="9.5" font-family="monospace" font-weight="bold">HEAD (ACTIVE POINTER)</text>
+              <text x="680" y="82" fill="#f2f5fc" font-size="9" font-family="monospace">ref: refs/heads/feature/cache</text>
+              <text x="680" y="100" fill="#49d6a3" font-size="8" font-family="monospace">★ Points to the branch, NOT the commit!</text>
+              <path d="M 670 82 H 610" stroke="#42d6e8" stroke-width="2" marker-end="url(#arrow)" />
+            </g>
+          </g>
+        ) : lab.id === 'head-pointer-and-detached-head' ? (
+          <g class="dag-head-detached">
+            <!-- Normal / Symbolic HEAD -->
+            <g class="head-normal" data-git-inspect-cmd="git symbolic-ref HEAD" style="cursor:pointer;">
+              <rect x="20" y="25" width="380" height="85" rx="8" fill="#081e2b" stroke="#42d6e8" stroke-width="1.8" />
+              <rect x="20" y="25" width="380" height="22" rx="8" fill="#0f3044" />
+              <text x="210" y="40" text-anchor="middle" fill="#42d6e8" font-size="10" font-family="monospace" font-weight="bold">NORMAL STATE: SYMBOLIC HEAD (SAFE)</text>
+              <text x="35" y="66" fill="#f2f5fc" font-size="9" font-family="monospace">HEAD ──▶ ref: refs/heads/feature/cache ──▶ Commit b14c8</text>
+              <text x="35" y="88" fill="#49d6a3" font-size="8.5" font-family="monospace">Protected by branch safety net. New commits advance the branch.</text>
+            </g>
+
+            <!-- Detached HEAD Warning -->
+            <g class="head-detached" data-git-inspect-cmd="cat .git/HEAD" style="cursor:pointer;">
+              <rect x="440" y="25" width="440" height="85" rx="8" fill="#291216" stroke="#fb7e85" stroke-width="2" />
+              <rect x="440" y="25" width="440" height="22" rx="8" fill="#3d181e" />
+              <text x="660" y="40" text-anchor="middle" fill="#fb7e85" font-size="10" font-family="monospace" font-weight="bold">⚠️ DETACHED HEAD STATE (NO BRANCH SAFETY NET)</text>
+              <text x="455" y="66" fill="#f2f5fc" font-size="9" font-family="monospace">HEAD ──▶ 4f901ab (RAW 40-CHAR COMMIT HASH!)</text>
+              <text x="455" y="88" fill="#fb7e85" font-size="8.5" font-family="monospace">Branch reference is gone! Commits made here risk becoming orphans.</text>
+            </g>
+
+            <!-- Bottom: Rescue Mechanism -->
+            <rect x="20" y="125" width="860" height="65" rx="7" fill="#0d1b28" stroke="#68a3ff" stroke-width="1.4" />
+            <text x="450" y="146" text-anchor="middle" fill="#68a3ff" font-size="9.5" font-family="monospace" font-weight="bold">RESCUING A DETACHED COMMIT: git switch -c fix/cache-probe</text>
+            <text x="450" y="166" text-anchor="middle" fill="#97a3b8" font-size="8.5" font-family="monospace">Instantly creates a new 41-byte branch file pointing to the detached commit. Zero work lost!</text>
+          </g>
+        ) : lab.id === 'checkout-switch-rebuilding-workspace' ? (
+          <g class="dag-checkout">
+            <!-- 3 Steps of Checkout / Switch -->
+            <rect x="20" y="20" width="260" height="110" rx="7" fill="#081e2b" stroke="#42d6e8" stroke-width="1.8" />
+            <rect x="20" y="20" width="260" height="22" rx="7" fill="#0f3044" />
+            <text x="150" y="35" text-anchor="middle" fill="#42d6e8" font-size="9.5" font-family="monospace" font-weight="bold">STEP 1: MOVE HEAD REF</text>
+            <text x="35" y="60" fill="#f2f5fc" font-size="8.5" font-family="monospace">HEAD pointer file updated:</text>
+            <text x="35" y="78" fill="#42d6e8" font-size="8" font-family="monospace">refs/heads/feature ──▶ refs/heads/main</text>
+            <text x="35" y="100" fill="#8592a8" font-size="7.5" font-family="monospace">O(1) 40-byte string replacement</text>
+
+            <path d="M 285 75 H 320" stroke="#42d6e8" stroke-width="2.2" marker-end="url(#arrow)" />
+
+            <rect x="320" y="20" width="270" height="110" rx="7" fill="#0a1f18" stroke="#49d6a3" stroke-width="1.8" />
+            <rect x="320" y="20" width="270" height="22" rx="7" fill="#0f3629" />
+            <text x="455" y="35" text-anchor="middle" fill="#49d6a3" font-size="9.5" font-family="monospace" font-weight="bold">STEP 2: SWAP BINARY INDEX</text>
+            <text x="335" y="60" fill="#f2f5fc" font-size="8.5" font-family="monospace">Read target commit's Root Tree:</text>
+            <text x="335" y="78" fill="#49d6a3" font-size="8" font-family="monospace">Reloads .git/index staging cache</text>
+            <text x="335" y="100" fill="#8592a8" font-size="7.5" font-family="monospace">O(tree size) fast memory load</text>
+
+            <path d="M 595 75 H 630" stroke="#49d6a3" stroke-width="2.2" marker-end="url(#arrow)" />
+
+            <rect x="630" y="20" width="250" height="110" rx="7" fill="#141c28" stroke="#f6c763" stroke-width="1.8" />
+            <rect x="630" y="20" width="250" height="22" rx="7" fill="#222b15" />
+            <text x="755" y="35" text-anchor="middle" fill="#f6c763" font-size="9.5" font-family="monospace" font-weight="bold">STEP 3: SWAP DISK FILES</text>
+            <text x="645" y="60" fill="#f2f5fc" font-size="8.5" font-family="monospace">deployment.yaml ──▶ restored to C1</text>
+            <text x="645" y="78" fill="#fb7e85" font-size="8" font-family="monospace">redis.yaml ──▶ cleanly dematerialized!</text>
+            <text x="645" y="100" fill="#8592a8" font-size="7.5" font-family="monospace">Only modified files touched on disk</text>
+
+            <!-- Bottom: Dirty Guard Banner -->
+            <rect x="20" y="145" width="860" height="50" rx="6" fill="#241b0d" stroke="#f6c763" stroke-width="1.2" />
+            <text x="450" y="165" text-anchor="middle" fill="#f6c763" font-size="9" font-family="monospace" font-weight="bold">DIRTY FILE GUARD: Git halts checkout if unstaged changes would be overwritten</text>
+            <text x="450" y="180" text-anchor="middle" fill="#8592a8" font-size="8" font-family="monospace">Run git stash to safely store local edits in a drawer before switching.</text>
+          </g>
+        ) : lab.id === 'merge-vs-rebase-graph-surgery' ? (
+          <g class="dag-merge-rebase">
+            <!-- Top Lane: Git Merge -->
+            <rect x="20" y="15" width="860" height="100" rx="8" fill="#0d1b28" stroke="#68a3ff" stroke-width="1.6" />
+            <rect x="20" y="15" width="860" height="22" rx="8" fill="#13273d" />
+            <text x="450" y="30" text-anchor="middle" fill="#68a3ff" font-size="9.5" font-family="monospace" font-weight="bold">GIT MERGE: TWO-PARENT MERGE COMMIT (PRESERVES TRUE DIVERGENCE)</text>
+
+            <circle cx="80" cy="70" r="18" fill="#081e2b" stroke="#6c879b" stroke-width="1.8" />
+            <text x="80" y="74" text-anchor="middle" fill="#f2f5fc" font-size="9" font-family="monospace">c3904</text>
+
+            <line x1="100" y1="70" x2="220" y2="70" stroke="#68a3ff" stroke-width="2" marker-end="url(#arrow)" />
+
+            <circle cx="240" cy="55" r="18" fill="#081e2b" stroke="#68a3ff" stroke-width="1.8" />
+            <text x="240" y="59" text-anchor="middle" fill="#68a3ff" font-size="9" font-family="monospace">e78b2</text>
+            <text x="240" y="32" text-anchor="middle" fill="#68a3ff" font-size="7.5" font-family="monospace">main</text>
+
+            <circle cx="240" cy="88" r="18" fill="#0d241d" stroke="#49d6a3" stroke-width="1.8" />
+            <text x="240" y="92" text-anchor="middle" fill="#49d6a3" font-size="9" font-family="monospace">b14c8</text>
+            <text x="240" y="112" text-anchor="middle" fill="#49d6a3" font-size="7.5" font-family="monospace">feature</text>
+
+            <path d="M 260 55 L 390 70" stroke="#68a3ff" stroke-width="2" marker-end="url(#arrow)" />
+            <path d="M 260 88 L 390 70" stroke="#49d6a3" stroke-width="2" marker-end="url(#arrow)" />
+
+            <circle cx="410" cy="70" r="22" fill="#1b2438" stroke="#b79aff" stroke-width="2.2" />
+            <text x="410" y="74" text-anchor="middle" fill="#b79aff" font-size="9" font-family="monospace" font-weight="bold">8c149</text>
+            <text x="410" y="103" text-anchor="middle" fill="#b79aff" font-size="7.5" font-family="monospace">MERGE (2 PARENTS)</text>
+
+            <text x="640" y="65" fill="#f2f5fc" font-size="8.5" font-family="monospace">Parent 1: e78b21a (main)</text>
+            <text x="640" y="80" fill="#f2f5fc" font-size="8.5" font-family="monospace">Parent 2: b14c80e (feature)</text>
+            <text x="640" y="95" fill="#49d6a3" font-size="8" font-family="monospace">Non-destructive: full historical integrity</text>
+
+            <!-- Bottom Lane: Git Rebase -->
+            <rect x="20" y="125" width="860" height="100" rx="8" fill="#081e28" stroke="#42d6e8" stroke-width="1.6" />
+            <rect x="20" y="125" width="860" height="22" rx="8" fill="#0d2e42" />
+            <text x="450" y="140" text-anchor="middle" fill="#42d6e8" font-size="9.5" font-family="monospace" font-weight="bold">GIT REBASE: COMMIT REPLAY WITH BRAND NEW SHAS (LINEAR TIMELINE)</text>
+
+            <circle cx="80" cy="180" r="18" fill="#081e2b" stroke="#6c879b" stroke-width="1.8" />
+            <text x="80" y="184" text-anchor="middle" fill="#f2f5fc" font-size="9" font-family="monospace">c3904</text>
+
+            <line x1="100" y1="180" x2="220" y2="180" stroke="#68a3ff" stroke-width="2" marker-end="url(#arrow)" />
+
+            <circle cx="240" cy="180" r="18" fill="#081e2b" stroke="#68a3ff" stroke-width="1.8" />
+            <text x="240" y="184" text-anchor="middle" fill="#68a3ff" font-size="9" font-family="monospace">e78b2</text>
+            <text x="240" y="210" text-anchor="middle" fill="#68a3ff" font-size="7.5" font-family="monospace">main</text>
+
+            <line x1="260" y1="180" x2="380" y2="180" stroke="#42d6e8" stroke-width="2" marker-end="url(#arrow)" />
+
+            <circle cx="400" cy="180" r="20" fill="#082a2b" stroke="#42d6e8" stroke-width="2.2" />
+            <text x="400" y="184" text-anchor="middle" fill="#42d6e8" font-size="9" font-family="monospace" font-weight="bold">a92d1</text>
+            <text x="400" y="210" text-anchor="middle" fill="#42d6e8" font-size="7.5" font-family="monospace">C3' (REPLAYED)</text>
+
+            <text x="560" y="170" fill="#42d6e8" font-size="8.5" font-family="monospace">★ New hash: a92d18f (new parent e78b2)</text>
+            <text x="560" y="186" fill="#fb7e85" font-size="8" font-family="monospace">Original b14c80e is orphaned in object storage!</text>
+            <text x="560" y="202" fill="#8592a8" font-size="8" font-family="monospace">Creates a clean single line, but rewrites commit history.</text>
+          </g>
+        ) : lab.id === 'reset-restore-revert' ? (
+          <g class="dag-reset">
+            <!-- 3 Boundaries of Reset -->
+            <rect x="20" y="20" width="260" height="120" rx="8" fill="#081e2b" stroke="#42d6e8" stroke-width="1.8" />
+            <rect x="20" y="20" width="260" height="22" rx="8" fill="#0f3044" />
+            <text x="150" y="35" text-anchor="middle" fill="#42d6e8" font-size="9.5" font-family="monospace" font-weight="bold">ZONE 1: HEAD / REF</text>
+            <text x="35" y="60" fill="#f2f5fc" font-size="8.5" font-family="monospace">Movable 41-byte text pointer</text>
+            <text x="35" y="78" fill="#42d6e8" font-size="8" font-family="monospace">--soft moves this zone ONLY</text>
+            <text x="35" y="98" fill="#49d6a3" font-size="8" font-family="monospace">Index &amp; Working Tree 100% safe</text>
+            <text x="35" y="120" fill="#8592a8" font-size="7.5" font-family="monospace">Ideal for amending commit messages</text>
+
+            <rect x="310" y="20" width="270" height="120" rx="8" fill="#0a1f18" stroke="#49d6a3" stroke-width="1.8" />
+            <rect x="310" y="20" width="270" height="22" rx="8" fill="#0f3629" />
+            <text x="445" y="35" text-anchor="middle" fill="#49d6a3" font-size="9.5" font-family="monospace" font-weight="bold">ZONE 2: STAGING INDEX</text>
+            <text x="325" y="60" fill="#f2f5fc" font-size="8.5" font-family="monospace">Binary staging cache in .git/index</text>
+            <text x="325" y="78" fill="#49d6a3" font-size="8" font-family="monospace">--mixed (default) resets this zone</text>
+            <text x="325" y="98" fill="#f6c763" font-size="8" font-family="monospace">Working Tree remains untouched on disk</text>
+            <text x="325" y="120" fill="#8592a8" font-size="7.5" font-family="monospace">Changes appear as unstaged edits</text>
+
+            <rect x="610" y="20" width="270" height="120" rx="8" fill="#241416" stroke="#fb7e85" stroke-width="1.8" />
+            <rect x="610" y="20" width="270" height="22" rx="8" fill="#38191d" />
+            <text x="745" y="35" text-anchor="middle" fill="#fb7e85" font-size="9.5" font-family="monospace" font-weight="bold">ZONE 3: WORKING TREE (DESK)</text>
+            <text x="625" y="60" fill="#f2f5fc" font-size="8.5" font-family="monospace">Physical files on your hard drive</text>
+            <text x="625" y="78" fill="#fb7e85" font-size="8" font-family="monospace">--hard FORCIBLY WIPES THIS ZONE!</text>
+            <text x="625" y="98" fill="#fb7e85" font-size="8" font-family="monospace">★ DESTROYS UNCOMMITTED EDITS!</text>
+            <text x="625" y="120" fill="#8592a8" font-size="7.5" font-family="monospace">Cannot be recovered via reflog</text>
+
+            <!-- Bottom: git revert note -->
+            <rect x="20" y="155" width="860" height="50" rx="6" fill="#0d1b28" stroke="#68a3ff" stroke-width="1.2" />
+            <text x="450" y="175" text-anchor="middle" fill="#68a3ff" font-size="9" font-family="monospace" font-weight="bold">SAFE PRODUCTION UNDO: git revert creates a new forward commit that inverses changes</text>
+            <text x="450" y="190" text-anchor="middle" fill="#8592a8" font-size="8" font-family="monospace">Never rewrites history; completely safe for shared branches and continuous deployment pipelines.</text>
+          </g>
+        ) : lab.id === 'merge-conflicts-three-stage-index' ? (
+          <g class="dag-conflicts">
+            <!-- 3 Concurrent Stages in Index -->
+            <rect x="20" y="15" width="240" height="85" rx="7" fill="#0d1b28" stroke="#68a3ff" stroke-width="1.5" />
+            <text x="140" y="35" text-anchor="middle" fill="#68a3ff" font-size="9" font-family="monospace" font-weight="bold">STAGE 1: BASE (ANCESTOR)</text>
+            <text x="35" y="55" fill="#f2f5fc" font-size="8.5" font-family="monospace">SHA: c3904e1</text>
+            <text x="35" y="72" fill="#8592a8" font-size="8" font-family="monospace">replicas: 2 (original baseline)</text>
+            <text x="35" y="88" fill="#6c879b" font-size="7.5" font-family="monospace">Common ancestor state</text>
+
+            <rect x="280" y="15" width="240" height="85" rx="7" fill="#0a1f18" stroke="#49d6a3" stroke-width="1.5" />
+            <text x="400" y="35" text-anchor="middle" fill="#49d6a3" font-size="9" font-family="monospace" font-weight="bold">STAGE 2: OURS (MAIN)</text>
+            <text x="295" y="55" fill="#f2f5fc" font-size="8.5" font-family="monospace">SHA: e78b21a</text>
+            <text x="295" y="72" fill="#49d6a3" font-size="8" font-family="monospace">replicas: 5 (our change)</text>
+            <text x="295" y="88" fill="#6c879b" font-size="7.5" font-family="monospace">Version on target branch</text>
+
+            <rect x="540" y="15" width="240" height="85" rx="7" fill="#241b0d" stroke="#f6c763" stroke-width="1.5" />
+            <text x="660" y="35" text-anchor="middle" fill="#f6c763" font-size="9" font-family="monospace" font-weight="bold">STAGE 3: THEIRS (FEATURE)</text>
+            <text x="555" y="55" fill="#f2f5fc" font-size="8.5" font-family="monospace">SHA: b14c80e</text>
+            <text x="555" y="72" fill="#f6c763" font-size="8" font-family="monospace">replicas: 3 (their change)</text>
+            <text x="555" y="88" fill="#6c879b" font-size="7.5" font-family="monospace">Version on merging branch</text>
+
+            <!-- Conflict Markers on Disk -->
+            <rect x="20" y="115" width="460" height="95" rx="7" fill="#241416" stroke="#fb7e85" stroke-width="1.8" />
+            <rect x="20" y="115" width="460" height="20" rx="7" fill="#38191d" />
+            <text x="250" y="129" text-anchor="middle" fill="#fb7e85" font-size="9" font-family="monospace" font-weight="bold">ON DISK: CONFLICT MARKERS</text>
+            <text x="35" y="150" fill="#fb7e85" font-size="8.5" font-family="monospace">&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD (replicas: 5)</text>
+            <text x="35" y="167" fill="#8592a8" font-size="8.5" font-family="monospace">=======</text>
+            <text x="35" y="184" fill="#f6c763" font-size="8.5" font-family="monospace">&gt;&gt;&gt;&gt;&gt;&gt;&gt; feature/cache (replicas: 3)</text>
+            <text x="35" y="200" fill="#f2f5fc" font-size="8" font-family="monospace">Engineer manually edits file and removes marker lines</text>
+
+            <path d="M 490 160 H 540" stroke="#49d6a3" stroke-width="2.5" marker-end="url(#arrow)" />
+            <text x="515" y="150" text-anchor="middle" fill="#49d6a3" font-size="7.5" font-family="monospace">git add</text>
+
+            <!-- Resolution: Stage 0 -->
+            <rect x="550" y="115" width="330" height="95" rx="7" fill="#0d241d" stroke="#49d6a3" stroke-width="1.8" />
+            <rect x="550" y="115" width="330" height="20" rx="7" fill="#11372f" />
+            <text x="715" y="129" text-anchor="middle" fill="#49d6a3" font-size="9" font-family="monospace" font-weight="bold">RESOLVED: STAGE 0 RESTORED</text>
+            <text x="565" y="150" fill="#49d6a3" font-size="8.5" font-family="monospace">Stage 0: f5819ab · replicas: 4</text>
+            <text x="565" y="168" fill="#f2f5fc" font-size="8" font-family="monospace">Stages 1, 2, and 3 purged from index!</text>
+            <text x="565" y="186" fill="#8592a8" font-size="8" font-family="monospace">Ready for git commit to seal merge commit.</text>
           </g>
         ) : lab.id === 'worktrees-reflog-and-plumbing' ? (
           <g class="dag-worktree">
-            <rect x="260" y="20" width="380" height="90" rx="10" fill="#132b3d" stroke="#42d6e8" stroke-width="1.8" />
-            <text x="450" y="44" text-anchor="middle" fill="#42d6e8" font-size="12" font-family="monospace" font-weight="bold">SHARED REPOSITORY ROOT (.git)</text>
-            <text x="450" y="66" text-anchor="middle" fill="#97a3b8" font-size="11" font-family="monospace">.git/objects (Immutable Object DB) · .git/refs/heads/</text>
-            <text x="450" y="86" text-anchor="middle" fill="#49d6a3" font-size="10" font-family="monospace">Zero disk duplication across checked-out worktrees</text>
+            <!-- Shared Central Object DB -->
+            <rect x="240" y="15" width="420" height="85" rx="8" fill="#102538" stroke="#42d6e8" stroke-width="1.8" />
+            <rect x="240" y="15" width="420" height="20" rx="8" fill="#15364f" />
+            <text x="450" y="29" text-anchor="middle" fill="#42d6e8" font-size="10" font-family="monospace" font-weight="bold">SHARED REPOSITORY VAULT (.git/objects/ &amp; .git/refs/)</text>
+            <text x="450" y="55" text-anchor="middle" fill="#f2f5fc" font-size="9" font-family="monospace">Immutable content-addressed storage · Shared by all linked worktrees</text>
+            <text x="450" y="74" text-anchor="middle" fill="#49d6a3" font-size="8.5" font-family="monospace">★ ZERO DISK DUPLICATION ACROSS CHECKOUTS</text>
 
-            <rect x="30" y="25" width="180" height="80" rx="8" fill="#0d1b29" stroke="#68a3ff" stroke-width="1.5" />
-            <text x="120" y="48" text-anchor="middle" fill="#68a3ff" font-size="11" font-family="monospace" font-weight="bold">/wt/networking</text>
-            <text x="120" y="68" text-anchor="middle" fill="#97a3b8" font-size="10" font-family="monospace">Private HEAD &amp; Index</text>
-            <text x="120" y="88" text-anchor="middle" fill="#f6c763" font-size="10" font-family="monospace">[feature/networking]</text>
-            <line x1="210" y1="65" x2="260" y2="65" stroke="#42d6e8" stroke-width="2" marker-end="url(#arrow)" />
+            <!-- Linked Worktree 1: Root -->
+            <rect x="15" y="115" width="260" height="68" rx="6" fill="#0d1b28" stroke="#68a3ff" stroke-width="1.5" />
+            <text x="145" y="135" text-anchor="middle" fill="#68a3ff" font-size="9.5" font-family="monospace" font-weight="bold">ROOT /repos/infra-platform</text>
+            <text x="145" y="152" text-anchor="middle" fill="#f2f5fc" font-size="8.5" font-family="monospace">Private HEAD &amp; Index: [main]</text>
+            <text x="145" y="168" text-anchor="middle" fill="#8592a8" font-size="7.5" font-family="monospace">Simultaneous checked-out branch</text>
+            <path d="M 145 115 V 80 H 240" fill="none" stroke="#68a3ff" stroke-width="1.8" marker-end="url(#arrow)" />
 
-            <rect x="690" y="25" width="180" height="80" rx="8" fill="#0d1b29" stroke="#b79aff" stroke-width="1.5" />
-            <text x="780" y="48" text-anchor="middle" fill="#b79aff" font-size="11" font-family="monospace" font-weight="bold">/wt/iam</text>
-            <text x="780" y="68" text-anchor="middle" fill="#97a3b8" font-size="10" font-family="monospace">Private HEAD &amp; Index</text>
-            <text x="780" y="88" text-anchor="middle" fill="#f6c763" font-size="10" font-family="monospace">[feature/iam]</text>
-            <line x1="690" y1="65" x2="640" y2="65" stroke="#42d6e8" stroke-width="2" marker-end="url(#arrow)" />
+            <!-- Linked Worktree 2: Networking -->
+            <rect x="315" y="115" width="270" height="68" rx="6" fill="#0a1f18" stroke="#49d6a3" stroke-width="1.5" />
+            <text x="450" y="135" text-anchor="middle" fill="#49d6a3" font-size="9.5" font-family="monospace" font-weight="bold">LINKED /wt/networking</text>
+            <text x="450" y="152" text-anchor="middle" fill="#49d6a3" font-size="8.5" font-family="monospace">Private HEAD &amp; Index: [feature/networking]</text>
+            <text x="450" y="168" text-anchor="middle" fill="#8592a8" font-size="7.5" font-family="monospace">Independent working tree directory</text>
+            <path d="M 450 115 V 100" fill="none" stroke="#49d6a3" stroke-width="1.8" marker-end="url(#arrow)" />
+
+            <!-- Linked Worktree 3: IAM -->
+            <rect x="625" y="115" width="260" height="68" rx="6" fill="#241b0d" stroke="#f6c763" stroke-width="1.5" />
+            <text x="755" y="135" text-anchor="middle" fill="#f6c763" font-size="9.5" font-family="monospace" font-weight="bold">LINKED /wt/iam</text>
+            <text x="755" y="152" text-anchor="middle" fill="#f6c763" font-size="8.5" font-family="monospace">Private HEAD &amp; Index: [feature/iam]</text>
+            <text x="755" y="168" text-anchor="middle" fill="#8592a8" font-size="7.5" font-family="monospace">Zero gigabytes cloned</text>
+            <path d="M 755 115 V 80 H 660" fill="none" stroke="#f6c763" stroke-width="1.8" marker-end="url(#arrow-amber)" />
+
+            <!-- Bottom: 5 Plumbing Primitives -->
+            <rect x="15" y="195" width="870" height="45" rx="6" fill="#081018" stroke="#23354a" stroke-width="1.2" />
+            <text x="450" y="212" text-anchor="middle" fill="#f6c763" font-size="8.5" font-family="monospace" font-weight="bold">THE 5 PLUMBING PRIMITIVES: hash-object ──▶ update-index ──▶ write-tree ──▶ commit-tree ──▶ update-ref</text>
+            <text x="450" y="228" text-anchor="middle" fill="#8592a8" font-size="7.5" font-family="monospace">Every porcelain command is just a user-friendly wrapper over these five low-level engine operations.</text>
           </g>
         ) : (
           <g class="dag-commits">
