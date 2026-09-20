@@ -27,7 +27,7 @@ const { lab } = Astro.props;
       </div>
 
       <div class="arch-svg-wrapper">
-        <svg viewBox="0 0 1000 520" class="arch-svg" aria-label="ACME Shop Living Prometheus Architecture Diagram">
+        <svg viewBox="0 0 1000 560" class="arch-svg" aria-label="ACME Shop Living Prometheus Architecture Diagram">
           <defs>
             <linearGradient id="promGrad" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stop-color="#ea580c" />
@@ -37,10 +37,6 @@ const { lab } = Astro.props;
               <stop offset="0%" stop-color="#1e293b" />
               <stop offset="100%" stop-color="#0f172a" />
             </linearGradient>
-            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="3" result="blur" />
-              <feComposite in="SourceGraphic" in2="blur" operator="over" />
-            </filter>
             <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto">
               <path d="M 0 1 L 8 5 L 0 9 z" fill="#64748b" />
             </marker>
@@ -50,137 +46,142 @@ const { lab } = Astro.props;
           </defs>
 
           {/* User Traffic Ingress */}
-          <rect x="420" y="15" width="160" height="40" rx="8" class="arch-box user-box" />
-          <text x="500" y="35" class="box-title" text-anchor="middle">USER TRAFFIC</text>
-          <text x="500" y="48" class="box-sub" text-anchor="middle" data-metric-user-traffic>340 req/s · 0.8% err</text>
+          <rect x="420" y="12" width="160" height="38" rx="6" class="arch-box user-box" />
+          <text x="500" y="28" class="box-title" text-anchor="middle">USER TRAFFIC</text>
+          <text x="500" y="42" class="box-sub" text-anchor="middle" data-metric-user-traffic>340 req/s · 0.8% err</text>
 
-          <path d="M 500 55 L 500 85" class="traffic-line" marker-end="url(#arrow)" />
+          <path d="M 500 50 L 500 75" class="traffic-line" marker-end="url(#arrow)" />
 
           {/* ACME Shop Cluster Boundary */}
-          <rect x="30" y="85" width="940" height="215" rx="12" class="cluster-boundary" />
-          <text x="45" y="105" class="cluster-title">KUBERNETES CLUSTER (ACME SHOP — 3 WORKER NODES)</text>
+          <rect x="30" y="75" width="940" height="245" rx="10" class="cluster-boundary" />
+          <text x="45" y="95" class="cluster-title">KUBERNETES CLUSTER (ACME SHOP — 3 WORKER NODES)</text>
 
-          {/* Frontend & API Gateway */}
+          {/* Tier 1: Frontend & API Gateway */}
           <g class="clickable-node" data-node-id="api-gateway">
-            <rect x="420" y="115" width="160" height="50" rx="6" class="node-box" />
-            <text x="500" y="136" class="node-title" text-anchor="middle">API Gateway (2)</text>
-            <text x="500" y="153" class="node-sub" text-anchor="middle" data-node-traffic="api-gateway">340 req/s · 38ms</text>
+            <rect x="420" y="105" width="160" height="46" rx="6" class="node-box" />
+            <text x="500" y="124" class="node-title" text-anchor="middle">API Gateway (2)</text>
+            <text x="500" y="141" class="node-sub" text-anchor="middle" data-node-traffic="api-gateway">340 req/s · 38ms</text>
           </g>
 
-          {/* Downstream Microservices */}
-          <path d="M 460 165 L 200 205" class="traffic-line" marker-end="url(#arrow)" />
-          <path d="M 500 165 L 500 205" class="traffic-line" marker-end="url(#arrow)" />
-          <path d="M 540 165 L 800 205" class="traffic-line" marker-end="url(#arrow)" />
+          {/* Traffic Lines from Gateway to Services */}
+          <path d="M 450 151 L 200 178" class="traffic-line" marker-end="url(#arrow)" />
+          <path d="M 500 151 L 500 178" class="traffic-line" marker-end="url(#arrow)" />
+          <path d="M 550 151 L 800 178" class="traffic-line" marker-end="url(#arrow)" />
 
-          {/* Checkout Service */}
+          {/* Tier 2: Microservices */}
           <g class="clickable-node" data-node-id="checkout">
-            <rect x="110" y="205" width="180" height="60" rx="6" class="node-box service-box" />
-            <text x="200" y="226" class="node-title" text-anchor="middle">Checkout (3)</text>
-            <text x="200" y="242" class="node-sub" text-anchor="middle">checkout-1, 2, 3</text>
-            <text x="200" y="256" class="node-metric" text-anchor="middle" data-node-traffic="checkout">140 req/s · 85ms</text>
+            <rect x="110" y="178" width="180" height="52" rx="6" class="node-box service-box" />
+            <text x="200" y="197" class="node-title" text-anchor="middle">Checkout Service (3)</text>
+            <text x="200" y="211" class="node-sub" text-anchor="middle">checkout-1, 2, 3</text>
+            <text x="200" y="223" class="node-metric" text-anchor="middle" data-node-traffic="checkout">140 req/s · 85ms</text>
           </g>
 
-          {/* Catalog Service */}
           <g class="clickable-node" data-node-id="catalog">
-            <rect x="410" y="205" width="180" height="60" rx="6" class="node-box service-box" />
-            <text x="500" y="226" class="node-title" text-anchor="middle">Catalog (3)</text>
-            <text x="500" y="242" class="node-sub" text-anchor="middle">catalog-1, 2, 3</text>
-            <text x="500" y="256" class="node-metric" text-anchor="middle" data-node-traffic="catalog">210 req/s · 22ms</text>
+            <rect x="410" y="178" width="180" height="52" rx="6" class="node-box service-box" />
+            <text x="500" y="197" class="node-title" text-anchor="middle">Product Catalog (3)</text>
+            <text x="500" y="211" class="node-sub" text-anchor="middle">catalog-1, 2, 3</text>
+            <text x="500" y="223" class="node-metric" text-anchor="middle" data-node-traffic="catalog">210 req/s · 22ms</text>
           </g>
 
-          {/* Payment Service */}
           <g class="clickable-node" data-node-id="payment">
-            <rect x="710" y="205" width="180" height="60" rx="6" class="node-box service-box" />
-            <text x="800" y="226" class="node-title" text-anchor="middle">Payment (2)</text>
-            <text x="800" y="242" class="node-sub" text-anchor="middle">payment-1, 2</text>
-            <text x="800" y="256" class="node-metric" text-anchor="middle" data-node-traffic="payment">85 req/s · 120ms</text>
+            <rect x="710" y="178" width="180" height="52" rx="6" class="node-box service-box" />
+            <text x="800" y="197" class="node-title" text-anchor="middle">Payment Service (2)</text>
+            <text x="800" y="211" class="node-sub" text-anchor="middle">payment-1, 2</text>
+            <text x="800" y="223" class="node-metric" text-anchor="middle" data-node-traffic="payment">85 req/s · 120ms</text>
           </g>
 
-          {/* Databases */}
-          <g class="clickable-node" data-node-id="postgres">
-            <rect x="730" y="275" width="140" height="20" rx="4" class="db-box" />
-            <text x="800" y="289" class="db-text" text-anchor="middle">PostgreSQL (1)</text>
-          </g>
+          {/* Connecting lines from services to DBs */}
+          <path d="M 200 230 L 200 255" class="traffic-line" marker-end="url(#arrow)" />
+          <path d="M 800 230 L 800 255" class="traffic-line" marker-end="url(#arrow)" />
+
+          {/* Tier 3: Storage & Cache */}
           <g class="clickable-node" data-node-id="redis">
-            <rect x="130" y="275" width="140" height="20" rx="4" class="db-box" />
-            <text x="200" y="289" class="db-text" text-anchor="middle">Redis Cache (1)</text>
+            <rect x="130" y="255" width="140" height="30" rx="4" class="db-box" />
+            <text x="200" y="274" class="db-text" text-anchor="middle">Redis Cache (1)</text>
+          </g>
+
+          <g class="clickable-node" data-node-id="postgres">
+            <rect x="730" y="255" width="140" height="30" rx="4" class="db-box" />
+            <text x="800" y="274" class="db-text" text-anchor="middle">PostgreSQL Primary (1)</text>
           </g>
 
           {/* Scrape Lines Down to Prometheus */}
-          <path d="M 200 265 L 200 320 L 320 360" class="scrape-pull-line" marker-end="url(#arrowOrange)" />
-          <path d="M 500 265 L 500 360" class="scrape-pull-line" marker-end="url(#arrowOrange)" />
-          <path d="M 800 265 L 800 320 L 680 360" class="scrape-pull-line" marker-end="url(#arrowOrange)" />
-          <text x="360" y="335" class="scrape-label">HTTP GET /metrics (Pull)</text>
+          <path d="M 110 204 L 60 204 L 60 380 L 220 440" class="scrape-pull-line" marker-end="url(#arrowOrange)" />
+          <path d="M 500 230 L 500 320 L 290 320 L 290 405" class="scrape-pull-line" marker-end="url(#arrowOrange)" />
+          <path d="M 890 204 L 940 204 L 940 380 L 335 440" class="scrape-pull-line" marker-end="url(#arrowOrange)" />
+          <text x="140" y="340" class="scrape-label">HTTP GET /metrics (15s Pull)</text>
 
           {/* Dynamic Metric Sample Particles Container */}
           <g class="metric-particle-layer" data-particle-layer></g>
 
           {/* PROMETHEUS CORE SERVER */}
-          <rect x="220" y="360" width="560" height="145" rx="12" class="prom-server-box" />
-          <text x="240" y="385" class="prom-server-title">PROMETHEUS SERVER</text>
-          <text x="760" y="385" class="prom-server-status" text-anchor="end">READY · PULL ENGINE</text>
+          <rect x="200" y="355" width="580" height="175" rx="10" class="prom-server-box" />
+          <text x="220" y="380" class="prom-server-title">PROMETHEUS SERVER</text>
+          <text x="760" y="380" class="prom-server-status" text-anchor="end">READY · LOCAL TSDB PULL ENGINE</text>
 
           {/* Prometheus Subsystems */}
           <g class="clickable-node" data-node-id="scrape-manager">
-            <rect x="240" y="400" width="120" height="90" rx="6" class="subsystem-box" />
-            <text x="300" y="422" class="sub-title" text-anchor="middle">Scrape Mgr</text>
-            <text x="300" y="440" class="sub-detail" text-anchor="middle">11 Targets</text>
-            <text x="300" y="458" class="sub-detail" text-anchor="middle">15s Scrape</text>
-            <text x="300" y="476" class="sub-metric" text-anchor="middle">100% Up</text>
+            <rect x="220" y="400" width="125" height="110" rx="6" class="subsystem-box" />
+            <text x="282" y="424" class="sub-title" text-anchor="middle">Scrape Mgr</text>
+            <text x="282" y="445" class="sub-detail" text-anchor="middle">11 Targets</text>
+            <text x="282" y="465" class="sub-detail" text-anchor="middle">15s Interval</text>
+            <text x="282" y="490" class="sub-metric" text-anchor="middle">100% Up</text>
           </g>
 
-          <path d="M 360 445 L 380 445" class="internal-flow" marker-end="url(#arrow)" />
+          <path d="M 345 455 L 365 455" class="internal-flow" marker-end="url(#arrow)" />
 
           <g class="clickable-node" data-node-id="tsdb">
-            <rect x="380" y="400" width="120" height="90" rx="6" class="subsystem-box highlight" />
-            <text x="440" y="422" class="sub-title" text-anchor="middle">TSDB</text>
-            <text x="440" y="440" class="sub-detail" text-anchor="middle">Head + WAL</text>
-            <text x="440" y="458" class="sub-detail" text-anchor="middle" data-prom-head-series>480 Series</text>
-            <text x="440" y="476" class="sub-metric" text-anchor="middle">Gorilla Enc</text>
+            <rect x="365" y="400" width="125" height="110" rx="6" class="subsystem-box highlight" />
+            <text x="427" y="424" class="sub-title" text-anchor="middle">TSDB Core</text>
+            <text x="427" y="445" class="sub-detail" text-anchor="middle">Head + WAL</text>
+            <text x="427" y="465" class="sub-detail" text-anchor="middle" data-prom-head-series>480 Series</text>
+            <text x="427" y="490" class="sub-metric" text-anchor="middle">Gorilla Enc</text>
           </g>
 
-          <path d="M 500 445 L 520 445" class="internal-flow" marker-end="url(#arrow)" />
+          <path d="M 490 455 L 510 455" class="internal-flow" marker-end="url(#arrow)" />
 
           <g class="clickable-node" data-node-id="promql-engine">
-            <rect x="520" y="400" width="120" height="90" rx="6" class="subsystem-box" />
-            <text x="580" y="422" class="sub-title" text-anchor="middle">PromQL Engine</text>
-            <text x="580" y="440" class="sub-detail" text-anchor="middle">Instant/Range</text>
-            <text x="580" y="458" class="sub-detail" text-anchor="middle">AST Evaluator</text>
-            <text x="580" y="476" class="sub-metric" text-anchor="middle">&lt; 4ms avg</text>
+            <rect x="510" y="400" width="125" height="110" rx="6" class="subsystem-box" />
+            <text x="572" y="424" class="sub-title" text-anchor="middle">PromQL Engine</text>
+            <text x="572" y="445" class="sub-detail" text-anchor="middle">Instant & Range</text>
+            <text x="572" y="465" class="sub-detail" text-anchor="middle">AST Evaluator</text>
+            <text x="572" y="490" class="sub-metric" text-anchor="middle">&lt; 3ms avg</text>
           </g>
 
-          <path d="M 640 445 L 660 445" class="internal-flow" marker-end="url(#arrow)" />
+          <path d="M 635 455 L 655 455" class="internal-flow" marker-end="url(#arrow)" />
 
           <g class="clickable-node" data-node-id="rule-engine">
-            <rect x="660" y="400" width="105" height="90" rx="6" class="subsystem-box" />
-            <text x="712" y="422" class="sub-title" text-anchor="middle">Rule Mgr</text>
-            <text x="712" y="440" class="sub-detail" text-anchor="middle">Recording</text>
-            <text x="712" y="458" class="sub-detail" text-anchor="middle">Alerting</text>
-            <text x="712" y="476" class="sub-metric" text-anchor="middle">1m Eval</text>
+            <rect x="655" y="400" width="110" height="110" rx="6" class="subsystem-box" />
+            <text x="710" y="424" class="sub-title" text-anchor="middle">Rule Mgr</text>
+            <text x="710" y="445" class="sub-detail" text-anchor="middle">Recording</text>
+            <text x="710" y="465" class="sub-detail" text-anchor="middle">Alerting</text>
+            <text x="710" y="490" class="sub-metric" text-anchor="middle">15s Eval</text>
           </g>
 
           {/* Outgoing to Alertmanager and Grafana */}
-          <path d="M 765 430 L 870 415" class="external-flow" marker-end="url(#arrowOrange)" />
-          <path d="M 640 470 L 870 470" class="external-flow" marker-end="url(#arrow)" />
+          <path d="M 765 435 L 820 418" class="external-flow" marker-end="url(#arrowOrange)" />
+          <path d="M 635 485 L 820 485" class="external-flow" marker-end="url(#arrow)" />
 
           <g class="clickable-node" data-node-id="alertmanager">
-            <rect x="870" y="395" width="110" height="42" rx="6" class="out-box alert-out" />
-            <text x="925" y="415" class="out-title" text-anchor="middle">Alertmanager</text>
-            <text x="925" y="428" class="out-sub" text-anchor="middle" data-alert-state>0 Firing</text>
+            <rect x="820" y="395" width="135" height="46" rx="6" class="out-box alert-out" />
+            <text x="887" y="416" class="out-title" text-anchor="middle">Alertmanager</text>
+            <text x="887" y="431" class="out-sub" text-anchor="middle" data-alert-state>0 Firing (Port 9093)</text>
           </g>
 
           <g class="clickable-node" data-node-id="grafana">
-            <rect x="870" y="450" width="110" height="42" rx="6" class="out-box ui-out" />
-            <text x="925" y="470" class="out-title" text-anchor="middle">Grafana UI</text>
-            <text x="925" y="483" class="out-sub" text-anchor="middle">Dashboards</text>
+            <rect x="820" y="462" width="135" height="46" rx="6" class="out-box ui-out" />
+            <text x="887" y="483" class="out-title" text-anchor="middle">Grafana UI</text>
+            <text x="887" y="498" class="out-sub" text-anchor="middle">Dashboards & PromQL</text>
           </g>
         </svg>
       </div>
 
       <div class="interactive-prompt-bar">
         <span>INTERACTIVE EXPLORATION: Click any component above (Services, Scrape Manager, TSDB, PromQL, Alertmanager) to inspect its runtime internals.</span>
-        <button type="button" class="action-btn small" data-trigger-node="scrape-manager">Inspect Scrape Loop</button>
-        <button type="button" class="action-btn small" data-trigger-node="tsdb">Inspect TSDB</button>
+        <div class="button-group">
+          <button type="button" class="action-btn small" data-trigger-node="scrape-manager">Inspect Scrape Loop</button>
+          <button type="button" class="action-btn small" data-trigger-node="tsdb">Inspect TSDB</button>
+        </div>
       </div>
     </div>
   )}
@@ -195,17 +196,17 @@ const { lab } = Astro.props;
         </span>
         <span class="anatomy-brace">&#123;</span>
         <span class="anatomy-part label-dim" data-part="label-service">
-          <label>LABEL DIMENSION</label>
+          <label>LABEL KEY="VALUE"</label>
           <span>service="<strong>checkout</strong>"</span>
         </span>
         <span class="anatomy-comma">,</span>
         <span class="anatomy-part label-dim" data-part="label-method">
-          <label>LABEL DIMENSION</label>
+          <label>LABEL KEY="VALUE"</label>
           <span>method="<strong>POST</strong>"</span>
         </span>
         <span class="anatomy-comma">,</span>
         <span class="anatomy-part label-dim" data-part="label-status">
-          <label>LABEL DIMENSION</label>
+          <label>LABEL KEY="VALUE"</label>
           <span>status="<strong>500</strong>"</span>
         </span>
         <span class="anatomy-comma">,</span>
@@ -215,7 +216,7 @@ const { lab } = Astro.props;
         </span>
         <span class="anatomy-brace">&#125;</span>
         <span class="anatomy-part sample-value" data-part="value">
-          <label>FLOAT64 VALUE</label>
+          <label>FLOAT64 SAMPLE VALUE</label>
           <strong data-sample-live-val>18421</strong>
         </span>
       </div>
@@ -224,15 +225,16 @@ const { lab } = Astro.props;
         <h4 data-part-title>METRIC NAME: http_requests_total</h4>
         <p data-part-desc>Specifies the general feature of a system that is measured (e.g. <code>http_requests_total</code> for cumulative HTTP requests). By Prometheus convention, counter names end in <code>_total</code> and units like <code>_seconds</code> or <code>_bytes</code> are included in the base name.</p>
         <div class="anatomy-meta">
-          <span>CHARACTER SET: <code>[a-zA-Z_:][a-zA-Z0-9_:]*</code></span>
-          <span>RESERVED PREFIX: <code>__</code> (internal Prometheus use only)</span>
+          <span>RECOMMENDED REGEX: <code>[a-zA-Z_:][a-zA-Z0-9_:]*</code></span>
+          <span>RESERVED COLON: <code>:</code> for recording rules</span>
+          <span>RESERVED PREFIX: <code>__</code> for internal labels</span>
         </div>
       </div>
 
       <div class="sample-timeline-box">
         <h5>CONSECUTIVE SCRAPES TIMELINE (15s SCRAPE INTERVAL)</h5>
         <div class="timeline-rows">
-          <div class="t-row"><span>12:00:00.000</span><div class="bar-fill" style="width: 72%;"></div><strong>18,201</strong></div>
+          <div class="t-row"><span>12:00:00.000</span><div class="bar-fill" style="width: 72%;"></div><strong>18,201</strong><em class="delta">+0</em></div>
           <div class="t-row"><span>12:00:15.000</span><div class="bar-fill" style="width: 76%;"></div><strong>18,234</strong><em class="delta">+33</em></div>
           <div class="t-row"><span>12:00:30.000</span><div class="bar-fill" style="width: 82%;"></div><strong>18,291</strong><em class="delta">+57</em></div>
           <div class="t-row"><span>12:00:45.000</span><div class="bar-fill" style="width: 88%;"></div><strong>18,340</strong><em class="delta">+49</em></div>
@@ -264,9 +266,9 @@ const { lab } = Astro.props;
             <strong>http_requests_total</strong> — Monotonically increasing cumulative total
           </div>
           <div class="button-group">
-            <button type="button" class="action-btn" data-counter-add="1">+1 Request</button>
-            <button type="button" class="action-btn" data-counter-add="100">+100 Requests</button>
-            <button type="button" class="action-btn warning" data-counter-reset>Restart Process (Reset to 0)</button>
+            <button type="button" class="action-btn small" data-counter-add="1">+1 Request</button>
+            <button type="button" class="action-btn small" data-counter-add="100">+100 Requests</button>
+            <button type="button" class="action-btn small warning" data-counter-reset>Restart Process (Reset to 0)</button>
           </div>
         </div>
 
@@ -275,19 +277,19 @@ const { lab } = Astro.props;
             <h6>RAW COUNTER VALUE: <code>http_requests_total</code></h6>
             <svg viewBox="0 0 450 180" class="mini-chart" id="chart-raw-counter">
               <path class="chart-grid" d="M 40 20 L 430 20 M 40 60 L 430 60 M 40 100 L 430 100 M 40 140 L 430 140" />
-              <path class="chart-line-orange" d="M 40 140 L 140 110 L 240 70 L 300 40 L 300 140 L 430 100" />
-              <circle cx="300" cy="140" r="4" class="chart-dot reset" />
-              <text x="305" y="130" class="chart-label reset">Process Restart (Reset to 0)</text>
+              <path class="chart-line-orange" d="M 40 140 L 140 110 L 240 70 L 280 40 L 280 140 L 410 100" />
+              <circle cx="280" cy="140" r="4" class="chart-dot reset" />
+              <text x="285" y="130" class="chart-label reset" text-anchor="start">Process Reset (0)</text>
             </svg>
-            <p class="chart-caption">Raw counter drops to 0 when an application restarts. Never graph raw counters directly!</p>
+            <p class="chart-caption">Raw counter drops to 0 when process restarts. Always apply <code>rate()</code> or <code>increase()</code> for graphing.</p>
           </div>
 
           <div class="chart-box">
             <h6>DERIVED RATE: <code>rate(http_requests_total[5m])</code></h6>
             <svg viewBox="0 0 450 180" class="mini-chart" id="chart-rate-counter">
               <path class="chart-grid" d="M 40 20 L 430 20 M 40 60 L 430 60 M 40 100 L 430 100 M 40 140 L 430 140" />
-              <path class="chart-line-green" d="M 40 90 L 140 85 L 240 88 L 300 86 L 360 87 L 430 85" />
-              <text x="240" y="70" class="chart-label">Steady ~25.4 req/sec (Reset smoothly handled)</text>
+              <path class="chart-line-green" d="M 40 90 L 140 85 L 240 88 L 280 86 L 360 87 L 410 85" />
+              <text x="225" y="60" class="chart-label" text-anchor="middle">Steady ~25.4 req/s (Reset cleanly compensated)</text>
             </svg>
             <p class="chart-caption"><code>rate()</code> automatically detects counter resets and compensates by adding the pre-reset value.</p>
           </div>
@@ -301,9 +303,9 @@ const { lab } = Astro.props;
             <strong>active_connections</strong> — Snapshot value that can freely increase or decrease
           </div>
           <div class="button-group">
-            <button type="button" class="action-btn" data-gauge-delta="-5">-5 Connections</button>
-            <button type="button" class="action-btn" data-gauge-delta="5">+5 Connections</button>
-            <button type="button" class="action-btn" data-gauge-delta="25">+25 Surge</button>
+            <button type="button" class="action-btn small" data-gauge-delta="-5">-5</button>
+            <button type="button" class="action-btn small" data-gauge-delta="5">+5</button>
+            <button type="button" class="action-btn small" data-gauge-delta="25">+25 Surge</button>
           </div>
         </div>
 
@@ -311,6 +313,7 @@ const { lab } = Astro.props;
           <div class="gauge-metric-card">
             <span class="gauge-val" data-gauge-val>42</span>
             <label>CURRENT CONNECTIONS</label>
+            <small>Snapshot at timestamp t</small>
           </div>
           <div class="gauge-queries">
             <h6>AVAILABLE OVER-TIME OPERATORS (NEVER USE rate() ON A GAUGE):</h6>
@@ -318,7 +321,7 @@ const { lab } = Astro.props;
               <div class="op-item"><code>avg_over_time(active_connections[1h])</code><span>Mean connection level</span></div>
               <div class="op-item"><code>max_over_time(active_connections[1h])</code><span>Peak concurrency spike</span></div>
               <div class="op-item"><code>min_over_time(active_connections[1h])</code><span>Lowest trough</span></div>
-              <div class="op-item"><code>predict_linear(disk_free[4h], 86400)</code><span>Linear exhaustion extrapolation</span></div>
+              <div class="op-item"><code>predict_linear(node_filesystem_free_bytes[4h], 86400)</code><span>Linear exhaustion extrapolation</span></div>
             </div>
           </div>
         </div>
@@ -354,7 +357,7 @@ const { lab } = Astro.props;
       <div class="type-tab-content" data-type-view="summary">
         <div class="summary-comparison-box">
           <div class="compare-col">
-            <h5>HISTOGRAM (PROMETHEUS WAY)</h5>
+            <h5>HISTOGRAM (SERVER-SIDE AGGREGATABLE)</h5>
             <ul>
               <li>Buckets recorded independently per instance.</li>
               <li>Quantiles mathematically aggregatable across 100 instances via <code>histogram_quantile()</code>.</li>
@@ -363,12 +366,12 @@ const { lab } = Astro.props;
             </ul>
           </div>
           <div class="compare-col">
-            <h5>SUMMARY (CLIENT-SIDE)</h5>
+            <h5>SUMMARY (CLIENT-SIDE SLIDING WINDOW)</h5>
             <ul>
               <li>Quantiles (P50, P90, P99) calculated directly inside application RAM.</li>
               <li><strong>CANNOT BE AGGREGATED:</strong> You cannot average two P95 percentiles together mathematically!</li>
               <li>Low time-series footprint (only 3–4 series per instance).</li>
-              <li>Extremely high CPU and memory overhead on client JVM/Go runtime.</li>
+              <li>CPU and memory overhead on client application runtime.</li>
             </ul>
           </div>
         </div>
@@ -382,8 +385,8 @@ const { lab } = Astro.props;
       <div class="toggle-mode-bar">
         <span>HISTOGRAM FORMAT:</span>
         <div class="button-group">
-          <button type="button" class="action-btn is-active" data-hist-mode="classic">Classic Buckets</button>
-          <button type="button" class="action-btn" data-hist-mode="native">Native Histograms (Prometheus 3.8+)</button>
+          <button type="button" class="action-btn small is-active" data-hist-mode="classic">Classic Buckets</button>
+          <button type="button" class="action-btn small secondary" data-hist-mode="native">Native Histograms (Prometheus 3.0+)</button>
         </div>
       </div>
 
@@ -406,17 +409,17 @@ const { lab } = Astro.props;
         </div>
 
         <div class="hist-side native-side" data-hist-view="native">
-          <div class="hist-badge native">NATIVE HISTOGRAM SAMPLE</div>
+          <div class="hist-badge native">NATIVE HISTOGRAM COMPOSITE SAMPLE</div>
           <h4>1 SINGLE COMPACT TIME SERIES</h4>
           <div class="native-sample-structure">
             <div class="struct-field"><span>count:</span><strong>18,420</strong></div>
             <div class="struct-field"><span>sum:</span><strong>1,245.82s</strong></div>
-            <div class="struct-field"><span>schema:</span><strong>3 (Exponential factor 2^(2^-3))</strong></div>
+            <div class="struct-field"><span>schema:</span><strong>3 (Base 2^(2^-3) = ~1.0905 growth factor)</strong></div>
             <div class="struct-field"><span>zero_threshold:</span><strong>0.001s</strong></div>
-            <div class="struct-field"><span>positive_buckets:</span><strong>Sparse index array [0, 4, 12, 18, 45, 92, 114]</strong></div>
+            <div class="struct-field"><span>positive_buckets:</span><strong>Sparse index array with dynamic logarithmic bounds</strong></div>
           </div>
           <div class="hist-tradeoff-box positive">
-            <strong>Advantages:</strong> Up to 80% reduction in TSDB series churn, dynamic high-resolution quantile estimation, automatic handling of multi-modal latency distributions. Stable in Prometheus 3.8+.
+            <strong>Advantages:</strong> Up to 80% reduction in TSDB series churn, dynamic high-resolution quantile estimation without predefined bucket boundaries, and atomic network transfer via Remote Write 2.0.
           </div>
         </div>
       </div>
@@ -518,8 +521,7 @@ __meta_kubernetes_pod_label_app = "checkout"</pre>
       <div class="sd-display-grid">
         <div class="sd-config-col">
           <h6>PROMETHEUS CONFIGURATION (prometheus.yml)</h6>
-          <pre class="code-block" data-sd-yaml>
-scrape_configs:
+          <pre class="code-block" data-sd-yaml>scrape_configs:
   - job_name: 'kubernetes-pods'
     kubernetes_sd_configs:
       - role: pod
@@ -528,15 +530,14 @@ scrape_configs:
     relabel_configs:
       - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
         action: keep
-        regex: true
-          </pre>
+        regex: true</pre>
         </div>
 
         <div class="sd-targets-col">
           <h6>DISCOVERED TARGET METADATA POOL</h6>
           <table class="data-table" data-sd-table>
             <thead>
-              <tr><th>Target Address</th><th>Namespace</th><th>Pod Name</th><th>Action</th></tr>
+              <tr><th>Target Address</th><th>Namespace</th><th>Pod / Service</th><th>Action</th></tr>
             </thead>
             <tbody>
               <tr><td>10.244.1.12:8080</td><td>prod</td><td>checkout-1</td><td><span class="status-badge up">SCRAPED</span></td></tr>
@@ -591,20 +592,69 @@ scrape_configs:
     </div>
   )}
 
+  {/* VIEW 9: TARGET VS METRIC RELABELING */}
+  {lab.id === 'target-vs-metric-relabel' && (
+    <div class="canvas-panel comparison-pipeline-panel">
+      <div class="stage-compare-grid">
+        <div class="compare-card stage-target">
+          <div class="card-pill">STAGE 1 · BEFORE SCRAPE</div>
+          <h4>relabel_configs (Target Relabeling)</h4>
+          <p>Operates on target metadata (<code>__meta_*</code> and <code>__address__</code>) discovered from provider APIs.</p>
+          <div class="decision-box">
+            <strong>Target Dropped?</strong>
+            <p>If <code>action: drop</code> matches, the entire target is omitted from the scrape pool. <strong>ZERO network HTTP requests occur!</strong></p>
+          </div>
+          <div class="tradeoff-pills">
+            <span class="pill-yes">✓ Saves Network Egress</span>
+            <span class="pill-yes">✓ Saves Target CPU</span>
+            <span class="pill-yes">✓ Saves TSDB Storage</span>
+          </div>
+        </div>
+
+        <div class="compare-card stage-metric">
+          <div class="card-pill accent">STAGE 2 · AFTER SCRAPE</div>
+          <h4>metric_relabel_configs (Metric Relabeling)</h4>
+          <p>Operates on individual metric lines parsed from the target's HTTP <code>/metrics</code> response body.</p>
+          <div class="decision-box">
+            <strong>Metric Dropped?</strong>
+            <p>If <code>action: drop</code> matches on <code>__name__="debug_.*"</code>, the metric is discarded before TSDB append, but the HTTP scrape already consumed bandwidth.</p>
+          </div>
+          <div class="tradeoff-pills">
+            <span class="pill-no">✗ Network Already Used</span>
+            <span class="pill-no">✗ Exporter Spent CPU</span>
+            <span class="pill-yes">✓ Saves TSDB Storage</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="pipeline-timing-visual">
+        <div class="pipe-node-timing"><span>Discovery</span><small>Target metadata</small></div>
+        <div class="pipe-arrow">&rarr;</div>
+        <div class="pipe-node-timing active"><span>relabel_configs</span><small>Filter targets</small></div>
+        <div class="pipe-arrow">&rarr;</div>
+        <div class="pipe-node-timing"><span>HTTP GET /metrics</span><small>Across wire</small></div>
+        <div class="pipe-arrow">&rarr;</div>
+        <div class="pipe-node-timing active"><span>metric_relabel_configs</span><small>Filter samples</small></div>
+        <div class="pipe-arrow">&rarr;</div>
+        <div class="pipe-node-timing"><span>TSDB Ingest</span><small>Head + WAL</small></div>
+      </div>
+    </div>
+  )}
+
   {/* VIEW 10: TARGET INSPECTOR */}
   {lab.id === 'target-inspector' && (
     <div class="canvas-panel target-inspector-panel">
       <div class="target-table-header">
-        <h4>PROMETHEUS TARGETS (8 / 9 HEALTHY)</h4>
+        <h4>PROMETHEUS TARGETS POOL (10 / 11 HEALTHY)</h4>
         <div class="filter-chips">
-          <span class="chip active">All (9)</span>
-          <span class="chip">Up (8)</span>
-          <span class="chip alert">Down (1)</span>
+          <span class="chip active" data-target-filter="all">All (11)</span>
+          <span class="chip" data-target-filter="up">Up (10)</span>
+          <span class="chip alert" data-target-filter="down">Down (1)</span>
         </div>
       </div>
 
       <div class="targets-list-view">
-        <div class="target-row up">
+        <div class="target-row up" data-state="up">
           <span class="badge up">UP</span>
           <span class="endpoint">http://10.244.1.12:8080/metrics</span>
           <span class="job">job="checkout"</span>
@@ -612,7 +662,7 @@ scrape_configs:
           <span class="scrape-dur">18.4ms</span>
           <span class="samples">1,421 samples</span>
         </div>
-        <div class="target-row up">
+        <div class="target-row up" data-state="up">
           <span class="badge up">UP</span>
           <span class="endpoint">http://10.244.2.33:8080/metrics</span>
           <span class="job">job="checkout"</span>
@@ -620,13 +670,21 @@ scrape_configs:
           <span class="scrape-dur">21.0ms</span>
           <span class="samples">1,421 samples</span>
         </div>
-        <div class="target-row down">
+        <div class="target-row down" data-state="down">
           <span class="badge down">DOWN</span>
           <span class="endpoint">http://10.244.3.18:8080/metrics</span>
           <span class="job">job="checkout"</span>
           <span class="scrape-time">Last scrape: 1.1s ago</span>
           <span class="scrape-dur">0.0ms</span>
           <span class="error-msg">connection refused: dial tcp 10.244.3.18:8080</span>
+        </div>
+        <div class="target-row up" data-state="up">
+          <span class="badge up">UP</span>
+          <span class="endpoint">http://10.244.1.5:8080/metrics</span>
+          <span class="job">job="gateway"</span>
+          <span class="scrape-time">Last scrape: 2.8s ago</span>
+          <span class="scrape-dur">12.1ms</span>
+          <span class="samples">840 samples</span>
         </div>
       </div>
     </div>
@@ -638,15 +696,15 @@ scrape_configs:
       <div class="tsdb-arch-diagram">
         <div class="tsdb-node ingest-node">
           <label>INCOMING SAMPLE</label>
-          <code>http_requests_total 18421</code>
+          <code>http_requests_total&#123;service="checkout"&#125; 18421.0 @ 1726754535000</code>
         </div>
 
         <div class="tsdb-split">
           <div class="tsdb-path wal-path">
             <h5>DURABLE WRITE-AHEAD LOG (WAL)</h5>
             <div class="disk-card">
-              <code>data/wal/00000001</code>
-              <p>128 MB sequential append-only log segment files on physical disk. Flushed synchronously to survive kernel panics.</p>
+              <code>data/wal/00000125 (128 MB segment)</code>
+              <p>Append-only record of new series headers and samples. Flushed to disk synchronously so uncompacted data survives process crashes.</p>
             </div>
           </div>
 
@@ -654,20 +712,67 @@ scrape_configs:
             <h5>IN-MEMORY HEAD CHUNK</h5>
             <div class="ram-card">
               <code>data/chunks_head/</code>
-              <p>Active chunk buffers in process RAM. Once filled (~120 samples), chunks are memory-mapped (mmap) to disk.</p>
+              <p>Active chunk buffers in process RAM. Once filled (~120 samples), chunks are cut and memory-mapped (mmap) to disk, freeing RAM.</p>
             </div>
           </div>
         </div>
 
         <div class="tsdb-compaction-flow">
-          <div class="compaction-arrow">&darr; Every 2 hours &darr;</div>
+          <div class="compaction-arrow">&darr; Every 2 hours (Flushed to Immutable Block) &darr;</div>
           <div class="block-card">
-            <h6>IMMUTABLE 2-HOUR BLOCK (e.g. 01J8F9...)</h6>
+            <h6>IMMUTABLE 2-HOUR BLOCK (e.g. 01J8F9X...)</h6>
             <div class="block-sub-files">
-              <span>chunks/ (Compressed samples)</span>
+              <span>chunks/ (512 MB compressed sample segments)</span>
               <span>index (Inverted posting index)</span>
-              <span>meta.json (Block metadata)</span>
+              <span>meta.json (ULID, minTime, maxTime)</span>
               <span>tombstones (Soft deletions)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {/* VIEW 12: TSDB TIMELINE & COMPACTION */}
+  {lab.id === 'tsdb-timeline' && (
+    <div class="canvas-panel timeline-compaction-panel">
+      <div class="compaction-timeline-grid">
+        <div class="time-tier tier-head">
+          <div class="tier-label">ACTIVE HEAD (0–2h)</div>
+          <div class="tier-blocks">
+            <div class="block-unit head-active">
+              <strong>Head Chunk (RAM)</strong>
+              <small>00:00 – 02:00 (Active Writes)</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="time-tier tier-2h">
+          <div class="tier-label">2-HOUR BLOCKS (Cut from Head)</div>
+          <div class="tier-blocks">
+            <div class="block-unit">02:00 – 04:00</div>
+            <div class="block-unit">04:00 – 06:00</div>
+            <div class="block-unit">06:00 – 08:00</div>
+          </div>
+        </div>
+
+        <div class="compaction-merge-arrow">&darr; Compactor Loop (Merge Adjacent Blocks) &darr;</div>
+
+        <div class="time-tier tier-6h">
+          <div class="tier-label">COMPACTED 6-HOUR BLOCK</div>
+          <div class="tier-blocks">
+            <div class="block-unit wide">02:00 – 08:00 (Merged & Deduplicated Postings)</div>
+          </div>
+        </div>
+
+        <div class="compaction-merge-arrow">&darr; Compactor Tier 2 (Up to 1/10 of Retention or 31d) &darr;</div>
+
+        <div class="time-tier tier-18h">
+          <div class="tier-label">HISTORICAL STORAGE</div>
+          <div class="tier-blocks">
+            <div class="block-unit full">00:00 – 18:00 Historical Block · Tombstones Purged</div>
+            <div class="retention-cut-line">
+              <span>RETENTION WINDOW BOUNDARY (30 Days) &rarr; Older blocks deleted</span>
             </div>
           </div>
         </div>
@@ -684,8 +789,8 @@ scrape_configs:
           <strong>WAL Crash & Replay Engine</strong>
         </div>
         <div class="button-group">
-          <button type="button" class="action-btn warning" data-wal-action="crash">Crash Prometheus (SIGKILL)</button>
-          <button type="button" class="action-btn" data-wal-action="restart">Restart & Replay WAL</button>
+          <button type="button" class="action-btn small warning" data-wal-action="crash">Crash Prometheus (SIGKILL)</button>
+          <button type="button" class="action-btn small" data-wal-action="restart">Restart & Replay WAL</button>
         </div>
       </div>
 
@@ -817,6 +922,166 @@ scrape_configs:
     </div>
   )}
 
+  {/* VIEW 16: SELECTORS & MATCHERS */}
+  {lab.id === 'selectors-matchers' && (
+    <div class="canvas-panel matcher-panel">
+      <div class="matcher-nav-row">
+        <span>PROMQL MATCHERS:</span>
+        <button type="button" class="matcher-tab is-active" data-matcher-type="exact">= (Exact Equality)</button>
+        <button type="button" class="matcher-tab" data-matcher-type="neg">!= (Negative Equality)</button>
+        <button type="button" class="matcher-tab" data-matcher-type="regex">=~ (RE2 Regex Match)</button>
+        <button type="button" class="matcher-tab" data-matcher-type="nregex">!~ (Negative RE2 Match)</button>
+      </div>
+
+      <div class="matcher-test-card">
+        <div class="matcher-expr-box">
+          <label>ACTIVE EXPRESSION:</label>
+          <code data-matcher-code>http_requests_total&#123;status=~"5.."&#125;</code>
+        </div>
+        <p data-matcher-note>Google RE2 regex match. Fully anchored (^ and $) implicitly. Matches status codes starting with 5 (500, 502, 503, 504).</p>
+      </div>
+
+      <div class="matcher-series-grid">
+        <div class="series-card matched">
+          <span class="match-badge pass">MATCHED</span>
+          <code>&#123;service="checkout", status="500"&#125;</code>
+          <small>Status starts with 5</small>
+        </div>
+        <div class="series-card matched">
+          <span class="match-badge pass">MATCHED</span>
+          <code>&#123;service="payment", status="503"&#125;</code>
+          <small>Status starts with 5</small>
+        </div>
+        <div class="series-card rejected">
+          <span class="match-badge fail">FILTERED OUT</span>
+          <code>&#123;service="checkout", status="200"&#125;</code>
+          <small>Status does not match 5..</small>
+        </div>
+        <div class="series-card rejected">
+          <span class="match-badge fail">FILTERED OUT</span>
+          <code>&#123;service="catalog", status="404"&#125;</code>
+          <small>Status does not match 5..</small>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {/* VIEW 17: RANGE VECTORS */}
+  {lab.id === 'range-vectors' && (
+    <div class="canvas-panel range-vectors-panel">
+      <div class="range-compare-grid">
+        <div class="vector-type-card instant">
+          <span class="badge">INSTANT VECTOR</span>
+          <h4>http_requests_total</h4>
+          <p>A set of time series containing a <strong>single sample</strong> per series at the evaluation timestamp <code>t</code>.</p>
+          <div class="sample-dot-visual">
+            <span class="time-axis">Time t &rarr;</span>
+            <div class="dot-point">● (18,421)</div>
+          </div>
+          <span class="validity-chip valid">✓ Graphable directly in Grafana</span>
+        </div>
+
+        <div class="vector-type-card range">
+          <span class="badge accent">RANGE VECTOR</span>
+          <h4>http_requests_total[5m]</h4>
+          <p>A set of time series containing a <strong>buffer of samples</strong> over the 5-minute lookback duration.</p>
+          <div class="sample-window-visual">
+            <span class="window-bracket">[ &bull; &bull; &bull; &bull; &bull; &bull; ] (20 points)</span>
+          </div>
+          <span class="validity-chip invalid">✗ Cannot graph directly (Requires rate/increase)</span>
+        </div>
+      </div>
+
+      <div class="subquery-explanation-card">
+        <h5>SUBQUERIES: <code>rate(http_requests_total[5m])[30m:1m]</code></h5>
+        <p>Evaluates the instant vector expression <code>rate(...[5m])</code> at 1-minute steps over a 30-minute historical window, returning a derived range vector for secondary transformations like <code>max_over_time()</code>.</p>
+      </div>
+    </div>
+  )}
+
+  {/* VIEW 18: COUNTER FUNCTIONS (rate vs irate) */}
+  {lab.id === 'counter-functions' && (
+    <div class="canvas-panel counter-funcs-panel">
+      <div class="funcs-compare-grid">
+        <div class="func-card rate-card">
+          <div class="card-head">
+            <code>rate(v[5m])</code>
+            <span class="tag-rec">RECOMMENDED FOR ALERTS</span>
+          </div>
+          <p>Calculates the average per-second rate of increase over the entire range window. Smooths out momentary spikes and extrapolates boundaries.</p>
+          <div class="mini-sparkline">
+            <svg viewBox="0 0 200 50">
+              <path d="M 0 35 L 50 30 L 100 28 L 150 32 L 200 30" stroke="#22c55e" stroke-width="2" fill="none" />
+            </svg>
+          </div>
+          <small>Smooth, reliable trend line for SLO and alert evaluations.</small>
+        </div>
+
+        <div class="func-card irate-card">
+          <div class="card-head">
+            <code>irate(v[5m])</code>
+            <span class="tag-warn">DO NOT USE IN ALERTS</span>
+          </div>
+          <p>Calculates the instant rate of increase using ONLY the last two data points in the window. Highly sensitive to micro-bursts.</p>
+          <div class="mini-sparkline">
+            <svg viewBox="0 0 200 50">
+              <path d="M 0 35 L 50 10 L 100 45 L 150 15 L 200 30" stroke="#ef4444" stroke-width="2" fill="none" />
+            </svg>
+          </div>
+          <small>Volatile; can trigger alert flapping on transient network delays.</small>
+        </div>
+
+        <div class="func-card increase-card">
+          <div class="card-head">
+            <code>increase(v[5m])</code>
+            <span class="tag-info">TOTAL VALUE DELTA</span>
+          </div>
+          <p>Calculates total increase over the window. Equivalent to <code>rate(v[5m]) * 300s</code>. Compensates for counter resets.</p>
+          <div class="mini-sparkline">
+            <svg viewBox="0 0 200 50">
+              <path d="M 0 45 L 50 35 L 100 25 L 150 15 L 200 5" stroke="#38bdf8" stroke-width="2" fill="none" />
+            </svg>
+          </div>
+          <small>Useful for human-facing total count increases (e.g. daily orders).</small>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {/* VIEW 19: AGGREGATION & GROUPING */}
+  {lab.id === 'aggregation' && (
+    <div class="canvas-panel aggregation-panel">
+      <div class="agg-control-row">
+        <span>AGGREGATION MODIFIERS:</span>
+        <button type="button" class="action-btn small is-active" data-agg-mode="by">sum by (service)</button>
+        <button type="button" class="action-btn small secondary" data-agg-mode="without">sum without (instance)</button>
+      </div>
+
+      <div class="agg-flow-display">
+        <div class="agg-col input-col">
+          <h6>INPUT SERIES (6 SERIES)</h6>
+          <div class="agg-series-pill"><code>&#123;service="checkout", instance="c1", status="200"&#125;</code> 45/s</div>
+          <div class="agg-series-pill"><code>&#123;service="checkout", instance="c2", status="200"&#125;</code> 48/s</div>
+          <div class="agg-series-pill"><code>&#123;service="checkout", instance="c3", status="500"&#125;</code> 4/s</div>
+          <div class="agg-series-pill"><code>&#123;service="catalog", instance="k1", status="200"&#125;</code> 110/s</div>
+          <div class="agg-series-pill"><code>&#123;service="catalog", instance="k2", status="200"&#125;</code> 100/s</div>
+          <div class="agg-series-pill"><code>&#123;service="payment", instance="p1", status="200"&#125;</code> 85/s</div>
+        </div>
+
+        <div class="agg-arrow-col">&rarr;</div>
+
+        <div class="agg-col output-col">
+          <h6>OUTPUT SERIES</h6>
+          <div class="agg-output-content" data-agg-output>
+            <div class="agg-series-pill final"><code>&#123;service="catalog"&#125;</code> <strong>210/s</strong></div>
+            <div class="agg-series-pill final"><code>&#123;service="checkout"&#125;</code> <strong>97/s</strong></div>
+            <div class="agg-series-pill final"><code>&#123;service="payment"&#125;</code> <strong>85/s</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )}
+
   {/* VIEW 20: VECTOR MATCHING */}
   {lab.id === 'vector-matching' && (
     <div class="canvas-panel vector-match-panel">
@@ -872,7 +1137,7 @@ scrape_configs:
   {lab.id === 'many-to-many' && (
     <div class="canvas-panel many-fail-panel">
       <div class="fail-banner">
-        <span class="badge danger">SYNTAX ERROR</span>
+        <span class="badge danger">PROMQL ERROR</span>
         <strong>many-to-many matching not allowed: matching labels must be unique on one side</strong>
       </div>
 
@@ -903,6 +1168,38 @@ scrape_configs:
       <div class="solution-box">
         <strong>HOW TO FIX:</strong>
         <p>Prometheus refuses Cartesian joins because they create ambiguous identity. Resolve by aggregating one side with <code>sum by (service)</code> or specifying <code>group_left</code> with unique discriminator keys.</p>
+      </div>
+    </div>
+  )}
+
+  {/* VIEW 22: HISTOGRAM QUANTILE CALCULATION */}
+  {lab.id === 'histogram-quantiles' && (
+    <div class="canvas-panel quantiles-panel">
+      <div class="quantile-formula-banner">
+        <code>histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[5m])))</code>
+      </div>
+
+      <div class="bucket-curve-grid">
+        <div class="bucket-steps-col">
+          <h5>STEP-BY-STEP CALCULATION:</h5>
+          <ol class="calc-steps-list">
+            <li><strong>Sum rates across instances:</strong> Aggregates cumulative counts per bucket boundary <code>le</code>.</li>
+            <li><strong>Find target rank:</strong> Rank = 0.95 * total_count = 0.95 * 1045 = 992.75.</li>
+            <li><strong>Locate containing bucket:</strong> <code>le="0.25"</code> (820) to <code>le="0.5"</code> (960) &rarr; contains 95th percentile!</li>
+            <li><strong>Linear interpolation:</strong> Assumes uniform distribution within the bucket to calculate precise 412ms estimate.</li>
+          </ol>
+        </div>
+
+        <div class="bucket-graph-col">
+          <h5>CUMULATIVE BUCKET DISTRIBUTION</h5>
+          <div class="bucket-interp-bars">
+            <div class="interp-row"><span>le="0.05"</span><div class="bar-track"><div class="bar-fill" style="width: 20%;"></div></div><span>210</span></div>
+            <div class="interp-row"><span>le="0.10"</span><div class="bar-track"><div class="bar-fill" style="width: 45%;"></div></div><span>480</span></div>
+            <div class="interp-row"><span>le="0.25"</span><div class="bar-track"><div class="bar-fill" style="width: 78%;"></div></div><span>820</span></div>
+            <div class="interp-row highlight"><span>le="0.50"</span><div class="bar-track"><div class="bar-fill highlight" style="width: 92%;"></div><span class="p95-needle">&darr; P95 (412ms)</span></div><span>960</span></div>
+            <div class="interp-row"><span>le="+Inf"</span><div class="bar-track"><div class="bar-fill" style="width: 100%;"></div></div><span>1,045</span></div>
+          </div>
+        </div>
       </div>
     </div>
   )}
@@ -971,18 +1268,69 @@ scrape_configs:
     </div>
   )}
 
+  {/* VIEW 25: RECORDING RULES */}
+  {lab.id === 'recording-rules' && (
+    <div class="canvas-panel recording-rules-panel">
+      <div class="rule-perf-comparison">
+        <div class="perf-card raw-query">
+          <span class="badge danger">RAW AD-HOC QUERY</span>
+          <h4>sum by (service) (rate(http_requests_total[5m]))</h4>
+          <div class="perf-stat-row">
+            <span>Execution Time:</span>
+            <strong class="text-red">4,200 ms</strong>
+          </div>
+          <div class="perf-stat-row">
+            <span>Samples Scanned:</span>
+            <strong>1,200,000 points</strong>
+          </div>
+          <div class="perf-stat-row">
+            <span>TSDB Impact:</span>
+            <span>Repeated across 50 dashboards</span>
+          </div>
+        </div>
+
+        <div class="perf-arrow">&rarr; Precomputed &rarr;</div>
+
+        <div class="perf-card rec-query">
+          <span class="badge up">RECORDING RULE TIME SERIES</span>
+          <h4>service:http_requests:rate5m</h4>
+          <div class="perf-stat-row">
+            <span>Execution Time:</span>
+            <strong class="text-green">1.2 ms (3500x Faster!)</strong>
+          </div>
+          <div class="perf-stat-row">
+            <span>Samples Scanned:</span>
+            <strong>3 points</strong>
+          </div>
+          <div class="perf-stat-row">
+            <span>Schedule:</span>
+            <span>Evaluated once every 15s in background</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="rule-syntax-card">
+        <h6>RECORDING RULE SPECIFICATION (rules.yml)</h6>
+        <pre class="code-block">groups:
+  - name: acme_service_rates
+    interval: 15s
+    rules:
+      - record: service:http_requests:rate5m
+        expr: sum by (service) (rate(http_requests_total[5m]))</pre>
+      </div>
+    </div>
+  )}
+
   {/* VIEW 26: ALERT RULES */}
   {lab.id === 'alert-rules' && (
     <div class="canvas-panel alert-rule-panel">
       <div class="rule-yaml-preview">
-        <pre class="code-block">
-- alert: HighErrorRate
+        <pre class="code-block">- alert: HighErrorRate
   expr: sum(rate(http_requests_total&#123;status=~"5.."&#125;[5m])) / sum(rate(http_requests_total[5m])) &gt; 0.05
   for: 5m
   labels:
     severity: critical
-    team: checkout
-        </pre>
+    team: checkout</pre>
       </div>
 
       <div class="state-machine-grid">
@@ -1020,24 +1368,30 @@ scrape_configs:
   {/* VIEW 27: ALERTMANAGER ROUTING */}
   {lab.id === 'alertmanager-routing' && (
     <div class="canvas-panel alert-routing-panel">
+      <div class="tree-control-bar">
+        <span>TEST ALERT ROUTING:</span>
+        <button type="button" class="action-btn small" data-sim-route="payment-critical">Test Payment Outage</button>
+        <button type="button" class="action-btn small secondary" data-sim-route="general-warn">Test General Warning</button>
+      </div>
+
       <div class="routing-tree-visual">
-        <div class="tree-node root-node">
+        <div class="tree-node root-node active" id="am-root">
           <label>ROOT ROUTE</label>
           <span>group_by: [cluster, alertname]</span>
           <span>default_receiver: slack-general</span>
         </div>
 
         <div class="tree-branches">
-          <div class="tree-branch">
+          <div class="tree-branch" id="branch-critical">
             <div class="branch-label">match: severity=critical</div>
             <div class="tree-node sub-node">
-              <label>CRITICAL ROUTE</label>
+              <label>CRITICAL SUB-ROUTE</label>
               <div class="tree-sub-branches">
-                <div class="tree-node leaf-node pager" data-receiver-leaf="pagerduty-payments">
+                <div class="tree-node leaf-node pager" id="leaf-payment">
                   <label>PAYMENT PAGERDUTY</label>
                   <span>team="payments"</span>
                 </div>
-                <div class="tree-node leaf-node pager" data-receiver-leaf="pagerduty-platform">
+                <div class="tree-node leaf-node pager" id="leaf-platform">
                   <label>PLATFORM ON-CALL</label>
                   <span>default critical</span>
                 </div>
@@ -1045,12 +1399,129 @@ scrape_configs:
             </div>
           </div>
 
-          <div class="tree-branch">
+          <div class="tree-branch" id="branch-warning">
             <div class="branch-label">match: severity=warning</div>
-            <div class="tree-node leaf-node slack" data-receiver-leaf="slack-alerts">
+            <div class="tree-node leaf-node slack" id="leaf-slack">
               <label>SLACK #INFRA-WARNS</label>
               <span>repeat_interval: 12h</span>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {/* VIEW 28: ALERTMANAGER CONCEPTS */}
+  {lab.id === 'alertmanager-concepts' && (
+    <div class="canvas-panel am-concepts-panel">
+      <div class="am-concepts-grid">
+        <div class="concept-card">
+          <div class="concept-badge">GROUPING</div>
+          <h4>Batching Alerts into Digests</h4>
+          <p>Combines alerts sharing identical <code>group_by</code> labels into a single notification.</p>
+          <div class="param-pills">
+            <span><code>group_wait: 30s</code> (Initial delay for batching)</span>
+            <span><code>group_interval: 5m</code> (Time before sending new alerts)</span>
+            <span><code>repeat_interval: 4h</code> (Re-notification frequency)</span>
+          </div>
+        </div>
+
+        <div class="concept-card">
+          <div class="concept-badge accent">INHIBITION</div>
+          <h4>Suppressing Cascading Failures</h4>
+          <p>Mutes a set of alerts if another matching alert is already firing.</p>
+          <div class="inhibit-example">
+            <code>NodeDown&#123;node="w1"&#125;</code>
+            <span class="mute-arrow">&rarr; INHIBITS &rarr;</span>
+            <code class="muted-alert">PodCrashLoop&#123;node="w1"&#125;</code>
+          </div>
+          <small>1 notification instead of 25 cascading pod pages!</small>
+        </div>
+
+        <div class="concept-card">
+          <div class="concept-badge">SILENCES</div>
+          <h4>Planned Maintenance Muting</h4>
+          <p>Time-based mutes configured via UI or API without modifying config files.</p>
+          <div class="silence-sample">
+            <span>Matcher: <code>alertname=~"HighLatency", env="staging"</code></span>
+            <span>Active: 2026-09-20 14:00 – 16:00 UTC</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {/* VIEW 29: HA PAIRS */}
+  {lab.id === 'ha-pairs' && (
+    <div class="canvas-panel ha-pairs-panel">
+      <div class="ha-topology-visual">
+        <div class="targets-source-box">
+          <label>MONITORED WORKLOADS</label>
+          <strong>ACME Microservices (11 Targets)</strong>
+        </div>
+
+        <div class="ha-split-arrows">
+          <span>&swarr; Independent Scrapes &searr;</span>
+        </div>
+
+        <div class="ha-servers-row">
+          <div class="ha-server-box">
+            <h5>PROMETHEUS SERVER A</h5>
+            <span>Independent TSDB + Scrapes</span>
+            <span>Evaluates Alert Rules</span>
+          </div>
+          <div class="ha-server-box">
+            <h5>PROMETHEUS SERVER B</h5>
+            <span>Independent TSDB + Scrapes</span>
+            <span>Evaluates Alert Rules</span>
+          </div>
+        </div>
+
+        <div class="ha-split-arrows">
+          <span>&searr; Firing Alerts &swarr;</span>
+        </div>
+
+        <div class="ha-am-cluster">
+          <label>ALERTMANAGER CLUSTER (MEMBERLIST GOSSIP ON PORT 9094)</label>
+          <div class="am-nodes">
+            <span>AM Instance 1</span>
+            <span>AM Instance 2</span>
+            <span>AM Instance 3</span>
+          </div>
+          <strong class="dedup-note">&check; Deduplicates Identical Alerts &rarr; Exactly 1 Notification Paged</strong>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {/* VIEW 30: FEDERATION */}
+  {lab.id === 'federation' && (
+    <div class="canvas-panel federation-panel">
+      <div class="fed-topology">
+        <div class="fed-global-box">
+          <span class="badge">GLOBAL PROMETHEUS</span>
+          <h4>Central Monitoring Cluster</h4>
+          <p>Scrapes summary metrics via <code>/federate?match[]={'{job="cluster-summary"}'}</code></p>
+          <small>Only 15 roll-up series ingested globally!</small>
+        </div>
+
+        <div class="fed-arrows">&uarr; Scrapes Federated Summaries &uarr;</div>
+
+        <div class="fed-leaf-row">
+          <div class="fed-leaf-box">
+            <h6>EDGE: US-EAST</h6>
+            <span>5,000 Pods Scraped</span>
+            <code>job:requests:rate5m</code>
+          </div>
+          <div class="fed-leaf-box">
+            <h6>EDGE: EU-CENTRAL</h6>
+            <span>4,200 Pods Scraped</span>
+            <code>job:requests:rate5m</code>
+          </div>
+          <div class="fed-leaf-box">
+            <h6>EDGE: AP-SOUTH</h6>
+            <span>3,800 Pods Scraped</span>
+            <code>job:requests:rate5m</code>
           </div>
         </div>
       </div>
@@ -1092,6 +1563,278 @@ scrape_configs:
     </div>
   )}
 
+  {/* VIEW 32: AGENT MODE */}
+  {lab.id === 'agent-mode' && (
+    <div class="canvas-panel agent-mode-panel">
+      <div class="agent-compare-grid">
+        <div class="arch-card server-arch">
+          <span class="badge">PROMETHEUS SERVER (STANDARD)</span>
+          <h4>Full Telemetry Engine</h4>
+          <ul class="feat-list">
+            <li class="yes">✓ Target Discovery & Scrape Engine</li>
+            <li class="yes">✓ Local Append-Only TSDB Storage</li>
+            <li class="yes">✓ 2-Hour Blocks & Compactor</li>
+            <li class="yes">✓ PromQL Engine (Instant & Range Queries)</li>
+            <li class="yes">✓ Recording & Alerting Rule Loops</li>
+          </ul>
+          <div class="footprint-pill heavy">~2.8 GB RAM · Full NVMe Disk</div>
+        </div>
+
+        <div class="arch-card agent-arch">
+          <span class="badge accent">PROMETHEUS AGENT MODE (--enable-feature=agent)</span>
+          <h4>Optimized Edge Forwarder</h4>
+          <ul class="feat-list">
+            <li class="yes">✓ Target Discovery & Scrape Engine</li>
+            <li class="yes">✓ Lightweight Local WAL (Crash Buffer)</li>
+            <li class="yes">✓ Remote Write 1.0 / 2.0 Streaming</li>
+            <li class="no">✗ NO Local TSDB Blocks or Compaction</li>
+            <li class="no">✗ NO PromQL Engine or HTTP Query API</li>
+            <li class="no">✗ NO Alerting or Recording Rules</li>
+          </ul>
+          <div class="footprint-pill light">~310 MB RAM (89% Savings!) · Ephemeral Disk</div>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {/* VIEW 33: KUBERNETES & PROMETHEUS OPERATOR */}
+  {lab.id === 'kubernetes-operator' && (
+    <div class="canvas-panel k8s-operator-panel">
+      <div class="operator-flow-grid">
+        <div class="k8s-crd-col">
+          <h6>DECLARATIVE CRDs (GitOps)</h6>
+          <div class="crd-card">
+            <code>ServiceMonitor</code>
+            <small>Labels: app=checkout</small>
+          </div>
+          <div class="crd-card">
+            <code>PodMonitor</code>
+            <small>Scrapes Pod ports directly</small>
+          </div>
+          <div class="crd-card">
+            <code>PrometheusRule</code>
+            <small>Defines alert expressions</small>
+          </div>
+        </div>
+
+        <div class="flow-arrow-col">&rarr; Watches API &rarr;</div>
+
+        <div class="operator-core-box">
+          <span class="badge">PROMETHEUS OPERATOR</span>
+          <h4>Reconciliation Controller</h4>
+          <p>Compiles CRDs into <code>prometheus.yml</code> Secret. Issues HTTP POST <code>/-/reload</code> without downtime.</p>
+        </div>
+
+        <div class="flow-arrow-col">&rarr; Mounts Config &rarr;</div>
+
+        <div class="k8s-prom-pod">
+          <h6>PROMETHEUS STATEFULSET</h6>
+          <span>Live Scrapes Running</span>
+          <small>Dynamic targets updated</small>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {/* VIEW 34: MODERN PROMETHEUS (3.0+) */}
+  {lab.id === 'modern-prometheus' && (
+    <div class="canvas-panel modern-prom-panel">
+      <div class="modern-features-grid">
+        <div class="mod-card">
+          <div class="mod-icon">🔤</div>
+          <h5>Full UTF-8 Metric Support</h5>
+          <p>Prometheus 3.0 supports arbitrary UTF-8 characters in metric names and label values using <code>{'{ "http.request.count", app.env="prod" }'}</code> syntax.</p>
+        </div>
+
+        <div class="mod-card">
+          <div class="mod-icon">📊</div>
+          <h5>Native Histograms</h5>
+          <p>Exponential sparse bucketing in 1 TSDB sample. Reduces series cardinality by up to 80% while computing high-precision quantiles.</p>
+        </div>
+
+        <div class="mod-card">
+          <div class="mod-icon">📡</div>
+          <h5>Remote Write 2.0</h5>
+          <p>Metadata streaming, OpenTelemetry resource attribute passthrough, and improved Snappy wire efficiency.</p>
+        </div>
+
+        <div class="mod-card">
+          <div class="mod-icon">🔭</div>
+          <h5>Native OTLP Ingestion</h5>
+          <p>Accepts OpenTelemetry metrics directly over HTTP/gRPC via <code>/api/v1/otlp</code> without requiring an external collector proxy.</p>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {/* VIEW 35: INCIDENT TARGET DOWN */}
+  {lab.id === 'incident-target-down' && (
+    <div class="canvas-panel triage-panel">
+      <div class="triage-alert-banner">
+        <span class="badge danger">ALERT FIRING</span>
+        <strong>TargetDown: checkout-3 instance unreachable (up == 0)</strong>
+      </div>
+
+      <div class="triage-ladder-grid">
+        <div class="ladder-step done">
+          <span class="step-num">1</span>
+          <div>
+            <strong>Service Discovery Check</strong>
+            <p>Target exists in K8s Endpoints: <code>10.244.3.18:8080</code></p>
+          </div>
+        </div>
+        <div class="ladder-step done">
+          <span class="step-num">2</span>
+          <div>
+            <strong>TCP Port Probe</strong>
+            <p><code>nc -vz 10.244.3.18 8080</code> &rarr; <span class="text-red">Connection Refused</span></p>
+          </div>
+        </div>
+        <div class="ladder-step active">
+          <span class="step-num">3</span>
+          <div>
+            <strong>Container State Inspection</strong>
+            <p><code>kubectl describe pod checkout-3</code> &rarr; OOMKilled (Exit code 137)</p>
+          </div>
+        </div>
+        <div class="ladder-step">
+          <span class="step-num">4</span>
+          <div>
+            <strong>Remediation Action</strong>
+            <p>Bump pod memory limit 512Mi &rarr; 1Gi. Kubelet restarts pod. Target returns to <code>up == 1</code>.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {/* VIEW 36: INCIDENT CARDINALITY EXPLOSION */}
+  {lab.id === 'incident-cardinality' && (
+    <div class="canvas-panel cardinality-debug-panel">
+      <div class="triage-alert-banner">
+        <span class="badge danger">HEAD MEMORY ALERT</span>
+        <strong>prometheus_tsdb_head_series &gt; 2,500,000 (RAM usage 4.2 GB / 4.0 GB Limit)</strong>
+      </div>
+
+      <div class="card-report-grid">
+        <div class="report-table-box">
+          <h6>TOP 5 METRICS BY ACTIVE SERIES COUNT</h6>
+          <table class="data-table">
+            <thead>
+              <tr><th>Metric Name</th><th>Series Count</th><th>Root Cause Label</th></tr>
+            </thead>
+            <tbody>
+              <tr class="danger-row"><td>http_requests_total</td><td><strong>2,840,000</strong></td><td><code>user_id (2.8M values)</code></td></tr>
+              <tr><td>process_cpu_seconds_total</td><td>11</td><td>none</td></tr>
+              <tr><td>http_request_duration_seconds</td><td>48</td><td>le</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="remediation-box">
+          <h6>EMERGENCY MITIGATION: metric_relabel_configs</h6>
+          <pre class="code-block">metric_relabel_configs:
+  - action: labeldrop
+    regex: "user_id"</pre>
+          <p class="remedy-note">&check; Drops user_id dimension at ingestion. Series drop from 2.8M to 480 series. TSDB Head RAM drops to 720 KB.</p>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {/* VIEW 37: INCIDENT SLOW QUERY */}
+  {lab.id === 'incident-slow-query' && (
+    <div class="canvas-panel slow-query-panel">
+      <div class="slow-query-alert">
+        <span class="badge danger">QUERY TIMEOUT (2m Exceeded)</span>
+        <code>sum(rate(http_requests_total[30d]))</code>
+      </div>
+
+      <div class="query-profile-grid">
+        <div class="profile-card">
+          <h6>EXECUTION PROFILE</h6>
+          <ul>
+            <li>Scanned 360 on-disk 2h TSDB blocks.</li>
+            <li>Loaded 4,800,000 chunk samples into RAM.</li>
+            <li>PromQL evaluation exceeded <code>query.timeout: 2m</code>.</li>
+          </ul>
+        </div>
+        <div class="profile-card fix">
+          <h6>OPTIMIZED REMEDY</h6>
+          <ul>
+            <li>Precompute with recording rule <code>service:http_requests:rate5m</code>.</li>
+            <li>Query <code>sum_over_time(service:http_requests:rate5m[30d])</code>.</li>
+            <li>Execution time: <strong>3.2 ms</strong> (&gt;35,000x faster).</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {/* VIEW 38: INCIDENT REMOTE WRITE BACKLOG */}
+  {lab.id === 'incident-remote-write' && (
+    <div class="canvas-panel rw-triage-panel">
+      <div class="triage-alert-banner">
+        <span class="badge danger">EGRESS QUEUE SATURATION</span>
+        <strong>prometheus_remote_storage_samples_pending = 348,000 (Approaching Max Capacity)</strong>
+      </div>
+
+      <div class="rw-diag-grid">
+        <div class="diag-stat">
+          <label>REMOTE ENDPOINT RESPONSE</label>
+          <strong class="text-red">HTTP 429 Too Many Requests</strong>
+          <small>Thanos Receiver rate-limiting inbound writes</small>
+        </div>
+        <div class="diag-stat">
+          <label>CURRENT SHARDS</label>
+          <strong>10 / 10 (Max Shards Reached)</strong>
+          <small>Cannot scale further without config change</small>
+        </div>
+        <div class="diag-stat">
+          <label>REMEDY</label>
+          <strong class="text-green">Tune queue_config & Scale Thanos</strong>
+          <small>Bump max_shards: 50, configure backoff</small>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {/* VIEW 39: INCIDENT ALERT STORM */}
+  {lab.id === 'incident-alert-storm' && (
+    <div class="canvas-panel alert-storm-panel">
+      <div class="storm-header">
+        <span class="badge danger">ALERT STORM: 142 ALERTS FIRING</span>
+        <h4>Availability Zone Switch Failure (us-east-1a)</h4>
+      </div>
+
+      <div class="storm-compare-grid">
+        <div class="storm-col raw">
+          <h6>WITHOUT INHIBITION RULES</h6>
+          <div class="storm-pills">
+            <span class="pill-storm">NodeDown (w1)</span>
+            <span class="pill-storm">PodCrashLoop (c1)</span>
+            <span class="pill-storm">PodCrashLoop (c2)</span>
+            <span class="pill-storm">ServiceLatency (checkout)</span>
+            <span class="pill-storm">DiskReadTimeout (w1)</span>
+            <span class="pill-storm">... 137 more pages ...</span>
+          </div>
+          <p class="storm-result text-red">On-call engineer bombarded with 142 pager buzzes!</p>
+        </div>
+
+        <div class="storm-col inhibited">
+          <h6>WITH ALERTMANAGER INHIBITION</h6>
+          <div class="storm-pills">
+            <span class="pill-storm active">NodeDown&#123;node="w1"&#125; (PRIMARY ROOT CAUSE)</span>
+            <span class="pill-muted">PodCrashLoop (MUTED BY INHIBITION)</span>
+            <span class="pill-muted">ServiceLatency (MUTED BY INHIBITION)</span>
+            <span class="pill-muted">... 139 child alerts muted ...</span>
+          </div>
+          <p class="storm-result text-green">&check; Exactly 1 actionable page sent to On-Call!</p>
+        </div>
+      </div>
+    </div>
+  )}
+
   {/* VIEW 40: BOSS FIGHT */}
   {lab.id === 'incident-boss-fight' && (
     <div class="canvas-panel boss-panel">
@@ -1101,62 +1844,53 @@ scrape_configs:
       </div>
 
       <div class="boss-triage-stepper">
-        <div class="boss-step is-active" data-boss-step="1">1. Traffic Throughput</div>
-        <div class="boss-step" data-boss-step="2">2. Error Percentage</div>
-        <div class="boss-step" data-boss-step="3">3. P95 Latency</div>
-        <div class="boss-step" data-boss-step="4">4. Culprit Instance</div>
-        <div class="boss-step" data-boss-step="5">5. CPU Throttling</div>
+        <div class="boss-step is-active" data-boss-step="1">1. Throughput</div>
+        <div class="boss-step" data-boss-step="2">2. Error Ratio</div>
+        <div class="boss-step" data-boss-step="3">3. Root Cause</div>
       </div>
 
       <div class="boss-step-workspace" data-boss-workspace>
         <h5>STEP 1: DETERMINE TOTAL CHECKOUT TRAFFIC</h5>
-        <p>Run a query to measure the current total request rate for the checkout service.</p>
+        <p>Measure total request throughput for Checkout to confirm if traffic surge is the cause:</p>
         <div class="c-editor-row">
           <input type="text" class="dojo-promql-input" value="sum(rate(http_requests_total{service='checkout'}[5m]))" data-boss-input />
           <button type="button" class="action-btn run-btn" data-boss-submit>EXECUTE STEP</button>
         </div>
         <div class="boss-step-result" data-boss-result>
-          <span>Execute query to begin triage investigation.</span>
+          <span>Awaiting execution...</span>
         </div>
       </div>
     </div>
   )}
 
-  {/* DEFAULT FALLBACK FOR REMAINING VIEWS */}
-  {![
-    'mental-model',
-    'metric-anatomy',
-    'metric-types',
-    'native-histograms',
-    'cardinality',
-    'scrape-journey',
-    'service-discovery',
-    'relabeling',
-    'target-inspector',
-    'tsdb-internals',
-    'wal-recovery',
-    'storage-calculator',
-    'promql-dojo',
-    'vector-matching',
-    'many-to-many',
-    'promql-cheatsheet',
-    'promql-challenges',
-    'alert-rules',
-    'alertmanager-routing',
-    'remote-write',
-    'incident-boss-fight'
-  ].includes(lab.id) && (
-    <div class="canvas-panel generic-lab-panel">
-      <div class="lab-summary-box">
-        <h4>{lab.title}</h4>
-        <p class="lead-question">{lab.question}</p>
-        <div class="key-mechanism-card">
-          <label>CORE MECHANISM & ARCHITECTURE</label>
-          <p>{lab.takeaway}</p>
+  {/* VIEW 41: META-MONITORING */}
+  {lab.id === 'meta-monitoring' && (
+    <div class="canvas-panel meta-panel">
+      <div class="meta-header">
+        <span class="badge">PROMETHEUS INTERNAL /metrics</span>
+        <h4>Who Monitors the Monitor? Dogfooding Prometheus Observability</h4>
+      </div>
+
+      <div class="meta-metrics-grid">
+        <div class="meta-card">
+          <label>INGESTION RATE</label>
+          <strong>1,421 / s</strong>
+          <code>rate(prometheus_tsdb_head_samples_appended_total[5m])</code>
         </div>
-        <div class="key-mechanism-card caveat">
-          <label>OPERATIONAL CAVEAT & PRODUCTION TRAP</label>
-          <p>{lab.caveat}</p>
+        <div class="meta-card">
+          <label>ACTIVE HEAD SERIES</label>
+          <strong>480</strong>
+          <code>prometheus_tsdb_head_series</code>
+        </div>
+        <div class="meta-card">
+          <label>RULE EVAL DURATION</label>
+          <strong>2.8 ms</strong>
+          <code>prometheus_rule_group_duration_seconds</code>
+        </div>
+        <div class="meta-card">
+          <label>PROCESS RESIDENT RAM</label>
+          <strong>340 MB</strong>
+          <code>process_resident_memory_bytes</code>
         </div>
       </div>
     </div>

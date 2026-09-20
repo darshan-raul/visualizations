@@ -815,14 +815,315 @@ function initConsole(consoleEl: HTMLElement) {
   });
 
   // -------------------------------------------------------------
-  // VIEW 40: BOSS FIGHT STEPPER
+  // VIEW 7: SERVICE DISCOVERY TABS
+  // -------------------------------------------------------------
+  qa<HTMLButtonElement>(consoleEl, '[data-sd-mode]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const mode = btn.getAttribute('data-sd-mode') || 'k8s';
+      qa<HTMLButtonElement>(consoleEl, '[data-sd-mode]').forEach((b) => b.classList.toggle('is-active', b === btn));
+      const yamlEl = q<HTMLElement>(consoleEl, '[data-sd-yaml]');
+      const tableEl = q<HTMLElement>(consoleEl, '[data-sd-table]');
+
+      if (mode === 'k8s') {
+        if (yamlEl) {
+          yamlEl.textContent = `scrape_configs:
+  - job_name: 'kubernetes-pods'
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names: ['prod']
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true`;
+        }
+        if (tableEl) {
+          const tbody = tableEl.querySelector('tbody');
+          if (tbody) {
+            tbody.innerHTML = `
+              <tr><td><code>10.244.1.12:8080</code></td><td>prod</td><td>checkout-7d9c89f</td><td><span class="status-badge up">KEEP</span></td></tr>
+              <tr><td><code>10.244.2.33:8080</code></td><td>prod</td><td>catalog-5f6b21c</td><td><span class="status-badge up">KEEP</span></td></tr>
+              <tr><td><code>10.244.3.44:9100</code></td><td>kube-system</td><td>coredns-8594b</td><td><span class="status-badge drop">DROP</span></td></tr>
+            `;
+          }
+        }
+      } else if (mode === 'static') {
+        if (yamlEl) {
+          yamlEl.textContent = `scrape_configs:
+  - job_name: 'infra-static'
+    static_configs:
+      - targets: ['10.0.1.5:9100', '10.0.1.6:9100']
+        labels:
+          env: 'production'
+          tier: 'database'`;
+        }
+        if (tableEl) {
+          const tbody = tableEl.querySelector('tbody');
+          if (tbody) {
+            tbody.innerHTML = `
+              <tr><td><code>10.0.1.5:9100</code></td><td>infra</td><td>postgres-primary</td><td><span class="status-badge up">KEEP</span></td></tr>
+              <tr><td><code>10.0.1.6:9100</code></td><td>infra</td><td>redis-cache</td><td><span class="status-badge up">KEEP</span></td></tr>
+            `;
+          }
+        }
+      } else if (mode === 'ec2') {
+        if (yamlEl) {
+          yamlEl.textContent = `scrape_configs:
+  - job_name: 'aws-ec2'
+    ec2_sd_configs:
+      - region: us-east-1
+        port: 9100
+        filters:
+          - name: "tag:Environment"
+            values: ["production"]`;
+        }
+        if (tableEl) {
+          const tbody = tableEl.querySelector('tbody');
+          if (tbody) {
+            tbody.innerHTML = `
+              <tr><td><code>172.31.12.8:9100</code></td><td>us-east-1a</td><td>i-0abcd1234ef (checkout-asg)</td><td><span class="status-badge up">KEEP</span></td></tr>
+              <tr><td><code>172.31.28.14:9100</code></td><td>us-east-1b</td><td>i-0efgh5678ij (payment-asg)</td><td><span class="status-badge up">KEEP</span></td></tr>
+            `;
+          }
+        }
+      } else if (mode === 'consul') {
+        if (yamlEl) {
+          yamlEl.textContent = `scrape_configs:
+  - job_name: 'consul-services'
+    consul_sd_configs:
+      - server: 'consul.internal:8500'
+        services: ['api-gateway', 'auth-service']`;
+        }
+        if (tableEl) {
+          const tbody = tableEl.querySelector('tbody');
+          if (tbody) {
+            tbody.innerHTML = `
+              <tr><td><code>192.168.1.10:443</code></td><td>dc1</td><td>api-gateway</td><td><span class="status-badge up">KEEP</span></td></tr>
+              <tr><td><code>192.168.1.11:8080</code></td><td>dc1</td><td>auth-service</td><td><span class="status-badge up">KEEP</span></td></tr>
+            `;
+          }
+        }
+      } else if (mode === 'dns') {
+        if (yamlEl) {
+          yamlEl.textContent = `scrape_configs:
+  - job_name: 'dns-srv'
+    dns_sd_configs:
+      - names: ['_prometheus._tcp.internal.acme.shop']
+        type: 'SRV'`;
+        }
+        if (tableEl) {
+          const tbody = tableEl.querySelector('tbody');
+          if (tbody) {
+            tbody.innerHTML = `
+              <tr><td><code>10.0.50.2:9090</code></td><td>dns-zone</td><td>srv-prom-1</td><td><span class="status-badge up">KEEP</span></td></tr>
+              <tr><td><code>10.0.50.3:9090</code></td><td>dns-zone</td><td>srv-prom-2</td><td><span class="status-badge up">KEEP</span></td></tr>
+            `;
+          }
+        }
+      }
+    });
+  });
+
+  // -------------------------------------------------------------
+  // VIEW 10: TARGET INSPECTOR FILTERS
+  // -------------------------------------------------------------
+  qa<HTMLElement>(consoleEl, '[data-target-filter]').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      const filter = chip.getAttribute('data-target-filter') || 'all';
+      qa<HTMLElement>(consoleEl, '[data-target-filter]').forEach((c) => c.classList.toggle('active', c === chip));
+      const rows = qa<HTMLElement>(consoleEl, '.targets-list-view .target-row');
+      rows.forEach((row) => {
+        const state = row.getAttribute('data-state');
+        if (filter === 'all') {
+          row.style.display = 'flex';
+        } else if (filter === 'up') {
+          row.style.display = state === 'up' ? 'flex' : 'none';
+        } else if (filter === 'down') {
+          row.style.display = state === 'down' ? 'flex' : 'none';
+        }
+      });
+    });
+  });
+
+  // -------------------------------------------------------------
+  // VIEW 16: SELECTORS & MATCHERS TABS
+  // -------------------------------------------------------------
+  qa<HTMLButtonElement>(consoleEl, '[data-matcher-type]').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      const type = tab.getAttribute('data-matcher-type') || 'exact';
+      qa<HTMLButtonElement>(consoleEl, '[data-matcher-type]').forEach((t) => t.classList.toggle('is-active', t === tab));
+      const codeEl = q<HTMLElement>(consoleEl, '[data-matcher-code]');
+      const noteEl = q<HTMLElement>(consoleEl, '[data-matcher-note]');
+      const gridEl = q<HTMLElement>(consoleEl, '.matcher-series-grid');
+
+      if (type === 'exact') {
+        if (codeEl) codeEl.textContent = 'http_requests_total{service="checkout"}';
+        if (noteEl) noteEl.textContent = 'Exact equality match: matches only series with label service exactly equal to "checkout".';
+        if (gridEl) {
+          gridEl.innerHTML = `
+            <div class="series-card matched">
+              <span class="match-badge pass">MATCHED</span>
+              <code>{service="checkout", status="200"}</code>
+              <small>service is exactly checkout</small>
+            </div>
+            <div class="series-card matched">
+              <span class="match-badge pass">MATCHED</span>
+              <code>{service="checkout", status="500"}</code>
+              <small>service is exactly checkout</small>
+            </div>
+            <div class="series-card rejected">
+              <span class="match-badge fail">REJECTED</span>
+              <code>{service="catalog", status="200"}</code>
+              <small>service is catalog != checkout</small>
+            </div>
+          `;
+        }
+      } else if (type === 'neg') {
+        if (codeEl) codeEl.textContent = 'http_requests_total{status!="200"}';
+        if (noteEl) noteEl.textContent = 'Negative equality match: selects all series where status is not "200", including 4xx, 5xx, or unset.';
+        if (gridEl) {
+          gridEl.innerHTML = `
+            <div class="series-card matched">
+              <span class="match-badge pass">MATCHED</span>
+              <code>{service="checkout", status="500"}</code>
+              <small>status is 500 != 200</small>
+            </div>
+            <div class="series-card matched">
+              <span class="match-badge pass">MATCHED</span>
+              <code>{service="checkout", status="404"}</code>
+              <small>status is 404 != 200</small>
+            </div>
+            <div class="series-card rejected">
+              <span class="match-badge fail">REJECTED</span>
+              <code>{service="checkout", status="200"}</code>
+              <small>status is 200 (excluded)</small>
+            </div>
+          `;
+        }
+      } else if (type === 'regex') {
+        if (codeEl) codeEl.textContent = 'http_requests_total{status=~"5.."}';
+        if (noteEl) noteEl.textContent = 'Google RE2 regex match. Fully anchored (^ and $) implicitly. Matches status codes starting with 5 (500, 502, 503, 504).';
+        if (gridEl) {
+          gridEl.innerHTML = `
+            <div class="series-card matched">
+              <span class="match-badge pass">MATCHED</span>
+              <code>{service="checkout", status="500"}</code>
+              <small>Status starts with 5</small>
+            </div>
+            <div class="series-card matched">
+              <span class="match-badge pass">MATCHED</span>
+              <code>{service="checkout", status="503"}</code>
+              <small>Status starts with 5</small>
+            </div>
+            <div class="series-card rejected">
+              <span class="match-badge fail">REJECTED</span>
+              <code>{service="checkout", status="200"}</code>
+              <small>Does not match RE2 5..</small>
+            </div>
+          `;
+        }
+      } else if (type === 'nregex') {
+        if (codeEl) codeEl.textContent = 'http_requests_total{service!~"api-.*"}';
+        if (noteEl) noteEl.textContent = 'Negative RE2 regex match: excludes all service labels beginning with "api-".';
+        if (gridEl) {
+          gridEl.innerHTML = `
+            <div class="series-card matched">
+              <span class="match-badge pass">MATCHED</span>
+              <code>{service="checkout", status="200"}</code>
+              <small>Does not begin with api-</small>
+            </div>
+            <div class="series-card matched">
+              <span class="match-badge pass">MATCHED</span>
+              <code>{service="payment", status="200"}</code>
+              <small>Does not begin with api-</small>
+            </div>
+            <div class="series-card rejected">
+              <span class="match-badge fail">REJECTED</span>
+              <code>{service="api-gateway", status="200"}</code>
+              <small>Matches regex api-.* (rejected)</small>
+            </div>
+          `;
+        }
+      }
+    });
+  });
+
+  // -------------------------------------------------------------
+  // VIEW 19: AGGREGATION MODIFIERS
+  // -------------------------------------------------------------
+  qa<HTMLButtonElement>(consoleEl, '[data-agg-mode]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const mode = btn.getAttribute('data-agg-mode') || 'by';
+      qa<HTMLButtonElement>(consoleEl, '[data-agg-mode]').forEach((b) => {
+        b.classList.toggle('is-active', b === btn);
+        b.classList.toggle('secondary', b !== btn);
+      });
+      const outputEl = q<HTMLElement>(consoleEl, '[data-agg-output]');
+      if (!outputEl) return;
+
+      if (mode === 'by') {
+        outputEl.innerHTML = `
+          <div class="agg-series-pill final"><code>{service="catalog"}</code> <strong>210/s</strong></div>
+          <div class="agg-series-pill final"><code>{service="checkout"}</code> <strong>97/s</strong></div>
+          <div class="agg-series-pill final"><code>{service="payment"}</code> <strong>85/s</strong></div>
+        `;
+      } else {
+        outputEl.innerHTML = `
+          <div class="agg-series-pill final"><code>{service="catalog", status="200"}</code> <strong>210/s</strong></div>
+          <div class="agg-series-pill final"><code>{service="checkout", status="200"}</code> <strong>93/s</strong></div>
+          <div class="agg-series-pill final"><code>{service="checkout", status="500"}</code> <strong>4/s</strong></div>
+          <div class="agg-series-pill final"><code>{service="payment", status="200"}</code> <strong>85/s</strong></div>
+        `;
+      }
+    });
+  });
+
+  // -------------------------------------------------------------
+  // VIEW 27: ALERTMANAGER ROUTING SIMULATION
+  // -------------------------------------------------------------
+  qa<HTMLButtonElement>(consoleEl, '[data-sim-route]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const route = btn.getAttribute('data-sim-route');
+      const rootNode = q(consoleEl, '#am-root');
+      const critBranch = q(consoleEl, '#branch-critical');
+      const warnBranch = q(consoleEl, '#branch-warning');
+      const leafPayment = q(consoleEl, '#leaf-payment');
+      const leafSlack = q(consoleEl, '#leaf-slack');
+
+      // Reset active classes
+      qa(consoleEl, '.tree-node').forEach((n) => n.classList.remove('active'));
+      rootNode?.classList.add('active');
+
+      if (route === 'payment-critical') {
+        critBranch?.querySelector('.sub-node')?.classList.add('active');
+        leafPayment?.classList.add('active');
+        addEventLog(`[AM ROUTING] Alert{alertname="PaymentGatewayDown", severity="critical", service="payment"} matched root -> severity=critical -> team=payments -> Dispatched to PagerDuty!`);
+      } else if (route === 'general-warn') {
+        warnBranch?.querySelector('.slack')?.classList.add('active');
+        leafSlack?.classList.add('active');
+        addEventLog(`[AM ROUTING] Alert{alertname="HighDiskUsage", severity="warning"} matched root -> severity=warning -> Dispatched to Slack #infra-warns.`);
+      }
+    });
+  });
+
+  // -------------------------------------------------------------
+  // VIEW 40: BOSS FIGHT STEPPER (EVENT DELEGATION)
   // -------------------------------------------------------------
   let bossStep = 1;
   const bossWorkspace = q<HTMLElement>(consoleEl, '[data-boss-workspace]');
 
-  q(consoleEl, '[data-boss-submit]')?.addEventListener('click', () => {
+  bossWorkspace?.addEventListener('click', (e) => {
+    const submitBtn = (e.target as HTMLElement)?.closest('[data-boss-submit]');
+    if (!submitBtn) return;
+
     if (bossStep === 1) {
       bossStep = 2;
+      const step1 = q(consoleEl, '[data-boss-step="1"]');
+      const step2 = q(consoleEl, '[data-boss-step="2"]');
+      step1?.classList.remove('active');
+      step1?.classList.add('done');
+      step2?.classList.add('active');
+
       if (bossWorkspace) {
         bossWorkspace.innerHTML = `
           <h5>STEP 2: CALCULATE CHECKOUT 5xx ERROR RATIO</h5>
@@ -838,6 +1139,12 @@ function initConsole(consoleEl: HTMLElement) {
       }
     } else if (bossStep === 2) {
       bossStep = 3;
+      const step2 = q(consoleEl, '[data-boss-step="2"]');
+      const step3 = q(consoleEl, '[data-boss-step="3"]');
+      step2?.classList.remove('active');
+      step2?.classList.add('done');
+      step3?.classList.add('active');
+
       if (bossWorkspace) {
         bossWorkspace.innerHTML = `
           <h5>STEP 3: IDENTIFY THE THROTTLED INSTANCE</h5>
