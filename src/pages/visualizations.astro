@@ -21,6 +21,6 @@ const topics = (await getCollection('topics')).sort((a, b) => a.data.title.local
     </aside>
   </section>
   <section class="catalogue-section shell">
-    <LibraryExplorer topics={topics} enableMap defaultView="map" />
+    <LibraryExplorer topics={topics} enableMap defaultView="list" />
   </section>
 </BaseLayout>

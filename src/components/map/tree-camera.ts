@@ -24,8 +24,10 @@ export function createTreeCamera(map: HTMLElement) {
   let animFrame = 0;
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
+  const collectionXs = points.filter((point) => point.element.matches('.tree-collection')).map((point) => point.x);
+  const collectionSpread = Math.max(...collectionXs) - Math.min(...collectionXs) || 1;
+
   const isCompact = () => viewport.clientWidth < 860;
-  const axisScale = () => isCompact() ? .58 : 1;
   const fittedScale = () => {
     const width = viewport.clientWidth;
     const height = viewport.clientHeight;
@@ -34,6 +36,8 @@ export function createTreeCamera(map: HTMLElement) {
     const focusedBranch = map.classList.contains('has-selection') && !isCompact();
     return Math.max(isCompact() ? .25 : .4, Math.min(horizontalRoom / (focusedBranch ? 1320 : 1650), verticalRoom / (focusedBranch ? 860 : 930), 1.08));
   };
+  // Narrow screens stretch the horizontal axis until the collection row spans the viewport, so its nodes do not overlap.
+  const axisScale = () => isCompact() ? Math.max(.58, Math.min(1.1, (viewport.clientWidth - 76) / (collectionSpread * fittedScale()))) : 1;
 
   function tickAnim() {
     let moved = false;

@@ -166,7 +166,7 @@ const filterGroups = [
       if (map) map.hidden = currentView !== 'map';
       empty.hidden = visibleIds.size !== 0 || currentView === 'map';
       viewSwitch?.querySelectorAll<HTMLButtonElement>('[data-view]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.view === currentView)));
-      if (currentView === 'map') requestAnimationFrame(() => selectedTopic ? focusSelectedNode(selectedTopic) : fitMap());
+      if (currentView === 'map') requestAnimationFrame(frameMap);
       setUrl(mode);
     }
 
@@ -249,6 +249,23 @@ const filterGroups = [
       }
       const hiddenCount = edges.length - visibleEdges.length;
       if (hiddenCount) { const note = document.createElement('p'); note.textContent = `${hiddenCount} connection${hiddenCount === 1 ? '' : 's'} hidden by current filters.`; inspector.append(note); }
+    }
+
+    function expandBranch(slug: string) {
+      tree?.querySelectorAll<HTMLButtonElement>('[data-tree-toggle]').forEach((toggle) => {
+        const isTarget = toggle.dataset.treeToggle === slug;
+        toggle.setAttribute('aria-expanded', isTarget ? 'true' : 'false');
+        const label = toggle.querySelector('small');
+        const count = toggle.closest('[data-tree-branch]')?.querySelectorAll('[data-map-node]').length || 0;
+        if (label) label.textContent = `${count} topics · ${isTarget ? 'collapse' : 'expand'}`;
+      });
+    }
+
+    function frameMap() {
+      if (selectedTopic) { focusSelectedNode(selectedTopic); return; }
+      const expandedBranch = tree?.querySelector<HTMLButtonElement>('[data-tree-toggle][aria-expanded="true"]:not([hidden])');
+      if (treeCamera && expandedBranch) treeCamera.focus(`collection-${expandedBranch.dataset.treeToggle}`);
+      else fitMap();
     }
 
     function focusSelectedNode(id: string) {
@@ -373,6 +390,10 @@ const filterGroups = [
       checks.forEach((check) => { check.checked = params.getAll(check.dataset.filter || '').includes(check.value); });
       const requestedView = params.get('view');
       currentView = requestedView === 'map' && map ? 'map' : requestedView === 'list' ? 'list' : library.dataset.defaultView === 'map' && map ? 'map' : 'list'; selectedTopic = params.get('topic');
+      // A deep link carries no click, so open the branch its topic or single collection lives in.
+      const linkedCollections = params.getAll('collection');
+      const linkedBranch = nodeById.get(selectedTopic || '')?.collection || (linkedCollections.length === 1 ? linkedCollections[0] : null);
+      if (linkedBranch) expandBranch(linkedBranch);
       void applyFilters('none').then(() => setView(currentView, 'none'));
     }
 
@@ -384,13 +405,7 @@ const filterGroups = [
       
       if (tree) {
         if (value) {
-          tree.querySelectorAll<HTMLButtonElement>('[data-tree-toggle]').forEach((toggle) => {
-            const isTarget = toggle.dataset.treeToggle === value;
-            toggle.setAttribute('aria-expanded', isTarget ? 'true' : 'false');
-            const label = toggle.querySelector('small');
-            const count = toggle.closest('[data-tree-branch]')?.querySelectorAll('[data-map-node]').length || 0;
-            if (label) label.textContent = `${count} topics · ${isTarget ? 'collapse' : 'expand'}`;
-          });
+          expandBranch(value);
           if (treeCamera) treeCamera.focus(`collection-${value}`);
         } else {
           // If "All" is clicked, zoom back out to see everything
@@ -496,7 +511,7 @@ const filterGroups = [
     document.addEventListener('keydown', (event) => { const target = event.target as HTMLElement; if (event.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) && !target.isContentEditable) { event.preventDefault(); input.focus(); } });
     new ResizeObserver(() => {
       const width = map?.querySelector<HTMLElement>('[data-map-viewport]')?.clientWidth || 0;
-      if (currentView === 'map' && Math.abs(width - observedMapWidth) > 1) { observedMapWidth = width; fitMap(); }
+      if (currentView === 'map' && Math.abs(width - observedMapWidth) > 1) { observedMapWidth = width; if (tree) frameMap(); else fitMap(); }
     }).observe(library);
     restoreFromUrl();
   }

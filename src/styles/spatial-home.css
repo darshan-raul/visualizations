@@ -29,7 +29,7 @@ body:has(.spatial-home) .site-footer { display: none; }
 .spatial-home .collection-switch button:first-child { font-size: 0; }
 .spatial-home .collection-switch button:first-child::before { content: 'All'; font-size: .75rem; }
 
-.spatial-home .library-tools { position: absolute; z-index: 30; top: 88px; left: 28px; display: block; width: min(300px, calc(100% - 56px)); margin: 0; padding: 0; border: 0; border-radius: 0; background: none; }
+.spatial-home .library-tools { position: absolute; z-index: 30; top: 104px; left: 28px; display: block; width: min(300px, calc(100% - 56px)); margin: 0; padding: 0; border: 0; border-radius: 0; background: none; }
 .spatial-home .library-tools .search-field input { height: 42px; border-radius: 9px; background: rgba(9,12,19,.82); font-size: .75rem; backdrop-filter: blur(14px); }
 .spatial-home .advanced-filters { margin-top: 8px; }
 .spatial-home .advanced-filters > summary { width: max-content; padding: 8px 12px; border-radius: 8px; background: rgba(9,12,19,.78); color: var(--dim); font-size: .7rem; cursor: pointer; }
