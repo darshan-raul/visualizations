@@ -1,36 +1,54 @@
 ---
-title: "Git: From Working Tree to Worktrees and Plumbing"
-summary: "Explore Git through a live developer workspace. Step through index staging, object hashes, branching, rebase, three-stage conflict resolution, multi-directory worktrees, and low-level plumbing."
+title: "Git: Snapshots and Moving Labels"
+summary: "Start with one file and a line of saved versions, then add staging, branches, merging, remotes, and undo to the same picture, one idea at a time."
 slug: git
 collection: devops-sre
-tags: [Git, Version Control, DevOps, Worktrees, Internals]
-technologies: [Git, Bash, Linux, Terraform, Kubernetes]
+tags: [Git, Version Control, DevOps, Internals]
+technologies: [Git]
 format: deep-dive
-difficulty: intermediate
+difficulty: foundational
 published: 2026-09-19
-reviewed: 2026-09-19
-versionScope: Git 2.45+ object database, worktree, index, and ref behavior verified against git-scm documentation on 2026-09-19
+reviewed: 2026-10-08
+versionScope: Command behaviour checked against Git 2.55.0 on 2026-10-08; commit letters and hashes are illustrative
 legacyPath: /git
 featured: true
 state: reviewed
 related: [github-actions-cheatsheet, secopspipeline]
 sources:
-  - label: "Git Documentation: git-worktree"
-    url: https://git-scm.com/docs/git-worktree
-  - label: "Git Documentation: git-status"
-    url: https://git-scm.com/docs/git-status
-  - label: "Git Documentation: git-rev-parse"
-    url: https://git-scm.com/docs/git-rev-parse
-  - label: "Git Book: Git Internals - Plumbing and Porcelain"
-    url: https://git-scm.com/book/en/v2/Git-Internals-Plumbing-and-Porcelain
-  - label: "Git Documentation: git-reflog"
-    url: https://git-scm.com/docs/git-reflog
-  - label: "Git Documentation: git-reset"
+  - label: "Pro Git: What is Git?"
+    url: https://git-scm.com/book/en/v2/Getting-Started-What-is-Git%3F
+  - label: "Pro Git: Recording Changes to the Repository"
+    url: https://git-scm.com/book/en/v2/Git-Basics-Recording-Changes-to-the-Repository
+  - label: "Git documentation: git-add"
+    url: https://git-scm.com/docs/git-add
+  - label: "Git documentation: git-commit"
+    url: https://git-scm.com/docs/git-commit
+  - label: "Pro Git: Branches in a Nutshell"
+    url: https://git-scm.com/book/en/v2/Git-Branching-Branches-in-a-Nutshell
+  - label: "Git documentation: git-branch"
+    url: https://git-scm.com/docs/git-branch
+  - label: "Git documentation: git-switch"
+    url: https://git-scm.com/docs/git-switch
+  - label: "Git documentation: git-merge"
+    url: https://git-scm.com/docs/git-merge
+  - label: "Git documentation: git-rebase"
+    url: https://git-scm.com/docs/git-rebase
+  - label: "Git documentation: git-fetch"
+    url: https://git-scm.com/docs/git-fetch
+  - label: "Git documentation: git-push"
+    url: https://git-scm.com/docs/git-push
+  - label: "Git documentation: git-pull"
+    url: https://git-scm.com/docs/git-pull
+  - label: "Git documentation: git-restore"
+    url: https://git-scm.com/docs/git-restore
+  - label: "Git documentation: git-reset"
     url: https://git-scm.com/docs/git-reset
-  - label: "Git Documentation: git-fsck"
-    url: https://git-scm.com/docs/git-fsck
-  - label: "Git Documentation: git-gc"
-    url: https://git-scm.com/docs/git-gc
+  - label: "Git documentation: git-revert"
+    url: https://git-scm.com/docs/git-revert
+  - label: "Git documentation: git-reflog"
+    url: https://git-scm.com/docs/git-reflog
+  - label: "Pro Git: Git Objects"
+    url: https://git-scm.com/book/en/v2/Git-Internals-Git-Objects
 ---
 
 import GitConsole from '../../components/git/GitConsole.astro';

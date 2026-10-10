@@ -1,0 +1,45 @@
+---
+import GitGraph from './GitGraph.astro';
+import type { FileCard, GraphBox, Scene } from './git-lesson';
+interface Props { scene: Scene; box?: GraphBox; id: string; index: number; terms?: boolean }
+const { scene, box, id, index, terms = false } = Astro.props;
+type Place = { kind: string; title: string; term: string; files: FileCard[]; empty: string };
+const places: Place[] = [
+  ...(scene.desk ? [{ kind: 'desk', title: 'Your folder', term: 'working directory', files: scene.desk, empty: 'No files' }] : []),
+  ...(scene.tray ? [{ kind: 'tray', title: 'Ready to save', term: 'staging area', files: scene.tray, empty: 'Nothing waiting' }] : []),
+];
+---
+<div class="git-scene" data-git-scene={index}>
+  {scene.title && <h4 class="git-scene-title">{scene.title}</h4>}
+  <div class="git-scene-body">
+    {places.map((place) => <section class={`git-place is-${place.kind}`} aria-label={place.title}>
+      <h5>{place.title}{terms && <small>{place.term}</small>}</h5>
+      {place.files.length === 0 && <p class="git-place-empty">{place.empty}</p>}
+      {place.files.map((item) => <div class:list={['git-file', item.tone && `is-${item.tone}`]}>
+        <div class="git-file-head"><span>{item.name}</span>{item.tag && <em>{item.tag}</em>}</div>
+        <code>{item.lines.map((line, position) => <span class:list={[position === item.hot && 'is-hot']}>{line}</span>)}</code>
+      </div>)}
+    </section>)}
+    {scene.graph && box && <section class="git-place is-history" aria-label="Saved versions">
+      <h5>Saved versions{terms && <small>history</small>}</h5>
+      <GitGraph graph={scene.graph} box={box} id={id} />
+      {scene.peek && <div class="git-peek">
+        <span>Inside {scene.peek.id}</span>
+        <div>{scene.peek.files.map((item) => <div class="git-file">
+          <div class="git-file-head"><span>{item.name}</span></div>
+          <code>{item.lines.map((line, position) => <span class:list={[position === item.hot && 'is-hot']}>{line}</span>)}</code>
+        </div>)}</div>
+      </div>}
+    </section>}
+    {scene.cards && <div class="git-cards">
+      {scene.cards.map((card, position) => <>
+        {position > 0 && <span class="git-card-link" aria-hidden="true">→</span>}
+        <section class={`git-card is-${card.tone ?? 'commit'}`}>
+          <h5>{card.title}{card.sub && <small>{card.sub}</small>}</h5>
+          <dl>{card.rows.map(([key, value], row) => <div class:list={[row === card.hot && 'is-hot']}>{key && <dt>{key}</dt>}<dd>{value}</dd></div>)}</dl>
+        </section>
+      </>)}
+    </div>}
+  </div>
+  {scene.notice && <p class={`git-notice is-${scene.notice.tone}`}><strong>{scene.notice.label}</strong><code>{scene.notice.text}</code></p>}
+</div>

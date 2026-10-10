@@ -1,195 +1,106 @@
 ---
 import TopicConsoleShell from '../TopicConsoleShell.astro';
-import GitWorkspace from './GitWorkspace.astro';
-import { gitViews, gitGroups, gitRelated } from './git-data';
-
-interface Props {
-  published: Date;
-  reviewed?: Date;
-}
-
+import GitScene from './GitScene.astro';
+import { gitGroups, gitRelated, gitSources, gitViews, graphBox, type Graph, type View } from './git-lesson';
+interface Props { published: Date; reviewed?: Date }
 const { published, reviewed } = Astro.props;
 const date = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
-const firstLab = gitViews[0];
-
-const allSources = [
-  { label: 'Git SCM: git-worktree Documentation', url: 'https://git-scm.com/docs/git-worktree' },
-  { label: 'Git SCM: git-status Documentation', url: 'https://git-scm.com/docs/git-status' },
-  { label: 'Git SCM: git-rev-parse Documentation', url: 'https://git-scm.com/docs/git-rev-parse' },
-  { label: 'Git Book: Git Internals - Plumbing and Porcelain', url: 'https://git-scm.com/book/en/v2/Git-Internals-Plumbing-and-Porcelain' },
-  { label: 'Git SCM: git-reflog Documentation', url: 'https://git-scm.com/docs/git-reflog' },
-  { label: 'Git SCM: git-reset Documentation', url: 'https://git-scm.com/docs/git-reset' },
-  { label: 'Git SCM: git-fsck Documentation', url: 'https://git-scm.com/docs/git-fsck' },
-  { label: 'Git SCM: git-gc Documentation', url: 'https://git-scm.com/docs/git-gc' }
-];
+const pad = (value: number) => String(value).padStart(2, '0');
+const total = pad(gitViews.length);
+/** One box per scene slot, measured across every frame, so dots hold still while labels move. */
+const boxes = (view: View) => {
+  const slots = Math.max(...view.frames.map((frame) => frame.scenes.length));
+  return Array.from({ length: slots }, (_, slot) => graphBox(view.frames.flatMap((frame) => frame.scenes[slot]?.graph ?? []) as Graph[]));
+};
+const first = gitViews[0];
 ---
-
 <TopicConsoleShell
-  consoleId="git"
-  className="git-console"
-  prefix="git"
-  collectionHref="/devops-sre"
-  collectionLabel="DevOps & SRE"
-  crumbs={[
-    { label: 'Library', href: '/' },
-    { label: 'DevOps & SRE', href: '/devops-sre' },
-    { label: 'Git Workspaces' }
-  ]}
-  kicker="DEVOPS & SRE · DEVELOPER WORKSPACES"
-  title="Git: From Working Tree to Worktrees and Plumbing"
-  summary="Explore Git through a live developer workspace. Step through index staging, object hashes, branching, rebase, three-stage conflict resolution, multi-directory worktrees, and low-level plumbing."
-  referenceLabel="ONE REPO · infra-platform"
-  formatLabel="DEEP DIVE · WORKSPACE SIMULATION"
+  consoleId="git" className="git-console" prefix="git" collectionHref="/devops-sre" collectionLabel="DevOps & SRE"
+  crumbs={[{ label: 'Library', href: '/' }, { label: 'DevOps & SRE', href: '/devops-sre' }, { label: 'Deep Dive' }]}
+  kicker="GIT · VERSION CONTROL CONSOLE"
+  title="Git: Snapshots and Moving Labels"
+  summary="Start with one file and a line of saved versions. Then add staging, branches, merging, remotes, and undo to the same picture, one idea at a time."
+  referenceLabel="PRACTICE REPO · my-app" formatLabel="FOUNDATIONAL · DEEP DIVE"
   dates={`Published ${date.format(published)} · Reviewed ${date.format(reviewed ?? published)}`}
 >
-  <!-- Slot: Concept-Grouped Sidebar Index -->
-  <nav slot="index" class="git-index" aria-label="Git Laboratories index">
-    <details class="git-index-menu" open>
-      <summary>
-        <span>EXPLORE LABS</span>
-        <strong data-git-view-count>01 / {String(gitViews.length).padStart(2, '0')}</strong>
-      </summary>
-
-      {gitGroups.map((group, groupIndex) => {
-        const groupViews = gitViews.filter((v) => v.group === group);
-        return (
-          <details data-git-index-group={groupIndex} open={groupIndex === 0}>
-            <summary>
-              <strong>{group}</strong>
-              <span>{groupViews.length} labs</span>
-            </summary>
-            <div>
-              {groupViews.map((view) => {
-                const totalIndex = gitViews.indexOf(view);
-                return (
-                  <a
-                    href={`#${view.id}`}
-                    data-git-view-link={view.id}
-                    aria-current={totalIndex === 0 ? 'page' : undefined}
-                  >
-                    <span>{String(totalIndex + 1).padStart(2, '0')}</span>
-                    <strong>{view.label}</strong>
-                  </a>
-                );
-              })}
-            </div>
-          </details>
-        );
-      })}
-
-      <a class="git-sources-jump" href="#git-sources">↗ Primary sources</a>
+  <nav slot="index" class="git-index" aria-label="Git view index">
+    <details class="git-index-menu" data-git-menu open>
+    <summary class="git-index-head"><span>VIEW INDEX</span><strong data-git-count>01 / {total}</strong></summary>
+    {gitGroups.map((group, groupIndex) => {
+      const members = gitViews.filter((view) => view.group === group);
+      const start = gitViews.indexOf(members[0]);
+      return <details class="git-index-group" data-git-group open={groupIndex === 0}>
+        <summary><span>{pad(start + 1)}–{pad(start + members.length)}</span><strong>{group}</strong><i aria-hidden="true">⌄</i></summary>
+        <div>{members.map((view, offset) => <a href={`#${view.id}`} data-git-link aria-current={start + offset === 0 ? 'step' : undefined}><span>{pad(start + offset + 1)}</span><strong>{view.label}</strong></a>)}</div>
+      </details>;
+    })}
+    <a class="git-index-sources" href="#git-sources">↗ Sources</a>
     </details>
   </nav>
-
-  <!-- Slot: Main Workspace Body -->
-  <main slot="main" class="git-main">
-    <!-- Persistent Scenario Ribbon -->
-    <div class="git-scenario-ribbon" aria-label="Persistent workspace scenario context">
-      <span>SCENARIO</span>
-      <strong data-git-scenario-repo>~/repos/infra-platform (feature/cache)</strong>
-      <div>
-        <span>ACTIVE REF <b data-git-scenario-branch>feature/cache</b></span>
-        <span>WORKING PATH <b data-git-scenario-path>app/deployment.yaml</b></span>
-      </div>
+  <div slot="main" class="git-main">
+    <div class="git-toolbar">
+      <div><span class="git-kicker">ACTIVE VIEW</span><strong data-git-view-title>{first.label}</strong></div>
+      <div class="git-legend" aria-label="Legend"><span><i class="is-dot"></i> saved version</span><span><i class="is-line"></i> points back at its parent</span><span><i class="is-ghost"></i> no label points here</span></div>
+      <span class="git-toolbar-object">my-app/ · app.yaml, notes.md</span>
     </div>
-
-    <!-- 12 Concept Views -->
-    {gitViews.map((lab, index) => (
-      <section
-        id={lab.id}
-        class:list={['git-view', index === 0 && 'is-active']}
-        data-git-view={lab.id}
-        data-git-title={lab.title}
-        data-git-inspector={lab.inspector}
-        data-git-takeaway={lab.takeaway}
-        data-git-caveat={lab.caveat}
-        aria-labelledby={`${lab.id}-title`}
-      >
-        <header class="git-view-head">
-          <span class="git-view-group">
-            {String(index + 1).padStart(2, '0')} / {lab.group.toUpperCase()}
-          </span>
-          <h2 id={`${lab.id}-title`}>{lab.title}</h2>
-          <p class="git-view-question">{lab.question}</p>
-        </header>
-
-        <!-- Developer Workspace Simulation -->
-        <GitWorkspace lab={lab} />
-
-        <!-- Static Reading Copy for Non-JS / SEO -->
-        <div class="git-static-copy">
-          <p><strong>Core Mental Model:</strong> {lab.takeaway}</p>
-          <p><strong>Operational Boundary:</strong> {lab.caveat}</p>
-          <p class="git-source-links">
-            {lab.sources.map((url) => (
-              <a href={url} target="_blank" rel="noopener noreferrer">Primary reference ↗</a>
-            ))}
-          </p>
-        </div>
-      </section>
-    ))}
-  </main>
-
-  <!-- Slot: Context Inspector -->
-  <aside slot="inspector" class="git-inspector" aria-live="polite">
-    <span class="inspector-badge">CONTEXT INSPECTOR</span>
-    <h2 data-git-inspector-title>{firstLab.title}</h2>
-    <p data-git-inspector-copy>{firstLab.inspector}</p>
-
-    <div class="git-inspector-step">
-      <span class="step-badge">CURRENT OPERATION</span>
-      <strong data-git-inspector-state>Workspace Initialized</strong>
-      <p data-git-inspector-operation>Choose any command button in the workspace to execute Git actions and observe state transitions.</p>
+    <div class="git-canvas">
+      {gitViews.map((view, viewIndex) => {
+        const box = boxes(view);
+        return <>
+          {view.aliases?.map((alias) => <span id={alias} class="git-anchor" aria-hidden="true"></span>)}
+          <section id={view.id} class:list={['git-view', viewIndex === 0 && 'is-active']} data-git-view data-git-label={view.label} data-git-aliases={view.aliases?.join(' ')} data-git-takeaway={view.takeaway} data-git-mode={view.mode} aria-labelledby={`${view.id}-title`}>
+            <header class="git-view-head"><span>{pad(viewIndex + 1)} / {view.group.toUpperCase()}</span><h2 id={`${view.id}-title`} tabindex="-1">{view.title}</h2><p>{view.lede}</p></header>
+            {view.mode === 'steps'
+              ? <div class="git-controls" data-git-controls hidden>
+                  <button type="button" class="git-step-next" data-git-next>Next</button>
+                  <button type="button" data-git-back>← Back</button>
+                  <button type="button" data-git-restart>↺ Restart</button>
+                  <span data-git-step>Step 1 of {view.frames.length}</span>
+                </div>
+              : <div class="git-controls is-choices" data-git-controls role="group" aria-label="Choose what to compare" hidden>
+                  {view.frames.map((frame, frameIndex) => <button type="button" data-git-choice={frameIndex} aria-pressed={frameIndex === 0 ? 'true' : 'false'}>{frame.action}</button>)}
+                </div>}
+            <div class="git-frames">
+              {view.frames.map((frame, frameIndex) => <figure class:list={['git-frame', frameIndex === 0 && 'is-active']} data-git-frame data-git-action={frame.action}>
+                <figcaption><span>{view.mode === 'steps' ? `STEP ${frameIndex + 1} OF ${view.frames.length}` : `OPTION ${frameIndex + 1} OF ${view.frames.length}`} · <b>{frame.action}</b></span><p>{frame.caption}</p></figcaption>
+                <div class:list={['git-scenes', frame.scenes.length > 1 && 'is-pair']}>
+                  {frame.scenes.map((scene, slot) => <GitScene scene={scene} box={box[slot]} id={`${view.id}-${frameIndex}-${slot}`} index={slot} terms={view.terms} />)}
+                </div>
+              </figure>)}
+            </div>
+            <div class="git-reading" data-git-reading>
+              <span class="git-kicker">LESSON INSPECTOR</span>
+              <h3>{view.inspector.heading}</h3>
+              <p>{view.inspector.body}</p>
+              <dl class="git-facts">{view.inspector.facts.map(([key, value]) => <div><dt>{key}</dt><dd>{value}</dd></div>)}</dl>
+              <div class="git-evidence"><span>{view.inspector.evidence[0]}</span><code>{view.inspector.evidence[1]}</code></div>
+              <div class="git-note"><span>MODEL NOTE</span><p>{view.inspector.note}</p></div>
+              <p class="git-view-sources">{view.sources.map((source) => <a href={gitSources[source].url} target="_blank" rel="noopener noreferrer">{gitSources[source].label} ↗</a>)}</p>
+            </div>
+            <p class="git-view-point"><span>THE POINT TO KEEP</span>{view.takeaway}</p>
+          </section>
+        </>;
+      })}
     </div>
-
-    <div class="git-inspector-caveat-box">
-      <span class="caveat-label">OPERATIONAL CAVEAT</span>
-      <p class="git-inspector-caveat" data-git-inspector-caveat>{firstLab.caveat}</p>
+    <div class="git-timeline" data-git-timeline hidden>
+      <button type="button" data-git-prev aria-label="Previous view">←</button>
+      <div><span>NOW INSPECTING</span><strong data-git-progress>01 / {first.label}</strong></div>
+      <button type="button" data-git-forward aria-label="Next view">→</button>
     </div>
-  </aside>
-
-  <!-- Slot: Bottom Tray -->
-  <div slot="bottom" class="git-bottom">
-    <div class="git-bottom-takeaway">
-      <span>TAKEAWAY</span>
-      <p data-git-bottom-takeaway>{firstLab.takeaway}</p>
-    </div>
-
-    <nav class="git-view-sequence" aria-label="Laboratory sequence navigation">
-      <button type="button" data-git-view-prev aria-label="Previous laboratory">&larr; Previous</button>
-      <span data-git-view-counter>01 / {String(gitViews.length).padStart(2, '0')}</span>
-      <button type="button" data-git-view-next aria-label="Next laboratory">Next &rarr;</button>
-    </nav>
-
-    <div class="git-bottom-related">
-      <span>RELATED VISUALS</span>
-      {gitRelated.map((item) => (
-        <a href={item.href}>{item.label} ↗</a>
-      ))}
-    </div>
-
-    <details class="git-bottom-sources" id="git-sources">
-      <summary>
-        <strong>Authoritative Sources</strong>
-        <span>Official git-scm documentation and specifications</span>
-      </summary>
-      <ul>
-        {allSources.map((source) => (
-          <li>
-            <a href={source.url} target="_blank" rel="noopener noreferrer">{source.label} ↗</a>
-          </li>
-        ))}
-      </ul>
-    </details>
-
-    <div class="git-bottom-foot">
-      <span>Infra, Illustrated. · Visual deep dives into cloud infrastructure.</span>
-      <a href="/devops-sre">Back to DevOps & SRE collection</a>
-    </div>
+    <p class="git-live" data-git-live aria-live="polite"></p>
   </div>
+  <aside slot="inspector" class="git-inspector" data-git-inspector aria-label="Lesson inspector"></aside>
+  <Fragment slot="bottom">
+    <div class="git-point"><span>THE POINT TO KEEP</span><p data-git-point>{first.takeaway}</p></div>
+    <details class="git-reference" id="git-sources">
+      <summary><span>Sources, scope &amp; related visuals</span><i aria-hidden="true">↗</i></summary>
+      <div>
+        <p>This page teaches Git's model with a small practice project. Commit letters stand in for real hashes, and the file contents are examples. Command behaviour was checked against Git 2.55.0; the refusal and conflict messages are Git's own, shortened to one line.</p>
+        <ul>{gitSources.map((source) => <li><a href={source.url} target="_blank" rel="noopener noreferrer">{source.label} ↗</a></li>)}</ul>
+        <p class="git-related"><span>RELATED VISUALS</span>{gitRelated.map((item) => <a href={item.href}>{item.label} ↗</a>)}</p>
+      </div>
+    </details>
+    <div class="git-sitefoot"><span>Infra, Illustrated. · Visual deep dives into cloud infrastructure.</span><a href="/visualizations">Browse all visuals ↗</a></div>
+  </Fragment>
 </TopicConsoleShell>
-
-<script>
-  import { initGitConsoles } from './git-client';
-  initGitConsoles();
-</script>
+<script>import { initGitConsole } from './git-client'; initGitConsole();</script>

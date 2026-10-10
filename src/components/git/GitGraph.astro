@@ -1,0 +1,57 @@
+---
+import { COL, LANE, RADIUS, TAG, type Graph, type GraphBox } from './git-lesson';
+interface Props { graph: Graph; box: GraphBox; id: string }
+const { graph, box, id } = Astro.props;
+const labels = graph.labels ?? [];
+const at = new Map(graph.dots.map((item) => [item.id, { x: box.left + item.col * COL, y: box.top + (item.lane ?? 0) * LANE, lane: item.lane ?? 0 }]));
+const tagWidth = (name: string) => Math.round(name.length * 6.7 + 14);
+const tags = labels.flatMap((label) => {
+  const point = at.get(label.at);
+  if (!point) return [];
+  const level = labels.filter((other) => other.at === label.at).indexOf(label);
+  const offset = RADIUS + 15 + level * TAG;
+  return [{ ...label, x: point.x, y: point.lane === 0 ? point.y - offset : point.y + offset, width: tagWidth(label.name) }];
+});
+const headTag = tags.find((tag) => tag.name === graph.head);
+const head = headTag && { x: headTag.x - headTag.width / 2 - 21, y: headTag.y };
+const edges = graph.dots.flatMap((child) => (child.parents ?? []).flatMap((parentId) => {
+  const from = at.get(child.id);
+  const to = at.get(parentId);
+  if (!from || !to) return [];
+  const length = Math.hypot(to.x - from.x, to.y - from.y);
+  const ux = (to.x - from.x) / length;
+  const uy = (to.y - from.y) / length;
+  return [{ child, d: `M${from.x + ux * (RADIUS + 3)} ${from.y + uy * (RADIUS + 3)} L${to.x - ux * (RADIUS + 8)} ${to.y - uy * (RADIUS + 8)}` }];
+}));
+const first = graph.dots.find((item) => item.col === 0 && (item.lane ?? 0) === 0);
+const stub = graph.earlier && first ? at.get(first.id) : undefined;
+const name = (item: { id: string; text?: string; sub?: string }) => item.text === '' ? `the ${item.sub} version` : item.id;
+const spoken = [
+  ...graph.dots.map((item) => `${name(item)}${item.ghost ? ' (no label points here)' : ''}${item.parents?.length ? ` comes after ${item.parents.join(' and ')}` : ''}`),
+  ...labels.map((label) => `${label.name} points at ${label.at}`),
+  ...(graph.head ? [`HEAD is on ${graph.head}`] : []),
+].join('. ');
+---
+{graph.dots.length === 0 ? <p class="git-graph-empty">{graph.empty}</p> :
+<div class="git-graph" role="group" aria-label="History graph. Scroll sideways if it is cut off." tabindex="0">
+  <svg viewBox={`0 0 ${box.width} ${box.height}`} width={box.width} height={box.height} role="img" aria-labelledby={`${id}-title ${id}-desc`}>
+    <title id={`${id}-title`}>Saved versions and the labels on them</title>
+    <desc id={`${id}-desc`}>{spoken}.</desc>
+    <defs><marker id={`${id}-arrow`} markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M1 1 L7.5 4.5 L1 8" /></marker></defs>
+    {stub && <g class="git-earlier"><path d={`M${stub.x - RADIUS - 5} ${stub.y} H${stub.x - RADIUS - 34}`} /><text x={stub.x - RADIUS - 46} y={stub.y + 5} text-anchor="end">…</text></g>}
+    {edges.map((edge) => <path class:list={['git-edge', edge.child.fresh && 'is-fresh', edge.child.ghost && 'is-ghost']} d={edge.d} marker-end={`url(#${id}-arrow)`} />)}
+    {graph.dots.map((item) => {
+      const point = at.get(item.id)!;
+      return <g class:list={['git-dot', item.fresh && 'is-fresh', item.ghost && 'is-ghost', item.peek && 'is-peek']} transform={`translate(${point.x} ${point.y})`}>
+        <g class="git-dot-body"><circle r={RADIUS} /><text y="5" text-anchor="middle">{item.text ?? item.id}</text></g>
+        {item.sub && <text class="git-dot-sub" y={RADIUS + 19} text-anchor="middle">{item.sub}</text>}
+      </g>;
+    })}
+    {tags.map((tag) => <g class:list={['git-tag', tag.remote && 'is-remote', tag.fresh && 'is-fresh']} data-key={`label:${tag.name}`} data-x={tag.x} data-y={tag.y} transform={`translate(${tag.x} ${tag.y})`}>
+      <g class="git-tag-body"><rect x={-tag.width / 2} y="-10" width={tag.width} height="20" rx="4" /><text y="4" text-anchor="middle">{tag.name}</text></g>
+    </g>)}
+    {head && <g class:list={['git-head', graph.headFresh && 'is-fresh']} data-key="head" data-x={head.x} data-y={head.y} transform={`translate(${head.x} ${head.y})`}>
+      <g class="git-tag-body"><path d="M-20 -10 H16 L21 0 L16 10 H-20 Z" /><text x="-2" y="4" text-anchor="middle">HEAD</text></g>
+    </g>}
+  </svg>
+</div>}
