@@ -1,0 +1,50 @@
+---
+title: "AWS Network Charges: Distance, Direction, Path"
+summary: "Follow the same gigabytes from one instance in Mumbai to a neighbour, another zone, N. Virginia and the internet, then through the NAT gateways, endpoints and load balancers that add their own charge."
+slug: aws-data-transfer-costs
+collection: aws
+tags: [Networking, Cost, Troubleshooting]
+technologies: [Amazon EC2, Amazon VPC, NAT Gateway, Amazon S3, Amazon CloudFront, AWS Transit Gateway, AWS Direct Connect, Elastic Load Balancing, AWS PrivateLink]
+format: deep-dive
+difficulty: intermediate
+published: 2026-10-10
+reviewed: 2026-10-10
+versionScope: Rates for ap-south-1 (Mumbai), with us-east-1 as the second Region, read from the AWS Price List files on 2026-10-10
+legacyPath: /aws-data-transfer-costs
+featured: false
+state: reviewed
+related: [aws-eni, vpc-flow, aws-load-balancers]
+sources:
+  - label: "Amazon EC2 On-Demand pricing: data transfer"
+    url: https://aws.amazon.com/ec2/pricing/on-demand/
+  - label: "AWS Price List bulk API"
+    url: https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/using-the-aws-price-list-bulk-api.html
+  - label: "Cost and Usage Reports: understanding data transfer charges"
+    url: https://docs.aws.amazon.com/cur/latest/userguide/cur-data-transfers-charges.html
+  - label: "Amazon VPC pricing"
+    url: https://aws.amazon.com/vpc/pricing/
+  - label: "Gateway endpoints"
+    url: https://docs.aws.amazon.com/vpc/latest/privatelink/gateway-endpoints.html
+  - label: "AWS PrivateLink pricing"
+    url: https://aws.amazon.com/privatelink/pricing/
+  - label: "Amazon S3 pricing"
+    url: https://aws.amazon.com/s3/pricing/
+  - label: "Elastic Load Balancing pricing"
+    url: https://aws.amazon.com/elasticloadbalancing/pricing/
+  - label: "Amazon CloudFront pay-as-you-go pricing"
+    url: https://aws.amazon.com/cloudfront/pricing/pay-as-you-go/
+  - label: "AWS Transit Gateway pricing"
+    url: https://aws.amazon.com/transit-gateway/pricing/
+  - label: "AWS Direct Connect pricing"
+    url: https://aws.amazon.com/directconnect/pricing/
+  - label: "AWS Site-to-Site VPN pricing"
+    url: https://aws.amazon.com/vpn/pricing/
+  - label: "AWS Architecture Blog: data transfer costs for common architectures"
+    url: https://aws.amazon.com/blogs/architecture/overview-of-data-transfer-costs-for-common-architectures/
+  - label: "Pricing for NAT gateways"
+    url: https://docs.aws.amazon.com/vpc/latest/userguide/nat-gateway-pricing.html
+---
+
+import DtcConsole from '../../components/dtc/DtcConsole.astro';
+
+<DtcConsole published={props.published} reviewed={props.reviewed} />

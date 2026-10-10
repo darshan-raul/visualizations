@@ -1,0 +1,136 @@
+---
+import TopicConsoleShell from '../TopicConsoleShell.astro';
+import DtcMap from './DtcMap.astro';
+import { dtcGroups, dtcRelated, dtcSources, dtcViews, type Charge, type Route } from './dtc-lesson';
+import { DEFAULT_GB, RATES, chargeCost, computeCost, money, rate, tiersFor, volume } from './rates';
+interface Props { published: Date; reviewed?: Date }
+const { published, reviewed } = Astro.props;
+const date = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
+const pad = (value: number) => String(value).padStart(2, '0');
+const total = pad(dtcViews.length);
+const first = dtcViews[0];
+const gb = DEFAULT_GB;
+const priced = (charge: Charge) => charge.meter ? 'tiered' : charge.rate === 0 ? 'free' : `${rate(charge.rate)}/GB`;
+const tone = (charge: Charge) => charge.rate === 0 ? 'free' : 'paid';
+const monthly = (perHour: number) => money(perHour * RATES.hoursPerMonth);
+const saving = (routes: Route[]) => {
+  const [a, b] = routes.map((route) => computeCost(route, gb));
+  return { amount: money(a - b), share: a > 0 ? Math.round(((a - b) / a) * 100) : 0 };
+};
+const presets = [[50, '50 GB'], [1000, '1,000 GB'], [10240, '10 TB'], [204800, '200 TB']] as const;
+---
+<TopicConsoleShell
+  consoleId="dtc" className="dtc-console" prefix="dtc" collectionHref="/aws" collectionLabel="AWS"
+  crumbs={[{ label: 'Library', href: '/' }, { label: 'AWS', href: '/aws' }, { label: 'Deep Dive' }]}
+  kicker="AWS · DATA TRANSFER COST CONSOLE"
+  title="AWS Network Charges: Distance, Direction, Path"
+  summary="Follow the same gigabytes from one instance in Mumbai to a neighbour, another zone, N. Virginia and the internet, then through the devices that add their own charge on the way."
+  referenceLabel={`RATES · ${RATES.region} · ${RATES.asOf}`} formatLabel="INTERMEDIATE · DEEP DIVE"
+  dates={`Published ${date.format(published)} · Reviewed ${date.format(reviewed ?? published)}`}
+>
+  <nav slot="index" class="dtc-index" aria-label="Data transfer view index">
+    <details class="dtc-index-menu" data-dtc-menu open>
+    <summary class="dtc-index-head"><span>VIEW INDEX</span><strong data-dtc-count>01 / {total}</strong></summary>
+    {dtcGroups.map((group, groupIndex) => {
+      const members = dtcViews.filter((view) => view.group === group);
+      const start = dtcViews.indexOf(members[0]);
+      return <details class="dtc-index-group" data-dtc-group open={groupIndex === 0}>
+        <summary><span>{members.length > 1 ? `${pad(start + 1)}–${pad(start + members.length)}` : pad(start + 1)}</span><strong>{group}</strong><i aria-hidden="true">⌄</i></summary>
+        <div>{members.map((view, offset) => <a href={`#${view.id}`} data-dtc-link aria-current={start + offset === 0 ? 'step' : undefined}><span>{pad(start + offset + 1)}</span><strong>{view.label}</strong></a>)}</div>
+      </details>;
+    })}
+    <a class="dtc-index-sources" href="#dtc-sources">↗ Sources</a>
+    </details>
+  </nav>
+  <div slot="main" class="dtc-main">
+    <div class="dtc-toolbar">
+      <div class="dtc-toolbar-title"><span class="dtc-kicker">ACTIVE VIEW</span><strong data-dtc-view-title>{first.label}</strong></div>
+      <p class="dtc-scenario">app · private subnet · {RATES.homeAz} · sends <b>{volume(gb)}</b> a month</p>
+      <form class="dtc-volume" data-dtc-volume-form hidden>
+        <label for="dtc-gb">app sends</label>
+        <input id="dtc-gb" type="number" min="0" max="10000000" step="50" value={gb} inputmode="numeric" data-dtc-gb />
+        <span>GB a month</span>
+        <div role="group" aria-label="Volume presets">{presets.map(([value, label]) => <button type="button" data-dtc-preset={value} aria-pressed={value === gb ? 'true' : 'false'}>{label}</button>)}</div>
+      </form>
+    </div>
+    <div class="dtc-legend" aria-label="Legend">
+      <span><i class="is-place"></i> destination</span><span><i class="is-device"></i> device on the road</span>
+      <span><i class="is-free"></i> free hop</span><span><i class="is-paid"></i> charged hop</span><span><i class="is-chip">+$</i> rate per GB</span>
+    </div>
+    <div class="dtc-canvas">
+      {dtcViews.map((view, viewIndex) => <section id={view.id} class:list={['dtc-view', viewIndex === 0 && 'is-active']} data-dtc-view data-dtc-label={view.label} data-dtc-takeaway={view.takeaway} data-dtc-mode={view.mode} aria-labelledby={`${view.id}-title`}>
+        <header class="dtc-view-head"><span>{pad(viewIndex + 1)} / {view.group.toUpperCase()}</span><h2 id={`${view.id}-title`} tabindex="-1">{view.title}</h2><p>{view.lede}</p></header>
+        {view.mode === 'trace' && <div class="dtc-controls" data-dtc-trace hidden>
+          <button type="button" class="dtc-primary" data-dtc-step>Step →</button>
+          <button type="button" data-dtc-play>▶ Play</button>
+          <button type="button" data-dtc-reset>↺ Reset</button>
+          <span data-dtc-step-count></span>
+        </div>}
+        {view.mode === 'choices' && view.frames.length > 1 && <div class="dtc-controls is-choices" data-dtc-choices role="group" aria-label="Choose the road to price" hidden>
+          {view.frames.map((frame, frameIndex) => <button type="button" data-dtc-choice={frameIndex} aria-pressed={frameIndex === 0 ? 'true' : 'false'}>{frame.action}</button>)}
+        </div>}
+        <div class="dtc-frames">
+          {view.frames.map((frame, frameIndex) => <figure class:list={['dtc-frame', frameIndex === 0 && 'is-active']} data-dtc-frame data-dtc-action={frame.action}>
+            <figcaption>{view.frames.length > 1 && <span>OPTION {frameIndex + 1} OF {view.frames.length} · <b>{frame.action}</b></span>}<p>{frame.caption}</p></figcaption>
+            <div class="dtc-stage">
+              <div class="dtc-map-wrap"><DtcMap id={`${view.id}-${frameIndex}`} rings={view.rings} routes={frame.routes} context={view.context} fresh={view.rings > (dtcViews[viewIndex - 1]?.rings ?? 0)} /></div>
+              <div class="dtc-receipts">
+                {view.mode !== 'map' && frame.routes.map((route, slot) => <section class="dtc-receipt" data-dtc-receipt={slot} aria-label={`Receipt: ${route.name}`}>
+                  <h3>{route.name}</h3>
+                  <table>
+                    <thead><tr><th scope="col">Charge</th><th scope="col">Rate</th><th scope="col">Month</th></tr></thead>
+                    <tbody>{route.charges.map((charge) => <tr class={`is-${tone(charge)}`} data-dtc-charge data-hop={charge.hop} data-meter={charge.meter ?? 'flat'} data-rate={charge.rate}>
+                      <th scope="row">{charge.what}</th><td>{priced(charge)}</td><td data-dtc-amount>{money(chargeCost(charge, gb))}</td>
+                    </tr>)}</tbody>
+                    <tfoot><tr><th scope="row" colspan="2">Total for <span data-dtc-volume>{volume(gb)}</span></th><td data-dtc-total>{money(computeCost(route, gb))}</td></tr></tfoot>
+                  </table>
+                  {route.tiers && <table class="dtc-tiers" data-dtc-tiers={route.tiers}>
+                    <caption>How the month's volume fills the tiers</caption>
+                    <tbody>{tiersFor(route.tiers, gb).map((line) => <tr class:list={[line.gb === 0 && 'is-empty']}><th scope="row">{line.label}</th><td>{volume(line.gb)}</td><td>{line.perGB === 0 ? 'free' : `${rate(line.perGB)}/GB`}</td><td>{money(line.cost)}</td></tr>)}</tbody>
+                  </table>}
+                  {route.standing && <p class="dtc-standing"><span>ALSO BILLED BY THE HOUR</span>{route.standing.map((item) => <>{item.what}: {rate(item.perHour)} an hour, about {monthly(item.perHour)} a month.</>)}</p>}
+                </section>)}
+                {view.mode === 'trace' && <p class="dtc-savings" data-dtc-savings>Road B saves <strong data-dtc-saved>{saving(frame.routes).amount}</strong> a month, <strong data-dtc-share>{saving(frame.routes).share}%</strong> of road A, at <span data-dtc-volume>{volume(gb)}</span>.</p>}
+                {view.bill && <section class="dtc-bill" aria-label="Each charge and its usage type on the bill">
+                  <h3>Where the gigabyte goes · rate per GB · usage type on the bill</h3>
+                  <ul>{view.bill.map((row) => <li><span>{row.where}</span><b>{row.price}</b><code>{row.usage}</code></li>)}</ul>
+                </section>}
+              </div>
+            </div>
+          </figure>)}
+        </div>
+        <div class="dtc-reading" data-dtc-reading>
+          <span class="dtc-kicker">COST INSPECTOR</span>
+          <h3>{view.inspector.heading}</h3>
+          <p>{view.inspector.body}</p>
+          <dl class="dtc-facts">{view.inspector.facts.map(([key, value]) => <div><dt>{key}</dt><dd>{value}</dd></div>)}</dl>
+          <div class="dtc-evidence"><span>{view.inspector.evidence[0]}</span><code>{view.inspector.evidence[1]}</code></div>
+          <div class="dtc-note"><span>WORTH KNOWING</span><p>{view.inspector.note}</p></div>
+          <p class="dtc-view-sources">{view.sources.map((source) => <a href={dtcSources[source].url} target="_blank" rel="noopener noreferrer">{dtcSources[source].label} ↗</a>)}</p>
+        </div>
+        <p class="dtc-view-point"><span>THE POINT TO KEEP</span>{view.takeaway}</p>
+      </section>)}
+    </div>
+    <div class="dtc-timeline" data-dtc-timeline hidden>
+      <button type="button" data-dtc-prev aria-label="Previous view">←</button>
+      <div><span>NOW INSPECTING</span><strong data-dtc-progress>01 / {first.label}</strong></div>
+      <button type="button" data-dtc-forward aria-label="Next view">→</button>
+    </div>
+    <p class="dtc-live" data-dtc-live aria-live="polite"></p>
+  </div>
+  <aside slot="inspector" class="dtc-inspector" data-dtc-inspector aria-label="Cost inspector"></aside>
+  <Fragment slot="bottom">
+    <div class="dtc-point"><span>THE POINT TO KEEP</span><p data-dtc-point>{first.takeaway}</p></div>
+    <details class="dtc-reference" id="dtc-sources">
+      <summary><span>Sources, scope &amp; related visuals</span><i aria-hidden="true">↗</i></summary>
+      <div>
+        <p>Rates are in {RATES.currency} for {RATES.regionName} ({RATES.region}), with {RATES.peerRegionName} ({RATES.peerRegion}) as the second Region, as published in the AWS Price List files and read on {RATES.verified}. Verify at <a href="https://aws.amazon.com/pricing/" target="_blank" rel="noopener noreferrer">aws.amazon.com/pricing</a> before relying on a figure. Receipts show per-gigabyte charges; hourly charges are listed beside them at {RATES.hoursPerMonth} hours a month and left out of the totals. Taxes, discounts, request fees and storage aren't included.</p>
+        <ul>{dtcSources.map((source) => <li><a href={source.url} target="_blank" rel="noopener noreferrer">{source.label} ↗</a></li>)}</ul>
+        <p class="dtc-related"><span>RELATED VISUALS</span>{dtcRelated.map((item) => <a href={item.href}>{item.label} ↗</a>)}</p>
+      </div>
+    </details>
+    <p class="dtc-footnote">Rates as of {RATES.asOf} for {RATES.region}. Verify at <a href="https://aws.amazon.com/pricing/" target="_blank" rel="noopener noreferrer">aws.amazon.com/pricing</a>.</p>
+    <div class="dtc-sitefoot"><span>Infra, Illustrated. · Visual deep dives into cloud infrastructure.</span><a href="/visualizations">Browse all visuals ↗</a></div>
+  </Fragment>
+</TopicConsoleShell>
+<script>import { initDtcConsole } from './dtc-client'; initDtcConsole();</script>
