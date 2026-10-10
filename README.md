@@ -2,7 +2,7 @@
 
 **Visual deep dives into cloud infrastructure.**
 
-Infra Illustrated is a static visual reference library focused on AWS, Kubernetes, DevOps, SRE, and the foundations beneath them. Topics are independent references rather than a course or prescribed learning path.
+Infra Illustrated is a static visual reference library focused on AWS, Kubernetes, DevOps, SRE, and the foundations beneath them, with a small AI collection on LLM agents. Topics are independent references rather than a course or prescribed learning path.
 
 The confirmed product and migration decisions live in [SITE-REBUILD-BRIEF.md](./SITE-REBUILD-BRIEF.md).
 

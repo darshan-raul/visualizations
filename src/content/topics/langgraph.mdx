@@ -1,0 +1,39 @@
+---
+title: "LangGraph: The Agent Loop as a Graph"
+summary: "Redraw the loop that calls a model and runs its tools as boxes and arrows over one shared record, then see what that buys: your own routing, saved state, resume after a crash, and a pause for approval."
+slug: langgraph
+collection: ai
+tags: [AI Agents, Tool Calling, Reliability, Troubleshooting]
+technologies: [LangGraph, LangChain, Kubernetes, Python]
+format: deep-dive
+difficulty: intermediate
+published: 2026-10-11
+reviewed: 2026-10-11
+versionScope: Checked by running langgraph 1.2.14 and langchain 1.4.4 on 2026-10-11
+legacyPath: /langgraph
+featured: false
+state: reviewed
+related: [langchain, kubernetes-api-server]
+sources:
+  - label: "LangGraph: Graph API"
+    url: https://docs.langchain.com/oss/python/langgraph/graph-api
+  - label: "LangGraph: persistence"
+    url: https://docs.langchain.com/oss/python/langgraph/persistence
+  - label: "LangGraph: checkpointers"
+    url: https://docs.langchain.com/oss/python/langgraph/checkpointers
+  - label: "LangGraph: interrupts"
+    url: https://docs.langchain.com/oss/python/langgraph/interrupts
+  - label: "LangChain: agents"
+    url: https://docs.langchain.com/oss/python/langchain/agents
+  - label: "LangChain: human-in-the-loop middleware"
+    url: https://docs.langchain.com/oss/python/langchain/human-in-the-loop
+  - label: "LangChain: Model Context Protocol"
+    url: https://docs.langchain.com/oss/python/langchain/mcp
+  - label: "Kubernetes: Pod lifecycle"
+    url: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/
+---
+
+import LessonConsole from '../../components/lesson/LessonConsole.astro';
+import { langgraphLesson } from '../../components/lesson/langgraph-lesson';
+
+<LessonConsole lesson={langgraphLesson} published={props.published} reviewed={props.reviewed} />

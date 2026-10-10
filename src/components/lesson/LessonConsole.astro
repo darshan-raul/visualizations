@@ -1,0 +1,163 @@
+---
+import TopicConsoleShell from '../TopicConsoleShell.astro';
+import LessonDiagram from './LessonDiagram.astro';
+import type { Code, Frame, Lesson, View } from './lesson-types';
+interface Props { lesson: Lesson; published: Date; reviewed?: Date }
+const { lesson, published, reviewed } = Astro.props;
+const { views, groups, sources, related } = lesson;
+const date = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
+const pad = (value: number) => String(value).padStart(2, '0');
+const total = pad(views.length);
+const first = views[0];
+const ROLE = { system: 'system', user: 'user', assistant: 'assistant', tool: 'tool' } as const;
+const WROTE = { system: 'written by you', user: 'written by the user', assistant: 'written by the model', tool: 'written by your code' } as const;
+const MARK = { read: 'reads', write: 'writes', new: 'new' } as const;
+const GATE = { pass: 'yes', fail: 'no', skip: 'not reached' } as const;
+const STORE = { fresh: 'just saved', loaded: 'loaded', lost: 'lost' } as const;
+/** Bars in one view share a scale, so a longer bar always means more tokens. */
+const scale = (view: View) => Math.max(1, ...view.frames.flatMap((frame) => frame.meter?.rows.map((row) => row.tokens) ?? []));
+const word = (view: View) => view.mode === 'steps' ? 'STEP' : view.mode === 'scale' ? 'LEVEL' : 'OPTION';
+/** Splits a line into code and its trailing comment so the comment can be dimmed. */
+const split = (line: string) => {
+  const at = line.search(/(^|\s)(#|\/\/) /);
+  return at < 0 ? [line, ''] : [line.slice(0, at), line.slice(at)];
+};
+const lines = (item: Code) => item.text.split('\n').map((line, index) => ({ parts: split(line), hot: item.hot?.includes(index + 1) }));
+const side = (frame: Frame) => frame.messages || frame.meter || frame.state || frame.store || frame.gates;
+---
+<TopicConsoleShell
+  consoleId={lesson.id} className="lsn-console" prefix="lsn" collectionHref="/ai" collectionLabel="AI"
+  crumbs={[{ label: 'Library', href: '/' }, { label: 'AI', href: '/ai' }, { label: 'Deep Dive' }]}
+  kicker={lesson.kicker} title={lesson.title} summary={lesson.summary}
+  referenceLabel={lesson.reference} formatLabel={lesson.format}
+  dates={`Published ${date.format(published)} · Reviewed ${date.format(reviewed ?? published)}`}
+>
+  <nav slot="index" class="lsn-index" aria-label="View index">
+    <details class="lsn-index-menu" data-lsn-menu open>
+    <summary class="lsn-index-head"><span>VIEW INDEX</span><strong data-lsn-count>01 / {total}</strong></summary>
+    {groups.map((group, groupIndex) => {
+      const members = views.filter((view) => view.group === group);
+      const start = views.indexOf(members[0]);
+      return <details class="lsn-index-group" data-lsn-group open={groupIndex === 0}>
+        <summary><span>{members.length > 1 ? `${pad(start + 1)}–${pad(start + members.length)}` : pad(start + 1)}</span><strong>{group}</strong><i aria-hidden="true">⌄</i></summary>
+        <div>{members.map((view, offset) => <a href={`#${view.id}`} data-lsn-link aria-current={start + offset === 0 ? 'step' : undefined}><span>{pad(start + offset + 1)}</span><strong>{view.label}</strong></a>)}</div>
+      </details>;
+    })}
+    <a class="lsn-index-sources" href={`#${lesson.id}-sources`}>↗ Sources</a>
+    </details>
+  </nav>
+  <div slot="main" class="lsn-main">
+    <div class="lsn-toolbar">
+      <div><span class="lsn-kicker">ACTIVE VIEW</span><strong data-lsn-view-title>{first.label}</strong></div>
+      <span class="lsn-scenario">{lesson.scenario}</span>
+    </div>
+    <div class="lsn-legend" aria-label="Legend">
+      <span><i class="is-code"></i> your code</span><span><i class="is-model"></i> model (remote)</span><span><i class="is-kube"></i> Kubernetes</span>
+      <span><i class="is-hot"></i> happening now</span><span><i class="is-imagined"></i> no such path</span><span><i class="is-denied"></i> stopped</span>
+    </div>
+    <div class="lsn-canvas">
+      {views.map((view, viewIndex) => {
+        const max = scale(view);
+        return <section id={view.id} class:list={['lsn-view', viewIndex === 0 && 'is-active']} data-lsn-view data-lsn-label={view.label} data-lsn-takeaway={view.takeaway} data-lsn-mode={view.mode} aria-labelledby={`${view.id}-title`}>
+          <header class="lsn-view-head"><span>{pad(viewIndex + 1)} / {view.group.toUpperCase()}</span><h2 id={`${view.id}-title`} tabindex="-1">{view.title}</h2><p>{view.lede}</p></header>
+          {view.frames.length > 1 && (view.mode === 'steps'
+            ? <div class="lsn-controls" data-lsn-steps hidden>
+                <button type="button" class="lsn-primary" data-lsn-next>Next →</button>
+                <button type="button" data-lsn-back>← Back</button>
+                <button type="button" data-lsn-restart>↺ Restart</button>
+                <span data-lsn-step>Step 1 of {view.frames.length}</span>
+              </div>
+            : <div class:list={['lsn-controls', 'is-choices', view.mode === 'scale' && 'is-scale']} data-lsn-choices role="group" aria-label={view.mode === 'scale' ? 'Choose a level, from low to high' : 'Choose what to compare'} hidden>
+                {view.mode === 'scale' && <span class="lsn-scale-end">LOW LEVEL</span>}
+                {view.frames.map((frame, frameIndex) => <button type="button" data-lsn-choice={frameIndex} aria-pressed={frameIndex === 0 ? 'true' : 'false'}>{frame.action}</button>)}
+                {view.mode === 'scale' && <span class="lsn-scale-end">HIGH LEVEL</span>}
+              </div>)}
+          <div class="lsn-frames">
+            {view.frames.map((frame, frameIndex) => <figure class:list={['lsn-frame', frameIndex === 0 && 'is-active']} data-lsn-frame data-lsn-action={frame.action}>
+              <figcaption>{view.frames.length > 1 && <span>{word(view)} {frameIndex + 1} OF {view.frames.length} · <b>{frame.action}</b></span>}<p>{frame.caption}</p></figcaption>
+              {frame.notice && <p class={`lsn-notice is-${frame.notice.tone}`}><span>{frame.notice.label}</span>{frame.notice.text}</p>}
+              {(view.diagram || side(frame)) && <div class:list={['lsn-stage', !side(frame) && 'is-solo']}>
+                {view.diagram && <div class="lsn-diagram-wrap"><LessonDiagram id={`${view.id}-${frameIndex}`} diagram={view.diagram} pic={frame.pic} /></div>}
+                {side(frame) && <div class="lsn-side">
+                  {frame.messages && <section class="lsn-panel lsn-messages" aria-label={frame.messages.title}>
+                    <h3>{frame.messages.title}</h3>
+                    <ol>{frame.messages.rows.map((row) => <li class:list={[`is-${row.role}`, row.fresh && 'is-fresh', row.dim && 'is-dim']}>
+                      <span class="lsn-role">{ROLE[row.role]}<small>{row.by ?? WROTE[row.role]}</small></span>
+                      <code>{row.text}</code>
+                      {row.fresh && <em>new</em>}
+                    </li>)}</ol>
+                    {frame.messages.note && <p>{frame.messages.note}</p>}
+                  </section>}
+                  {frame.state && <section class="lsn-panel lsn-state" aria-label={frame.state.title}>
+                    <h3>{frame.state.title}</h3>
+                    <dl>{frame.state.rows.map((row) => <div class:list={[row.mark && `is-${row.mark}`]}>
+                      <dt>{row.key}</dt><dd><code>{row.value}</code>{row.mark && <em>{MARK[row.mark]}</em>}</dd>
+                    </div>)}</dl>
+                    {frame.state.note && <p>{frame.state.note}</p>}
+                  </section>}
+                  {frame.store && <section class="lsn-panel lsn-store" aria-label={frame.store.title}>
+                    <h3>{frame.store.title}</h3>
+                    <ol>{frame.store.rows.map((row) => <li class:list={[row.mark && `is-${row.mark}`]}><b>{row.id}</b><code>{row.text}</code>{row.mark && <em>{STORE[row.mark]}</em>}</li>)}</ol>
+                    {frame.store.note && <p>{frame.store.note}</p>}
+                  </section>}
+                  {frame.gates && <section class:list={['lsn-panel', 'lsn-gates', frame.gates.ok ? 'is-ok' : 'is-stopped']} aria-label={frame.gates.title}>
+                    <h3>{frame.gates.title}</h3>
+                    <code class="lsn-gates-call">{frame.gates.call}</code>
+                    <ol>{frame.gates.rows.map((row) => <li class={`is-${row.result}`}><b>{row.check}</b><em>{GATE[row.result]}</em><span>{row.why}</span></li>)}</ol>
+                    <p class="lsn-gates-verdict"><span>{frame.gates.ok ? 'RUNS' : 'DOES NOT RUN'}</span>{frame.gates.verdict}</p>
+                  </section>}
+                  {frame.meter && <section class="lsn-panel lsn-meter" aria-label={frame.meter.title}>
+                    <h3>{frame.meter.title}</h3>
+                    <ul>{frame.meter.rows.map((row) => <li class:list={[row.fresh && 'is-fresh']}><span>{row.label}</span><i style={`width:${Math.max(2, Math.round((row.tokens / max) * 100))}%`}></i><b>{row.tokens.toLocaleString('en')}</b></li>)}</ul>
+                    <p>{frame.meter.note ?? 'Example token counts. Real counts depend on the model\'s tokenizer.'}</p>
+                  </section>}
+                </div>}
+              </div>}
+              {frame.table && <div class="lsn-table-wrap"><table class="lsn-table">
+                <caption>{frame.table.title}</caption>
+                <thead><tr>{frame.table.head.map((cell) => <th scope="col">{cell}</th>)}</tr></thead>
+                <tbody>{frame.table.rows.map((row, rowIndex) => <tr class:list={[frame.table!.hot === rowIndex && 'is-hot']}>{row.map((cell, cellIndex) => cellIndex === 0 ? <th scope="row">{cell}</th> : <td>{cell}</td>)}</tr>)}</tbody>
+              </table></div>}
+              {frame.code && <div class="lsn-code-row">
+                {frame.code.map((item) => <section class="lsn-code" aria-label={item.title}>
+                  <h3>{item.title}</h3>
+                  <pre tabindex="0"><code>{lines(item).map((line) => <span class:list={['lsn-line', line.hot && 'is-hot']}>{line.parts[0] || ' '}{line.parts[1] && <i>{line.parts[1]}</i>}</span>)}</code></pre>
+                </section>)}
+              </div>}
+            </figure>)}
+          </div>
+          <div class="lsn-reading" data-lsn-reading>
+            <span class="lsn-kicker">INSPECTOR</span>
+            <h3>{view.inspector.heading}</h3>
+            <p>{view.inspector.body}</p>
+            <dl class="lsn-facts">{view.inspector.facts.map(([key, value]) => <div><dt>{key}</dt><dd>{value}</dd></div>)}</dl>
+            <div class="lsn-evidence"><span>{view.inspector.evidence[0]}</span><code>{view.inspector.evidence[1]}</code></div>
+            <div class="lsn-note"><span>WORTH KNOWING</span><p>{view.inspector.note}</p></div>
+            <p class="lsn-view-sources">{view.sources.map((source) => <a href={sources[source].url} target="_blank" rel="noopener noreferrer">{sources[source].label} ↗</a>)}</p>
+          </div>
+          <p class="lsn-view-point"><span>THE POINT TO KEEP</span>{view.takeaway}</p>
+        </section>;
+      })}
+    </div>
+    <div class="lsn-timeline" data-lsn-timeline hidden>
+      <button type="button" data-lsn-prev aria-label="Previous view">←</button>
+      <div><span>NOW INSPECTING</span><strong data-lsn-progress>01 / {first.label}</strong></div>
+      <button type="button" data-lsn-forward aria-label="Next view">→</button>
+    </div>
+    <p class="lsn-live" data-lsn-live aria-live="polite"></p>
+  </div>
+  <aside slot="inspector" class="lsn-inspector" data-lsn-inspector aria-label="Inspector"></aside>
+  <Fragment slot="bottom">
+    <div class="lsn-point"><span>THE POINT TO KEEP</span><p data-lsn-point>{first.takeaway}</p></div>
+    <details class="lsn-reference" id={`${lesson.id}-sources`} data-lsn-sources>
+      <summary><span>Sources, scope &amp; related visuals</span><i aria-hidden="true">↗</i></summary>
+      <div>
+        <p>{lesson.scope}</p>
+        <ul>{sources.map((source) => <li><a href={source.url} target="_blank" rel="noopener noreferrer">{source.label} ↗</a></li>)}</ul>
+        <p class="lsn-related"><span>RELATED VISUALS</span>{related.map((item) => <a href={item.href}>{item.label} ↗</a>)}</p>
+      </div>
+    </details>
+    <div class="lsn-sitefoot"><span>Infra, Illustrated. · Visual deep dives into cloud infrastructure.</span><a href="/visualizations">Browse all visuals ↗</a></div>
+  </Fragment>
+</TopicConsoleShell>
+<script>import { initLessonConsole } from './lesson-client'; initLessonConsole();</script>

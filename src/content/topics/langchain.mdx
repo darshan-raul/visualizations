@@ -1,0 +1,43 @@
+---
+title: "LangChain: From One Model Call to an Agent"
+summary: "Start with one HTTP call to a model. Add the message list, a tool, and a loop, one idea at a time, then see which of those pieces LangChain names for you."
+slug: langchain
+collection: ai
+tags: [AI Agents, Tool Calling, Security, Troubleshooting]
+technologies: [LangChain, OpenRouter, Kubernetes, Python]
+format: deep-dive
+difficulty: foundational
+published: 2026-10-11
+reviewed: 2026-10-11
+versionScope: Checked by running langchain 1.4.4, langchain-core 1.6.9 and langgraph 1.2.14 on 2026-10-11; wire examples use the Chat Completions format
+legacyPath: /langchain
+featured: false
+state: reviewed
+related: [langgraph, kubernetes-api-server]
+sources:
+  - label: "OpenRouter: quickstart"
+    url: https://openrouter.ai/docs/quickstart
+  - label: "OpenAI: function calling guide"
+    url: https://developers.openai.com/api/docs/guides/function-calling
+  - label: "LangChain: messages"
+    url: https://docs.langchain.com/oss/python/langchain/messages
+  - label: "LangChain: models and bind_tools"
+    url: https://docs.langchain.com/oss/python/langchain/models
+  - label: "LangChain: tools"
+    url: https://docs.langchain.com/oss/python/langchain/tools
+  - label: "LangChain: agents"
+    url: https://docs.langchain.com/oss/python/langchain/agents
+  - label: "LangChain reference: create_agent"
+    url: https://reference.langchain.com/python/langchain/agents/factory/create_agent
+  - label: "LangChain: human-in-the-loop middleware"
+    url: https://docs.langchain.com/oss/python/langchain/human-in-the-loop
+  - label: "Kubernetes: Pod lifecycle"
+    url: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/
+  - label: "Kubernetes: RBAC authorization"
+    url: https://kubernetes.io/docs/reference/access-authn-authz/rbac/
+---
+
+import LessonConsole from '../../components/lesson/LessonConsole.astro';
+import { langchainLesson } from '../../components/lesson/langchain-lesson';
+
+<LessonConsole lesson={langchainLesson} published={props.published} reviewed={props.reviewed} />

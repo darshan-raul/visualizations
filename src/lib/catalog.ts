@@ -19,6 +19,11 @@ export const collections = {
     eyebrow: 'The layers underneath',
     description: 'Build the networking, identity, container, and distributed-systems models that infrastructure relies on.',
   },
+  ai: {
+    label: 'AI',
+    eyebrow: 'Models, tools, and agents',
+    description: 'See what an LLM application sends, what the model sends back, and which code runs the tools in between.',
+  },
 } as const;
 
 export type CollectionSlug = keyof typeof collections;

@@ -15,7 +15,7 @@ Infra Illustrated is a static visual reference library deployed on Vercel. The s
 
 - `src/pages/index.astro` — Infra Illustrated landing page
 - `src/pages/visualizations.astro` — complete filterable catalogue
-- `src/pages/[collection].astro` — AWS, Kubernetes, DevOps & SRE, and Foundations pages
+- `src/pages/[collection].astro` — AWS, Kubernetes, DevOps & SRE, Foundations, and AI pages
 - `src/content/topics/*.{json,mdx}` — validated catalogue metadata and canonical rebuilt explainers
 - `src/components/` — shared UI components
 - `src/styles/global.css` — global design system

@@ -8,7 +8,7 @@ const topics = defineCollection({
     title: z.string(),
     summary: z.string(),
     slug: z.string(),
-    collection: z.enum(['aws', 'kubernetes', 'devops-sre', 'foundations']),
+    collection: z.enum(['aws', 'kubernetes', 'devops-sre', 'foundations', 'ai']),
     tags: z.array(z.string()).min(1),
     technologies: z.array(z.string()),
     format: z.enum(['visual-brief', 'deep-dive', 'flow-explorer', 'operational-reference']),

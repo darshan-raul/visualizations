@@ -5,7 +5,7 @@ export type TopicNode = {
   title: string;
   summary: string;
   href: string;
-  collection: 'aws' | 'kubernetes' | 'devops-sre' | 'foundations';
+  collection: 'aws' | 'kubernetes' | 'devops-sre' | 'foundations' | 'ai';
   tags: string[];
   technologies: string[];
   format: string;

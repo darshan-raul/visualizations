@@ -90,6 +90,9 @@ Every visualization has exactly one primary collection:
 2. Kubernetes
 3. DevOps & SRE
 4. Foundations
+5. AI
+
+The AI collection was added on 2026-10-11 at the owner's request, for LLM application and agent topics that use infrastructure as their running example. It opened with two topics, LangChain and LangGraph. AWS and Kubernetes remain the main subject pillars.
 
 Do not create many sparse top-level collections. A tag may become a collection later only when there is enough substantial content to justify it.
 
@@ -123,7 +126,7 @@ The homepage should become a library discovery interface rather than a course la
 
 The site should include:
 
-- Dedicated AWS, Kubernetes, DevOps & SRE, and Foundations collection pages
+- Dedicated AWS, Kubernetes, DevOps & SRE, Foundations, and AI collection pages
 - A complete filterable visualizations catalogue
 - Stable topic URLs independent of collection membership
 - Related Visuals based on shared metadata with optional manual overrides

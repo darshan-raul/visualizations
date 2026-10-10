@@ -21,6 +21,7 @@
   --kubernetes: #68a3ff;
   --devops-sre: #49d6a3;
   --foundations: #b79aff;
+  --ai: #f58fc0;
   --sans: 'DM Sans', Inter, ui-sans-serif, system-ui, sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
   --shell: 1180px;
@@ -395,6 +396,7 @@ a { color: inherit; }
 .collection-kubernetes { --collection-accent: var(--kubernetes); }
 .collection-devops-sre { --collection-accent: var(--devops-sre); }
 .collection-foundations { --collection-accent: var(--foundations); }
+.collection-ai { --collection-accent: var(--ai); }
 .tile-index { align-self: start; color: var(--collection-accent); font-family: var(--mono); font-size: .75rem; }
 .tile-copy { display: grid; gap: 5px; }
 .tile-copy strong { font-size: .95rem; }
