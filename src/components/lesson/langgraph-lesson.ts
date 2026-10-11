@@ -15,8 +15,12 @@ const SOURCES = [
   { label: 'Kubernetes: Pod lifecycle', url: 'https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/' },
   { label: 'LangChain: Model Context Protocol', url: 'https://docs.langchain.com/oss/python/langchain/mcp' },
   { label: 'Kubernetes: RBAC authorization', url: 'https://kubernetes.io/docs/reference/access-authn-authz/rbac/' },
+  { label: 'LangGraph: streaming', url: 'https://docs.langchain.com/oss/python/langgraph/streaming' },
+  { label: 'LangGraph: subgraphs', url: 'https://docs.langchain.com/oss/python/langgraph/use-subgraphs' },
+  { label: 'LangChain: multi-agent', url: 'https://docs.langchain.com/oss/python/langchain/multi-agent' },
+  { label: 'LangChain blog: Jev and LangGraph', url: 'https://www.langchain.com/blog/building-prod-with-jev-and-langgraph' },
 ];
-const [GRAPH_API, PERSISTENCE, CHECKPOINTERS, INTERRUPTS, AGENTS, CREATE_AGENT, HITL, POD, MCP, RBAC] = SOURCES.map((_, index) => index);
+const [GRAPH_API, PERSISTENCE, CHECKPOINTERS, INTERRUPTS, AGENTS, CREATE_AGENT, HITL, POD, MCP, RBAC, STREAMING, SUBGRAPHS, MULTI_AGENT, JEV] = SOURCES.map((_, index) => index);
 
 const SCRIPT: Diagram = {
   title: 'An agent loop inside one process', width: 640, height: 196,
@@ -125,6 +129,44 @@ const APPROVAL: Diagram = {
 };
 const APPROVAL_FLOW = ['diagnose', 'propose', 'approval', 'apply', 'end', 'd-p', 'p-a', 'a-x', 'x-e'];
 
+const TRIAGE: Diagram = {
+  title: 'A triage step that routes on a label and a confidence', width: 640, height: 270,
+  nodes: [
+    node('start', 'terminal', 4, 118, 'START', undefined, 58),
+    node('triage', 'code', 84, 106, 'triage', 'labels the question', 130),
+    node('sure', 'gate', 240, 102, 'sure enough?', undefined, 150, 66),
+    node('workloads', 'code', 474, 14, 'workloads', 'pods, deployments', 158, 50),
+    node('network', 'code', 474, 110, 'network', 'services, DNS', 158, 50),
+    node('person', 'person', 474, 206, 'ask_person', 'a person picks', 158, 50),
+  ],
+  edges: [
+    edge('s-t', 'start', 'triage'), edge('t-q', 'triage', 'sure'),
+    edge('q-w', 'sure', 'workloads', '≥ 0.6', { via: [[315, 39]] }),
+    edge('q-n', 'sure', 'network', '≥ 0.6'),
+    edge('q-p', 'sure', 'person', 'below 0.6', { via: [[315, 231]] }),
+  ],
+};
+
+const TEAM = [['w', 'workloads', 8], ['n', 'network', 220], ['s', 'storage', 432]] as const;
+const SPECIALISTS: Diagram = {
+  title: 'A supervisor routing to specialist agents', width: 640, height: 270,
+  zones: TEAM.map(([id, name, x]) => ({ id: `${id}-agent`, x, y: 92, w: 200, h: 170, label: `${name.toUpperCase()} AGENT` })),
+  nodes: [
+    node('supervisor', 'code', 235, 8, 'supervisor', 'picks one specialist', 170, 52),
+    ...TEAM.flatMap(([id, , x]) => [
+      node(`${id}-model`, 'code', x + 72, 118, 'model', undefined, 120, 42),
+      node(`${id}-tools`, 'tool', x + 72, 206, 'tools', undefined, 120, 42),
+    ]),
+  ],
+  edges: TEAM.flatMap(([id, , x]) => [
+    edge(`to-${id}`, 'supervisor', `${id}-model`, undefined, id === 'n' ? {} : { via: [[x + 132, 34]] }),
+    edge(`${id}-down`, `${id}-model`, `${id}-tools`, undefined, { shift: -16 }),
+    edge(`${id}-up`, `${id}-tools`, `${id}-model`, undefined, { shift: 16 }),
+  ]),
+};
+const member = (id: string) => [`${id}-agent`, `${id}-model`, `${id}-tools`, `to-${id}`, `${id}-down`, `${id}-up`];
+const TWO_SPECIALISTS = ['supervisor', ...member('w'), ...member('n')];
+
 const SERVICE: Diagram = {
   title: 'Where the graph sits in a service', width: 640, height: 292,
   nodes: [
@@ -200,6 +242,22 @@ def approval(state):
         "action": state["proposed_action"],
     })
     return {"approved": answer}      # runs after resume`;
+const TRIAGE_CODE = `
+def triage(state):
+    label, score = classify(state["question"])
+    return {"route": label, "confidence": score}
+
+def next_step(state) -> str:
+    if state["confidence"] < 0.6:
+        return "ask_person"
+    return state["route"]
+
+graph.add_conditional_edges("triage", next_step,
+    ["workloads", "network", "ask_person"])`;
+const asked = (question: string, route: string, confidence: string) => ({
+  title: 'State', rows: [row('question', question, 'read'), row('route', route, 'write'), row('confidence', confidence, 'write')],
+});
+const EVENTS = ['When', 'What arrives'];
 
 const views: View[] = [
   {
@@ -413,7 +471,7 @@ list(agent.get_graph().nodes)
       body: 'Writing the loop as a graph does not make it do anything new. It makes the control flow into data the runtime can see. Once the runtime knows where a run is, it can save that position, stop there, and show it to you.',
       facts: [['Loop', 'Control flow hidden inside Python'], ['Graph', 'Control flow the runtime can save, pause and draw'], ['create_agent', 'The standard graph, prebuilt']],
       evidence: ['Draw any compiled graph', 'app.get_graph().draw_mermaid()'],
-      note: 'A compiled graph has the same invoke, stream and batch methods as a model or a chain, so it drops into code that already uses those.',
+      note: 'A compiled graph has the same invoke, stream and batch methods as a model or a chain, so it drops into code that already uses those. Older code calls create_react_agent from langgraph.prebuilt. It builds the same shape with the model node named agent, and LangGraph 1.0 deprecated it in favour of create_agent.',
     },
     takeaway: 'LangGraph turns the implicit loop into an explicit graph over state.',
     sources: [GRAPH_API, CREATE_AGENT],
@@ -578,7 +636,7 @@ app.invoke({"messages": [question]}, config)`, [1, 2])],
       {
         action: 'End of the run', caption: 'Three model calls and two tool runs have left six snapshots. The last one has nothing left to run.',
         pic: { show: AGENT_BASE, hot: ['end'], badge: { model: 'saved', tools: 'saved' } },
-        store: { title: THREAD, rows: saved(6, { 5: 'fresh' }), note: 'Ask a follow-up with the same thread_id and the run starts from #5, history included.' },
+        store: { title: THREAD, rows: saved(6, { 5: 'fresh' }), note: 'Ask a follow-up with the same thread_id and the run starts from #5, history included. A thread_id that has never been used starts empty.' },
         code: [code('Python', `
 app.invoke({"messages": [follow_up]}, config)  # same thread
 app.get_state(config).next                     # ()
@@ -693,6 +751,103 @@ graph.add_conditional_edges("approval", after_approval)`, [2])],
     sources: [INTERRUPTS, HITL],
   },
   {
+    id: 'confidence', group: 'Bigger graphs', label: 'Unsure', mode: 'choices',
+    title: 'When the input is a sentence, route on a label and on how sure it is',
+    lede: 'So far the branch came from an exact field. A question typed by a person has to be labelled first, and a label can be wrong.',
+    diagram: TRIAGE,
+    frames: [
+      {
+        action: 'A clear question', caption: 'Triage labels the question as a workloads problem and is nearly certain. The score clears the bar, so the label picks the branch.',
+        pic: { hot: ['t-q', 'sure', 'q-w', 'workloads'], say: { 'q-w': '0.94' } },
+        state: asked('"Why is payments-api failing?"', '"workloads"', '0.94'),
+        code: [code('Python', TRIAGE_CODE, [1, 2, 3])],
+      },
+      {
+        action: 'Another clear one', caption: 'A different question, a different label, and still a high score. Same edge, other branch.',
+        pic: { hot: ['t-q', 'sure', 'q-n', 'network'], say: { 'q-n': '0.88' } },
+        state: asked('"payments-api cannot reach its database"', '"network"', '0.88'),
+        code: [code('Python', TRIAGE_CODE, [8])],
+      },
+      {
+        action: 'An unclear one', caption: 'Triage still produces a label, because it always does. The score is low, so the label is not followed and the question goes to a person.',
+        pic: { hot: ['t-q', 'sure', 'q-p', 'person'], denied: ['q-n'], say: { 'q-p': '0.41', 'q-n': '' } },
+        state: asked('"payments has been slow since Tuesday"', '"network"', '0.41'),
+        code: [code('Python', TRIAGE_CODE, [6, 7])],
+        notice: { tone: 'ok', label: 'A PERSON, NOT A GUESS', text: 'ask_person can pause the run with interrupt(), the way the approval node did, and resume with the label someone chose.' },
+      },
+    ],
+    inspector: {
+      heading: 'Keep the decision and its confidence as two fields',
+      body: 'Whatever labels the question should return one of a fixed set of labels and a score. Put both in their own state keys, not in messages, and the edge that follows is plain code again: check the score, then follow the label.',
+      facts: [['Label', 'One of a fixed set, never free text to parse'], ['Score', 'Decides whether the label is followed'], ['Below the bar', 'A person, or a question back to the user']],
+      evidence: ['Say where the edge can go', 'add_conditional_edges("triage", next_step, ["workloads", "network", "ask_person"])'],
+      note: 'What does the labelling is your choice. A chat model with structured output works, but a confidence it writes is a number it generated, not a measured probability. Classifiers and decision models such as TypeSafe AI\'s Jev return typed answers with probabilities and write no prose, so text generation is spent only where a reply is written. The 0.6 here is an example: pick the bar from questions you have labelled yourself.',
+    },
+    takeaway: 'Store the decision and how sure it was, and send a low score to a person instead of guessing.',
+    sources: [GRAPH_API, JEV, INTERRUPTS],
+  },
+  {
+    id: 'specialists', group: 'Bigger graphs', label: 'Specialists', mode: 'choices',
+    title: 'Each destination can be a whole agent',
+    lede: 'The boxes that triage chose between do not have to be single functions. Each can be the two-box agent graph, with its own tools.',
+    diagram: SPECIALISTS,
+    frames: [
+      {
+        action: 'Pick a specialist', caption: 'The supervisor is the triage step under a new name. It picks one agent, and only that agent runs.',
+        pic: { show: TWO_SPECIALISTS, hot: ['supervisor', 'to-w', 'w-model'] },
+        state: { title: 'State', rows: [row('messages', '1 item', 'read'), row('route', '"workloads"', 'write')] },
+        code: [code('Python', `
+workloads = create_agent(model, tools=WORKLOAD_TOOLS)
+network = create_agent(model, tools=NETWORK_TOOLS)
+
+graph = StateGraph(State)     # messages and route
+graph.add_node("supervisor", supervisor)
+graph.add_node("workloads", workloads)   # a graph as a node
+graph.add_node("network", network)`, [6, 7])],
+      },
+      {
+        action: 'Inside it', caption: 'The workloads agent runs its own loop with only the pod and deployment tools. When it finishes, the messages it added are in the outer state.',
+        pic: { show: TWO_SPECIALISTS, hot: ['w-model', 'w-tools', 'w-down', 'w-up'] },
+        state: { title: 'State', rows: [row('messages', '6 items', 'write'), row('newest', 'assistant: payments-api-7d9f was OOMKilled…', 'write'), row('route', '"workloads"')] },
+      },
+      {
+        action: 'Add a specialist', caption: 'A storage agent is one more row in a table. The loop that builds the graph does not change.',
+        pic: { hot: ['to-s'], fresh: member('s') },
+        code: [code('Python', `
+AGENTS = {
+    "workloads": create_agent(model, tools=WORKLOAD_TOOLS),
+    "network": create_agent(model, tools=NETWORK_TOOLS),
+    "storage": create_agent(model, tools=STORAGE_TOOLS),
+}
+for name, agent in AGENTS.items():
+    graph.add_node(name, agent)
+    graph.add_edge(name, END)`, [4])],
+      },
+      {
+        action: 'Route from the node', caption: 'A node can return a Command that updates the state and names the next node together, so the supervisor needs no separate routing function.',
+        pic: { hot: ['supervisor', 'to-w'] },
+        state: { title: 'State', rows: [row('route', '"workloads"', 'write')] },
+        code: [code('Python', `
+from langgraph.types import Command
+
+Next = Literal["workloads", "network", "storage"]
+
+def supervisor(state) -> Command[Next]:
+    label = pick(state)
+    return Command(goto=label, update={"route": label})`, [5, 7])],
+      },
+    ],
+    inspector: {
+      heading: 'A graph can be a node in another graph',
+      body: 'One router with thirty branches is hard to read and harder to change. The usual shape is a small top level that picks among a handful of specialists, each a compiled graph with its own loop. A specialist is given only the tools for its job, so its model chooses among five tools instead of fifty.',
+      facts: [['Supervisor', 'Picks one specialist: code, a classifier or a model call'], ['Specialist', 'A compiled graph passed to add_node'], ['Shared state', 'Keys with the same name in both graphs, such as messages']],
+      evidence: ['Checked by running it', 'supervisor → workloads: model, tools, model, tools, model → END'],
+      note: 'A graph added as a node shares the outer state by key name. If its state has a different shape, call it from inside a node function and translate in and out. The Command return type is what tells LangGraph where the supervisor can go: without it the run still works, but the drawn graph has no arrows out of supervisor. LangChain\'s multi-agent guide calls this shape a router, and describes the other common wiring, where the main agent calls each specialist as a tool.',
+    },
+    takeaway: 'Keep the top level small. Route to a few specialists and let the detail live inside each one.',
+    sources: [SUBGRAPHS, MULTI_AGENT, GRAPH_API],
+  },
+  {
     id: 'service', group: 'In a service', label: 'In a service', mode: 'choices',
     title: 'Where the graph sits when it is a service',
     lede: 'Around the graph are the same things any backend has: an API in front, a database beside it, and the systems it calls.',
@@ -717,11 +872,84 @@ async with MCPAdapter("https://k8s-mcp.internal.example/mcp") as adapter:
       heading: 'An ordinary service with a graph in the middle',
       body: 'The API authenticates the user and picks the thread. The runtime loads that thread\'s checkpoint, runs nodes, and saves after each one. Model calls go out to a provider. Tool calls go to systems that authorise them with their own rules.',
       facts: [['Watch', 'Model calls and tokens per run, tool errors, steps per run, runs waiting on approval'], ['Test', 'Routing functions with plain dicts; a resume after a killed process'], ['Decide early', 'Who can read a thread, and when threads are deleted']],
-      evidence: ['Show progress as it happens', 'app.stream(inputs, config, stream_mode="updates")'],
+      evidence: ['One thread per conversation', 'config = {"configurable": {"thread_id": session.id}}'],
       note: 'MCP changes where a tool runs and who operates it. It does not change who is responsible: your service still chooses which servers and tools to expose, and the credential the MCP server uses still decides what can be done. The MCPAdapter shown is from langchain 1.4; earlier code uses the langchain-mcp-adapters package.',
     },
     takeaway: 'The graph is one component. Identity, storage and the permissions of what it calls are still your service\'s job.',
     sources: [MCP, PERSISTENCE, RBAC],
+  },
+  {
+    id: 'streaming', group: 'In a service', label: 'Streaming', mode: 'choices',
+    title: 'Watch a run while it happens',
+    lede: 'Three model calls and two tool runs can take a while. The caller can wait for the end, or be told as it goes.',
+    diagram: AGENT,
+    frames: [
+      {
+        action: 'invoke', caption: 'invoke returns once, when the run reaches END. Until then the caller has nothing to show.',
+        pic: { show: AGENT_BASE, hot: ['end'] },
+        table: { title: 'What the caller receives', head: EVENTS, rows: [['At END', 'The final state, with all 6 messages']] },
+        code: [code('Python', `
+result = app.invoke(inputs, config)`)],
+      },
+      {
+        action: 'One event per node', caption: 'Each time a node finishes, the caller gets that node\'s name and what it returned. Enough to show "checking pods" while the run continues.',
+        pic: { show: AGENT_BASE, hot: ['model', 'tools', 'c-t', 't-m'] },
+        table: {
+          title: 'What the caller receives', head: EVENTS,
+          rows: [
+            ['model finishes', "{'model': {'messages': [tool call: list_pods]}}"],
+            ['tools finishes', "{'tools': {'messages': [the pod list]}}"],
+            ['model finishes', "{'model': {'messages': [tool call: get_pod_details]}}"],
+            ['tools finishes', "{'tools': {'messages': [the pod's details]}}"],
+            ['model finishes', "{'model': {'messages': [the answer]}}"],
+          ],
+        },
+        code: [code('Python', `
+for update in app.stream(inputs, config, stream_mode="updates"):
+    print(update)     # {node name: what it returned}`, [1])],
+      },
+      {
+        action: 'One event per token', caption: 'While the model node is still running, the model\'s output arrives a piece at a time, with a note of which node produced it.',
+        pic: { show: AGENT_BASE, hot: ['model'], badge: { model: 'still running' } },
+        table: {
+          title: 'What the caller receives during the last model call', head: EVENTS,
+          rows: [
+            ['Token 1', "('payments-api-7d9f', {'langgraph_node': 'model', …})"],
+            ['Token 2', "(' was', {'langgraph_node': 'model', …})"],
+            ['Token 3', "(' OOMKilled', {'langgraph_node': 'model', …})"],
+          ],
+        },
+        code: [code('Python', `
+for chunk, meta in app.stream(inputs, config, stream_mode="messages"):
+    if meta["langgraph_node"] == "model":
+        print(chunk.content, end="")`, [1])],
+      },
+      {
+        action: 'Both', caption: 'Ask for a list of modes and each event is tagged with the mode it belongs to. One loop can drive a progress line and a growing reply.',
+        pic: { show: AGENT_BASE, hot: ['model', 'tools', 'c-t', 't-m'] },
+        table: {
+          title: 'What the caller receives', head: ['Event', 'What to do with it'],
+          rows: [['("updates", {node: …})', 'Move the progress line on'], ['("messages", (chunk, meta))', 'Append the text to the reply']],
+        },
+        code: [code('Python', `
+modes = ["updates", "messages"]
+for mode, data in app.stream(inputs, config, stream_mode=modes):
+    if mode == "updates":
+        show_progress(data)
+    else:
+        chunk, meta = data
+        append_text(chunk.content)`, [1, 2])],
+      },
+    ],
+    inspector: {
+      heading: 'The same run, reported as it goes',
+      body: 'stream runs the graph exactly as invoke does: the same nodes, the same checkpoints. The difference is what the caller is handed, and stream_mode picks it. "updates" is what each node returned. "messages" is model output a token at a time. "values" is the whole state after every step.',
+      facts: [['updates', 'One event per finished node: a progress line'], ['messages', 'One event per model token: a reply that types itself'], ['A list of modes', 'Each event arrives as (mode, data)']],
+      evidence: ['Checked by running it', 'stream_mode="messages"  →  (AIMessageChunk, {"langgraph_node": "model", …})'],
+      note: 'Tokens are a preview. The node still returns one whole message, and that message is what gets saved. A run that pauses for approval ends its updates stream with an event named __interrupt__. Pass subgraphs=True to see events from inside a specialist. From LangGraph 1.1, version="v2" delivers every event as a dict with type, ns and data instead of these tuples.',
+    },
+    takeaway: 'Use invoke when only the result matters, and stream when someone is watching.',
+    sources: [STREAMING],
   },
   {
     id: 'whole-picture', group: 'In a service', label: 'Who owns what', mode: 'choices',
@@ -743,6 +971,27 @@ async with MCPAdapter("https://k8s-mcp.internal.example/mcp") as adapter:
           ],
         },
       },
+      {
+        action: 'One line each', caption: 'Every idea on this page in one line, with the name to search for.',
+        pic: { show: AGENT_BASE },
+        table: {
+          title: 'Cheat sheet', head: ['Idea', 'One line', 'In the API'],
+          rows: [
+            ['State', 'One shared record for the run, merged by LangGraph', 'TypedDict, MessagesState'],
+            ['Node', 'A function: state in, changed keys out', 'add_node'],
+            ['Edge', 'What runs next', 'add_edge'],
+            ['Reducer', 'Replace or combine when an update is merged', 'operator.add, add_messages'],
+            ['Routing', 'A function returns the next node\'s name', 'add_conditional_edges'],
+            ['Agent loop', 'model and tools, round until no tool calls', 'ToolNode, tools_condition, create_agent'],
+            ['Bounded loop', 'A counter in state, with the runtime limit as a fuse', 'recursion_limit'],
+            ['Checkpoints', 'A snapshot per step, grouped by thread', 'compile(checkpointer=…), thread_id'],
+            ['Approval', 'Stop, save, resume with the answer', 'interrupt, Command(resume=…)'],
+            ['Confidence', 'A label and a score in state; a low score goes to a person', 'Your classifier'],
+            ['Specialists', 'A small top level over compiled graphs', 'add_node(name, graph), Command(goto=…)'],
+            ['Streaming', 'Per-node updates or per-token output', 'stream_mode'],
+          ],
+        },
+      },
     ],
     inspector: {
       heading: 'A loop you already understood, made explicit',
@@ -760,12 +1009,12 @@ export const langgraphLesson: Lesson = {
   id: 'lg',
   kicker: 'AI · GRAPH RUNTIME CONSOLE',
   title: 'LangGraph: The Agent Loop as a Graph',
-  summary: 'Take the loop that calls a model and runs its tools, and redraw it as boxes and arrows over one shared record. Then see what that buys: your own routing, saved state, resume after a crash, and a pause for approval.',
+  summary: 'Take the loop that calls a model and runs its tools, and redraw it as boxes and arrows over one shared record. Then see what that buys: your own routing, saved state, resume after a crash, a pause for approval, specialist agents and a run you can watch.',
   reference: 'QUESTION · Why is payments-api failing?',
   format: 'INTERMEDIATE · DEEP DIVE',
   scenario: 'namespace payments · pod payments-api-7d9f · thread session-123',
-  scope: 'Names and behaviour were checked by running them against langgraph 1.2.14 and langchain 1.4.4 on 2026-10-11, with a scripted stand-in for the model: node names, checkpoint order, which nodes repeat after a crash, the interrupt and resume values, and the recursion error. The pod, the tools and the troubleshooting graph are examples, and checkpoint numbers are simplified to count from the first saved step. Subgraphs, parallel branches, streaming modes, the long-term Store and multi-agent patterns are outside this page.',
-  groups: ['Why a graph', 'The agent as a graph', 'Your own flow', 'Saved state', 'In a service'],
+  scope: 'Names and behaviour were checked by running them against langgraph 1.2.14 and langchain 1.4.4 on 2026-10-11, with a scripted stand-in for the model: node names, checkpoint order, which nodes repeat after a crash, the interrupt and resume values, the recursion error, the shape of each stream mode, and a compiled agent used as a node. The pod, the tools, the troubleshooting graph and the triage scores are examples, and checkpoint numbers are simplified to count from the first saved step. Jev is described from the LangChain post of 2026-09-25 and was not run. Parallel branches, custom stream events, the long-term Store, time travel and agents that hand off to each other are outside this page.',
+  groups: ['Why a graph', 'The agent as a graph', 'Your own flow', 'Saved state', 'Bigger graphs', 'In a service'],
   views,
   sources: SOURCES,
   related: [{ label: 'LangChain: From One Model Call to an Agent', href: '/langchain' }, { label: 'Kubernetes API Server', href: '/kubernetes-api-server' }],

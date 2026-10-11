@@ -5,7 +5,8 @@ stand-in for the model, so no API key or cluster is needed.
 """
 import operator
 from importlib.metadata import version
-from typing import Annotated, TypedDict
+import warnings
+from typing import Annotated, Literal, TypedDict
 
 from langchain.agents import create_agent
 from langchain.agents.middleware import HumanInTheLoopMiddleware, ModelCallLimitMiddleware
@@ -263,6 +264,113 @@ paused = agent.invoke(QUESTION, config)
 assert paused["__interrupt__"][0].value["action_requests"][0]["name"] == "set_memory_limit" and RAN == []
 done = agent.invoke(Command(resume={"decisions": [{"type": "reject", "message": "Not during the freeze."}]}), config)
 assert RAN == [] and kinds(done["messages"])[-2:] == ["ToolMessage", "AIMessage"]
+
+# Streaming: one event per finished node, or one per model token, or both tagged with the mode.
+model = investigation()
+app = agent_graph(lambda state: {"messages": [model.invoke(state["messages"])]})
+assert [list(update) for update in app.stream(QUESTION, stream_mode="updates")] == [["model"], ["tools"], ["model"], ["tools"], ["model"]]
+assert [len(values["messages"]) for values in agent_graph(lambda state: {"messages": [AIMessage(content="done")]}).stream(QUESTION, stream_mode="values")] == [1, 2]
+
+
+def answering():
+    model = Scripted(messages=iter([AIMessage(content="payments-api-7d9f was OOMKilled.")]))
+    return agent_graph(lambda state: {"messages": [model.invoke(state["messages"])]})
+
+
+tokens = list(answering().stream(QUESTION, stream_mode="messages"))
+assert all(type(chunk).__name__ == "AIMessageChunk" and meta["langgraph_node"] == "model" for chunk, meta in tokens)
+assert "".join(chunk.content for chunk, _ in tokens) == "payments-api-7d9f was OOMKilled." and len(tokens) > 1
+both = list(answering().stream(QUESTION, stream_mode=["updates", "messages"]))
+assert {mode for mode, _ in both} == {"updates", "messages"} and both[-1][0] == "updates"
+parts = list(answering().stream(QUESTION, stream_mode=["updates", "messages"], version="v2"))
+assert all(set(part) >= {"type", "ns", "data"} for part in parts) and {part["type"] for part in parts} == {"updates", "messages"}
+
+# A paused run shows up in the updates stream.
+app, config = fix_graph(), {"configurable": {"thread_id": "fix-stream"}}
+assert [list(update) for update in app.stream({"proposed_action": "x"}, config, stream_mode="updates")] == [["__interrupt__"]]
+
+
+# A label and a confidence in state; a declared list of destinations; low confidence goes to a person.
+class Triage(TypedDict):
+    question: str
+    route: str
+    confidence: float
+    handled_by: str
+
+
+def next_step(state) -> str:
+    if state["confidence"] < 0.6:
+        return "ask_person"
+    return state["route"]
+
+
+def triage_graph(label, score):
+    graph = StateGraph(Triage)
+    graph.add_node("triage", lambda state: {"route": label, "confidence": score})
+    for name in ["workloads", "network", "ask_person"]:
+        graph.add_node(name, lambda state, name=name: {"handled_by": name})
+        graph.add_edge(name, END)
+    graph.add_edge(START, "triage")
+    graph.add_conditional_edges("triage", next_step, ["workloads", "network", "ask_person"])
+    return graph.compile()
+
+
+for label, score, handler in [("workloads", 0.94, "workloads"), ("network", 0.88, "network"), ("network", 0.41, "ask_person")]:
+    assert triage_graph(label, score).invoke({"question": "?"})["handled_by"] == handler
+assert {edge.target for edge in triage_graph("workloads", 0.9).get_graph().edges if edge.source == "triage"} == {"workloads", "network", "ask_person"}
+
+
+# Specialists: a compiled graph is a node, its messages come back to the parent, and Command routes from inside a node.
+class Routed(MessagesState):
+    route: str
+
+
+Next = Literal["workloads", "network", "storage"]
+
+
+def supervisor(state) -> Command[Next]:
+    return Command(goto="workloads", update={"route": "workloads"})
+
+
+def unannotated(state):
+    return Command(goto="workloads", update={"route": "workloads"})
+
+
+def specialists(supervisor_node):
+    agents = {
+        "workloads": create_agent(investigation(), tools=TOOLS),
+        "network": create_agent(Scripted(messages=iter([])), tools=TOOLS),
+        "storage": create_agent(Scripted(messages=iter([])), tools=TOOLS),
+    }
+    graph = StateGraph(Routed)
+    graph.add_node("supervisor", supervisor_node)
+    for name, agent in agents.items():
+        graph.add_node(name, agent)
+        graph.add_edge(name, END)
+    graph.add_edge(START, "supervisor")
+    return graph.compile()
+
+
+def out_of_supervisor(app):
+    return {edge.target for edge in app.get_graph().edges if edge.source == "supervisor"}
+
+
+app = specialists(supervisor)
+done = app.invoke(QUESTION)
+assert done["route"] == "workloads" and kinds(done["messages"]) == SIX
+assert out_of_supervisor(app) == {"workloads", "network", "storage"}
+loose = specialists(unannotated)
+assert kinds(loose.invoke(QUESTION)["messages"]) == SIX and out_of_supervisor(loose) == {"__end__"}
+inside = [(bool(where), list(update)) for where, update in specialists(supervisor).stream(QUESTION, stream_mode="updates", subgraphs=True)]
+assert inside == [(False, ["supervisor"]), (True, ["model"]), (True, ["tools"]), (True, ["model"]), (True, ["tools"]), (True, ["model"]), (False, ["workloads"])]
+
+# The older prebuilt agent still builds the same shape, with a deprecation warning.
+with warnings.catch_warnings(record=True) as caught:
+    warnings.simplefilter("always")
+    from langgraph.prebuilt import create_react_agent
+
+    assert list(create_react_agent(investigation(), TOOLS).get_graph().nodes) == ["__start__", "agent", "tools", "__end__"]
+    assert any("from langchain.agents import create_agent" in str(warning.message) for warning in caught)
 
 # The MCP adapter the service view names ships in this release (importing it needs the fastmcp extra).
 import pathlib  # noqa: E402
