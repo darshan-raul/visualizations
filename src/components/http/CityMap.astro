@@ -1,5 +1,5 @@
 ---
-import { SIGN, codes, districts, familyOf, place, works } from './http-codes';
+import { SIGN, codes, districts, familyOf, place, factory } from './http-codes';
 /** Roads leave the server at the centre and end at a district's edge. The lit one is the selected family's. */
 const HUB = { x: 520, y: 330 };
 const roads: Record<number, string> = {
@@ -13,7 +13,7 @@ const spoken = districts.map((district) => `${district.family}xx, ${district.nam
 ---
 <svg class="city-map" data-city-map viewBox="0 0 1040 720" role="group" aria-labelledby="city-map-title city-map-desc">
   <title id="city-map-title">HTTP status codes as a city map</title>
-  <desc id="city-map-desc">A request travels from the browser to the server at the centre. Roads lead from there to five districts, one for each first digit. {spoken} In The Works, 502, 503 and 504 hang on the front office, which is the proxy, and 500 on the workshop behind it, which is the app.</desc>
+  <desc id="city-map-desc">A request travels from the browser to the server at the centre. Roads lead from there to five districts, one for each first digit. {spoken} In The Factory, 502, 503 and 504 hang on the front office, which is the proxy, and 500 on the workshop behind it, which is the app.</desc>
   <g aria-hidden="true">
     <path class="city-river" d="M0 395 C160 340 300 440 520 392 S860 300 1040 350" />
     <path class="city-road is-main" d={`M104 ${HUB.y} H${HUB.x}`} />
@@ -35,13 +35,13 @@ const spoken = districts.map((district) => `${district.family}xx, ${district.nam
       <text class="city-means" x={x + 70} y={y + 42}>{district.means}</text>
       <path class="city-icon" d={district.icon} transform={`translate(${x + w - 50} ${y + 14})`} aria-hidden="true" />
       {district.family === 5 && <g aria-hidden="true">
-        {[works.office, works.shop].map((block) => <>
+        {[factory.office, factory.shop].map((block) => <>
           <rect class="city-block" x={block.x} y={block.y} width={block.w} height={block.h} rx="8" />
           <text class="city-block-label" x={block.x + 12} y={block.y + 20}>{block.label}</text>
           <text class="city-block-sub" x={block.x + 12} y={block.y + 35}>{block.sub}</text>
         </>)}
-        <path class="city-handoff" d={`M${works.office.x + works.office.w + 6} ${works.office.y + 110} H${works.shop.x - 12}`} marker-end="url(#city-arrow)" />
-        <text class="city-road-label" x={(works.office.x + works.office.w + works.shop.x) / 2} y={works.office.y + 100} text-anchor="middle">passes it on</text>
+        <path class="city-handoff" d={`M${factory.office.x + factory.office.w + 6} ${factory.office.y + 110} H${factory.shop.x - 12}`} marker-end="url(#city-arrow)" />
+        <text class="city-road-label" x={(factory.office.x + factory.office.w + factory.shop.x) / 2} y={factory.office.y + 100} text-anchor="middle">passes it on</text>
       </g>}
     </g>;
   })}

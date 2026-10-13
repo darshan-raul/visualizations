@@ -74,7 +74,7 @@ export const districts: District[] = [
     box: { x: 322, y: 20, w: 402, h: 180 }, columns: 3,
   },
   {
-    family: 3, name: 'Signpost Junction', means: 'look elsewhere', icon: 'M14 28 V0 M14 4 H28 L32 8 L28 12 H14 M14 15 H2 L-2 19 L2 23 H14',
+    family: 3, name: 'The Crossroads', means: 'look elsewhere', icon: 'M14 28 V0 M14 4 H28 L32 8 L28 12 H14 M14 15 H2 L-2 19 L2 23 H14',
     blurb: 'What you want is at another address, or already in your own cache. The client has one more step to take.',
     takeaway: 'A 3xx is an instruction to the client, and following it is a second request the client makes.',
     acts: 'the client asks again at the address in Location', again: 'yes, at the new address',
@@ -88,7 +88,7 @@ export const districts: District[] = [
     box: { x: 20, y: 452, w: 530, h: 180 }, columns: 4,
   },
   {
-    family: 5, name: 'The Works', means: 'the server failed', icon: 'M0 28 V14 L10 20 V14 L20 20 V4 H26 V28 Z',
+    family: 5, name: 'The Factory', means: 'the server failed', icon: 'M0 28 V14 L10 20 V14 L20 20 V4 H26 V28 Z',
     blurb: 'The request was fine and the city\'s own machinery was not. Two buildings write codes here: the front office, which is a proxy, and the workshop behind it, which is the app.',
     takeaway: 'A 5xx sends you to the server\'s logs, and a 502 or 504 points one hop behind the box that wrote it.',
     acts: 'whoever runs the server', again: 'possibly, after a wait',
@@ -96,12 +96,12 @@ export const districts: District[] = [
   },
 ];
 
-/** The two buildings inside The Works. 502, 503 and 504 hang on the first; 500 on the second. */
-export const works = {
+/** The two buildings inside The Factory. 502, 503 and 504 hang on the first; 500 on the second. */
+export const factory = {
   office: { x: 598, y: 470, w: 142, h: 212, label: 'FRONT OFFICE', sub: 'the proxy' },
   shop: { x: 826, y: 470, w: 176, h: 212, label: 'WORKSHOP', sub: 'the app' },
 };
-const office = (row: number) => ({ x: works.office.x + 12, y: works.office.y + 46 + row * (SIGN.h + SIGN.gap) });
+const office = (row: number) => ({ x: factory.office.x + 12, y: factory.office.y + 46 + row * (SIGN.h + SIGN.gap) });
 
 export const codes: Code[] = [
   {
@@ -197,7 +197,7 @@ export const codes: Code[] = [
     story: 'The browser kept the shop\'s logo along with its version label, "v7". On the next visit it asks for the logo only if the label has changed. It hasn\'t, so the shop sends headers and no image.',
     by: 'the app, a proxy or a CDN', acts: 'the client shows its stored copy', again: 'no need', header: ['If-None-Match (in the request)', '"v7"'],
     see: ['Ask conditionally', 'curl -sI -H \'If-None-Match: "v7"\' https://shop.example/logo.png'],
-    note: 'This is why 304 lives at the junction: the answer is elsewhere, and elsewhere is the browser\'s own cache. It saves the transfer and not the round trip.',
+    note: 'This is why 304 lives at the crossroads: the answer is elsewhere, and elsewhere is the browser\'s own cache. It saves the transfer and not the round trip.',
     sources: [REDIRECT, CONDITIONAL],
   },
   {
@@ -286,7 +286,7 @@ export const codes: Code[] = [
     by: 'the app', again: 'possibly later; nothing in the request needs fixing',
     see: ['Find them in an access log', 'awk \'$9 ~ /^5/\' access.log'],
     note: 'The page a visitor gets is vague on purpose, since a stack trace would tell an attacker about the code. The useful detail is in the app\'s log for that moment.',
-    sources: [SERVER], at: { x: works.shop.x + 29, y: works.shop.y + 46 + SIGN.h + SIGN.gap },
+    sources: [SERVER], at: { x: factory.shop.x + 29, y: factory.shop.y + 46 + SIGN.h + SIGN.gap },
   },
   {
     code: 502, phrase: 'Bad Gateway', says: 'The box behind me gave a bad answer.',

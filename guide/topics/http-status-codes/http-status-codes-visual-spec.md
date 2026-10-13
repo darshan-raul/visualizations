@@ -18,7 +18,7 @@ The reference was a bright cartoon raster with every label drawn into the pictur
 | Raster illustration with text in the image | Inline SVG with real text; each sign is a link | Searchable, readable by a screen reader, correctable. The reference misspelt "malformed". |
 | Bright cartoon palette | The site's dark console | Brief: preserve the dark technical character; frame matches the other topics. |
 | 4xx red, 5xx purple | 4xx amber, 5xx red, 3xx blue, 2xx green, 1xx grey | Brief: red is failure, amber is caution, purple is identity. |
-| "Checkpoint", "Success Plaza", "Detour", "Wrong Address", "Outage Zone" | The Gatehouse, Market Square, Signpost Junction, The Wall, The Works | "Wrong address" fits only 404, and 304 is not a detour. Each name now fits every code in its district. |
+| "Checkpoint", "Success Plaza", "Detour", "Wrong Address", "Outage Zone" | The Gatehouse, Market Square, The Crossroads, The Wall, The Factory | "Wrong address" fits only 404, and 304 is not a detour. Each name now fits every code in its district. |
 | Districts scattered, no path | A road from the browser to the server at the centre, and from there to each district | Shows that the server picks one sign per request; the road to the selected district is lit. |
 | 5xx as four equal signs | Two buildings: a front office (the proxy) holding 502, 503, 504, and a workshop (the app) holding 500 | Which box writes which code is the most useful thing to know about 5xx. |
 | Gloss only | Gloss, an example, four facts, a command, and a caveat per code | A gloss can't carry what people get wrong: the POST that becomes a GET, the 504 after the order was saved. |
@@ -41,7 +41,7 @@ The reference was a bright cartoon raster with every label drawn into the pictur
 | Pill and circle | `browser`, `server` | Who asks and who answers |
 | Thick grey line | Road | The request's way in, and the way to each district |
 | Moving dotted line in the family colour | One road | The district the selected code is in. Still under reduced motion. |
-| Two inner boxes in The Works | Front office, workshop | The proxy and the app, with an arrow for the hand-off |
+| Two inner boxes in The Factory | Front office, workshop | The proxy and the app, with an arrow for the hand-off |
 
 ## Console structure
 
