@@ -1,0 +1,92 @@
+---
+import TopicConsoleShell from '../TopicConsoleShell.astro';
+import CityMap from './CityMap.astro';
+import { codes, districtOf, districts, familyOf, related, sources } from './http-codes';
+interface Props { published: Date; reviewed?: Date }
+const { published, reviewed } = Astro.props;
+const date = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
+const pad = (value: number) => String(value).padStart(2, '0');
+const START = codes.findIndex((code) => code.code === 200);
+const first = codes[START];
+---
+<TopicConsoleShell
+  consoleId="http-status" className="lsn-console city-console" prefix="lsn" collectionHref="/foundations" collectionLabel="Foundations"
+  crumbs={[{ label: 'Library', href: '/' }, { label: 'Foundations', href: '/foundations' }, { label: 'Operational Reference' }]}
+  kicker="HTTP · STATUS CODE MAP"
+  title="HTTP Status Codes as a City Map"
+  summary="Every answer over HTTP opens with a three-digit number. The first digit picks one of five districts, and each sign in a district is one code. Choose a sign to see what the server is saying, who acts next and where to look."
+  referenceLabel="EXAMPLE SITE · shop.example" formatLabel="FOUNDATIONAL · OPERATIONAL REFERENCE"
+  dates={`Published ${date.format(published)} · Reviewed ${date.format(reviewed ?? published)}`}
+>
+  <nav slot="index" class="lsn-index" aria-label="Status code index">
+    <details class="lsn-index-menu" data-city-menu open>
+    <summary class="lsn-index-head"><span>CODE INDEX</span><strong data-city-count>{pad(START + 1)} / {pad(codes.length)}</strong></summary>
+    {districts.map((district) => <details class="lsn-index-group" data-city-group open={district.family === familyOf(first)}>
+      <summary><span>{district.family}xx · {district.means}</span><strong>{district.name}</strong><i aria-hidden="true">⌄</i></summary>
+      <div>{codes.map((code, index) => familyOf(code) === district.family && <a href={`#code-${code.code}`} data-lsn-link data-city-link={index} aria-current={index === START ? 'step' : undefined}><span>{code.code}</span><strong>{code.phrase}</strong></a>)}</div>
+    </details>)}
+    <a class="lsn-index-sources" href="#http-status-sources">↗ Sources</a>
+    </details>
+  </nav>
+  <div slot="main" class="lsn-main">
+    <div class="lsn-toolbar">
+      <div><span class="lsn-kicker">SELECTED SIGN</span><strong data-city-title>{first.code} {first.phrase}</strong></div>
+      <span class="lsn-scenario">a browser asking shop.example</span>
+    </div>
+    <div class="lsn-legend" aria-label="Legend">
+      <span><i class="is-code"></i> a sign is one status code</span><span><i class="city-key-district"></i> a district is one first digit</span><span><i class="is-hot"></i> the road to the selected district</span>
+    </div>
+    <div class="lsn-canvas">
+      <div class="city-map-wrap" tabindex="0" role="group" aria-label="City map. Scroll sideways if it is cut off."><CityMap /></div>
+      <div class="city-codes">
+        {codes.map((code, index) => {
+          const district = districtOf(code);
+          const facts: [string, string][] = [
+            ['Who acts next', code.acts ?? district.acts],
+            ['Ask again?', code.again ?? district.again],
+            ['Usually written by', code.by],
+            ...(code.header ? [[`Header to read: ${code.header[0]}`, code.header[1]] as [string, string]] : []),
+          ];
+          return <section id={`code-${code.code}`} class:list={['city-code', `is-f${district.family}`, index === START && 'is-active']} data-city-code data-city-family={district.family} data-city-label={`${code.code} ${code.phrase}`} data-city-takeaway={district.takeaway} aria-labelledby={`code-${code.code}-title`}>
+            <header class="city-code-head">
+              <span>{district.family}xx · {district.name.toUpperCase()} · {district.means.toUpperCase()}</span>
+              <h2 id={`code-${code.code}-title`} tabindex="-1"><b>{code.code}</b> {code.phrase}</h2>
+              <p class="city-says">“{code.says}”</p>
+            </header>
+            <p class="city-story">{code.story}</p>
+            <dl class="city-facts">{facts.map(([key, value]) => <div><dt>{key}</dt><dd>{value}</dd></div>)}</dl>
+            <div class="lsn-reading" data-city-reading>
+              <span class="lsn-kicker">DISTRICT {district.family}xx</span>
+              <h3>{district.name}: {district.means}</h3>
+              <p>{district.blurb}</p>
+              <div class="lsn-evidence"><span>{code.see[0]}</span><code>{code.see[1]}</code></div>
+              <div class="lsn-note"><span>WORTH KNOWING ABOUT {code.code}</span><p>{code.note}</p></div>
+              <p class="lsn-view-sources">{code.sources.map((source) => <a href={sources[source].url} target="_blank" rel="noopener noreferrer">{sources[source].label} ↗</a>)}</p>
+            </div>
+            <p class="lsn-view-point"><span>THE POINT TO KEEP</span>{district.takeaway}</p>
+          </section>;
+        })}
+      </div>
+    </div>
+    <div class="lsn-timeline" data-city-timeline hidden>
+      <button type="button" data-city-prev aria-label="Previous code">←</button>
+      <div><span>NOW READING</span><strong data-city-progress>{first.code} {first.phrase}</strong></div>
+      <button type="button" data-city-next aria-label="Next code">→</button>
+    </div>
+    <p class="lsn-live" data-city-live aria-live="polite"></p>
+  </div>
+  <aside slot="inspector" class="lsn-inspector" data-city-inspector aria-label="District and evidence"></aside>
+  <Fragment slot="bottom">
+    <div class="lsn-point"><span>THE POINT TO KEEP</span><p data-city-point>{districtOf(first).takeaway}</p></div>
+    <details class="lsn-reference" id="http-status-sources" data-city-sources>
+      <summary><span>Sources, scope &amp; related visuals</span><i aria-hidden="true">↗</i></summary>
+      <div>
+        <p>The city is a way to remember the five classes; the meanings beside each sign follow RFC 9110. The map shows {codes.length} codes you are likely to meet out of the full IANA registry. The shop, its paths, the header values and the 60-second timeout are examples. How clients treat redirects, conditional requests, interim answers and the reason phrase was checked with curl 8.21 and Node.js 26 on 2026-10-13.</p>
+        <ul>{sources.map((source) => <li><a href={source.url} target="_blank" rel="noopener noreferrer">{source.label} ↗</a></li>)}</ul>
+        <p class="lsn-related"><span>RELATED VISUALS</span>{related.map((item) => <a href={item.href}>{item.label} ↗</a>)}</p>
+      </div>
+    </details>
+    <div class="lsn-sitefoot"><span>Infra, Illustrated. · Visual deep dives into cloud infrastructure.</span><a href="/visualizations">Browse all visuals ↗</a></div>
+  </Fragment>
+</TopicConsoleShell>
+<script>import { initCityConsole } from './http-city-client'; initCityConsole();</script>
