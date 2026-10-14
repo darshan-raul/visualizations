@@ -1,0 +1,123 @@
+---
+import TopicConsoleShell from '../TopicConsoleShell.astro';
+import CorsMap from './CorsMap.astro';
+import CorsOrigin from './CorsOrigin.astro';
+import { answersHtml, checksHtml, inspect, trip, type LegState } from './cors-trip';
+import { ORIGINS, diagnosis, groups, related, sources, views } from './cors-views';
+interface Props { published: Date; reviewed?: Date }
+const { published, reviewed } = Astro.props;
+const date = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
+const pad = (value: number) => String(value).padStart(2, '0');
+// View 01 is Origins; the map views follow as 02–06. The map is drawn with the first map view's first choice
+// until JavaScript moves it into the active view.
+const nav = [ORIGINS, ...views];
+const firstTrip = trip(views[0].choices[0].config);
+const legend: [LegState, string][] = [['sent', 'sent'], ['ghost', 'never sent'], ['pass', 'handed to the script'], ['block', 'held back'], ['opaque', 'usable, not readable']];
+const shown = new Set(Object.values(firstTrip.legs));
+---
+<TopicConsoleShell
+  consoleId="cors" className="lsn-console cors-console" prefix="lsn" collectionHref="/foundations" collectionLabel="Foundations"
+  crumbs={[{ label: 'Library', href: '/' }, { label: 'Foundations', href: '/foundations' }, { label: 'Flow Explorer' }]}
+  kicker="BROWSER SECURITY · CORS"
+  title="CORS, One Request at a Time"
+  summary="A script on app.b.com asks api.a.com for an account. Follow that one request out of the browser and back: where it goes, whether it reaches the server, and whether the script is allowed to read the answer."
+  referenceLabel="EXAMPLE · app.b.com → api.a.com" formatLabel="FOUNDATIONAL · FLOW EXPLORER"
+  dates={`Published ${date.format(published)} · Reviewed ${date.format(reviewed ?? published)}`}
+>
+  <nav slot="index" class="lsn-index" aria-label="Views">
+    <details class="lsn-index-menu" data-cors-menu open>
+    <summary class="lsn-index-head"><span>VIEWS</span><strong data-cors-count>01 / {pad(nav.length)}</strong></summary>
+    {groups.map((group, groupIndex) => <details class="lsn-index-group" data-cors-group open={groupIndex === 0}>
+      <summary><span>{pad(groupIndex + 1)}</span><strong>{group.name}</strong><i aria-hidden="true">⌄</i></summary>
+      <div>{nav.map((item, index) => item.group === group.id && <a href={`#${item.id}`} data-lsn-link data-cors-link={index} aria-current={index === 0 ? 'step' : undefined}><span>{pad(index + 1)}</span><strong>{item.label}</strong></a>)}</div>
+    </details>)}
+    <a class="lsn-index-sources" href="#cors-sources">↗ Sources</a>
+    </details>
+  </nav>
+  <div slot="main" class="lsn-main">
+    <div class="lsn-toolbar">
+      <div><span class="lsn-kicker">VIEW</span><strong data-cors-title>{ORIGINS.label}</strong></div>
+      <span class="lsn-scenario">app.b.com → api.a.com</span>
+    </div>
+    <div class="lsn-canvas">
+      <CorsOrigin active takeaway={ORIGINS.takeaway} />
+
+      <div class="cors-stage" data-cors-stage>
+        <div class="cors-answers" data-cors-answers aria-live="polite" set:html={answersHtml(firstTrip)} />
+        <div class="cors-map-wrap"><CorsMap /></div>
+        <div class="cors-legend" aria-label="Legend">
+          {legend.map(([key, label]) => <span data-cors-key={key} hidden={!shown.has(key)}><i class={`cors-key-${key}`}></i> {label}</span>)}
+        </div>
+        <div class="cors-check" data-cors-check set:html={checksHtml(firstTrip)} />
+        <div class="cors-play" data-cors-play hidden>
+          <button type="button" data-cors-run>▶ Play the trip</button>
+          <button type="button" data-cors-step>Step</button>
+          <p data-cors-now aria-live="polite"></p>
+        </div>
+        <p class="cors-map-caption">The map shows {views[0].label}: {views[0].choices[0].label}. Each view below describes its own exchanges.</p>
+      </div>
+
+      {views.map((item, viewIndex) => {
+        const number = viewIndex + 2;
+        const group = groups.find((entry) => entry.id === item.group)!;
+        return <section id={item.id} class="cors-view" data-cors-view data-view={viewIndex} data-label={item.label} data-takeaway={item.takeaway} aria-labelledby={`${item.id}-title`}>
+          <header class="cors-view-head">
+            <span>{pad(number)} · {group.name.toUpperCase()}</span>
+            <h2 id={`${item.id}-title`} tabindex="-1">{item.label}</h2>
+            <p class="cors-says">{item.says}</p>
+          </header>
+          <p class="cors-intro">{item.intro}</p>
+          <div class="cors-choose" role="group" aria-label={item.choose} data-cors-choose hidden>
+            <span>{item.choose}</span>
+            <div>{item.choices.map((choice, index) => <button type="button" data-cors-choice={index} aria-pressed={index === 0 ? 'true' : 'false'}>{choice.label}</button>)}</div>
+          </div>
+          <div class="cors-slot" data-cors-slot />
+          {item.id === 'find-the-failure' && <ol class="cors-diagnosis" data-cors-diagnosis aria-label="Questions to ask, in order">
+            {diagnosis.map((question) => <li><span>{question}</span></li>)}
+          </ol>}
+          {item.choices.map((choice, index) => {
+            const t = trip(choice.config);
+            return <div id={`${item.id}--${choice.id}`} class:list={['cors-choice', index === 0 && 'is-active']} data-cors-choice-panel={index}>
+              <h3>{choice.label}</h3>
+              <div class="cors-answers is-static" set:html={answersHtml(t)} />
+              <div class="cors-check is-static" set:html={checksHtml(t)} />
+              <p class="cors-explain">{choice.explain}</p>
+              {choice.catches !== undefined && <p class="cors-catch">Caught at question {choice.catches + 1}: {diagnosis[choice.catches]}</p>}
+              <details class="cors-inspect">
+                <summary><span>Inspect the exchange</span><i aria-hidden="true">⌄</i></summary>
+                <div set:html={inspect(t)} />
+              </details>
+            </div>;
+          })}
+          <div class="lsn-reading" data-cors-reading>
+            <span class="lsn-kicker">{group.name.toUpperCase()}</span>
+            <h3>{item.label}</h3>
+            <div class="lsn-note"><span>WORTH KNOWING</span><p>{item.note}</p></div>
+            <p class="lsn-view-sources">{item.sources.map((source) => <a href={sources[source].url} target="_blank" rel="noopener noreferrer">{sources[source].label} ↗</a>)}</p>
+          </div>
+          <p class="lsn-view-point"><span>THE POINT TO KEEP</span>{item.takeaway}</p>
+        </section>;
+      })}
+    </div>
+    <div class="lsn-timeline" data-cors-timeline hidden>
+      <button type="button" data-cors-prev aria-label="Previous view">←</button>
+      <div><span>NOW READING</span><strong data-cors-progress>{ORIGINS.label}</strong></div>
+      <button type="button" data-cors-next aria-label="Next view">→</button>
+    </div>
+    <p class="lsn-live" data-cors-live aria-live="polite"></p>
+  </div>
+  <aside slot="inspector" class="lsn-inspector" data-cors-inspector aria-label="About this view"></aside>
+  <Fragment slot="bottom">
+    <div class="lsn-point"><span>THE POINT TO KEEP</span><p data-cors-point>{ORIGINS.takeaway}</p></div>
+    <details class="lsn-reference" id="cors-sources" data-cors-sources>
+      <summary><span>Sources, scope &amp; related visuals</span><i aria-hidden="true">↗</i></summary>
+      <div>
+        <p>Every exchange on this page comes from one model of the Fetch standard's CORS protocol, limited to the cases drawn. It leaves out Private Network Access, COOP, COEP and CORP. Its verdicts (could the script read it, did the request reach the server, was the header visible) were replayed in Firefox 154 with <code>scripts/verify-cors-lesson.mjs</code> on 2026-10-14. Console messages use Chromium's wording. Hostnames, the token and the cookie are made up.</p>
+        <ul>{sources.map((source) => <li><a href={source.url} target="_blank" rel="noopener noreferrer">{source.label} ↗</a></li>)}</ul>
+        <p class="lsn-related"><span>RELATED VISUALS</span>{related.map((item) => <a href={item.href}>{item.label} ↗</a>)}</p>
+      </div>
+    </details>
+    <div class="lsn-sitefoot"><span>Infra, Illustrated. · Visual deep dives into cloud infrastructure.</span><a href="/visualizations">Browse all visuals ↗</a></div>
+  </Fragment>
+</TopicConsoleShell>
+<script>import { initCorsConsole } from './cors-client'; initCorsConsole();</script>

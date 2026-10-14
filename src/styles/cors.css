@@ -1,0 +1,285 @@
+/* The CORS trip map and its panels. The console frame, index, inspector and bottom strip come from lesson-console.css. */
+.cors-console { --sent:var(--blue); --pass:var(--green); --block:var(--red); --opaque:var(--amber); --origin:var(--purple); }
+.cors-legend i { width:22px; height:0; border:0; border-top:2.5px solid var(--sent); border-radius:0; }
+.cors-legend i.cors-key-ghost { border-top:2.5px dotted var(--block); }
+.cors-legend i.cors-key-pass { border-top-color:var(--pass); }
+.cors-legend i.cors-key-block { border-top:2.5px dashed var(--block); }
+.cors-legend i.cors-key-opaque { border-top:2.5px dashed var(--opaque); }
+
+/* The map */
+.cors-map-wrap { padding:6px; border:1px solid var(--border); border-radius:11px; background:#0a131d; }
+.cors-map { display:block; width:100%; max-width:1300px; height:auto; margin-inline:auto; }
+.cors-map.is-tall { display:none; max-width:440px; }
+@media (max-width:760px) { .cors-map.is-wide { display:none; } .cors-map.is-tall { display:block; } }
+.cors-map.is-tall .cors-code, .cors-map.is-tall .cors-log { font-size:10.5px!important; }
+.cors-map.is-tall .cors-gets { font-size:12.5px; }
+.cors-map.is-tall .cors-box-sub { font-size:11px; }
+.cors-map.is-tall .cors-leg-label { font-size:11px!important; }
+.cors-map text { font-family:var(--sans); }
+.cors-frame { fill:#0d1824; stroke:#3b4a60; stroke-width:1.5; }
+.cors-frame-bar { stroke:#3b4a60; }
+.cors-tab { fill:#16263a; stroke:var(--origin); stroke-opacity:.6; }
+.cors-tab-label { fill:var(--origin); font:600 12px var(--mono)!important; }
+.cors-zone-label { fill:var(--dim); font:600 11px var(--mono)!important; letter-spacing:.12em; }
+.cors-box { fill:#101e2d; stroke:var(--border-strong); stroke-width:1.3; }
+.cors-box.is-page { stroke:var(--origin); stroke-opacity:.7; }
+.cors-box.is-server { fill:#0e1b28; stroke:#56637a; }
+.cors-box-kicker { fill:var(--dim); font:600 11px var(--mono)!important; letter-spacing:.06em; text-transform:uppercase; }
+.cors-box-sub { fill:var(--muted); font:12px var(--sans); }
+.cors-code { fill:var(--text); font:600 13px var(--mono)!important; }
+.cors-gets { fill:var(--text); font:650 14px var(--sans); }
+.cors-box.is-gets[data-state="pass"] { stroke:var(--pass); stroke-width:2; fill:#0f2a26; }
+.cors-box.is-gets[data-state="block"] { stroke:var(--block); stroke-width:2; fill:#27181c; }
+.cors-box.is-gets[data-state="opaque"] { stroke:var(--opaque); stroke-width:2; fill:#242117; }
+.cors-server { fill:var(--text); font:700 17px var(--mono)!important; }
+.cors-log { fill:var(--cyan); font:11px var(--mono)!important; }
+.cors-gate { fill:#13213a; stroke:var(--blue); stroke-width:1.6; }
+.cors-gate-label { fill:var(--blue); font:600 11px var(--mono)!important; letter-spacing:.12em; }
+.cors-jar rect { fill:#101e2d; stroke:var(--border-strong); stroke-dasharray:3 3; }
+.cors-jar text { fill:var(--dim); font:11px var(--mono)!important; }
+.cors-jar[data-state="yes"] rect { stroke:var(--origin); stroke-dasharray:none; }
+.cors-jar[data-state="yes"] text { fill:var(--origin); }
+.cors-jar[data-state="maybe"] rect { stroke:var(--amber); }
+.cors-jar[data-state="maybe"] text { fill:var(--amber); }
+.cors-cdn rect { fill:#121f2f; stroke:#56637a; stroke-width:1.3; }
+.cors-cdn[data-state="off"] { display:none; }
+.cors-cdn[data-state="stale"] rect { stroke:var(--block); }
+.cors-cdn-note { fill:var(--muted); font:11px var(--mono)!important; }
+.cors-cdn[data-state="stale"] .cors-cdn-note { fill:var(--red); }
+
+.cors-leg { fill:none; stroke:var(--sent); stroke-width:3.5; stroke-linecap:round; stroke-linejoin:round; transition:opacity .35s ease; }
+.cors-leg[data-state="off"] { display:none; }
+.cors-leg[data-state="ghost"] { stroke:var(--block); stroke-width:2.5; stroke-dasharray:1 7; opacity:.85; marker-end:none; }
+.cors-leg[data-state="pass"] { stroke:var(--pass); }
+.cors-leg[data-state="block"] { stroke:var(--block); stroke-dasharray:7 6; }
+.cors-leg[data-state="opaque"] { stroke:var(--opaque); stroke-dasharray:7 6; }
+.cors-leg.is-now { stroke-dasharray:2 10; animation:cors-flow .9s linear infinite; }
+@keyframes cors-flow { to { stroke-dashoffset:-12; } }
+.cors-leg-label { fill:var(--text); font:600 12.5px var(--mono)!important; }
+.cors-leg-label[data-state="off"] { display:none; }
+.cors-leg-label[data-state="ghost"] { fill:var(--red); }
+.cors-badge circle { fill:#0b151f; stroke:var(--cyan); stroke-width:1.5; }
+.cors-badge text { fill:var(--cyan); font:700 11px var(--mono)!important; }
+.cors-stamp rect { fill:#0b151f; stroke:var(--border-strong); stroke-width:1.5; }
+.cors-stamp text { fill:var(--muted); font:700 11.5px var(--mono)!important; }
+.cors-stamp[data-state="off"] { display:none; }
+.cors-stamp[data-state="pass"] rect { stroke:var(--pass); fill:#0f2a26; } .cors-stamp[data-state="pass"] text { fill:var(--green); }
+.cors-stamp[data-state="block"] rect { stroke:var(--block); fill:#27181c; } .cors-stamp[data-state="block"] text { fill:var(--red); }
+.cors-stamp:is([data-state="opaque"],[data-state="navigate"]) rect { stroke:var(--opaque); fill:#242117; } .cors-stamp:is([data-state="opaque"],[data-state="navigate"]) text { fill:var(--amber); }
+.cors-map .is-later { opacity:.08; }
+.cors-map .cors-leg.is-later { opacity:0; }
+
+/* One view */
+.cors-view { padding:20px 23px 24px; scroll-margin-top:16px; }
+.cors-view + .cors-view, .cors-stage + .cors-view { border-top:1px solid var(--border-strong); }
+.cors-console.is-enhanced .cors-view { display:none; border-top:0; }
+.cors-console.is-enhanced .cors-view.is-active { display:block; }
+.cors-view-head > span { color:var(--cyan); font:.75rem var(--mono); letter-spacing:.08em; }
+.cors-view-head h2 { margin:8px 0 4px; font-size:clamp(1.4rem,2.2vw,1.8rem); line-height:1.2; letter-spacing:-.03em; outline:none; }
+.cors-says { margin:0 0 12px; color:var(--text); font-size:1.12rem; line-height:1.45; }
+.cors-intro { max-width:76ch; margin:0 0 18px; color:var(--muted); font-size:1rem; line-height:1.6; }
+.cors-steps { display:grid; gap:6px; margin:0 0 16px; padding:0; list-style:none; }
+.cors-steps li { display:grid; grid-template-columns:26px minmax(0,1fr); gap:10px; align-items:start; padding:8px 10px; border:1px solid var(--border); border-left:3px solid var(--blue); border-radius:8px; background:#0e1a27; transition:opacity .25s ease; }
+.cors-steps li span { display:grid; place-items:center; width:22px; height:22px; border:1.5px solid var(--cyan); border-radius:50%; color:var(--cyan); font:700 .72rem var(--mono); }
+.cors-steps li p { margin:0; color:var(--text); font-size:.95rem; line-height:1.45; }
+.cors-steps li.is-good { border-left-color:var(--green); }
+.cors-steps li.is-bad { border-left-color:var(--red); }
+.cors-steps li.is-now { background:#12323d; border-color:rgba(66,214,232,.45); }
+.cors-steps li.is-later { opacity:.35; }
+.cors-fix { margin:0 0 16px; padding:11px 14px; border:1px solid rgba(251,126,133,.4); border-left-width:3px; border-radius:8px; background:#27181c; color:var(--text); line-height:1.5; }
+.cors-fix span { display:block; margin-bottom:3px; color:var(--red); font:600 .7rem var(--mono); letter-spacing:.07em; }
+.cors-fix.is-ok { border-color:rgba(73,214,163,.45); background:#0f2a26; }
+.cors-fix.is-ok span { color:var(--green); }
+.cors-wire { display:grid; gap:12px; margin-bottom:16px; }
+.cors-exchange { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); gap:10px; }
+.cors-exchange h4 { grid-column:1 / -1; margin:0; color:var(--muted); font:600 .74rem var(--mono); letter-spacing:.08em; text-transform:uppercase; }
+.cors-exchange > div { min-width:0; padding:10px 12px; border:1px solid var(--border-strong); border-radius:8px; background:#0a131d; }
+.cors-exchange > div > span { color:var(--dim); font:.68rem var(--mono); letter-spacing:.07em; }
+.cors-exchange ul { margin:6px 0 0; padding:0; list-style:none; font:.8rem/1.55 var(--mono); }
+.cors-exchange li { display:flex; flex-wrap:wrap; gap:0 6px; padding:1px 4px; border-radius:4px; overflow-wrap:anywhere; }
+.cors-exchange li b { color:var(--muted); font-weight:500; }
+.cors-exchange li span { color:var(--text); }
+.cors-exchange li i { margin-left:auto; font-style:normal; font-weight:700; }
+.cors-exchange li.is-good { background:#0f2a26; } .cors-exchange li.is-good i { color:var(--green); }
+.cors-exchange li.is-bad { background:#2c191d; } .cors-exchange li.is-bad i, .cors-exchange li.is-bad span { color:var(--red); }
+.cors-exchange li.is-note { background:#242117; } .cors-exchange li.is-note i { color:var(--amber); }
+.cors-ghost { margin:0; padding:10px 12px; border:1.5px dotted var(--red); border-radius:8px; color:var(--red); font:600 .82rem var(--mono); letter-spacing:.04em; text-transform:uppercase; }
+.cors-devtools { margin-bottom:14px; border:1px solid var(--border-strong); border-radius:8px; background:#0a131d; overflow:hidden; }
+.cors-devtools-title { display:block; padding:7px 12px; border-bottom:1px solid var(--border); color:var(--dim); font:.68rem var(--mono); letter-spacing:.07em; }
+.cors-devtools table { width:100%; border-collapse:collapse; font:.8rem var(--mono); }
+.cors-devtools th { padding:6px 12px; color:var(--dim); font-weight:500; text-align:left; border-bottom:1px solid var(--border); }
+.cors-devtools td { padding:6px 12px; color:var(--text); border-bottom:1px solid var(--border); }
+.cors-devtools tr.is-bad td { color:var(--red); }
+.cors-devtools em { margin-left:6px; font-style:normal; font-size:.72rem; opacity:.85; }
+.cors-devtools .cors-console-line { margin:0; padding:9px 12px; background:#27181c; color:var(--red); font:.78rem/1.5 var(--mono); overflow-wrap:anywhere; }
+.cors-devtools .cors-console-line span { display:block; margin-bottom:2px; color:var(--dim); font-size:.68rem; letter-spacing:.07em; }
+.cors-curl { border:1px solid var(--border-strong); border-radius:8px; background:#102431; overflow:hidden; }
+.cors-curl span { display:block; padding:8px 12px 0; color:var(--dim); font:.68rem var(--mono); letter-spacing:.05em; }
+.cors-curl pre { margin:0; padding:8px 12px 10px; overflow-x:auto; }
+.cors-curl code { color:var(--cyan); font:.8rem/1.6 var(--mono); }
+.cors-loop { display:grid; gap:6px; max-width:90ch; margin:4px 0 16px; padding-left:22px; }
+.cors-loop b { color:var(--text); }
+
+@media (max-width:760px) {
+  .cors-view { padding:18px 14px 22px; }
+  .cors-devtools th:nth-child(4), .cors-devtools td:nth-child(4) { display:none; }
+  .cors-devtools :is(th,td) { padding-inline:8px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .cors-map .cors-leg { animation:none!important; transition:none!important; }
+  .cors-steps li { transition:none; }
+}
+.cors-badge.is-off { display:none; }
+.cors-map-caption { margin:8px 16px 0; color:var(--dim); font-size:.85rem; }
+.cors-map-caption b { color:var(--muted); font-weight:600; }
+.cors-console.is-enhanced .cors-map-caption { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+
+/* Starter view: what an origin is */
+.cors-anatomy { margin:0 0 26px; padding:18px 18px 14px; border:1px solid var(--border-strong); border-radius:12px; background:#0a131d; }
+.cors-anatomy-url { display:flex; flex-wrap:wrap; align-items:flex-start; row-gap:12px; font:600 clamp(1.15rem,2.6vw,1.9rem) var(--mono); }
+.cors-anatomy-url span { display:grid; gap:6px; }
+.cors-anatomy-url b { padding:6px 2px 8px; border-bottom:3px solid var(--border-strong); font-weight:600; letter-spacing:-.01em; }
+.cors-anatomy-url i { padding:0 2px; color:var(--dim); font:500 .72rem var(--mono); font-style:normal; letter-spacing:.04em; }
+.cors-anatomy-url .is-scheme b, .cors-anatomy-url .is-host b, .cors-anatomy-url .is-port b, .cors-anatomy-url .is-sep b { color:var(--origin); border-bottom-color:var(--origin); }
+.cors-anatomy-url :is(.is-scheme,.is-host,.is-port) i { color:var(--origin); }
+.cors-anatomy-url .is-port b { opacity:.6; border-bottom-style:dashed; }
+.cors-anatomy-url .is-rest b { color:var(--dim); }
+.cors-anatomy-url .is-rest + .is-rest b, .cors-anatomy-url .is-port + .is-rest b { margin-left:0; }
+.cors-anatomy-key { display:flex; flex-wrap:wrap; gap:10px 28px; margin-top:16px; }
+.cors-anatomy-key p { margin:0; color:var(--muted); font-size:.95rem; }
+.cors-anatomy-key span { margin-right:10px; font:600 .7rem var(--mono); letter-spacing:.07em; }
+.cors-anatomy-key .is-origin span { color:var(--origin); }
+.cors-anatomy-key .is-origin code { margin-right:6px; color:var(--text); font:600 .9rem var(--mono); }
+.cors-anatomy-key .is-rest span { color:var(--dim); }
+.cors-anatomy figcaption { margin-top:12px; color:var(--muted); font-size:.92rem; line-height:1.5; }
+.cors-anatomy code, .cors-o-lead code, .cors-o-form code { font-family:var(--mono); font-size:.9em; color:var(--text); }
+.cors-o-title { margin:0 0 4px; font-size:1.2rem; letter-spacing:-.02em; }
+.cors-o-lead { margin:0 0 14px; color:var(--muted); line-height:1.5; }
+.cors-o-form { display:grid; gap:6px; margin-bottom:12px; }
+.cors-o-form label { color:var(--dim); font-size:.85rem; }
+.cors-o-form > div { display:flex; gap:8px; }
+.cors-o-form input { flex:1; min-width:0; min-height:44px; padding:8px 12px; border:1px solid var(--border-strong); border-radius:8px; background:#0b151f; color:var(--text); font:.9rem var(--mono); }
+.cors-o-form input:focus-visible { outline:3px solid var(--cyan); outline-offset:1px; }
+.cors-o-form button { min-height:44px; padding:8px 16px; border:1px solid rgba(66,214,232,.55); border-radius:8px; background:#12323d; color:var(--cyan); font:600 .88rem var(--mono); }
+.cors-o-grid { display:grid; grid-template-columns:76px repeat(3,minmax(0,1fr)); gap:8px; }
+.cors-o-rows { display:grid; grid-template-rows:auto 1fr 1fr auto; padding-top:20px; color:var(--dim); font:.68rem var(--mono); letter-spacing:.05em; text-transform:uppercase; }
+.cors-o-rows span { display:flex; align-items:center; min-height:26px; }
+.cors-o-part { display:grid; grid-template-rows:auto 1fr 1fr auto; gap:2px; min-width:0; padding:8px 11px; border:1px solid var(--border-strong); border-radius:9px; background:#0e1a27; }
+.cors-o-part > span { color:var(--dim); font:.68rem var(--mono); letter-spacing:.06em; text-transform:uppercase; }
+.cors-o-part b { display:flex; align-items:center; gap:6px; min-height:26px; font:600 .95rem var(--mono); overflow-wrap:anywhere; }
+.cors-o-part b:first-of-type { color:var(--origin); }
+.cors-o-part small { color:var(--dim); font:.68rem var(--mono); }
+.cors-o-part i { color:var(--green); font:600 .74rem var(--mono); font-style:normal; }
+.cors-o-part.is-differ { border-color:rgba(246,199,99,.55); background:#211f17; }
+.cors-o-part.is-differ b:last-of-type, .cors-o-part.is-differ i { color:var(--amber); }
+.cors-o-verdict { margin:10px 0 6px; padding:11px 14px; border:1px solid rgba(73,214,163,.45); border-left-width:3px; border-radius:8px; background:#0f2a26; color:var(--text); line-height:1.5; }
+.cors-o-verdict span { display:block; margin-bottom:3px; color:var(--green); font:600 .7rem var(--mono); letter-spacing:.07em; }
+.cors-o-verdict.is-differ { border-color:rgba(246,199,99,.5); background:#211f17; }
+.cors-o-verdict.is-differ span { color:var(--amber); }
+.cors-o-resolved { margin:0 0 16px; color:var(--dim); font-size:.82rem; overflow-wrap:anywhere; }
+.cors-o-resolved code { color:var(--muted); font:.82rem var(--mono); }
+.cors-o-presets { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr)); gap:8px; margin:0 0 22px; padding:0; list-style:none; }
+.cors-o-presets button { display:flex; justify-content:space-between; align-items:center; gap:10px; width:100%; min-height:44px; padding:8px 12px; border:1px solid var(--border-strong); border-radius:8px; background:#0e1a27; color:var(--text); text-align:left; }
+.cors-o-presets button:hover { border-color:rgba(66,214,232,.45); }
+.cors-o-presets button[aria-pressed="true"] { border-color:rgba(66,214,232,.6); background:#12323d; }
+.cors-o-presets code { min-width:0; font:.82rem var(--mono); overflow-wrap:anywhere; }
+.cors-o-presets button span { flex:none; padding:2px 8px; border-radius:999px; font:600 .7rem var(--mono); }
+.cors-o-presets span.is-match { color:var(--green); background:#0f2a26; }
+.cors-o-presets span.is-differ { color:var(--amber); background:#211f17; }
+.cors-o-why { margin:4px 2px 0; color:var(--muted); font-size:.85rem; line-height:1.45; }
+.cors-console.is-enhanced .cors-o-why { display:none; }
+.cors-o-next { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr)); gap:10px; }
+.cors-o-next > div { padding:12px 14px; border:1px solid var(--border-strong); border-left:3px solid var(--green); border-radius:8px; background:#0e1a27; }
+.cors-o-next > div.is-differ { border-left-color:var(--amber); }
+.cors-o-next span { color:var(--green); font:600 .7rem var(--mono); letter-spacing:.07em; }
+.cors-o-next .is-differ span { color:var(--amber); }
+.cors-o-next p { margin:5px 0 0; color:var(--text); line-height:1.5; }
+.cors-o-go { margin:16px 0 0; }
+.cors-o-go a { display:inline-flex; align-items:center; min-height:44px; padding:8px 16px; border:1px solid rgba(66,214,232,.55); border-radius:8px; background:#12323d; color:var(--cyan); font:600 .9rem var(--mono); }
+@media (max-width:760px) {
+  .cors-anatomy { padding:14px 12px 12px; }
+  .cors-o-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
+  .cors-o-rows { display:none; }
+  .cors-o-part { padding:6px 8px; }
+  .cors-o-part b { font-size:.78rem; }
+}
+
+/* The stage: two answers, the map, the legend, playback */
+.cors-stage { display:grid; gap:10px; margin:0 0 16px; }
+.cors-console:not(.is-enhanced) .cors-stage { padding:16px 23px 0; }
+.cors-console.is-intro .cors-stage { display:none; }
+.cors-answers { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr)); gap:10px; }
+.cors-answer { display:grid; gap:3px; padding:11px 14px; border:1px solid var(--border-strong); border-left-width:4px; border-radius:9px; background:#0e1a27; }
+.cors-answer span { color:var(--dim); font:600 .72rem var(--mono); letter-spacing:.05em; text-transform:uppercase; }
+.cors-answer b { font-size:1.15rem; font-weight:650; }
+.cors-answer.is-yes { border-left-color:var(--green); } .cors-answer.is-yes b { color:var(--green); }
+.cors-answer.is-no { border-left-color:var(--red); } .cors-answer.is-no b { color:var(--red); }
+.cors-answer.is-partly { border-left-color:var(--amber); } .cors-answer.is-partly b { color:var(--amber); }
+.cors-console.is-enhanced .cors-answers.is-static { display:none; }
+.cors-legend { display:flex; flex-wrap:wrap; gap:6px 16px; color:var(--muted); font-size:.78rem; }
+.cors-legend span { display:flex; align-items:center; gap:6px; }
+.cors-legend span[hidden] { display:none; }
+
+/* The read check, spelled out under the map */
+.cors-check { display:grid; gap:10px; padding:13px 16px; border:1px solid var(--border-strong); border-left:4px solid #5d8fe0; border-radius:10px; background:#0d1824; }
+.cors-check-head, .cors-check li { display:grid; grid-template-columns:minmax(0,1fr) 26px minmax(0,1fr); gap:4px 12px; align-items:baseline; }
+.cors-check-head span { color:var(--dim); font:600 .7rem var(--mono); letter-spacing:.05em; text-transform:uppercase; }
+.cors-check-head span:first-child { grid-column:1 / -1; color:#8fb4f0; letter-spacing:.08em; }
+.cors-check-head span:nth-child(3) { grid-column:3; }
+.cors-check h4 { margin:0 0 6px; color:var(--muted); font:600 .74rem var(--mono); }
+.cors-check ul { display:grid; gap:8px; margin:0; padding:0; list-style:none; }
+.cors-check code { overflow-wrap:anywhere; color:var(--text); font-size:.84rem; }
+.cors-check li i { font-style:normal; font-weight:700; text-align:center; }
+.cors-check li.is-ok i { color:var(--green); } .cors-check li.is-bad i { color:var(--red); }
+.cors-check li.is-bad code:nth-of-type(2) { color:var(--red); }
+.cors-check li small { grid-column:3; color:var(--muted); font-size:.8rem; line-height:1.4; }
+.cors-check li.is-bad small { color:#f2a3a3; }
+.cors-check-note { margin:0; color:var(--muted); font-size:.9rem; line-height:1.5; }
+.cors-check .is-later { opacity:.18; }
+.cors-console.is-enhanced .cors-check.is-static { display:none; }
+.cors-choice .cors-check.is-static { margin:10px 0; }
+@media (max-width:760px) {
+  .cors-check-head span:nth-child(n+2) { display:none; }
+  .cors-check li { grid-template-columns:22px minmax(0,1fr); }
+  .cors-check li code:first-of-type { grid-column:1 / -1; color:var(--muted); }
+  .cors-check li i { grid-column:1; }
+  .cors-check li small { grid-column:2; }
+}
+.cors-play { display:flex; flex-wrap:wrap; align-items:center; gap:9px; }
+.cors-play button { min-height:44px; padding:8px 14px; border:1px solid var(--border-strong); border-radius:8px; background:#142634; color:var(--text); font-size:.9rem; }
+.cors-play button:first-child { border-color:rgba(66,214,232,.55); background:#12323d; color:var(--cyan); font:600 .88rem var(--mono); }
+.cors-play p { flex:1 1 260px; margin:0; color:var(--text); font-size:.92rem; line-height:1.45; }
+.cors-play p:empty { display:none; }
+
+/* Choices inside a view */
+.cors-choose { display:grid; gap:8px; margin:0 0 14px; }
+.cors-choose > span { color:var(--dim); font:600 .72rem var(--mono); letter-spacing:.06em; text-transform:uppercase; }
+.cors-choose > div { display:flex; flex-wrap:wrap; gap:8px; }
+.cors-choose button { min-height:44px; padding:8px 14px; border:1px solid var(--border-strong); border-radius:8px; background:#142634; color:var(--text); font:.86rem var(--mono); text-align:left; }
+.cors-choose button:hover { border-color:rgba(66,214,232,.45); }
+.cors-choose button[aria-pressed="true"] { border-color:rgba(66,214,232,.65); background:#12323d; color:var(--cyan); }
+.cors-choice { margin-top:14px; }
+.cors-choice + .cors-choice { padding-top:14px; border-top:1px dashed var(--border-strong); }
+.cors-console.is-enhanced .cors-choice { display:none; margin-top:0; padding-top:0; border:0; }
+.cors-console.is-enhanced .cors-choice.is-active { display:block; }
+.cors-choice h3 { margin:0 0 10px; font:600 .95rem var(--mono); }
+.cors-console.is-enhanced .cors-choice h3 { display:none; }
+.cors-choice .cors-answers { margin-bottom:10px; }
+.cors-explain { max-width:76ch; margin:0 0 12px; color:var(--text); font-size:1.02rem; line-height:1.6; }
+.cors-catch { margin:0 0 12px; color:var(--amber); font-size:.9rem; }
+.cors-console.is-enhanced .cors-catch { display:none; }
+.cors-inspect { border:1px solid var(--border-strong); border-radius:9px; background:#0b151f; }
+.cors-inspect > summary { display:flex; justify-content:space-between; align-items:center; min-height:44px; padding:8px 14px; color:var(--cyan); font:600 .76rem var(--mono); letter-spacing:.06em; text-transform:uppercase; cursor:pointer; list-style:none; }
+.cors-inspect > summary::-webkit-details-marker { display:none; }
+.cors-inspect > summary i { font-style:normal; transition:transform .18s ease; }
+.cors-inspect[open] > summary i { transform:rotate(180deg); }
+.cors-inspect > div { padding:4px 14px 14px; }
+.cors-diagnosis { display:grid; gap:6px; margin:0 0 6px; padding:0; list-style:none; counter-reset:q; }
+.cors-diagnosis li { display:grid; grid-template-columns:28px 1fr; gap:10px; align-items:center; padding:8px 12px; border:1px solid var(--border); border-radius:8px; background:#0e1a27; color:var(--muted); counter-increment:q; }
+.cors-diagnosis li::before { content:counter(q); display:grid; place-items:center; width:24px; height:24px; border:1.5px solid var(--border-strong); border-radius:50%; font:700 .74rem var(--mono); }
+.cors-diagnosis li.is-passed { color:var(--text); }
+.cors-diagnosis li.is-passed::before { content:'✓'; border-color:var(--green); color:var(--green); }
+.cors-diagnosis li.is-caught { border-color:rgba(251,126,133,.5); background:#27181c; color:var(--text); font-weight:600; }
+.cors-diagnosis li.is-caught::before { content:'✕'; border-color:var(--red); color:var(--red); }
+.cors-jar[data-state="no"] { display:none; }
+@media (prefers-reduced-motion:reduce) { .cors-inspect > summary i { transition:none; } }

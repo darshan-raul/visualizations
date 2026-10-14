@@ -1,0 +1,64 @@
+---
+import { PAGE, START_PRESET, compare, comparison, presets } from './cors-origin';
+import { sources } from './cors-views';
+interface Props { active: boolean; takeaway: string }
+const { active, takeaway } = Astro.props;
+const start = presets[START_PRESET];
+const origin = sources.findIndex((source) => source.url.endsWith('#origin'));
+---
+<section id="what-is-an-origin" class:list={['cors-view', 'cors-origin', active && 'is-active']} data-cors-view data-cors-intro data-label="Origins" data-takeaway={takeaway} aria-labelledby="what-is-an-origin-title">
+  <header class="cors-view-head">
+    <span>01 · BASICS</span>
+    <h2 id="what-is-an-origin-title" tabindex="-1">What is an origin?</h2>
+    <p class="cors-says">Every page comes from somewhere. That somewhere is its origin.</p>
+  </header>
+  <p class="cors-intro">Here is the address of the dashboard you're looking at. The browser keeps only its first three parts, which say how the page was fetched, from which machine and on which port, and calls them the page's origin. Everything after them only says where on that site you are.</p>
+
+  <figure class="cors-anatomy" aria-label={`Parts of ${PAGE}`}>
+    <div class="cors-anatomy-url">
+      <span class="is-scheme"><b>https</b><i>scheme</i></span>
+      <span class="is-sep"><b>://</b></span>
+      <span class="is-host"><b>app.b.com</b><i>host</i></span>
+      <span class="is-port"><b>:443</b><i>port</i></span>
+      <span class="is-rest"><b>/dashboard</b><i>path</i></span>
+      <span class="is-rest"><b>?tab=2</b><i>query</i></span>
+      <span class="is-rest"><b>#top</b><i>fragment</i></span>
+    </div>
+    <div class="cors-anatomy-key">
+      <p class="is-origin"><span>THE ORIGIN</span><code>https://app.b.com</code> scheme + host + port</p>
+      <p class="is-rest"><span>NOT PART OF IT</span>path, query and fragment</p>
+    </div>
+    <figcaption>Nobody typed <code>:443</code>, which is why it is drawn faded. https uses port 443 unless the URL says otherwise, and http uses 80, so the browser fills it in before comparing.</figcaption>
+  </figure>
+
+  <h3 class="cors-o-title">Is this URL the same origin as the page?</h3>
+  <p class="cors-o-lead">Two URLs have the same origin only when all three parts match. Pick an example or type your own.</p>
+  <form class="cors-o-form" data-cors-o-form hidden>
+    <label for="cors-o-input">A URL to compare with <code>{PAGE}</code></label>
+    <div><input id="cors-o-input" name="url" type="text" inputmode="url" spellcheck="false" autocomplete="off" value={start.url} /><button type="submit">Compare</button></div>
+  </form>
+  <div class="cors-o-result" data-cors-o-result aria-live="polite" set:html={comparison(compare(start.url), start.why)} />
+  <ul class="cors-o-presets" aria-label="Examples">
+    {presets.map((preset, index) => {
+      const c = compare(preset.url);
+      return <li><button type="button" data-cors-o-preset={index} aria-pressed={index === START_PRESET ? 'true' : 'false'} data-why={preset.why}>
+        <code>{preset.url}</code><span class:list={[c.ok && c.same ? 'is-match' : 'is-differ']}>{c.ok && c.same ? 'same' : 'different'}</span>
+      </button><p class="cors-o-why">{preset.why}</p></li>;
+    })}
+  </ul>
+
+  <div class="cors-o-next">
+    <div class="is-match"><span>SAME ORIGIN</span><p>The page's script can read whatever comes back. Nobody else has to agree.</p></div>
+    <div class="is-differ"><span>DIFFERENT ORIGIN</span><p>The request can still go out. The script only gets to read the answer if the server says this origin may. That permission is CORS.</p></div>
+  </div>
+  <p class="cors-o-go"><a href="#reading-the-response" data-cors-go>Next: follow a request to another origin →</a></p>
+
+  <div class="lsn-reading" data-cors-reading>
+    <span class="lsn-kicker">BASICS</span>
+    <h3>An origin is where a page comes from</h3>
+    <p>Browsers use the origin as the line between one site's pages and another's. A script runs with the origin of the page that loaded it, and reading anything from another origin needs that origin's permission.</p>
+    <div class="lsn-note"><span>WORTH KNOWING</span><p>"Site" is a looser idea. app.b.com and api.b.com are the same site, b.com, but different origins. Cookies and their SameSite setting work with sites; CORS works with origins. URLs such as data: and file: get an opaque origin that matches nothing.</p></div>
+    <p class="lsn-view-sources"><a href={sources[origin].url} target="_blank" rel="noopener noreferrer">{sources[origin].label} ↗</a><a href="https://url.spec.whatwg.org/#default-port" target="_blank" rel="noopener noreferrer">URL standard: default ports ↗</a><a href="https://www.rfc-editor.org/rfc/rfc6454.html" target="_blank" rel="noopener noreferrer">RFC 6454: The Web Origin Concept ↗</a></p>
+  </div>
+  <p class="lsn-view-point"><span>THE POINT TO KEEP</span>{takeaway}</p>
+</section>

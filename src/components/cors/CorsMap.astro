@@ -1,0 +1,111 @@
+---
+import { trip, view, type Leg } from './cors-trip';
+import { views } from './cors-views';
+/**
+ * One trip from a page to api.a.com. The browser and its read check, the network with an optional CDN, and the server
+ * and its log. Drawn twice: across for wide screens, top to bottom for phones. The client repaints both from `view()`.
+ */
+const v = view(trip(views[0].choices[0].config));
+const t = v.text;
+type Box = [number, number, number, number];
+type At = [number, number];
+type Label = 'preOut' | 'preBack' | 'out' | 'back';
+type Layout = {
+  id: string; viewBox: string; frame: Box; bar: string; tab: Box; tabText: At; zone: At;
+  page: Box; who: At; code: At; sub: At; gets: Box; getsKicker: At; gets1: At; gets2: At; jar: Box;
+  gate: Box; gateLabel: string; gateAnchor: string; cdn: Box; cdnKicker: At; cdnNote: At;
+  server: Box; serverName: At; serverSub: At; logKicker: At; logs: At[];
+  legs: Record<Leg, string>; labels: Record<Label, string>; labelAnchor: Record<Label, string>;
+  badges: Partial<Record<Leg, At>>; preCheck: Box; check: Box;
+};
+const wide: Layout = {
+  id: 'wide', viewBox: '0 0 1040 440', frame: [16, 16, 444, 408], bar: 'M16 52 H460', tab: [30, 24, 190, 22], tabText: [44, 39], zone: [444, 40],
+  page: [40, 80, 200, 86], who: [54, 102], code: [54, 130], sub: [54, 152],
+  gets: [40, 300, 200, 96], getsKicker: [54, 322], gets1: [54, 347], gets2: [54, 370], jar: [252, 374, 118, 30],
+  gate: [380, 64, 40, 344], gateLabel: 'translate(405 362) rotate(-90)', gateAnchor: 'middle',
+  cdn: [590, 206, 100, 114], cdnKicker: [640, 228], cdnNote: [640, 344],
+  server: [790, 64, 234, 344], serverName: [806, 92], serverSub: [806, 110], logKicker: [806, 330], logs: [[806, 352], [806, 372], [806, 392]],
+  legs: { call: 'M240 123 H300 V250 H380', preOut: 'M420 120 H790', preBack: 'M790 150 H420', out1: 'M420 250 H640', out2: 'M640 250 H790', back2: 'M790 285 H640', back1: 'M640 285 H420', release: 'M380 285 H300 V345 H240' },
+  labels: { preOut: 'translate(470 111)', preBack: 'translate(760 170)', out: 'translate(470 241)', back: 'translate(760 305)' },
+  labelAnchor: { preOut: 'start', preBack: 'end', out: 'start', back: 'end' },
+  badges: { call: [270, 123], preOut: [438, 120], preBack: [772, 150], out1: [438, 250], back2: [772, 285], back1: [620, 285], release: [360, 285] },
+  preCheck: [322, 163, 156, 24], check: [312, 272, 176, 26],
+};
+// Top to bottom: the page at the top, the read check across the browser's lower edge, the server at the foot.
+// Lane labels run along their lane, reading in the direction of travel.
+const tall: Layout = {
+  id: 'tall', viewBox: '0 0 360 690', frame: [10, 10, 340, 222], bar: 'M10 44 H350', tab: [20, 18, 170, 20], tabText: [32, 32], zone: [340, 32],
+  page: [22, 56, 140, 84], who: [32, 76], code: [32, 100], sub: [32, 122],
+  gets: [172, 56, 166, 106], getsKicker: [182, 76], gets1: [182, 100], gets2: [182, 122], jar: [172, 168, 166, 22],
+  gate: [10, 200, 340, 32], gateLabel: 'translate(14 250)', gateAnchor: 'start',
+  cdn: [40, 400, 140, 80], cdnKicker: [218, 444], cdnNote: [180, 500],
+  server: [10, 548, 340, 132], serverName: [24, 574], serverSub: [24, 592], logKicker: [24, 616], logs: [[24, 636], [24, 654], [24, 672]],
+  legs: { call: 'M90 140 V200', preOut: 'M250 232 V548', preBack: 'M290 548 V232', out1: 'M90 232 V440', out2: 'M90 440 V548', back2: 'M130 548 V440', back1: 'M130 440 V232', release: 'M130 200 V150 H172' },
+  labels: { preOut: 'translate(255 390) rotate(90)', preBack: 'translate(285 390) rotate(-90)', out: 'translate(95 316) rotate(90)', back: 'translate(125 316) rotate(-90)' },
+  labelAnchor: { preOut: 'middle', preBack: 'middle', out: 'middle', back: 'middle' },
+  badges: { call: [90, 170], preOut: [250, 266], preBack: [290, 530], out1: [90, 266], back2: [130, 530], back1: [130, 428], release: [130, 178] },
+  preCheck: [202, 204, 136, 24], check: [36, 204, 150, 24],
+};
+const leg = (name: Leg) => ({ 'data-leg': name, 'data-when': name, 'data-state': v.legs[name], 'data-at': v.at[name] });
+const logKey = (index: number) => `log${index + 1}` as 'log1' | 'log2' | 'log3';
+---
+{[wide, tall].map((l) => {
+  const [fx, fy, fw, fh] = l.frame;
+  return <svg class={`cors-map is-${l.id}`} data-cors-map viewBox={l.viewBox} role="img" aria-labelledby={`cors-map-title-${l.id} cors-map-desc-${l.id}`}>
+    <title id={`cors-map-title-${l.id}`}>One request's trip from the page to the API</title>
+    <desc id={`cors-map-desc-${l.id}`}>The page's script, inside the browser, asks for a URL. The request passes the browser's read check on the way out, sometimes after a preflight, crosses the network, maybe through a CDN, and reaches the server. The answer comes back to the read check, which hands it to the script or holds it back. The two answers beside the map say whether the request reached the server and whether the script can read the response.</desc>
+    <defs><marker id={`cors-arrow-${l.id}`} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9 Z" fill="context-stroke" /></marker></defs>
+    <g aria-hidden="true">
+      <rect class="cors-frame" x={fx} y={fy} width={fw} height={fh} rx="14" />
+      <path class="cors-frame-bar" d={l.bar} />
+      <rect class="cors-tab" x={l.tab[0]} y={l.tab[1]} width={l.tab[2]} height={l.tab[3]} rx="6" />
+      <text class="cors-tab-label" x={l.tabText[0]} y={l.tabText[1]} data-t="tab">{t.tab}</text>
+      <text class="cors-zone-label" x={l.zone[0]} y={l.zone[1]} text-anchor="end">BROWSER</text>
+
+      <rect class="cors-box is-page" x={l.page[0]} y={l.page[1]} width={l.page[2]} height={l.page[3]} rx="10" />
+      <text class="cors-box-kicker" x={l.who[0]} y={l.who[1]} data-t="who">{t.who}</text>
+      <text class="cors-code" x={l.code[0]} y={l.code[1]} data-t="code">{t.code}</text>
+      <text class="cors-box-sub" x={l.sub[0]} y={l.sub[1]}>runs in the page's origin</text>
+
+      <rect class="cors-box is-gets" data-s="gets" data-state={v.state.gets} data-when="gets" data-at={v.at.gets} x={l.gets[0]} y={l.gets[1]} width={l.gets[2]} height={l.gets[3]} rx="10" />
+      <g data-when="gets" data-at={v.at.gets}>
+        <text class="cors-box-kicker" x={l.getsKicker[0]} y={l.getsKicker[1]}>what it gets</text>
+        <text class="cors-gets" x={l.gets1[0]} y={l.gets1[1]} data-t="gets1">{t.gets1}</text>
+        <text class="cors-box-sub" x={l.gets2[0]} y={l.gets2[1]} data-t="gets2">{t.gets2}</text>
+      </g>
+      <g class="cors-jar" data-s="jar" data-state={v.state.jar} data-when="jar" data-at={v.at.jar}>
+        <rect x={l.jar[0]} y={l.jar[1]} width={l.jar[2]} height={l.jar[3]} rx="7" />
+        <text x={l.jar[0] + l.jar[2] / 2} y={l.jar[1] + l.jar[3] / 2 + 4} text-anchor="middle" data-t="jar">{t.jar}</text>
+      </g>
+
+      <rect class="cors-gate" x={l.gate[0]} y={l.gate[1]} width={l.gate[2]} height={l.gate[3]} rx="8" />
+      <text class="cors-gate-label" transform={l.gateLabel} text-anchor={l.gateAnchor}>READ CHECK</text>
+
+      <g class="cors-cdn" data-s="cdn" data-state={v.state.cdn}>
+        <rect x={l.cdn[0]} y={l.cdn[1]} width={l.cdn[2]} height={l.cdn[3]} rx="10" />
+        <text class="cors-box-kicker" x={l.cdnKicker[0]} y={l.cdnKicker[1]} text-anchor="middle">CDN edge</text>
+        <text class="cors-cdn-note" x={l.cdnNote[0]} y={l.cdnNote[1]} text-anchor="middle" data-t="cdn" data-when="cdn" data-at={v.at.cdn}>{t.cdn}</text>
+      </g>
+
+      <rect class="cors-box is-server" x={l.server[0]} y={l.server[1]} width={l.server[2]} height={l.server[3]} rx="12" />
+      <text class="cors-server" x={l.serverName[0]} y={l.serverName[1]} data-t="server">{t.server}</text>
+      <text class="cors-box-sub" x={l.serverSub[0]} y={l.serverSub[1]}>the server</text>
+      <text class="cors-box-kicker" x={l.logKicker[0]} y={l.logKicker[1]}>ACCESS LOG</text>
+      {l.logs.map(([x, y], index) => <text class="cors-log" x={x} y={y} data-t={logKey(index)} data-when={index < 2 ? logKey(index) : undefined} data-at={index < 2 ? v.at[logKey(index)] : undefined}>{t[logKey(index)]}</text>)}
+    </g>
+
+    <g aria-hidden="true">
+      {(Object.keys(l.legs) as Leg[]).map((name) => <path class="cors-leg" {...leg(name)} d={l.legs[name]} marker-end={`url(#cors-arrow-${l.id})`} />)}
+      <text class="cors-leg-label" transform={l.labels.preOut} text-anchor={l.labelAnchor.preOut} data-t="preOut" data-leg-label="preOut" data-state={v.legs.preOut} data-when="preOut" data-at={v.at.preOut}>{t.preOut}</text>
+      <text class="cors-leg-label" transform={l.labels.preBack} text-anchor={l.labelAnchor.preBack} data-t="preBack" data-leg-label="preBack" data-state={v.legs.preBack} data-when="preBack" data-at={v.at.preBack}>{t.preBack}</text>
+      <text class="cors-leg-label" transform={l.labels.out} text-anchor={l.labelAnchor.out} data-t="out" data-leg-label="out1" data-state={v.legs.out1} data-when="out1" data-at={v.at.out1}>{t.out}</text>
+      <text class="cors-leg-label" transform={l.labels.back} text-anchor={l.labelAnchor.back} data-t="back" data-leg-label="back2" data-state={v.legs.back2} data-when="back2" data-at={v.at.back2}>{t.back}</text>
+      {(Object.entries(l.badges) as [Leg, At][]).map(([name, [x, y]]) => <g class:list={['cors-badge', (!v.badge[name] || v.legs[name] === 'off') && 'is-off']} data-badge={name} data-when={name} data-at={v.at[name]}>
+        <circle cx={x} cy={y} r="10" /><text x={x} y={y + 4} text-anchor="middle">{v.badge[name] ?? ''}</text>
+      </g>)}
+      {([['preCheck', l.preCheck], ['check', l.check]] as const).map(([key, [x, y, w, h]]) => <g class="cors-stamp" data-s={key} data-state={v.state[key]} data-when={key} data-at={v.at[key]}>
+        <rect x={x} y={y} width={w} height={h} rx={h / 2} /><text x={x + w / 2} y={y + h / 2 + 4} text-anchor="middle" data-t={key}>{t[key]}</text>
+      </g>)}
+    </g>
+  </svg>;
+})}

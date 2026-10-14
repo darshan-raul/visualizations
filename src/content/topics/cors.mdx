@@ -1,0 +1,36 @@
+---
+title: "CORS, One Request at a Time"
+summary: "Follow one request from a page on app.b.com to api.a.com and back. See when the browser sends a preflight, when the request reaches the server but the script still can't read the answer, and why the console's CORS error is often hiding a 500, a redirect or a CDN cache. Change the request or the server and watch the outcome move."
+slug: cors
+collection: foundations
+tags: [HTTP, Browser, Security, Troubleshooting]
+technologies: [HTTP, Fetch API, CloudFront]
+format: flow-explorer
+difficulty: foundational
+published: 2026-10-14
+reviewed: 2026-10-14
+versionScope: Follows the Fetch standard's CORS protocol; verdicts replayed in Firefox 154 on 2026-10-14
+legacyPath: /cors
+featured: false
+state: reviewed
+related: [http-status-codes, networking, aws-load-balancers]
+sources:
+  - label: "Fetch standard: the CORS protocol"
+    url: https://fetch.spec.whatwg.org/#http-cors-protocol
+  - label: "Fetch standard: CORS-preflight fetch"
+    url: https://fetch.spec.whatwg.org/#cors-preflight-fetch
+  - label: "Fetch standard: CORS protocol and credentials"
+    url: https://fetch.spec.whatwg.org/#cors-protocol-and-credentials
+  - label: "HTML standard: origins"
+    url: https://html.spec.whatwg.org/multipage/browsers.html#origin
+  - label: "MDN: Cross-Origin Resource Sharing"
+    url: https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS
+  - label: "MDN: CORS errors"
+    url: https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS/Errors
+  - label: "AWS: CloudFront caching based on request headers"
+    url: https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/header-caching.html
+---
+
+import CorsConsole from '../../components/cors/CorsConsole.astro';
+
+<CorsConsole published={props.published} reviewed={props.reviewed} />
