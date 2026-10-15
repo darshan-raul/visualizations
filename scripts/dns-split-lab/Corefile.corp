@@ -1,0 +1,13 @@
+# The corporate DNS server: authoritative for corp.example.com, forwards example.com to the VPC (an inbound endpoint).
+corp.example.com:53 {
+    file /zones/corp.zone
+    log
+}
+example.com:53 {
+    forward . 172.30.3.20
+    log
+}
+.:53 {
+    forward . 172.30.3.10
+    log
+}

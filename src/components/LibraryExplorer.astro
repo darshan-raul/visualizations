@@ -5,7 +5,7 @@ import TopicTree from './TopicTree.astro';
 import { collections, formatLabels } from '../lib/catalog';
 import { buildTopicGraph } from '../lib/topic-graph';
 
-const { topics, compact = false, enableMap = false, defaultView = 'list', immersive = false } = Astro.props;
+const { topics, groups, compact = false, enableMap = false, defaultView = 'list', immersive = false } = Astro.props;
 const tags = [...new Set<string>(topics.flatMap((topic: any): string[] => topic.data.tags))].sort();
 const technologies = [...new Set<string>(topics.flatMap((topic: any): string[] => topic.data.technologies))].sort();
 const graph = enableMap ? buildTopicGraph(topics) : null;
@@ -56,7 +56,14 @@ const filterGroups = [
       {enableMap && <div class="view-switch" data-view-switch hidden aria-label="Choose catalogue view"><button type="button" data-view="list" aria-pressed="true">List</button><button type="button" data-view="map" aria-pressed="false">Map</button></div>}
     </div>
   </div>
-  <div class="topic-grid" data-topic-grid>{topics.map((topic: any) => <TopicCard topic={topic} />)}</div>
+  {groups
+    ? <div class="topic-groups" data-topic-grid>{groups.map((group: any, index: number) => (
+        <section class="topic-group" aria-labelledby={`group-${group.id}`} data-topic-group>
+          <header><span aria-hidden="true">{String(index + 1).padStart(2, '0')}</span><h2 id={`group-${group.id}`}>{group.label}</h2><p>{group.means}</p></header>
+          <div class="topic-grid">{group.topics.map((topic: any) => <TopicCard topic={topic} />)}</div>
+        </section>
+      ))}</div>
+    : <div class="topic-grid" data-topic-grid>{topics.map((topic: any) => <TopicCard topic={topic} />)}</div>}
   {graph && (immersive ? <TopicTree graph={graph} immersive /> : <TopicMap graph={graph} />)}
   {graph && <script is:inline type="application/json" data-topic-graph set:html={graphJson} />}
   <div class="empty-state" data-empty-state hidden><span aria-hidden="true">⌁</span><h2>No matching visual yet</h2><p>Try a broader term or clear one of the filters.</p></div>
@@ -201,8 +208,9 @@ const filterGroups = [
         tree.querySelectorAll<HTMLButtonElement>('[data-tree-toggle]').forEach((toggle) => {
           toggle.classList.toggle('is-active-collection', toggle.dataset.treeToggle === selected?.collection);
         });
+        const parent = selected ? tree.querySelector<HTMLElement>(`[data-map-node="${CSS.escape(selected.id)}"]`)?.dataset.treeParent : undefined;
         tree.querySelectorAll<SVGLineElement>('[data-tree-line]').forEach((line) => {
-          const onTopicPath = Boolean(selected && line.dataset.treeTarget === selected.id);
+          const onTopicPath = Boolean(selected && (line.dataset.treeTarget === selected.id || (parent && line.dataset.treeTarget === parent)));
           const onCollectionPath = Boolean(selected && line.dataset.treeTarget === `collection-${selected.collection}`);
           line.classList.toggle('is-active', onTopicPath || onCollectionPath);
           line.classList.toggle('is-context-hidden', Boolean(selected && (line.dataset.treeSource === 'tree-root' || line.dataset.treeCollection !== selected.collection)));
@@ -318,8 +326,11 @@ const filterGroups = [
           const collapsed = toggle.getAttribute('aria-expanded') === 'false';
           topicNodes.forEach((node) => { node.hidden = collapsed || !visibleIds.has(node.dataset.mapNode || ''); });
           tree.querySelector<SVGLineElement>(`[data-tree-line][data-tree-target="collection-${CSS.escape(slug)}"]`)!.toggleAttribute('hidden', !hasVisibleTopics);
-          tree.querySelectorAll<SVGLineElement>(`[data-tree-line][data-tree-collection="${CSS.escape(slug)}"][data-tree-source^="collection-"]`).forEach((line) => {
-            const target = tree.querySelector<HTMLButtonElement>(`[data-map-node="${CSS.escape(line.dataset.treeTarget || '')}"]`);
+          branch.querySelectorAll<HTMLElement>('[data-tree-group]').forEach((group) => {
+            group.hidden = collapsed || !topicNodes.some((node) => node.dataset.treeParent === group.dataset.treeGroup && !node.hidden);
+          });
+          tree.querySelectorAll<SVGLineElement>(`[data-tree-line][data-tree-collection="${CSS.escape(slug)}"]:not([data-tree-source="tree-root"])`).forEach((line) => {
+            const target = tree.querySelector<HTMLElement>(`[data-tree-point="${CSS.escape(line.dataset.treeTarget || '')}"]`);
             line.toggleAttribute('data-hidden', collapsed || !target || target.hasAttribute('hidden'));
           });
         });
@@ -347,6 +358,7 @@ const filterGroups = [
         if (show) visibleIds.add(card.dataset.slug || '');
       }
       if (selectedTopic && !visibleIds.has(selectedTopic)) selectedTopic = null;
+      library.querySelectorAll<HTMLElement>('[data-topic-group]').forEach((group) => { group.hidden = !group.querySelector('[data-topic-card]:not([hidden])'); });
       status.textContent = searchResult.fallback && query
         ? `${visibleIds.size} visualization${visibleIds.size === 1 ? '' : 's'} - matching titles and metadata`
         : `${visibleIds.size} visualization${visibleIds.size === 1 ? '' : 's'}`;

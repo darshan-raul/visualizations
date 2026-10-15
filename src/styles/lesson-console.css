@@ -235,6 +235,27 @@
 .lsn-meter li b { color:var(--text); font:.76rem var(--mono); text-align:right; }
 .lsn-meter li.is-fresh span { color:var(--text); } .lsn-meter li.is-fresh i { background:var(--amber); }
 
+/* Legend swatches for the remaining node kinds */
+.lsn-legend i.is-tool { border-color:#5fb8c6; }
+.lsn-legend i.is-store { border-color:#9fb0c8; border-top-width:4px; }
+.lsn-legend i.is-part { border-color:#62718a; }
+.lsn-legend i.is-person { border-color:var(--amber); border-style:dashed; }
+
+/* Checks: a symptom, commands revealed one at a time, then a verdict */
+.lsn-checks { display:grid; gap:12px; margin-top:14px; }
+.lsn-symptom { display:grid; gap:5px; padding:11px 13px; border:1px solid rgba(251,126,133,.4); border-radius:8px; background:#1d1418; }
+.lsn-symptom span { color:var(--red); font:600 .7rem var(--mono); letter-spacing:.07em; }
+.lsn-symptom code { font:.88rem/1.5 var(--mono); overflow-wrap:anywhere; }
+.lsn-checks ol { display:grid; gap:10px; margin:0; padding:0; list-style:none; }
+.lsn-checks li { display:grid; gap:6px; min-width:0; padding:11px 13px; border:1px solid var(--border-strong); border-radius:9px; background:#0e1a27; }
+.lsn-checks li.is-fresh { border-color:rgba(66,214,232,.55); animation:lsn-appear .5s ease-out; }
+.lsn-checks li > span { color:var(--dim); font:600 .68rem var(--mono); letter-spacing:.07em; }
+.lsn-checks li > code { color:var(--cyan); font:.84rem var(--mono); overflow-wrap:anywhere; }
+.lsn-checks pre { margin:0; padding:8px 10px; border-radius:7px; background:#091420; color:var(--text); font:.78rem/1.55 var(--mono); overflow-x:auto; white-space:pre; }
+.lsn-checks p { margin:0; color:var(--muted); font-size:.92rem; line-height:1.5; }
+.lsn-checks .lsn-controls { margin:0; }
+.lsn-checks .lsn-notice { margin:0; }
+
 /* Table and code under the stage */
 .lsn-table-wrap { margin-top:14px; overflow-x:auto; border:1px solid var(--border-strong); border-radius:11px; background:#0e1a27; }
 .lsn-table { width:100%; border-collapse:collapse; font-size:.86rem; line-height:1.45; }

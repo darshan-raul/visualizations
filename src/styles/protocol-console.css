@@ -41,6 +41,15 @@
 .protocol-console.is-enhanced [data-visual-node]:not(.is-reached) { opacity:.48; }
 .protocol-console.is-enhanced [data-visual-node].is-blocked { opacity:1; border-color:var(--red)!important; color:var(--red); background:rgba(251,126,133,.11); }
 .protocol-canvas.is-failed .protocol-canvas-head span:last-child { color:var(--red); }
+.protocol-step-index button[aria-pressed="true"] { border-bottom-color:var(--cyan); color:var(--text); background:rgba(66,214,232,.07); }
+.protocol-controls button:disabled { opacity:.45; cursor:default; }
+.protocol-canvas.is-alternate .protocol-canvas-head span:last-child,
+.protocol-canvas.is-alternate [data-protocol-failure][aria-pressed="true"] { color:var(--amber); border-color:var(--amber); }
+.protocol-console.is-enhanced .protocol-canvas:not(.is-failed) .firewall-drop { display:none; }
+.protocol-console.is-enhanced .protocol-canvas.is-failed .firewall-drop { opacity:1; color:var(--red); }
+.protocol-ribbon[data-state="blocked"] span:last-child { color:var(--red); }
+.protocol-ribbon[data-state="alternate"] span:last-child { color:var(--amber); }
+.protocol-index summary > span { flex-shrink:0; white-space:nowrap; }
 
 /* Networking: side lookup, data path, and packet envelope. */
 .visual-network { min-height:300px; color:var(--text); }

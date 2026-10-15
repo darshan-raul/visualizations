@@ -3,6 +3,8 @@
   "summary": "Understand image indexes, platform manifests, emulation, native builders, and cross-platform container delivery.",
   "slug": "docker-multiarch",
   "collection": "foundations",
+  "group": "machine",
+  "order": 3,
   "tags": ["Containers", "Builds", "Architecture"],
   "technologies": ["Docker", "Buildx", "OCI"],
   "format": "deep-dive",

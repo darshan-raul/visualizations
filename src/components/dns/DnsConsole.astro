@@ -1,0 +1,15 @@
+---
+import LessonConsole from '../lesson/LessonConsole.astro';
+import ChangeBoard from './ChangeBoard.astro';
+import RecordMap from './RecordMap.astro';
+import RouteBoard from './RouteBoard.astro';
+import { dnsLesson } from './dns-lesson';
+interface Props { published: Date; reviewed?: Date }
+const { published, reviewed } = Astro.props;
+---
+<LessonConsole lesson={dnsLesson} published={published} reviewed={reviewed}>
+  <RecordMap slot="view-records" />
+  <ChangeBoard slot="view-change" />
+  <RouteBoard slot="view-routes" />
+</LessonConsole>
+<script>import { initDnsConsole } from './dns-client'; initDnsConsole();</script>

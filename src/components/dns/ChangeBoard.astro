@@ -1,0 +1,45 @@
+---
+import { change } from './dns-lesson';
+/**
+ * Moving shop.example.com: a plan toggle, six moments and four clients. Without JavaScript the full table for each plan
+ * is the whole view; with it, the board shows one moment and the table hides the moments still to come.
+ */
+const STATE = { old: 'old address', new: 'new address', gone: 'broken' } as const;
+const last = change.times.length - 1;
+---
+<div class="dns-change-controls" data-dns-change-controls hidden>
+  <div class="lsn-controls is-choices" role="group" aria-label="Choose the plan">
+    {change.modes.map((mode, index) => <button type="button" data-dns-mode={mode.id} aria-pressed={index === 0 ? 'true' : 'false'}>{mode.label}</button>)}
+  </div>
+  <div class="lsn-controls">
+    <button type="button" class="lsn-primary" data-dns-tnext>Next →</button>
+    <button type="button" data-dns-tback>← Back</button>
+    <button type="button" data-dns-treset>↺ Restart</button>
+    <span data-lsn-step data-dns-tcount>Moment 1 of {change.times.length}</span>
+  </div>
+</div>
+<div class="dns-board" data-dns-board hidden>
+  <ol class="dns-clock" aria-label="Timeline">
+    {change.times.map((time, index) => <li data-dns-tick={index}><button type="button" data-dns-jump={index}>{time}</button></li>)}
+  </ol>
+  <p class="dns-moment" data-dns-moment></p>
+  <div class="dns-ttl"><span>TTL PUBLISHED</span><b data-dns-ttl></b><span>OLD SERVER</span><b data-dns-old></b></div>
+  <ul class="dns-clients">
+    {change.clients.map((client) => <li data-dns-client={client.id}><b>{client.label}</b><small>{client.sub}</small><span class="dns-client-state"></span><code></code></li>)}
+  </ul>
+</div>
+{change.modes.map((mode) => <div class="dns-change-table" data-dns-change-table={mode.id}>
+  <div class="lsn-table-wrap"><table class="lsn-table dns-timeline-table">
+    <caption>{mode.label}: {mode.summary}</caption>
+    <thead><tr><th scope="col">Client</th>{change.times.map((time, index) => <th scope="col" data-dns-col={index}>{time}</th>)}</tr></thead>
+    <tbody>
+      <tr><th scope="row">TTL published</th>{mode.ttl.map((ttl, index) => <td data-dns-col={index}>{ttl}</td>)}</tr>
+      {change.clients.map((client) => <tr>
+        <th scope="row">{client.label}<small>{client.sub}</small></th>
+        {change.cells[mode.id][client.id].map(([state, text], index) => <td data-dns-col={index} class={`dns-cell is-${state}`}><span>{STATE[state]}</span>{text}</td>)}
+      </tr>)}
+      <tr><th scope="row">Old server</th>{change.times.map((_, index) => <td data-dns-col={index}>{index === last ? 'off' : 'running'}</td>)}</tr>
+    </tbody>
+  </table></div>
+</div>)}
+<script is:inline type="application/json" data-dns-change-data set:html={JSON.stringify(change).replace(/</g, '\\u003c')}></script>

@@ -1,5 +1,5 @@
 ---
-import { collections } from '../lib/catalog';
+import { collectionGroups, collections } from '../lib/catalog';
 import type { TopicEdge, TopicNode } from '../lib/topic-graph';
 
 interface Props { graph: { nodes: TopicNode[]; edges: TopicEdge[] }; immersive?: boolean }
@@ -11,6 +11,14 @@ const grouped = collectionEntries.map(([slug, collection]) => ({
   collection,
   topics: graph.nodes.filter((node) => node.collection === slug).sort((a, b) => a.title.localeCompare(b.title)),
 }));
+/* A collection with groups (src/lib/catalog.ts) branches into its groups, each with its topics in reading order. */
+const sections = new Map(grouped.map(({ slug, topics }) => [slug, collectionGroups[slug as keyof typeof collections]?.map((section) => ({
+  ...section,
+  point: `group-${slug}-${section.id}`,
+  topics: topics.filter((topic) => topic.group === section.id).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+}))]));
+const parentOf = new Map<string, string>();
+const groupPositions = new Map<string, { x: number; y: number }>();
 const total = graph.nodes.length;
 const positions = new Map<string, { x: number; y: number; size: number }>();
 const collectionPositions = new Map<string, { x: number; y: number }>();
@@ -45,6 +53,20 @@ for (const [groupIndex, group] of grouped.entries()) {
     x: collectionX,
     y: -80,
   });
+
+  const branchSections = sections.get(group.slug);
+  if (branchSections) {
+    const spread = 400;
+    for (const [sectionIndex, section] of branchSections.entries()) {
+      const x = collectionX + (sectionIndex - (branchSections.length - 1) / 2) * spread;
+      groupPositions.set(section.point, { x, y: 120 });
+      for (const [index, topic] of section.topics.entries()) {
+        parentOf.set(topic.id, section.point);
+        positions.set(topic.id, { x: x - 70, y: 240 + index * 95, size: Math.min(92, 62 + (degree.get(topic.id) || 0) * 2.2) });
+      }
+    }
+    continue;
+  }
 
   const topicCount = group.topics.length;
   const topRowCount = Math.ceil(topicCount / 2);
@@ -96,9 +118,15 @@ for (const [groupIndex, group] of grouped.entries()) {
             return (
               <g class={`tree-branch collection-${group.slug}`}>
                 <line data-tree-line data-tree-source="tree-root" data-tree-target={`collection-${group.slug}`} data-tree-collection={group.slug} marker-end="url(#tree-arrow)" x1="0" y1="-430" x2={point.x} y2={point.y} />
+                {sections.get(group.slug)?.map((section) => {
+                  const target = groupPositions.get(section.point)!;
+                  return <line data-tree-line data-tree-source={`collection-${group.slug}`} data-tree-target={section.point} data-tree-collection={group.slug} marker-end="url(#tree-arrow)" x1={point.x} y1={point.y} x2={target.x} y2={target.y} data-hidden />;
+                })}
                 {group.topics.map((topic) => {
+                  const source = parentOf.get(topic.id) ?? `collection-${group.slug}`;
+                  const from = groupPositions.get(source) ?? point;
                   const target = positions.get(topic.id)!;
-                  return <line data-tree-line data-tree-source={`collection-${group.slug}`} data-tree-target={topic.id} data-tree-collection={group.slug} marker-end="url(#tree-arrow)" x1={point.x} y1={point.y} x2={target.x} y2={target.y} data-hidden />;
+                  return <line data-tree-line data-tree-source={source} data-tree-target={topic.id} data-tree-collection={group.slug} marker-end="url(#tree-arrow)" x1={from.x} y1={from.y} x2={target.x} y2={target.y} data-hidden />;
                 })}
               </g>
             );
@@ -119,27 +147,36 @@ for (const [groupIndex, group] of grouped.entries()) {
                 <span class="tree-orb" aria-hidden="true"></span>
                 <span class="tree-label"><strong>{group.collection.label}</strong><b aria-hidden="true">{compactCollectionLabels[group.slug]}</b><small>{group.topics.length} topics · expand</small></span>
               </button>
-              {group.topics.map((topic, index) => {
-                const position = positions.get(topic.id)!;
-                return (
-                  <button
-                    class="tree-node tree-topic map-node"
-                    type="button"
-                    data-tree-point={topic.id}
-                    data-map-node={topic.id}
-                    data-collection={topic.collection}
-                    data-tree-x={position.x}
-                    data-tree-y={position.y}
-                    data-label-position={index < topRowCount ? 'above' : 'below'}
-                    data-size={position.size}
-                    aria-label={topic.title}
-                    aria-pressed="false"
-                  >
+              {(sections.get(group.slug) ?? [{ point: '', label: '', means: '', topics: group.topics }]).map((section) => (
+                <Fragment>
+                  {section.point && <div class="tree-node tree-group" data-tree-point={section.point} data-tree-group={section.point} data-tree-parent={`collection-${group.slug}`} data-tree-x={groupPositions.get(section.point)!.x} data-tree-y={groupPositions.get(section.point)!.y} hidden>
                     <span class="tree-orb" aria-hidden="true"></span>
-                    <span class="tree-label"><strong>{shortTitles[topic.title] || topic.title}</strong><small>{topic.format.replaceAll('-', ' ')}</small></span>
-                  </button>
-                );
-              })}
+                    <span class="tree-label"><strong>{section.label}</strong><small>{section.means}</small></span>
+                  </div>}
+                  {section.topics.map((topic, index) => {
+                    const position = positions.get(topic.id)!;
+                    return (
+                    <button
+                      class="tree-node tree-topic map-node"
+                      type="button"
+                      data-tree-point={topic.id}
+                      data-map-node={topic.id}
+                      data-collection={topic.collection}
+                      data-tree-x={position.x}
+                      data-tree-y={position.y}
+                      data-label-position={section.point ? 'side' : index < topRowCount ? 'above' : 'below'}
+                      data-tree-parent={parentOf.get(topic.id)}
+                      data-size={position.size}
+                      aria-label={topic.title}
+                      aria-pressed="false"
+                    >
+                      <span class="tree-orb" aria-hidden="true"></span>
+                      <span class="tree-label"><strong>{shortTitles[topic.title] || topic.title}</strong><small>{topic.format.replaceAll('-', ' ')}</small></span>
+                    </button>
+                    );
+                  })}
+                </Fragment>
+              ))}
             </div>
           );
         })}
@@ -196,10 +233,17 @@ for (const [groupIndex, group] of grouped.entries()) {
   .tree-topic .tree-label { left: 50%; width: 180px; transform: translateX(-50%); text-align: center; }
   .tree-topic[data-label-position="above"] .tree-label { top: auto; bottom: calc(50% + 35px); }
   .tree-topic[data-label-position="below"] .tree-label { top: calc(50% + 35px); }
+  .tree-topic[data-label-position="side"] .tree-label { top: 50%; left: calc(50% + 30px); width: 200px; transform: translateY(-50%); text-align: left; }
   .tree-topic:hover .tree-label, .tree-topic:focus-visible .tree-label, .tree-topic[aria-pressed="true"] .tree-label { visibility: visible !important; }
   .tree-topic.is-muted { opacity: .3; }
   .tree-topic.is-neighbor .tree-orb { border-color: color-mix(in srgb, var(--collection-accent) 72%, #364052); }
   .tree-topic[hidden], .tree-connectors line[hidden] { display: none; }
+  .tree-group { cursor: default; pointer-events: none; }
+  .tree-group[hidden] { display: none; }
+  .tree-group .tree-orb { width: 30px; height: 30px; border-radius: 9px; border-style: dashed; box-shadow: inset 0 0 0 4px var(--bg); }
+  .tree-group .tree-label { top: auto; bottom: calc(50% + 26px); left: 50%; width: 200px; transform: translateX(-50%); text-align: center; }
+  .tree-group .tree-label strong { color: var(--collection-accent); font-size: .9rem; font-weight: 600; }
+  .tree-group .tree-label small { text-transform: none; }
   .map-topbar { position: absolute; z-index: 8; bottom: 26px; left: 160px; display: flex; align-items: end; gap: 10px; pointer-events: none; }
   .map-topbar > * { pointer-events: auto; }
   .map-topbar label { display: grid; width: 340px; gap: 5px; }
@@ -245,6 +289,9 @@ for (const [groupIndex, group] of grouped.entries()) {
     .tree-collection .tree-label { width: 86px; }
     .tree-collection .tree-label strong { font-size: .8125rem; line-height: 1.15; }
     .tree-collection .tree-label small { display: none; }
+    .tree-group .tree-label { width: 100px; }
+    .tree-group .tree-label strong { font-size: .75rem; }
+    .tree-group .tree-label small, .tree-topic[data-label-position="side"] .tree-label { display: none; }
     .map-inspector { grid-row: 2; margin: 8px 16px 74px; padding: 20px; border-radius: 14px 4px 14px 14px; }
   }
   @media (max-width: 430px) {

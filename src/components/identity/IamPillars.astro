@@ -1,0 +1,66 @@
+---
+import { BUCKET, ENDPOINT, OFFICE, actions, evaluate, origins, presets, requirements, resourceOf, who } from './iam-eval';
+import { contextHtml, policyText, trailHtml, verdictHtml } from './pillars-view';
+/**
+ * The four-question simulator. Without JavaScript it shows the first preset worked through, with the controls disabled;
+ * the client enables them and re-renders the trail, the request context and both policies on every change.
+ */
+const first = presets[0].ask;
+const text = policyText(first);
+const howItems = [
+  ['identity', 'Identity policy allows it', 'An Allow on the caller\'s role'],
+  ['bucket', 'Bucket policy allows this caller', 'An Allow naming the role, or "*"'],
+  ['scp', 'SCP leaves room for S3', 'The organization\'s ceiling'],
+  ['boundary', 'Boundary includes the action', 'The role\'s own ceiling'],
+  ['deny', 'Bucket policy denies DeleteBucket', 'A Deny for every principal'],
+] as const;
+---
+<div class="iq" data-iq>
+  <div class="lsn-controls is-choices" role="group" aria-label="Start from an example" data-iq-presets hidden>
+    {presets.map((preset, index) => <button type="button" data-iq-preset={preset.id} aria-pressed={index === 0 ? 'true' : 'false'}>{preset.label}</button>)}
+  </div>
+  <p class="iq-note" data-iq-note>{presets[0].note}</p>
+  <form class="iq-pillars" data-iq-form aria-label="The four questions">
+    <fieldset class="iq-pillar is-who" disabled>
+      <legend><b>WHO</b> is asking</legend>
+      {Object.entries(who).map(([id, item]) => <label><input type="radio" name="who" value={id} checked={first.who === id} /><span>{item.label}<small>{id === 'anonymous' ? 'unsigned request' : `account ${item.account.slice(0, 3)}…`}</small></span></label>)}
+    </fieldset>
+    <fieldset class="iq-pillar is-what" disabled>
+      <legend><b>WHAT</b> they want</legend>
+      {actions.map((action) => <label><input type="radio" name="action" value={action} checked={first.action === action} /><span><code>{action}</code></span></label>)}
+      <p class="iq-resource">on <code data-iq-resource>{resourceOf(first.action).replace('arn:aws:s3:::', '')}</code></p>
+    </fieldset>
+    <fieldset class="iq-pillar is-how" disabled>
+      <legend><b>HOW</b> the policies read</legend>
+      {howItems.map(([id, label, sub]) => <label class:list={[id === 'deny' && 'is-deny']}><input type="checkbox" name={id} checked={first[id]} /><span>{label}<small>{sub}</small></span></label>)}
+    </fieldset>
+    <fieldset class="iq-pillar is-where" disabled>
+      <legend><b>FROM WHERE</b> it comes</legend>
+      {Object.entries(origins).map(([id, item]) => <label><input type="radio" name="origin" value={id} checked={first.origin === id} /><span>{item.label}<small>{item.context.map(([, value]) => value).join(' · ')}</small></span></label>)}
+      <label class="iq-select"><span>Condition on both Allows</span>
+        <select name="require">{Object.entries(requirements).map(([id, item]) => <option value={id} selected={first.require === id}>{item.label}</option>)}</select>
+      </label>
+      <p class="iq-resource">Office range <code>{OFFICE}</code> · endpoint <code>{ENDPOINT.slice(0, 10)}…</code></p>
+    </fieldset>
+  </form>
+  <div class="iq-out">
+    <section class="lsn-panel iq-trail" aria-labelledby="iq-trail-title">
+      <h3 id="iq-trail-title">How AWS decides</h3>
+      <p class="iq-verdict" data-iq-verdict data-allowed={String(evaluate(first).allowed)} set:html={verdictHtml(first)}></p>
+      <ol data-iq-rows set:html={trailHtml(first)}></ol>
+    </section>
+    <section class="lsn-panel iq-context" aria-labelledby="iq-context-title">
+      <h3 id="iq-context-title">The request context</h3>
+      <dl data-iq-context set:html={contextHtml(first)}></dl>
+    </section>
+    <section class="lsn-code iq-policy" aria-label="Identity policy">
+      <h3 data-iq-identity-title>{text.identityTitle}</h3>
+      <pre tabindex="0"><code data-iq-identity>{text.identity}</code></pre>
+    </section>
+    <section class="lsn-code iq-policy" aria-label="Bucket policy">
+      <h3>Bucket policy on {BUCKET} (222…)</h3>
+      <pre tabindex="0"><code data-iq-bucket>{text.bucket}</code></pre>
+    </section>
+  </div>
+  <p class="iq-live" data-iq-live aria-live="polite"></p>
+</div>

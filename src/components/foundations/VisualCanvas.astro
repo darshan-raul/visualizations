@@ -1,8 +1,11 @@
 ---
 import type { ProtocolView } from './protocol-data';
+import NetworkLayers from './NetworkLayers.astro';
 interface Props { topicId: string; view: ProtocolView; }
 const { topicId, view } = Astro.props;
 ---
+
+{topicId === 'networking' && view.id === 'osi-tcp-ip' && <NetworkLayers />}
 
 {topicId === 'networking' && view.id === 'packet-journey' && <div class="visual-network visual-network-journey" aria-label="DNS lookup precedes the packet path; the packet then crosses client, local link, gateway, translation edge, and server">
   <div class="network-lookup" data-visual-node="0"><span class="visual-label">SIDE LOOKUP · DNS</span><strong>app.example.test</strong><span class="network-lookup-wire" aria-hidden="true">⇢ query · A record ⇠</span><strong>10.20.10.53</strong><small>answer 203.0.113.80</small></div>
@@ -46,11 +49,11 @@ const { topicId, view } = Astro.props;
 </div>}
 
 {topicId === 'networking' && view.id === 'dns' && <div class="visual-network visual-network-dns" aria-label="DNS resolver may answer from cache or follow delegated authority, returning an address before the application packet is sent">
-  <div class="dns-query" data-visual-node="0"><span>APPLICATION</span><strong>app.example.test?</strong></div><div class="dns-split"><div data-visual-node="1"><span>CACHE</span><strong>valid A answer?</strong><small>TTL controls reuse</small></div><div data-visual-node="2"><span>DNS HIERARCHY</span><strong>delegation → authority</strong><small>query only when needed</small></div></div><div class="dns-answer" data-visual-node="3"><span>RESOLVER ANSWER</span><strong>203.0.113.80</strong><small>Now the application can attempt transport.</small></div><div class="dns-boundary">DNS lookup is beside the later packet path, not a hop in it.</div>
+  <div class="dns-query" data-visual-node="0"><span>APPLICATION</span><strong>app.example.test?</strong></div><div class="dns-split"><div data-visual-node="1"><span>RESOLVER CACHE</span><strong>usable A answer?</strong><small>Hit → return answer · miss → ask authority</small></div><div data-visual-node="2"><span>DNS HIERARCHY</span><strong data-dns-authority>delegation → authority</strong><small>Cache miss only → return answer</small></div></div><div class="dns-answer" data-visual-node="3"><span>RESOLVER ANSWER</span><strong>203.0.113.80</strong><small>Now the application can attempt transport.</small></div><div class="dns-boundary">DNS lookup is beside the later packet path, not a hop in it.</div>
 </div>}
 
 {topicId === 'networking' && view.id === 'firewall' && <div class="visual-network visual-network-firewall" aria-label="A firewall checks a new SYN against policy, records allowed state, and evaluates return traffic using that state if configured">
-  <div class="firewall-flow"><div data-visual-node="0"><span>NEW FLOW</span><strong>TCP SYN → :443</strong></div><div class="firewall-gate" data-visual-node="1"><span>POLICY GATE</span><strong>allow new connection?</strong></div><div data-visual-node="2"><span>RETURN FLOW</span><strong>state match → allow</strong></div></div><div class="firewall-compare"><div><strong>STATEFUL</strong><small>can match allowed connection state</small></div><div><strong>STATELESS</strong><small>each packet needs an applicable rule</small></div></div><div class="firewall-drop" data-visual-node="3">DENIED OR UNMATCHED · stop at this policy boundary</div>
+  <div class="firewall-flow"><div data-visual-node="0"><span>NEW FLOW</span><strong>TCP SYN → :443</strong></div><div class="firewall-gate" data-visual-node="1"><span>POLICY GATE</span><strong>allow new connection?</strong></div><div data-visual-node="2"><span>RETURN FLOW</span><strong>state match → allow</strong></div></div><div class="firewall-compare"><div><strong>STATEFUL</strong><small>can match allowed connection state</small></div><div><strong>STATELESS</strong><small>each packet needs an applicable rule</small></div></div><div class="firewall-drop" data-visual-node="3">ALTERNATE: DENY NEW SYN · stop at this policy boundary</div>
 </div>}
 
 {topicId === 'networking' && view.id === 'load-balancer' && <div class="visual-network visual-network-lb" aria-label="L4 balancer chooses using connection metadata; L7 HTTP balancer can route by host or path after protocol inspection">

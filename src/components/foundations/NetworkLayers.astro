@@ -1,0 +1,57 @@
+---
+import '../../styles/network-layers.css';
+
+const bands = [
+  { name: 'Application', rows: [
+    { number: 7, name: 'Application', role: 'Meaning of the exchange' },
+    { number: 6, name: 'Presentation', role: 'Representation of data' },
+    { number: 5, name: 'Session', role: 'Coordination of the dialog' },
+  ], summary: 'Application protocols and libraries' },
+  { name: 'Transport', rows: [
+    { number: 4, name: 'Transport', role: 'Communication between endpoints' },
+  ], summary: 'TCP · UDP' },
+  { name: 'Internet', rows: [
+    { number: 3, name: 'Network', role: 'Addressing and routing across networks' },
+  ], summary: 'IP' },
+  { name: 'Link', rows: [
+    { number: 2, name: 'Data link', role: 'Frames on the local link' },
+    { number: 1, name: 'Physical', role: 'Signals through the medium' },
+  ], summary: 'Local network access' },
+];
+const request = [
+  { label: 'Application', protocol: 'HTTP over TLS', value: 'GET / → protected bytes', detail: 'The HTTP exchange uses TLS above TCP in this example.' },
+  { label: 'Transport', protocol: 'TCP segment', value: '51514 → 443', detail: 'An ordered byte stream between transport endpoints.' },
+  { label: 'Internet', protocol: 'IPv4 packet', value: '10.20.10.25 → 203.0.113.80', detail: 'IP addresses guide delivery across routed networks.' },
+  { label: 'Link', protocol: 'Ethernet + signals', value: 'Client MAC → gateway MAC', detail: 'A frame reaches the local next hop through the medium.' },
+];
+---
+
+<div class="network-layers">
+  <div class="layer-model-intro"><span>SEVEN RESPONSIBILITIES</span><strong>One request. Two ways to read it.</strong><p>OSI names the jobs. TCP/IP groups the protocols used to do them.</p></div>
+  <div class="layer-model-layout">
+    <table class="layer-crosswalk">
+      <caption>OSI / TCP/IP · approximate correspondence</caption>
+      <thead><tr><th scope="col">OSI model</th><th scope="col">TCP/IP model</th></tr></thead>
+      {bands.map((band, index) => <tbody>
+        {band.rows.map((row, rowIndex) => <tr>
+          <th scope="row" data-visual-node={index}><span class="layer-number">L{row.number}</span><strong>{row.name}</strong><small>{row.role}</small></th>
+          {rowIndex === 0 && <td rowspan={band.rows.length} data-visual-node={index}><span class="layer-band-name">{band.name}</span><small>{band.summary}</small></td>}
+        </tr>)}
+      </tbody>)}
+    </table>
+    <section class="layer-request" aria-label="This request using the TCP/IP layers">
+      <h3>THIS HTTPS REQUEST</h3>
+      <p class="layer-direction">Sender: application bytes down to the link</p>
+      <ol>{request.map((part, index) => <li data-visual-node={index}>
+        <span>{part.label}</span><strong>{part.protocol}</strong><code>{part.value}</code><small>{part.detail}</small>
+      </li>)}</ol>
+      <p class="layer-receive">The receiving endpoint processes the data up its stack.</p>
+    </section>
+  </div>
+  <div class="layer-model-notes">
+    <p><strong>Functions overlap.</strong> TCP/IP has no separate presentation or session layer. Applications, libraries, and transport protocols divide those jobs; these bands are a teaching correspondence.</p>
+    <p><strong>Where does TLS fit?</strong> Here it protects HTTP above TCP. Assigning it a universal OSI layer hides how the protocols actually compose.</p>
+    <p><strong>Four or five layers?</strong> This uses the four-layer Internet model. A common <a href="https://gaia.cs.umass.edu/kurose_ross/videos/1/">five-layer teaching version</a> separates physical signaling from the link layer.</p>
+  </div>
+  <p class="layer-model-sources">Model references: <a href="https://www.itu.int/rec/T-REC-X.200-199407-I/en">ITU-T X.200 §6–7</a> · <a href="https://www.rfc-editor.org/rfc/rfc1122#section-1.1.3">RFC 1122 §1.1.3</a> · <a href="https://www.rfc-editor.org/rfc/rfc8446#section-1">TLS 1.3 §1</a></p>
+</div>

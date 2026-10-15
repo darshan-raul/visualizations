@@ -1,0 +1,8 @@
+---
+import IdentityNode from './IdentityNode.astro';
+interface Props { items: {label:string;title:string;detail?:string;tone?:string;actor?:string}[]; labels?: string[]; conceptual?: boolean }
+const { items, labels = [], conceptual = false } = Astro.props;
+---
+<div class:list={['ic-flow', conceptual && 'is-conceptual']}>
+  {items.map((item,index)=><><IdentityNode {...item}/>{index < items.length-1 && <span class="ic-connector"><i aria-hidden="true">→</i>{labels[index] && <small>{labels[index]}</small>}</span>}</>)}
+</div>

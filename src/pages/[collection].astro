@@ -2,7 +2,7 @@
 import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import LibraryExplorer from '../components/LibraryExplorer.astro';
-import { collections, type CollectionSlug } from '../lib/catalog';
+import { collectionGroups, collections, type CollectionSlug } from '../lib/catalog';
 
 export function getStaticPaths() {
   return Object.keys(collections).map((collection) => ({ params: { collection } }));
@@ -12,6 +12,12 @@ const slug = Astro.params.collection as CollectionSlug;
 const collection = collections[slug];
 const topics = (await getCollection('topics', ({ data }) => data.collection === slug))
   .sort((a, b) => a.data.title.localeCompare(b.data.title));
+const groups = collectionGroups[slug]?.map((group) => ({
+  ...group,
+  topics: topics.filter((topic) => topic.data.group === group.id).sort((a, b) => (a.data.order ?? 0) - (b.data.order ?? 0)),
+}));
+const ungrouped = groups ? topics.filter((topic) => !groups.some((group) => group.id === topic.data.group) || !topic.data.order) : [];
+if (ungrouped.length) throw new Error(`${slug} topics need a known group and an order: ${ungrouped.map((topic) => topic.data.slug).join(', ')}`);
 ---
 
 <BaseLayout title={collection.label} description={collection.description}>
@@ -30,6 +36,6 @@ const topics = (await getCollection('topics', ({ data }) => data.collection === 
     </aside>
   </section>
   <section class="catalogue-section shell">
-    <LibraryExplorer topics={topics} compact />
+    <LibraryExplorer topics={groups ? groups.flatMap((group) => group.topics) : topics} groups={groups} compact />
   </section>
 </BaseLayout>

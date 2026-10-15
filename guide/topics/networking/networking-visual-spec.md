@@ -1,10 +1,10 @@
 # Networking, Illustrated — Visual specification
 
-**Status:** Integrated refactor; design and factual review 2026-09-16. **Version:** 2.0.
+**Status:** Integrated refactor; design and factual review 2026-09-16. **Version:** 2.2; OSI / TCP/IP view added and verified 2026-10-15.
 **Audience:** Working developers moving into DevOps, SRE and cloud infrastructure.
 **Page promise:** Follow one HTTPS request from a hostname on a laptop to a server, and see which layer makes each decision.
 **Persistent scenario:** One HTTPS intent from client.lab.example (10.20.10.25:51514) to app.example.test (203.0.113.80:443), using a local gateway and an illustrative NAT edge.
-**Scope:** IPv4 address locality, Ethernet next-hop delivery, route selection, TCP endpoints, translation, discovery, filtering, balancing, and first-failure diagnosis.
+**Scope:** OSI responsibilities and the TCP/IP protocol stack, IPv4 address locality, Ethernet next-hop delivery, route selection, TCP endpoints, translation, discovery, filtering, balancing, and first-failure diagnosis.
 **Non-goals:** Full TLS, IPv6 Neighbor Discovery internals, BGP, vendor device CLI, Wi-Fi, and complete Kubernetes or VPC networking.
 **Visual thesis:** Follow one packet through layer-specific checkpoints; keep DNS beside, not inside, the data path.
 
@@ -14,22 +14,23 @@ Use the confirmed dark console tokens from `src/styles/global.css`: cyan is live
 
 ## Concept groups and narrative
 
-The native disclosure index groups views as **Follow the request**, **Address and local link**, **Make a decision**, **Transport endpoints**, **Discovery and policy**, **Operate the path**. The default active view is **Packet journey**. Selection opens only its group and updates a current/total counter.
+The native disclosure index groups views as **Request**, **Local link**, **Routing**, **Transport**, **Discovery**, **Diagnosis**. The default active view is **Packet journey**. Selection opens only its group and updates a current/total counter.
 
 | # | Index group / view | Core learner question | Visual form | Interaction | Required takeaway |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Follow the request / Packet journey | What happens after an application asks for app.example.test? | Topology with DNS as a violet side lookup above a cyan client → link → gateway → optional NAT → server path | Step, play/pause, failure | A network request is one application intent carried through several layer-specific decisions. |
-| 2 | Follow the request / Headers on the wire | Which address matters to the next device, and which one identifies the final peer? | Nested envelope: application bytes inside TCP segment inside IPv4 packet inside Ethernet frame, with field labels at each boundary | Manual inspection and alternate state | MAC addresses reach the next hop; IP addresses guide the packet across hops; ports select an endpoint. |
-| 3 | Address and local link / CIDR and locality | Does 203.0.113.80 live on the client’s link? | Large client address and a proportional 24-bit prefix/8-bit host rail; local and remote peers sit below as a two-outcome comparison | Manual inspection and alternate state | Prefix length divides the address space; the route table decides what to do with a destination. |
-| 4 | Address and local link / ARP to the next hop | What MAC address goes into the Ethernet destination field? | Client and gateway anchor a bidirectional request/reply rail; the completed first-hop frame lists gateway MAC beside remote IP | Manual inspection and alternate state | ARP resolves a local next hop. It does not discover the remote server’s Ethernet address across routers. |
-| 5 | Make a decision / Route and NAT | Why does this destination use a specific gateway? | Destination sits left of an overlapping route table; the selected /26 via 10 | Step, play/pause, failure | Route selection happens before neighbor resolution; the longest matching prefix wins. |
-| 6 | Transport endpoints / TCP and UDP | What does TCP add to this HTTPS request? | Two anchored endpoint labels bracket a vertical SYN → SYN-ACK ← ACK → DATA sequence, followed by a short UDP comparison | Manual inspection and alternate state | TCP connection state and retransmission are transport responsibilities; they do not repair missing routes or application failures. |
-| 7 | Transport endpoints / Socket and 5-tuple | How does the server know which application endpoint should receive it? | One five-field transport tuple is shown as a flat horizontal anatomy strip, with the server listener below as the receiving endpoint | Manual inspection and alternate state | An IP address identifies a host/interface context; a port and protocol identify transport endpoints. |
-| 8 | Make a decision / NAT transformation | Which fields change when the private client reaches the outside network? | Before/after source tuples flank an SNAT marker; mapping state sits below and the reply path reverses the mapping | Manual inspection and alternate state | NAT changes selected address or port fields; routing and filtering remain separate decisions. |
-| 9 | Discovery and policy / DNS lookup | How did the client learn 203.0.113.80? | Application query leads to a split cache-or-authority branch and rejoins at the resolver answer; a boundary note keeps DNS off the later packet route | Manual inspection and alternate state | DNS discovers a destination; it is not a forwarding hop for the application packet. |
-| 10 | Discovery and policy / Filter and state | Why can a SYN fail while a later reply is allowed? | New SYN, policy gate and return flow form a directional rail; stateful/stateless rule treatment is compared below | Manual inspection and alternate state | A filter decision depends on rule context and connection state, not just the destination IP. |
-| 11 | Discovery and policy / L4 versus L7 | What can a transport balancer know that an HTTP balancer cannot—and vice versa? | Two flat rails compare L4 metadata/choice with L7 HTTP evidence/choice; healthy target requirement appears in the bottom note | Manual inspection and alternate state | The layer of inspection determines the routing criteria and the connection behavior a balancer can implement. |
-| 12 | Operate the path / First failed assumption | Where should you look when a request times out? | A numbered evidence ladder moves from name to route, socket, policy and service; the first failure is marked at the exact checkpoint | Step, play/pause, failure | Find the first failed assumption, then collect evidence at that layer before changing configuration. |
+| 1 | Request / Packet journey | What happens after an application asks for app.example.test? | Topology with DNS as a violet side lookup above a cyan client → link → gateway → optional NAT → server path | Step, play/pause, failure | A network request is one application intent carried through several layer-specific decisions. |
+| 2 | Request / OSI–TCP/IP | How do seven OSI layers relate to this request’s protocol stack? | Seven responsibility rows align with four TCP/IP bands beside a concrete HTTP/TLS/TCP/IP/Ethernet sender stack | Select a band; disconnect local link | Layers identify responsibilities; a working lower layer does not prove the layers above it work. |
+| 3 | Request / Headers on the wire | Which address matters to the next device, and which one identifies the final peer? | Nested envelope: application bytes inside TCP segment inside IPv4 packet inside Ethernet frame, with field labels at each boundary | Manual inspection and alternate state | MAC addresses reach the next hop; IP addresses guide the packet across hops; ports select an endpoint. |
+| 4 | Local link / CIDR and locality | Does 203.0.113.80 live on the client’s link? | Large client address and a proportional 24-bit prefix/8-bit host rail; local and remote peers sit below as a two-outcome comparison | Manual inspection and alternate state | Prefix length divides the address space; the route table decides what to do with a destination. |
+| 5 | Local link / ARP to the next hop | What MAC address goes into the Ethernet destination field? | Client and gateway anchor a bidirectional request/reply rail; the completed first-hop frame lists gateway MAC beside remote IP | Manual inspection and alternate state | ARP resolves a local next hop. It does not discover the remote server’s Ethernet address across routers. |
+| 6 | Routing / Route selection | Why does this destination use a specific gateway? | Destination sits left of an overlapping route table; the selected /26 via 10 | Step, play/pause, failure | Route selection happens before neighbor resolution; the longest matching prefix wins. |
+| 7 | Transport / TCP and UDP | What does TCP add to this HTTPS request? | Two anchored endpoint labels bracket a vertical SYN → SYN-ACK ← ACK → DATA sequence, followed by a short UDP comparison | Manual inspection and alternate state | TCP connection state and retransmission are transport responsibilities; they do not repair missing routes or application failures. |
+| 8 | Transport / Socket and 5-tuple | How does the server know which application endpoint should receive it? | One five-field transport tuple is shown as a flat horizontal anatomy strip, with the server listener below as the receiving endpoint | Manual inspection and alternate state | An IP address identifies a host/interface context; a port and protocol identify transport endpoints. |
+| 9 | Routing / NAT transformation | Which fields change when the private client reaches the outside network? | Before/after source tuples flank an SNAT marker; mapping state sits below and the reply path reverses the mapping | Manual inspection and alternate state | NAT changes selected address or port fields; routing and filtering remain separate decisions. |
+| 10 | Discovery / DNS lookup | How did the client learn 203.0.113.80? | Application query leads to a split cache-or-authority branch and rejoins at the resolver answer; a boundary note keeps DNS off the later packet route | Manual inspection and alternate state | DNS discovers a destination; it is not a forwarding hop for the application packet. |
+| 11 | Discovery / Filter and state | Why can a SYN fail while a later reply is allowed? | New SYN, policy gate and return flow form a directional rail; stateful/stateless rule treatment is compared below | Manual inspection and alternate state | A filter decision depends on rule context and connection state, not just the destination IP. |
+| 12 | Discovery / L4 versus L7 | How does the information a balancer inspects change its backend choice? | Two flat rails compare L4 metadata/choice with L7 HTTP evidence/choice; healthy target requirement appears in the bottom note | Manual inspection and alternate state | The layer of inspection determines the routing criteria and the connection behavior a balancer can implement. |
+| 13 | Diagnosis / Diagnose | Where should you look when a request times out? | A numbered evidence ladder moves from name to route, socket, policy and service; the first failure is marked at the exact checkpoint | Step, play/pause, failure | Find the first failed assumption, then collect evidence at that layer before changing configuration. |
 
 ## Per-visual contracts
 
@@ -53,7 +54,7 @@ Client, resolver, local switch/link, gateway, NAT edge, remote server, packet en
 
 #### Composition
 
-Follow the request / Packet journey in the one persistent console. Topology with DNS as a violet side lookup above a cyan client → link → gateway → optional NAT → server path. A first-hop envelope below separates MAC, IP and port fields. The active view’s actor labels and state cues stay in the canvas; DNS supplies an address before TCP begins. The client then selects a route and a next-hop link address; routers repeat forwarding decisions at each hop. sits in the contextual inspector to the right or below, and the takeaway stays in the bottom strip. Default checkpoint: Resolve.
+Request / Packet journey in the one persistent console. Topology with DNS as a violet side lookup above a cyan client → link → gateway → optional NAT → server path. A first-hop envelope below separates MAC, IP and port fields. The active view’s actor labels and state cues stay in the canvas; DNS supplies an address before TCP begins. The client then selects a route and a next-hop link address; routers repeat forwarding decisions at each hop. sits in the contextual inspector to the right or below, and the takeaway stays in the bottom strip. Default checkpoint: Resolve.
 
 #### Interaction
 
@@ -99,7 +100,78 @@ The named figure and surrounding heading provide a text summary. Native buttons 
 - DNS never sits on the application data path; the first frame targets a next hop; NAT occurs only at a configured edge.
 - The failure control marks the first relevant boundary and names observable evidence without relying on red color alone.
 
-### Visual 2 — Each layer adds the address it owns
+### Visual 2 — OSI, reimagined around one request
+
+#### Purpose
+
+Connect familiar layer numbers to the existing HTTPS request, replacing rote layer-name recall with responsibility, protocol composition, and diagnostic evidence.
+
+#### Learner question
+
+How do seven OSI layers relate to the TCP/IP stack your request actually uses?
+
+#### Persistent scenario state
+
+The client has resolved app.example.test to 203.0.113.80 and sends HTTP protected by TLS over TCP, IPv4, and its Ethernet link. This is the HTTP-over-TCP case, not HTTP/3. It appears second, after the broad packet journey and before the header anatomy.
+
+#### Concepts and actors
+
+OSI application (7), presentation (6), session (5), transport (4), network (3), data link (2), and physical (1). TCP/IP application, transport, internet, and link bands. HTTP, TLS, TCP ports 51514/443, IPv4 addresses, next-hop MAC addresses, and physical signaling. Models group responsibilities; they are not seven runtime services or seven forwarding hops.
+
+#### Composition
+
+Use `Request / OSI–TCP/IP`, fragment `#osi-tcp-ip`, inside the existing console. A semantic two-column table shows all seven OSI responsibilities, with row-spanning cells for the four TCP/IP bands. To the right, a sender stack grounds the model in HTTP over TLS → TCP segment → IPv4 packet → Ethernet and physical signaling. Solid downward arrows denote the sender’s use of lower-layer services, not equivalence between models. Dashed table boundaries denote approximate functional correspondence. The receiver processes data up its stack; this is not a packet trace through seven devices.
+
+Default selection is Application. All context remains fully readable; selected responsibility rows, TCP/IP band, and request strip gain a cyan background/border cue. Explanation follows the selected band in the contextual inspector and below the visual. No animation is needed: simultaneous alignment teaches grouping better than a timed layer reveal. The existing three hero traces remain the only timed interactions.
+
+#### Interaction
+
+Four native pressed-state buttons (Application, Transport, Internet, Link) appear above the model under enhancement. Selecting one highlights only its matching band and request strip and updates the inspector and named result. Tab, Enter, and Space operate the controls. **Disconnect local link** selects Link, marks the affected band and local request strip as blocked, and explains that a configured IP address can remain present despite loss of physical connectivity. Toggle off or select another band to clear the failure. Existing view navigation, direct fragments, reload, and browser history select this view and its index group.
+
+#### Data or content states
+
+- Application: HTTP gives the exchange meaning; TLS protects bytes above TCP in this example. Representation and dialog functions do not require separate OSI runtime modules.
+- Transport: TCP sends an ordered byte stream between ports 51514 and 443; transport success does not establish TLS trust or HTTP success.
+- Internet: IPv4 uses 10.20.10.25 → 203.0.113.80; routing selects a next hop.
+- Link: Ethernet uses the client MAC → gateway MAC on this local link; physical signaling carries the encoded data, and routers construct new outgoing frames.
+- Evidence: name resolution, TCP connectivity, TLS acceptance, and HTTP success are distinct observations.
+
+#### Failure or edge state
+
+The local interface loses physical link connectivity. The configured IP address may still exist, but frames cannot leave through that interface. Show this at Link, with a text explanation and red boundary; higher-layer configuration cannot restore the missing link.
+
+#### Required copy
+
+Title: “OSI, reimagined around one request.” Canvas: “One request. Two ways to read it.” Model caption: “OSI / TCP/IP · approximate correspondence.” Takeaway: “Use layers to identify the responsibility and the evidence you need; a working lower layer does not prove the layers above it work.”
+
+#### Accuracy caveats
+
+This is a teaching correspondence, not a normative one-to-one mapping. X.200 defines the seven OSI layers; RFC 1122 §1.1.3 identifies the four Internet architecture layers. RFC 1122 directly compares application/presentation and describes transport as well; do not claim it prescribes an exact 7-to-4 crosswalk. Session functions may span applications and transport. TLS is shown above TCP and below HTTP, without declaring TLS universally “OSI layer 6.” Mention the five-layer teaching variation, which separates physical signaling from link, without implying a protocol change. HTTP/3 uses QUIC over UDP and is outside this example.
+
+#### Mobile behavior
+
+At 800 px and below, the request stack follows the table. Keep the two model columns together with readable seven-row labels and row-spanning TCP/IP groups. No horizontal page scrolling at 320 px or 200% CSS zoom. The inspector follows the canvas. Labels wrap without truncation.
+
+#### Accessibility
+
+Use table headers, grouped table bodies, and real row spans; all model names and responsibilities remain ordinary text. Selection uses a border and background along with named pressed-state buttons and a text result, not color alone. Keep all context visible and use no essential motion. Without JavaScript, all seven rows, four TCP/IP bands, the real request stack, caveats, scenario explanations, and sources remain readable in narrative order.
+
+#### Source anchors
+
+- [ITU-T X.200, §§6–7 — OSI basic reference model](https://www.itu.int/rec/T-REC-X.200-199407-I/en)
+- [RFC 1122, §1.1.3 — Internet protocol suite](https://www.rfc-editor.org/rfc/rfc1122#section-1.1.3)
+- [RFC 8446, §1 — TLS’s underlying transport and security properties](https://www.rfc-editor.org/rfc/rfc8446#section-1)
+- [Kurose/Ross, Chapter 1 §1.5, slide 6 — five-layer teaching stack](https://gaia.cs.umass.edu/kurose_ross/videos/1/5/1.5_video_slides_posted.pptx)
+
+#### Acceptance checks
+
+- All seven OSI names and numbers and all four TCP/IP bands are readable simultaneously.
+- Application selection groups upper responsibilities without asserting exact implementation boundaries; TLS has no fixed OSI-layer assignment.
+- Link selection and disconnection distinguish configured addresses from physical reachability.
+- Direct `#osi-tcp-ip`, reload, Back/Forward, native keyboard choices, 320 px, 200% CSS zoom, and the no-JavaScript reading path work.
+- Existing view fragments remain stable and the counter becomes 13 views.
+
+### Visual 3 — Each layer adds the address it owns
 
 #### Purpose
 
@@ -119,7 +191,7 @@ Application payload, TCP ports, IPv4 addresses, Ethernet MACs and current-link t
 
 #### Composition
 
-Follow the request / Headers on the wire in the one persistent console. Nested envelope: application bytes inside TCP segment inside IPv4 packet inside Ethernet frame, with field labels at each boundary. The active view’s actor labels and state cues stay in the canvas; The Ethernet frame is only for the current local link. The IP packet carries the end-to-end destination, while TCP identifies the receiving transport endpoint. sits in the contextual inspector to the right or below, and the takeaway stays in the bottom strip. Default checkpoint: Application.
+Request / Headers on the wire in the one persistent console. Nested envelope: application bytes inside TCP segment inside IPv4 packet inside Ethernet frame, with field labels at each boundary. The active view’s actor labels and state cues stay in the canvas; The Ethernet frame is only for the current local link. The IP packet carries the end-to-end destination, while TCP identifies the receiving transport endpoint. sits in the contextual inspector to the right or below, and the takeaway stays in the bottom strip. Default checkpoint: Application.
 
 #### Interaction
 
@@ -163,7 +235,7 @@ The named figure and surrounding heading provide a text summary. Native buttons 
 - The frame is local-link scope; a router can replace L2 while retaining the remote IP destination.
 - The failure control marks the first relevant boundary and names observable evidence without relying on red color alone.
 
-### Visual 3 — The prefix decides what is local
+### Visual 4 — The prefix decides what is local
 
 #### Purpose
 
@@ -183,7 +255,7 @@ Client address, /24 prefix, connected range, local peer and remote peer.
 
 #### Composition
 
-Address and local link / CIDR and locality in the one persistent console. Large client address and a proportional 24-bit prefix/8-bit host rail; local and remote peers sit below as a two-outcome comparison. The active view’s actor labels and state cues stay in the canvas; The client has 10.20.10.25/24, so its directly connected subnet is 10.20.10.0/24. A destination outside it needs a route through a next hop. A prefix describes a network range, not a physical wire. sits in the contextual inspector to the right or below, and the takeaway stays in the bottom strip. Default checkpoint: Client IP.
+Local link / CIDR and locality in the one persistent console. Large client address and a proportional 24-bit prefix/8-bit host rail; local and remote peers sit below as a two-outcome comparison. The active view’s actor labels and state cues stay in the canvas; The client has 10.20.10.25/24, so its directly connected subnet is 10.20.10.0/24. A destination outside it needs a route through a next hop. A prefix describes a network range, not a physical wire. sits in the contextual inspector to the right or below, and the takeaway stays in the bottom strip. Default checkpoint: Client IP.
 
 #### Interaction
 
@@ -227,7 +299,7 @@ The named figure and surrounding heading provide a text summary. Native buttons 
 - 10.20.10.80 is in 10.20.10.0/24 while 203.0.113.80 is outside it.
 - The failure control marks the first relevant boundary and names observable evidence without relying on red color alone.
 
-### Visual 4 — The first frame targets the gateway, not the server
+### Visual 5 — The first frame targets the gateway, not the server
 
 #### Purpose
 
@@ -247,7 +319,7 @@ Client, next-hop IPv4 address, ARP request/reply, gateway MAC, Ethernet frame.
 
 #### Composition
 
-Address and local link / ARP to the next hop in the one persistent console. Client and gateway anchor a bidirectional request/reply rail; the completed first-hop frame lists gateway MAC beside remote IP. The active view’s actor labels and state cues stay in the canvas; After route selection, the host resolves the selected IPv4 next hop with ARP on the local link. The outgoing frame uses the gateway’s MAC; the IP packet still names 203.0.113.80. sits in the contextual inspector to the right or below, and the takeaway stays in the bottom strip. Default checkpoint: Route.
+Local link / ARP to the next hop in the one persistent console. Client and gateway anchor a bidirectional request/reply rail; the completed first-hop frame lists gateway MAC beside remote IP. The active view’s actor labels and state cues stay in the canvas; After route selection, the host resolves the selected IPv4 next hop with ARP on the local link. The outgoing frame uses the gateway’s MAC; the IP packet still names 203.0.113.80. sits in the contextual inspector to the right or below, and the takeaway stays in the bottom strip. Default checkpoint: Route.
 
 #### Interaction
 
@@ -291,7 +363,7 @@ The named figure and surrounding heading provide a text summary. Native buttons 
 - The outgoing destination MAC is the gateway MAC, never the routed-away server MAC.
 - The failure control marks the first relevant boundary and names observable evidence without relying on red color alone.
 
-### Visual 5 — Forwarding chooses the most specific route
+### Visual 6 — Forwarding chooses the most specific route
 
 #### Purpose
 
@@ -311,7 +383,7 @@ Destination, /26, /24, default route, next hop and outgoing interface.
 
 #### Composition
 
-Make a decision / Route and NAT in the one persistent console. Destination sits left of an overlapping route table; the selected /26 via 10.20.10.1 is marked, and the right decision strip separates neighbor resolution from later NAT. The active view’s actor labels and state cues stay in the canvas; The deliberately overlapping route table selects 203.0.113.64/26 for 203.0.113.80. That beats 203.0.113.0/24 and the default route. Only then does the host resolve the selected next hop’s link address. sits in the contextual inspector to the right or below, and the takeaway stays in the bottom strip. Default checkpoint: Lookup.
+Routing / Route selection in the one persistent console. Destination sits left of an overlapping route table; the selected /26 via 10.20.10.1 is marked, and the right decision strip separates neighbor resolution from later NAT. The active view’s actor labels and state cues stay in the canvas; The deliberately overlapping route table selects 203.0.113.64/26 for 203.0.113.80. That beats 203.0.113.0/24 and the default route. Only then does the host resolve the selected next hop’s link address. sits in the contextual inspector to the right or below, and the takeaway stays in the bottom strip. Default checkpoint: Lookup.
 
 #### Interaction
 
@@ -355,7 +427,7 @@ The named figure and surrounding heading provide a text summary. Native buttons 
 - 203.0.113.80 selects /26 via the same 10.20.10.1 gateway as the first-hop narrative; neighbor resolution follows route selection.
 - The failure control marks the first relevant boundary and names observable evidence without relying on red color alone.
 
-### Visual 6 — TCP establishes a connection before application data
+### Visual 7 — TCP establishes a connection before application data
 
 #### Purpose
 
@@ -375,7 +447,7 @@ Client port, server port, TCP control flags, connection state and byte stream.
 
 #### Composition
 
-Transport endpoints / TCP and UDP in the one persistent console. Two anchored endpoint labels bracket a vertical SYN → SYN-ACK ← ACK → DATA sequence, followed by a short UDP comparison. The active view’s actor labels and state cues stay in the canvas; The client sends SYN, receives SYN-ACK, and returns ACK before exchanging stream data. TCP numbers bytes and acknowledges delivery; UDP carries independent datagrams without a transport handshake. sits in the contextual inspector to the right or below, and the takeaway stays in the bottom strip. Default checkpoint: SYN.
+Transport / TCP and UDP in the one persistent console. Two anchored endpoint labels bracket a vertical SYN → SYN-ACK ← ACK → DATA sequence, followed by a short UDP comparison. The active view’s actor labels and state cues stay in the canvas; The client sends SYN, receives SYN-ACK, and returns ACK before exchanging stream data. TCP numbers bytes and acknowledges delivery; UDP carries independent datagrams without a transport handshake. sits in the contextual inspector to the right or below, and the takeaway stays in the bottom strip. Default checkpoint: SYN.
 
 #### Interaction
 
@@ -419,7 +491,7 @@ The named figure and surrounding heading provide a text summary. Native buttons 
 - Application data begins after transport setup in this example; UDP has no TCP handshake.
 - The failure control marks the first relevant boundary and names observable evidence without relying on red color alone.
 
-### Visual 7 — A five-tuple distinguishes this connection
+### Visual 8 — A five-tuple distinguishes this connection
 
 #### Purpose
 
@@ -439,7 +511,7 @@ Protocol, source/destination addresses, source/destination ports and listener.
 
 #### Composition
 
-Transport endpoints / Socket and 5-tuple in the one persistent console. One five-field transport tuple is shown as a flat horizontal anatomy strip, with the server listener below as the receiving endpoint. The active view’s actor labels and state cues stay in the canvas; For this TCP flow, protocol, source IP and port, and destination IP and port distinguish the transport conversation. The server needs a listener on the destination address/port; a successful DNS lookup says nothing about that listener. sits in the contextual inspector to the right or below, and the takeaway stays in the bottom strip. Default checkpoint: Protocol.
+Transport / Socket and 5-tuple in the one persistent console. One five-field transport tuple is shown as a flat horizontal anatomy strip, with the server listener below as the receiving endpoint. The active view’s actor labels and state cues stay in the canvas; For this TCP flow, protocol, source IP and port, and destination IP and port distinguish the transport conversation. The server needs a listener on the destination address/port; a successful DNS lookup says nothing about that listener. sits in the contextual inspector to the right or below, and the takeaway stays in the bottom strip. Default checkpoint: Protocol.
 
 #### Interaction
 
@@ -483,7 +555,7 @@ The named figure and surrounding heading provide a text summary. Native buttons 
 - A reachable address does not imply a process listens on port 443.
 - The failure control marks the first relevant boundary and names observable evidence without relying on red color alone.
 
-### Visual 8 — NAT rewrites a tuple at a configured edge
+### Visual 9 — NAT rewrites a tuple at a configured edge
 
 #### Purpose
 
@@ -503,7 +575,7 @@ Private client tuple, translated public tuple, unchanged remote tuple, edge mapp
 
 #### Composition
 
-Make a decision / NAT transformation in the one persistent console. Before/after source tuples flank an SNAT marker; mapping state sits below and the reply path reverses the mapping. The active view’s actor labels and state cues stay in the canvas; In this source-NAT example, the edge maps 10.20.10.25:51514 to 198.51.100.25:62001. Return traffic uses that mapping to find the private client. The remote destination and its port stay the same in this example. sits in the contextual inspector to the right or below, and the takeaway stays in the bottom strip. Default checkpoint: Inside tuple.
+Routing / NAT transformation in the one persistent console. Before/after source tuples flank an SNAT marker; mapping state sits below and the reply path reverses the mapping. The active view’s actor labels and state cues stay in the canvas; In this source-NAT example, the edge maps 10.20.10.25:51514 to 198.51.100.25:62001. Return traffic uses that mapping to find the private client. The remote destination and its port stay the same in this example. sits in the contextual inspector to the right or below, and the takeaway stays in the bottom strip. Default checkpoint: Inside tuple.
 
 #### Interaction
 
@@ -547,7 +619,7 @@ The named figure and surrounding heading provide a text summary. Native buttons 
 - The source fields change in this example; routing and filtering are separate.
 - The failure control marks the first relevant boundary and names observable evidence without relying on red color alone.
 
-### Visual 9 — DNS returns data before transport starts
+### Visual 10 — DNS returns data before transport starts
 
 #### Purpose
 
@@ -559,7 +631,7 @@ How did the client learn 203.0.113.80?
 
 #### Persistent scenario state
 
-HTTPS · app.example.test · 10.20.10.25:51514 → 203.0.113.80:443. At this view the active checkpoint begins at **Query** and can advance to **Answer**.
+HTTPS · app.example.test · 10.20.10.25:51514 → 203.0.113.80:443. The default scenario is **Cache hit**; **Cache miss** selects the alternate lookup path. Both return an address.
 
 #### Concepts and actors
 
@@ -567,19 +639,17 @@ Application, recursive resolver/cache, delegated authority, A answer and TTL.
 
 #### Composition
 
-Discovery and policy / DNS lookup in the one persistent console. Application query leads to a split cache-or-authority branch and rejoins at the resolver answer; a boundary note keeps DNS off the later packet route. The active view’s actor labels and state cues stay in the canvas; The application asks a resolver, which may answer from cache or query the DNS hierarchy. An A record supplies an IPv4 address; TTL bounds how long a cached answer may be reused. The later TCP packet does not pass through DNS. sits in the contextual inspector to the right or below, and the takeaway stays in the bottom strip. Default checkpoint: Query.
+Discovery / DNS lookup in the one persistent console. Application query leads to a split cache-or-authority branch and rejoins at the resolver answer; a boundary note keeps DNS off the later packet route. The active view’s actor labels and state cues stay in the canvas; The application asks a resolver, which may answer from cache or query the DNS hierarchy. An A record supplies an IPv4 address; TTL bounds how long a cached answer may be reused. The later TCP packet does not pass through DNS. sits in the contextual inspector to the right or below, and the takeaway stays in the bottom strip. Default scenario: Cache hit. The cache-hit path highlights application, cache, and answer; the cache-miss path also highlights delegated authority.
 
 #### Interaction
 
-Direct checkpoint selection and previous/next inspect the states without a timed simulation. **Show stale answer** exposes the alternate state.
-Tab/Enter/Space operate all controls. Selecting a checkpoint clears an injected failure; the failure button can be toggled off.
+Two native pressed-state buttons select **Cache hit** or **Cache miss** without suggesting that a cache hit queries authority. **Change authoritative record** selects the cache-hit path and compares cached 203.0.113.80 (120 seconds remaining) with authoritative 203.0.113.81. The answer still reaches the client; the status reads **CACHED ANSWER RETURNED**, with amber alternate-state framing rather than a red block. Toggling the change off or selecting a scenario restores the baseline. Tab/Enter/Space operate all controls.
 
 #### Data or content states
 
-- 1. **Query:** ask for app.example.test A
-- 2. **Cache:** reuse valid response if present
-- 3. **Authority:** otherwise follow delegation to an answer
-- 4. **Answer:** 203.0.113.80 with TTL
+- **Cache hit:** return 203.0.113.80 directly from cache without asking authority.
+- **Cache miss:** follow delegation and return the authoritative 203.0.113.80 answer.
+- **Record changed:** return cached 203.0.113.80 while authority now has 203.0.113.81; the cached answer has 120 seconds remaining.
 - Observable fixture: Illustrative DNS record: app.example.test. 300 IN A 203.0.113.80
 
 #### Failure or edge state
@@ -588,7 +658,7 @@ A cached address may continue to be used until its TTL expires even after the au
 
 #### Required copy
 
-Canvas labels: Query → Cache → Authority → Answer. Bottom takeaway: “DNS discovers a destination; it is not a forwarding hop for the application packet.”
+Canvas labels: application → resolver cache → answer on a hit; resolver cache → delegated authority → answer on a miss. Bottom takeaway: “DNS discovers a destination; it is not a forwarding hop for the application packet.”
 
 #### Accuracy caveats
 
@@ -609,9 +679,9 @@ The named figure and surrounding heading provide a text summary. Native buttons 
 #### Acceptance checks
 
 - A DNS answer supplies data before transport; stale cache can persist until TTL expiry.
-- The failure control marks the first relevant boundary and names observable evidence without relying on red color alone.
+- Changing authority returns the older cached address with a remaining TTL; no node or status claims DNS is blocked.
 
-### Visual 10 — A firewall evaluates packets at its own boundary
+### Visual 11 — A firewall evaluates packets at its own boundary
 
 #### Purpose
 
@@ -623,7 +693,7 @@ Why can a SYN fail while a later reply is allowed?
 
 #### Persistent scenario state
 
-HTTPS · app.example.test · 10.20.10.25:51514 → 203.0.113.80:443. At this view the active checkpoint begins at **New SYN** and can advance to **Drop**.
+HTTPS · app.example.test · 10.20.10.25:51514 → 203.0.113.80:443. At this view the active checkpoint begins at **New SYN** and can advance to **Reply**.
 
 #### Concepts and actors
 
@@ -631,11 +701,11 @@ New flow, configured policy, connection state, reply and denied packet.
 
 #### Composition
 
-Discovery and policy / Filter and state in the one persistent console. New SYN, policy gate and return flow form a directional rail; stateful/stateless rule treatment is compared below. The active view’s actor labels and state cues stay in the canvas; A stateful firewall can remember an allowed flow and classify return packets using connection state. A stateless rule set evaluates each packet independently. Policy order, direction, and location determine where a packet first fails. sits in the contextual inspector to the right or below, and the takeaway stays in the bottom strip. Default checkpoint: New SYN.
+Discovery / Filter and state in the one persistent console. New SYN, policy gate and return flow form a directional rail; stateful/stateless rule treatment is compared below. The active view’s actor labels and state cues stay in the canvas; A stateful firewall can remember an allowed flow and classify return packets using connection state. A stateless rule set evaluates each packet independently. Policy order, direction, and location determine where a packet first fails. sits in the contextual inspector to the right or below, and the takeaway stays in the bottom strip. Default checkpoint: New SYN.
 
 #### Interaction
 
-Direct checkpoint selection and previous/next inspect the states without a timed simulation. **Drop new SYN** exposes the alternate state.
+Direct checkpoint selection and previous/next inspect the states without a timed simulation. **Drop new SYN** stops at the policy gate, reveals the denied-SYN branch, and leaves the return flow unreached. Toggling it off restores the normal branch.
 Tab/Enter/Space operate all controls. Selecting a checkpoint clears an injected failure; the failure button can be toggled off.
 
 #### Data or content states
@@ -643,7 +713,6 @@ Tab/Enter/Space operate all controls. Selecting a checkpoint clears an injected 
 - 1. **New SYN:** evaluate ingress/egress policy
 - 2. **Allow:** record accepted connection state
 - 3. **Reply:** match established flow
-- 4. **Drop:** unmatched or denied packet stops here
 - Observable fixture: Illustrative policy: allow TCP destination 443; allow established replies
 
 #### Failure or edge state
@@ -652,7 +721,7 @@ A silent drop leaves the client waiting in SYN-SENT; the server may see no reque
 
 #### Required copy
 
-Canvas labels: New SYN → Allow → Reply → Drop. Bottom takeaway: “A filter decision depends on rule context and connection state, not just the destination IP.”
+Canvas labels: New SYN → Allow → Reply. Denial is a separate branch at the policy gate, revealed by **Drop new SYN**, never the final step of an allowed flow. Bottom takeaway: “A filter decision depends on rule context and connection state, not just the destination IP.”
 
 #### Accuracy caveats
 
@@ -675,19 +744,19 @@ The named figure and surrounding heading provide a text summary. Native buttons 
 - A silent drop can leave the client in SYN-SENT while the server sees no request.
 - The failure control marks the first relevant boundary and names observable evidence without relying on red color alone.
 
-### Visual 11 — Load balancing chooses an endpoint using different evidence
+### Visual 12 — Load balancing chooses an endpoint using different evidence
 
 #### Purpose
 
-Resolve “What can a transport balancer know that an HTTP balancer cannot—and vice versa?” by making the relevant actors, boundaries, and changed state visible.
+Resolve “How does the information a balancer inspects change its backend choice?” by making the relevant actors, boundaries, and changed state visible.
 
 #### Learner question
 
-What can a transport balancer know that an HTTP balancer cannot—and vice versa?
+How does the information a balancer inspects change its backend choice?
 
 #### Persistent scenario state
 
-HTTPS · app.example.test · 10.20.10.25:51514 → 203.0.113.80:443. At this view the active checkpoint begins at **L4 input** and can advance to **L7 choice**.
+HTTPS · app.example.test · 10.20.10.25:51514 → 203.0.113.80:443. The default comparison selects **L4 connection**. **L7 request** selects the other rail; neither rail is a later stage of the other.
 
 #### Concepts and actors
 
@@ -695,19 +764,17 @@ Transport metadata, HTTP host/path, backend pools, target health.
 
 #### Composition
 
-Discovery and policy / L4 versus L7 in the one persistent console. Two flat rails compare L4 metadata/choice with L7 HTTP evidence/choice; healthy target requirement appears in the bottom note. The active view’s actor labels and state cues stay in the canvas; An L4 balancer can use addresses, ports, protocol and connection state. An L7 HTTP balancer can inspect application attributes such as host and path once it terminates or parses that protocol. Both need healthy eligible targets. sits in the contextual inspector to the right or below, and the takeaway stays in the bottom strip. Default checkpoint: L4 input.
+Discovery / L4 versus L7 in the one persistent console. Two flat rails compare L4 metadata/choice with L7 HTTP evidence/choice; healthy target requirement appears in the bottom note. The active view’s actor labels and state cues stay in the canvas; An L4 balancer can use addresses, ports, protocol and connection state. An L7 HTTP balancer can inspect application attributes such as host and path once it terminates or parses that protocol. Both need healthy eligible targets. sits in the contextual inspector to the right or below, and the takeaway stays in the bottom strip. Default comparison: L4 connection. Highlight only the selected rail’s input and backend choice.
 
 #### Interaction
 
-Direct checkpoint selection and previous/next inspect the states without a timed simulation. **No healthy target** exposes the alternate state.
+Two native pressed-state buttons select **L4 connection** or **L7 request**. There are no numbered checkpoints or step controls in this comparison. **No healthy target** exposes the alternate state.
 Tab/Enter/Space operate all controls. Selecting a checkpoint clears an injected failure; the failure button can be toggled off.
 
 #### Data or content states
 
-- 1. **L4 input:** IP, port, protocol, connection
-- 2. **L4 choice:** eligible backend for the flow
-- 3. **L7 input:** HTTP host/path after protocol inspection
-- 4. **L7 choice:** route to matching healthy target
+- **L4 connection:** transport metadata → eligible backend for the connection.
+- **L7 request:** HTTP host/path → matching API pool for the request.
 - Observable fixture: Illustrative: app.example.test /api → API pool
 
 #### Failure or edge state
@@ -716,7 +783,7 @@ The balancer can receive the request but has no eligible backend to send it to.
 
 #### Required copy
 
-Canvas labels: L4 input → L4 choice → L7 input → L7 choice. Bottom takeaway: “The layer of inspection determines the routing criteria and the connection behavior a balancer can implement.”
+Canvas labels: L4 evidence → L4 choice, compared with L7 evidence → L7 choice. Bottom takeaway: “The layer of inspection determines the routing criteria and the connection behavior a balancer can implement.”
 
 #### Accuracy caveats
 
@@ -739,7 +806,7 @@ The named figure and surrounding heading provide a text summary. Native buttons 
 - Layer of inspection determines what criteria can drive routing.
 - The failure control marks the first relevant boundary and names observable evidence without relying on red color alone.
 
-### Visual 12 — Troubleshoot the first checkpoint that fails
+### Visual 13 — Troubleshoot the first checkpoint that fails
 
 #### Purpose
 
@@ -759,7 +826,7 @@ Resolver, route table, socket state, filter and listening application.
 
 #### Composition
 
-Operate the path / First failed assumption in the one persistent console. A numbered evidence ladder moves from name to route, socket, policy and service; the first failure is marked at the exact checkpoint. The active view’s actor labels and state cues stay in the canvas; Test a claim at each layer: name resolution, route, neighbor reachability, TCP handshake, policy, then application response. A later test cannot repair an earlier missing prerequisite. sits in the contextual inspector to the right or below, and the takeaway stays in the bottom strip. Default checkpoint: Name.
+Diagnosis / Diagnose in the one persistent console. A numbered evidence ladder moves from name to route, socket, policy and service; the first failure is marked at the exact checkpoint. The active view’s actor labels and state cues stay in the canvas; Test a claim at each layer: name resolution, route, neighbor reachability, TCP handshake, policy, then application response. A later test cannot repair an earlier missing prerequisite. sits in the contextual inspector to the right or below, and the takeaway stays in the bottom strip. Default checkpoint: Name.
 
 #### Interaction
 
@@ -806,7 +873,7 @@ The named figure and surrounding heading provide a text summary. Native buttons 
 
 ## Persistent console and deep-link contract
 
-The canonical public route is `/networking`. Every major view uses its stable fragment (the view IDs in the narrative table). Browser refresh, direct fragment, back and forward select the correct view and open its index group. These are new routes, so no earlier public section aliases exist. Without JavaScript, all 12 figures, their explanations, the grouped index and sources remain stacked inside the same console.
+The canonical public route is `/networking`. Every major view uses its stable fragment (the view IDs in the narrative table). Browser refresh, direct fragment, back and forward select the correct view and open its index group. These are new routes, so no earlier public section aliases exist. Without JavaScript, all 13 figures, their explanations, the grouped index and sources remain stacked inside the same console.
 
 The console contains brand and library navigation, Foundations breadcrumb, title, format/difficulty, publication/review dates, persistent scenario state ribbon, grouped disclosure index, one active canvas, right/bottom inspector, bottom takeaway and previous/current/next navigation, related visuals, primary sources and footer.
 
@@ -822,7 +889,7 @@ Published related visuals: [Linux networking](/linux/networking), [Kubernetes ne
 
 ## Page-level acceptance
 
-- All 12 named figures, inspector explanations, failure copy, sources, and the grouped index are readable inside the same console with JavaScript disabled.
+- All 13 named figures, inspector explanations, failure copy, sources, and the grouped index are readable inside the same console with JavaScript disabled.
 - Under enhancement, exactly one selected visual canvas is shown; selecting a new view opens only its concept group and preserves a stable fragment across refresh and history navigation.
 - Every manual checkpoint updates its canvas state and named result, every selected hero trace can be paused and inspected, and its failure state marks a relevant boundary and evidence.
 - Topic color and connector meaning follow the brief, while static comparisons remain static where movement adds no teaching value.
@@ -831,9 +898,12 @@ Published related visuals: [Linux networking](/linux/networking), [Kubernetes ne
 
 ## Integration guidance and status
 
-Canonical metadata: `src/content/topics/networking.mdx`. Canonical route: `src/pages/networking.astro`. Neutral shell: `src/components/TopicConsoleShell.astro`; reusable console behavior: `src/components/foundations/ProtocolConsole.astro`; topic-specific visual forms: `src/components/foundations/VisualCanvas.astro`; source state: `src/components/foundations/protocol-data.ts`; reusable tokens/styles: `src/styles/protocol-console.css`. The prototype remains an approval artifact and must be regenerated after final production edits. Integration status: built and indexed on 2026-09-16; browser visual QA still pending.
+Canonical metadata: `src/content/topics/networking.mdx`. Canonical route: `src/pages/networking.astro`. Neutral shell: `src/components/TopicConsoleShell.astro`; reusable console behavior: `src/components/foundations/ProtocolConsole.astro`; topic-specific visual forms: `src/components/foundations/VisualCanvas.astro`; source state: `src/components/foundations/protocol-data.ts`; reusable tokens/styles: `src/styles/protocol-console.css`. The prototype remains an approval artifact and must be regenerated after final production edits. Integration status: canonical page retained; console behavior repaired and browser-tested on 2026-10-15. The output takeaway uses a dedicated selector, so initialization preserves every view. Empty-fragment history restores the first view. NAT source fields agree with the translated tuple. The prototype was regenerated from the corrected production build.
 
 ## Source index
+
+- [ITU-T X.200 — OSI basic reference model](https://www.itu.int/rec/T-REC-X.200-199407-I/en)
+- [RFC 8446 — TLS 1.3](https://www.rfc-editor.org/rfc/rfc8446)
 
 - [RFC 1122 — Internet host requirements](https://www.rfc-editor.org/rfc/rfc1122)
 - [RFC 9293 — Transmission Control Protocol](https://www.rfc-editor.org/rfc/rfc9293)
@@ -850,3 +920,11 @@ Canonical metadata: `src/content/topics/networking.mdx`. Canonical route: `src/p
 - [Additional primary reference](https://docs.aws.amazon.com/elasticloadbalancing/latest/userguide/what-is-load-balancing.html)
 - [Additional primary reference](https://man7.org/linux/man-pages/man8/ip-route.8.html)
 - [Additional primary reference](https://man7.org/linux/man-pages/man8/ss.8.html)
+
+## Correction validation — 2026-10-15
+
+Before the OSI addition, headless Chromium checks passed for all 32 views across Networking, Containers, and SSH: exactly one active canvas, intact opening diagrams, stage selection, failure/alternate toggles, contextual takeaways, and one expanded index group after navigation. Those Networking checks also covered direct fragments, Back/Forward including the empty fragment, NAT state fields, both DNS paths and changed-authority evidence, the separate firewall denial branch, keyboard activation of comparison choices, all 12 views without page overflow at 320 and 720 CSS px and CSS zoom 200%, reduced-motion playback, and all 12 readable views with JavaScript disabled. Desktop and 320 px screenshots were inspected. No JavaScript page errors occurred. CSS zoom and keyboard automation are useful checks but do not replace manual browser zoom, screen-reader, touch-device, or contrast review; those checks remain pending. `npm run check` and `npm run build` passed.
+
+## OSI addition validation — 2026-10-15
+
+Canonical visual module: `src/components/foundations/NetworkLayers.astro`, composed by `VisualCanvas.astro`; scoped styles use shared tokens in `src/styles/network-layers.css`. The new view is second in the Request group; existing fragments are unchanged. Headless Chromium passed seven OSI rows, four TCP/IP groups, all four band selections, local-link failure, keyboard selection, direct-link reload and history, no horizontal page overflow at 320/390/720 px and CSS zoom 200%, zero page errors, and all 13 views with JavaScript disabled. Desktop and mobile screenshots were inspected. The prototype is regenerated from the production build; it remains a design artifact. Manual browser zoom, screen-reader and contrast review remain pending.

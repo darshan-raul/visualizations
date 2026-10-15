@@ -31,24 +31,24 @@ const stateFields: Record<string, { key: string; value: string }[]> = {
   <main slot="main" class="protocol-main">
     <div class="protocol-ribbon" aria-label="Persistent scenario"><span>LIVE SCENARIO</span><strong>{topic.objectLabel}</strong><span data-protocol-ribbon-state>READY</span></div>
     <div class="protocol-state-strip" aria-label="Scenario state">{stateFields[topic.id]?.map((field) => <div><span>{field.key}</span><strong data-protocol-field={field.key}>{field.value}</strong></div>)}</div>
-    {topic.views.map((view, index) => <section id={view.id} class="protocol-view" data-protocol-view={view.id} data-protocol-title={view.title} data-protocol-inspector={view.inspector} data-protocol-takeaway={view.takeaway} data-protocol-caveat={view.caveat} data-protocol-failure={view.failure} data-protocol-stage-details={JSON.stringify(view.stages.map((stage) => stage.detail))} aria-labelledby={`${view.id}-title`}>
+    {topic.views.map((view, index) => <section id={view.id} class="protocol-view" data-protocol-view={view.id} data-protocol-title={view.title} data-protocol-inspector={view.inspector} data-protocol-takeaway={view.takeaway} data-protocol-caveat={view.caveat} data-protocol-failure={view.failure} data-protocol-mode={view.mode ?? 'sequence'} data-protocol-alternate={view.alternate} data-protocol-stage-nodes={JSON.stringify(view.stages.map((stage) => stage.nodes))} data-protocol-stage-details={JSON.stringify(view.stages.map((stage) => stage.detail))} aria-labelledby={`${view.id}-title`}>
       <header><span>{String(index + 1).padStart(2, '0')} / {view.group.toUpperCase()}</span><h2 id={`${view.id}-title`}>{view.title}</h2><p>{view.question}</p></header>
       <figure class="protocol-canvas">
         <div class="protocol-canvas-head"><span>{topic.id === 'networking' ? 'PACKET PATH' : topic.id === 'containers' ? 'LINUX PROCESS LAB' : 'SECURE TRANSPORT TRACE'}</span><span data-protocol-stage-status={view.id}>CHECKPOINT 01 / {String(view.stages.length).padStart(2, '0')}</span></div>
         <VisualCanvas topicId={topic.id} view={view} />
-        <ol class="protocol-step-index" data-protocol-stages={view.id} aria-label="Manual checkpoints">{view.stages.map((stage, stageIndex) => <li data-protocol-stage={stageIndex} class={stageIndex === 0 ? 'is-active' : ''}><button type="button" data-protocol-stage-button={stageIndex} aria-current={stageIndex === 0 ? 'step' : undefined}><span>{String(stageIndex + 1).padStart(2, '0')}</span>{stage.label}</button></li>)}</ol>
-        <div class="protocol-controls" data-protocol-controls={view.id}><button type="button" data-protocol-prev>← Step back</button>{animatedViews[topic.id]?.includes(view.id) && <button type="button" data-protocol-play>▶ Play trace</button>}<button type="button" data-protocol-next>Next step →</button><button type="button" data-protocol-failure aria-pressed="false">{view.failureLabel}</button><p data-protocol-result aria-live="polite">{view.stages[0].label}: {view.stages[0].detail}</p></div>
+        <ul class="protocol-step-index" data-protocol-stages={view.id} aria-label={view.mode === 'choice' ? 'Compare scenarios' : 'Manual checkpoints'}>{view.stages.map((stage, stageIndex) => <li data-protocol-stage={stageIndex} class={stageIndex === 0 ? 'is-active' : ''}><button type="button" data-protocol-stage-button={stageIndex} aria-current={view.mode !== 'choice' && stageIndex === 0 ? 'step' : undefined} aria-pressed={view.mode === 'choice' ? stageIndex === 0 : undefined}>{view.mode !== 'choice' && <span>{String(stageIndex + 1).padStart(2, '0')}</span>}{stage.label}</button></li>)}</ul>
+        <div class="protocol-controls" data-protocol-controls={view.id}>{view.mode !== 'choice' && <button type="button" data-protocol-prev>← Step back</button>}{animatedViews[topic.id]?.includes(view.id) && <button type="button" data-protocol-play>▶ Play trace</button>}{view.mode !== 'choice' && <button type="button" data-protocol-next>Next step →</button>}<button type="button" data-protocol-failure aria-pressed="false">{view.failureLabel}</button><p data-protocol-result aria-live="polite">{view.stages[0].label}: {view.stages[0].detail}</p></div>
         <div class="protocol-evidence"><span>OBSERVABLE EVIDENCE</span><pre data-protocol-evidence>{view.evidence}</pre></div>
         <figcaption>{view.takeaway}</figcaption>
       </figure>
-      <div class="protocol-static-copy"><p>{view.inspector}</p><p><strong>Boundary:</strong> {view.caveat}</p><p><strong>Failure state:</strong> {view.failure}</p></div>
+      <div class="protocol-static-copy"><p>{view.inspector}</p>{view.mode === 'choice' && <ul>{view.stages.map((stage) => <li><strong>{stage.label}:</strong> {stage.detail}</li>)}</ul>}<p><strong>Boundary:</strong> {view.caveat}</p><p><strong>{view.alternate ? 'Alternate state:' : 'Failure state:'}</strong> {view.failure}</p></div>
     </section>)}
   </main>
 
   <aside slot="inspector" class="protocol-inspector" aria-live="polite"><span>CONTEXT INSPECTOR</span><h2 data-protocol-inspector-title>{active.title}</h2><p data-protocol-inspector-copy>{active.inspector}</p><div class="protocol-inspector-facts"><span>TEACHING OBJECT</span><strong>{topic.objectLabel}</strong><span>ACTIVE STATE</span><strong data-protocol-inspector-state>{active.stages[0].label}</strong></div><div class="protocol-caveat"><span>MODEL BOUNDARY</span><p data-protocol-inspector-caveat>{active.caveat}</p></div></aside>
 
   <div slot="bottom" class="protocol-bottom">
-    <div class="protocol-takeaway"><span>TAKEAWAY</span><p data-protocol-takeaway>{active.takeaway}</p></div>
+    <div class="protocol-takeaway"><span>TAKEAWAY</span><p data-protocol-takeaway-output>{active.takeaway}</p></div>
     <nav class="protocol-sequence" aria-label="View sequence"><button type="button" data-protocol-view-prev aria-label="Previous view">←</button><span data-protocol-view-counter>01 / {String(topic.views.length).padStart(2, '0')}</span><button type="button" data-protocol-view-next aria-label="Next view">→</button></nav>
     <div class="protocol-related"><span>RELATED VISUALS</span>{topic.related.map((item) => <a href={item.href}>{item.label} ↗</a>)}</div>
     <details class="protocol-source-list" id="protocol-sources"><summary>Sources <span>Primary references</span></summary><ul>{topic.sources.map((source) => <li><a href={source.url}>{source.label} ↗</a></li>)}</ul></details>
@@ -63,7 +63,7 @@ const stateFields: Record<string, { key: string; value: string }[]> = {
     const title = console.querySelector<HTMLElement>('[data-protocol-inspector-title]');
     const copy = console.querySelector<HTMLElement>('[data-protocol-inspector-copy]');
     const caveat = console.querySelector<HTMLElement>('[data-protocol-inspector-caveat]');
-    const takeaway = console.querySelector<HTMLElement>('[data-protocol-takeaway]');
+    const takeaway = console.querySelector<HTMLElement>('[data-protocol-takeaway-output]');
     const count = console.querySelector<HTMLElement>('[data-protocol-count]');
     const counter = console.querySelector<HTMLElement>('[data-protocol-view-counter]');
     const ribbon = console.querySelector<HTMLElement>('[data-protocol-ribbon-state]');
@@ -90,23 +90,45 @@ const stateFields: Record<string, { key: string; value: string }[]> = {
     };
     const activateStage = (view: HTMLElement, stageIndex: number, failed = false) => {
       currentStage.set(view, stageIndex);
+      const choice = view.dataset.protocolMode === 'choice';
+      const alternate = failed && view.dataset.protocolAlternate === 'true';
+      const blocked = failed && !alternate;
       const stages = [...view.querySelectorAll<HTMLElement>('[data-protocol-stage]')];
-      stages.forEach((stage, i) => { stage.classList.toggle('is-active', i === stageIndex); stage.classList.toggle('is-failed', failed && i === stageIndex); const button = stage.querySelector('button'); if (i === stageIndex) button?.setAttribute('aria-current','step'); else button?.removeAttribute('aria-current'); });
+      stages.forEach((stage, i) => { stage.classList.toggle('is-active', i === stageIndex); stage.classList.toggle('is-failed', blocked && i === stageIndex); const button = stage.querySelector('button'); if (choice) button?.setAttribute('aria-pressed', String(i === stageIndex)); else if (i === stageIndex) button?.setAttribute('aria-current','step'); else button?.removeAttribute('aria-current'); });
       const current = stages[stageIndex];
       const stageTitle = current?.querySelector('button')?.lastChild?.textContent?.trim() || 'Ready';
       const detail = view.dataset.protocolStageDetails ? JSON.parse(view.dataset.protocolStageDetails)[stageIndex] : '';
       const visualNodes = [...view.querySelectorAll<HTMLElement>('[data-visual-node]')];
-      visualNodes.forEach((node) => { const position = Number(node.dataset.visualNode); node.classList.toggle('is-reached', position <= stageIndex); node.classList.toggle('is-blocked', failed && position === stageIndex); });
-      view.querySelector('.protocol-canvas')?.classList.toggle('is-failed', failed);
+      const selectedNodes: number[] | null = JSON.parse(view.dataset.protocolStageNodes || '[]')[stageIndex];
+      visualNodes.forEach((node) => { const position = Number(node.dataset.visualNode); const reached = selectedNodes ? selectedNodes.includes(position) : position <= stageIndex; node.classList.toggle('is-reached', reached); node.classList.toggle('is-blocked', blocked && (choice ? position === selectedNodes?.at(-1) : position === stageIndex)); });
+      view.querySelector('.protocol-canvas')?.classList.toggle('is-failed', blocked);
+      view.querySelector('.protocol-canvas')?.classList.toggle('is-alternate', alternate);
       if (!failed) view.querySelector('[data-protocol-failure]')?.setAttribute('aria-pressed', 'false');
-      view.querySelector<HTMLElement>('[data-protocol-result]')!.textContent = failed ? `Blocked at ${stageTitle}: ${view.dataset.protocolFailure || 'Failure state selected.'}` : `${stageTitle}: ${detail}`;
-      view.querySelector<HTMLElement>('[data-protocol-stage-status]')!.textContent = failed ? 'FAILURE STATE' : `CHECKPOINT ${String(stageIndex + 1).padStart(2, '0')} / ${String(stages.length).padStart(2, '0')}`;
-      if (ribbon) ribbon.textContent = failed ? 'BLOCKED' : stageTitle.toUpperCase();
+      view.querySelector<HTMLElement>('[data-protocol-result]')!.textContent = failed ? `${alternate ? 'Older cached answer returned' : `Blocked at ${stageTitle}`}: ${view.dataset.protocolFailure || 'Failure state selected.'}` : `${stageTitle}: ${detail}`;
+      view.querySelector<HTMLElement>('[data-protocol-stage-status]')!.textContent = alternate ? 'CACHED ANSWER RETURNED' : blocked ? 'FAILURE STATE' : choice ? stageTitle.toUpperCase() : `CHECKPOINT ${String(stageIndex + 1).padStart(2, '0')} / ${String(stages.length).padStart(2, '0')}`;
+      if (ribbon) ribbon.textContent = alternate ? 'CACHED ANSWER' : blocked ? 'BLOCKED' : stageTitle.toUpperCase();
+      const ribbonContainer = console.querySelector<HTMLElement>('.protocol-ribbon');
+      if (ribbonContainer) ribbonContainer.dataset.state = alternate ? 'alternate' : blocked ? 'blocked' : 'normal';
+      const previous = view.querySelector<HTMLButtonElement>('[data-protocol-prev]');
+      const next = view.querySelector<HTMLButtonElement>('[data-protocol-next]');
+      if (previous) previous.disabled = stageIndex === 0;
+      if (next) next.disabled = stageIndex === stages.length - 1;
+      if (view.id === 'dns' && console.dataset.consoleId === 'networking') {
+        const authority = view.querySelector<HTMLElement>('[data-dns-authority]');
+        const evidence = view.querySelector<HTMLElement>('[data-protocol-evidence]');
+        if (authority) authority.textContent = alternate ? '203.0.113.81 · new address' : 'delegation → authority';
+        if (evidence) evidence.textContent = alternate
+          ? 'Resolver cache: app.example.test. 120 IN A 203.0.113.80\nAuthority now: app.example.test. 300 IN A 203.0.113.81\nClient receives 203.0.113.80; 120 seconds remain on the cached TTL.'
+          : stageIndex === 0
+            ? 'Cache hit: app.example.test. 120 IN A 203.0.113.80\nResolver returns the cached answer without querying authority.'
+            : 'Cache miss → resolver follows delegation\nAuthoritative answer: app.example.test. 300 IN A 203.0.113.80';
+      }
       const field = (key: string, value: string) => { const target = [...console.querySelectorAll<HTMLElement>('[data-protocol-field]')].find((item) => item.dataset.protocolField === key); if (target) target.textContent = value; };
       if (console.dataset.consoleId === 'networking') {
         field('DST', view.id === 'packet-journey' && stageIndex === 0 && failed ? 'unknown' : '203.0.113.80:443');
         field('NEXT HOP', view.id === 'packet-journey' && stageIndex < 1 ? 'unresolved' : '10.20.10.1');
-        field('SRC', view.id === 'packet-journey' && stageIndex >= 4 ? '198.51.100.25:62001' : '10.20.10.25:51514');
+        const translated = view.id === 'packet-journey' && stageIndex >= 4 || view.id === 'nat' && stageIndex >= 1 || view.id === 'forwarding' && stageIndex >= 3;
+        field('SRC', translated ? '198.51.100.25:62001' : '10.20.10.25:51514');
       } else if (console.dataset.consoleId === 'containers') {
         field('INSIDE PID', view.id === 'assemble' && stageIndex < 1 ? '—' : '1');
         field('NETNS', view.id === 'assemble' && stageIndex < 1 ? 'host' : 'container');
@@ -118,21 +140,21 @@ const stateFields: Record<string, { key: string; value: string }[]> = {
         field('USER', view.id === 'trust' || view.id === 'encrypted' ? 'unauthenticated' : view.id === 'user-auth' && stageIndex < 3 ? 'authenticating' : 'authenticated');
         field('CHANNEL', view.id === 'channels' ? stageTitle.toLowerCase() : view.id === 'ssh-forwarding' ? 'forwarding' : 'none');
       }
-      if (copy && views[activeView] === view) copy.textContent = failed ? view.dataset.protocolFailure || '' : view.dataset.protocolInspector || '';
+      if (copy && views[activeView] === view) copy.textContent = failed ? view.dataset.protocolFailure || '' : view.id === 'osi-tcp-ip' ? detail : view.dataset.protocolInspector || '';
       const inspectorState = console.querySelector<HTMLElement>('[data-protocol-inspector-state]');
-      if (inspectorState) inspectorState.textContent = failed ? `Blocked at ${stageTitle}` : stageTitle;
+      if (inspectorState) inspectorState.textContent = alternate ? 'Older cached answer returned' : blocked ? `Blocked at ${stageTitle}` : stageTitle;
     };
     views.forEach((view) => {
-      let stage = 0; let timer: number | undefined;
+      let timer: number | undefined;
       const playButton = view.querySelector<HTMLButtonElement>('[data-protocol-play]');
       const stop = () => { if (timer) window.clearInterval(timer); timer = undefined; if (playButton) playButton.textContent = '▶ Play trace'; };
       stopPlayback.set(view, stop);
-      const move = (delta: number) => { const stages = view.querySelectorAll('[data-protocol-stage]'); stage = Math.max(0, Math.min(stages.length - 1, stage + delta)); activateStage(view, stage); };
+      const move = (delta: number) => { const stages = view.querySelectorAll('[data-protocol-stage]'); const stage = Math.max(0, Math.min(stages.length - 1, (currentStage.get(view) ?? 0) + delta)); activateStage(view, stage); };
       view.querySelector('[data-protocol-prev]')?.addEventListener('click', () => { stop(); move(-1); });
       view.querySelector('[data-protocol-next]')?.addEventListener('click', () => { stop(); move(1); });
-      playButton?.addEventListener('click', () => { if (timer) { stop(); return; } stage = 0; activateStage(view, stage); if (matchMedia('(prefers-reduced-motion: reduce)').matches) { stage = view.querySelectorAll('[data-protocol-stage]').length - 1; activateStage(view, stage); return; } playButton.textContent = 'Ⅱ Pause trace'; timer = window.setInterval(() => { if (stage >= view.querySelectorAll('[data-protocol-stage]').length - 1) { stop(); return; } move(1); }, 1150); });
-      view.querySelector('[data-protocol-failure]')?.addEventListener('click', (event) => { stop(); const button = event.currentTarget as HTMLButtonElement; const on = button.getAttribute('aria-pressed') !== 'true'; const failureAt: Record<string, number> = { 'packet-journey': 0, encapsulation: 3, cidr: 3, arp: 2, forwarding: 0, tcp: 1, socket: 3, nat: 1, dns: 1, firewall: 0, 'load-balancer': 3, diagnose: 3, assemble: 1, namespaces: 3, cgroups: 2, 'build-cache': 2, image: 3, run: 3, 'container-packet': 3, boundary: 2, 'security-boundary': 3, registry: 1, 'break-fix': 1, 'vm-compare': 1, trust: 4, encrypted: 0, 'user-auth': 3, channels: 3, 'ssh-forwarding': 3, 'credential-tooling': 2, hardening: 2, 'ssh-diagnose': 2 }; if (on) stage = failureAt[view.id] ?? stage; button.setAttribute('aria-pressed', String(on)); activateStage(view, stage, on); });
-      view.querySelectorAll<HTMLButtonElement>('[data-protocol-stage-button]').forEach((button) => button.addEventListener('click', () => { stop(); stage = Number(button.dataset.protocolStageButton); activateStage(view, stage); }));
+      playButton?.addEventListener('click', () => { if (timer) { stop(); return; } activateStage(view, 0); if (matchMedia('(prefers-reduced-motion: reduce)').matches) { activateStage(view, view.querySelectorAll('[data-protocol-stage]').length - 1); return; } playButton.textContent = 'Ⅱ Pause trace'; timer = window.setInterval(() => { if ((currentStage.get(view) ?? 0) >= view.querySelectorAll('[data-protocol-stage]').length - 1) { stop(); return; } move(1); }, 1150); });
+      view.querySelector('[data-protocol-failure]')?.addEventListener('click', (event) => { stop(); const button = event.currentTarget as HTMLButtonElement; const on = button.getAttribute('aria-pressed') !== 'true'; const failureAt: Record<string, number> = { 'packet-journey': 0, 'osi-tcp-ip': 3, encapsulation: 3, cidr: 3, arp: 2, forwarding: 0, tcp: 1, socket: 3, nat: 1, dns: 0, firewall: 1, 'load-balancer': 1, diagnose: 3, assemble: 1, namespaces: 3, cgroups: 2, 'build-cache': 2, image: 3, run: 3, 'container-packet': 3, boundary: 2, 'security-boundary': 3, registry: 1, 'break-fix': 1, 'vm-compare': 1, trust: 4, encrypted: 0, 'user-auth': 3, channels: 3, 'ssh-forwarding': 3, 'credential-tooling': 2, hardening: 2, 'ssh-diagnose': 2 }; const keepChoice = view.dataset.protocolMode === 'choice' && view.dataset.protocolAlternate !== 'true' && view.id !== 'osi-tcp-ip'; const stage = on && !keepChoice ? failureAt[view.id] ?? currentStage.get(view) ?? 0 : currentStage.get(view) ?? 0; button.setAttribute('aria-pressed', String(on)); activateStage(view, stage, on); });
+      view.querySelectorAll<HTMLButtonElement>('[data-protocol-stage-button]').forEach((button) => button.addEventListener('click', () => { stop(); activateStage(view, Number(button.dataset.protocolStageButton)); }));
     });
     links.forEach((link, index) => link.addEventListener('click', () => selectView(index, false)));
     console.querySelector('[data-protocol-view-prev]')?.addEventListener('click', () => selectView(activeView - 1));
@@ -141,7 +163,7 @@ const stateFields: Record<string, { key: string; value: string }[]> = {
     selectView(fromHash >= 0 ? fromHash : 0, false);
     const syncHistory = () => {
       const index = views.findIndex((view) => view.id === location.hash.slice(1));
-      if (index >= 0) selectView(index, false);
+      if (index >= 0 || !location.hash) selectView(index >= 0 ? index : 0, false);
     };
     window.addEventListener('hashchange', syncHistory);
     window.addEventListener('popstate', syncHistory);

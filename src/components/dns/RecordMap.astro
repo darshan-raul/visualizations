@@ -1,0 +1,64 @@
+---
+import { districts, dnsSources, records, type Tone } from './dns-lesson';
+/** The example.com zone as a map: districts by purpose, one sign per record type, and a detail panel for each. */
+const SIGN = { w: 112, h: 46, gap: 10 };
+const TONE: Record<Tone, string> = { blue: 'var(--blue)', teal: '#5fb8c6', purple: 'var(--purple)', amber: 'var(--amber)', grey: '#9fb0c8' };
+const districtOf = (id: string) => districts.find((district) => district.id === id)!;
+const place = new Map(districts.flatMap((district) => records.filter((record) => record.district === district.id)
+  .map((record, index) => [record.type, { x: district.box.x + 14 + index * (SIGN.w + SIGN.gap), y: district.box.y + 52 }] as const)));
+const anchor = (type: string) => `record-${type.toLowerCase()}`;
+const spoken = `${districts.map((district) => `${district.name}, ${district.means}: ${records.filter((record) => record.district === district.id).map((record) => `${record.type} ${record.phrase}`).join(', ')}.`).join(' ')} The reverse zone sits outside example.com.`;
+const first = records[0].type;
+---
+<div class="dns-map-wrap" tabindex="0" role="group" aria-label="Record map. Scroll sideways if it is cut off.">
+  <svg class="dns-map" viewBox="0 0 830 442" role="group" aria-labelledby="dns-map-title dns-map-desc">
+    <title id="dns-map-title">The records in the example.com zone, grouped by purpose</title>
+    <desc id="dns-map-desc">{spoken}</desc>
+    <g aria-hidden="true">
+      <path class="dns-map-zone" d="M22 40 H808 Q822 40 822 54 V294 Q822 304 812 304 H556 Q546 304 546 314 V420 Q546 434 532 434 H20 Q6 434 6 420 V54 Q6 40 22 40 Z" />
+      <text class="dns-map-zone-label" x="20" y="30">ZONE example.com</text>
+      <rect class="dns-map-zone is-other" x="552" y="310" width="270" height="124" rx="14" />
+      <text class="dns-map-zone-label" x="566" y="306">ANOTHER ZONE</text>
+    </g>
+    {districts.map((district) => {
+      const { x, y, w, h } = district.box;
+      return <g class="dns-district" style={`--tone:${TONE[district.tone]}`} aria-hidden="true">
+        <rect x={x} y={y} width={w} height={h} rx="12" />
+        <text class="dns-district-name" x={x + 14} y={y + 22}>{district.name}</text>
+        <text class="dns-district-means" x={x + 14} y={y + 39}>{district.means}</text>
+      </g>;
+    })}
+    {records.map((record) => {
+      const at = place.get(record.type)!;
+      return <a class="dns-sign" href={`#${anchor(record.type)}`} data-dns-sign={record.type} style={`--tone:${TONE[districtOf(record.district).tone]}`} aria-label={`${record.type}, ${record.phrase}`} aria-current={record.type === first ? 'true' : undefined}>
+        <rect x={at.x} y={at.y} width={SIGN.w} height={SIGN.h} rx="7" />
+        <path class="dns-pin" d={`M${at.x} ${at.y + 15} V${at.y + 7} a7 7 0 0 1 7 -7 H${at.x + 15} Z`} />
+        <text class="dns-sign-type" x={at.x + SIGN.w / 2} y={at.y + 21} text-anchor="middle">{record.type}</text>
+        <text class="dns-sign-phrase" x={at.x + SIGN.w / 2} y={at.y + 37} text-anchor="middle">{record.sign}</text>
+      </a>;
+    })}
+  </svg>
+</div>
+<div class="lsn-controls is-choices dns-record-picker" role="group" aria-label="Choose a record type" data-dns-picker hidden>
+  {records.map((record) => <button type="button" data-dns-pick={record.type} aria-pressed={record.type === first ? 'true' : 'false'}>{record.type}</button>)}
+</div>
+<div class="dns-records">
+  {records.map((record, index) => {
+    const district = districtOf(record.district);
+    const id = anchor(record.type);
+    return <article class:list={['dns-record', index === 0 && 'is-active']} id={id} data-dns-record={record.type} style={`--tone:${TONE[district.tone]}`} aria-labelledby={`${id}-title`}>
+      <header><span>{district.name.toUpperCase()}</span><h3 id={`${id}-title`} tabindex="-1"><b>{record.type}</b> {record.phrase}</h3></header>
+      <p class="dns-says">“{record.says}”</p>
+      <div class="dns-zone-line"><span>ZONE FILE</span><code>{record.line}</code></div>
+      <dl class="dns-fields">{record.fields.map(([key, value, meaning]) => <div><dt>{key}</dt><dd><code>{value}</code>{meaning && <small>{meaning}</small>}</dd></div>)}</dl>
+      <div class="lsn-code-row">
+        <section class="lsn-code" aria-label="Ask for it">
+          <h3>Ask for it</h3>
+          <pre tabindex="0"><code><span class="lsn-line is-hot">$ {record.dig[0]}</span>{record.dig[1].split('\n').map((line) => <span class="lsn-line">{line}</span>)}</code></pre>
+        </section>
+        <div class="lsn-note dns-trap"><span>THE TRAP</span><p>{record.trap}</p></div>
+      </div>
+      <p class="dns-record-sources">{record.sources.map((source) => <a href={dnsSources[source].url} target="_blank" rel="noopener noreferrer">{dnsSources[source].label} ↗</a>)}</p>
+    </article>;
+  })}
+</div>

@@ -1,4 +1,4 @@
-type Point = { element: HTMLElement; id: string; x: number; y: number };
+type Point = { element: HTMLElement; id: string; x: number; y: number; parent?: string };
 
 export function createTreeCamera(map: HTMLElement) {
   const viewport = map.querySelector<HTMLElement>('[data-map-viewport]')!;
@@ -9,7 +9,17 @@ export function createTreeCamera(map: HTMLElement) {
     id: element.dataset.treePoint!,
     x: Number(element.dataset.treeX),
     y: Number(element.dataset.treeY),
+    parent: element.dataset.treeParent,
   }));
+  const pointById = new Map(points.map((point) => [point.id, point]));
+  // On a narrow screen a grouped branch stretches downwards and each topic sits straight under its group, so nothing overlaps.
+  const place = (point: Point, compact: boolean): { x: number; y: number } => {
+    const parent = compact && point.parent ? pointById.get(point.parent) : undefined;
+    if (!parent) return point;
+    const from = place(parent, compact);
+    const topic = point.element.matches('.tree-topic');
+    return { x: topic ? from.x : point.x, y: from.y + (point.y - parent.y) * (topic ? 2.2 : 1.8) };
+  };
   let zoom = 1;
   let frame = 0;
   let drag: { id: number; x: number; y: number; moved: boolean } | null = null;
@@ -79,11 +89,12 @@ export function createTreeCamera(map: HTMLElement) {
     const topicLabels: HTMLElement[] = [];
 
     for (const point of points) {
-      // Pure 2D flat layout
-      const x = centerX + cameraX + point.x * baseScale * axisScale();
-      const y = centerY + cameraY + point.y * baseScale;
+      // Pure 2D flat layout.
+      const { x: worldX, y: worldY } = place(point, compact);
+      const x = centerX + cameraX + worldX * baseScale * axisScale();
+      const y = centerY + cameraY + worldY * baseScale;
       const nodeScale = Math.max(.78, Math.min(1.08, .82 + baseScale * .16));
-      const box = point.element.matches('.tree-root') ? 92 : point.element.matches('.tree-collection') ? 68 : 46;
+      const box = point.element.matches('.tree-root') ? 92 : point.element.matches('.tree-collection') ? 68 : point.element.matches('.tree-group') ? 36 : 46;
       point.element.style.width = `${box}px`;
       point.element.style.height = `${box}px`;
       point.element.style.left = `${x - box / 2}px`;
@@ -95,7 +106,7 @@ export function createTreeCamera(map: HTMLElement) {
       if (point.element.matches('.tree-topic') && !point.element.hidden) topicLabels.push(point.element);
     }
 
-    const occupied = [...map.querySelectorAll<HTMLElement>('.tree-root .tree-label, .tree-collection:not([hidden]) .tree-label')].map((label) => label.getBoundingClientRect());
+    const occupied = [...map.querySelectorAll<HTMLElement>('.tree-root .tree-label, .tree-collection:not([hidden]) .tree-label, .tree-group:not([hidden]) .tree-label')].map((label) => label.getBoundingClientRect());
     topicLabels.forEach((element) => {
       const label = element.querySelector<HTMLElement>('.tree-label')!;
       if (!compact) {
@@ -191,7 +202,9 @@ export function createTreeCamera(map: HTMLElement) {
           const branchPoint = collection ? points.find((point) => point.id === `collection-${collection}`) : null;
           const focusPoint = branchPoint || pt;
           targetCameraX = -focusPoint.x * currentScale * targetCameraZoom * axisScale();
-          const desiredY = branchPoint ? viewport.clientHeight * .22 : pt.element.matches('.tree-collection') ? viewport.clientHeight * .38 : viewport.clientHeight * .46;
+          // A branch with groups is taller, so its collection node sits higher.
+          const tall = Boolean(map.querySelector(`[data-tree-branch="${pt.element.dataset.treeToggle}"] [data-tree-group]`));
+          const desiredY = branchPoint ? viewport.clientHeight * .22 : pt.element.matches('.tree-collection') ? viewport.clientHeight * (tall ? .2 : .38) : viewport.clientHeight * .46;
           const projectionCenterY = compact ? viewport.clientHeight * .5 : viewport.clientHeight * (map.classList.contains('has-selection') ? .58 : .72);
           targetCameraY = desiredY - projectionCenterY - focusPoint.y * currentScale * targetCameraZoom;
         }

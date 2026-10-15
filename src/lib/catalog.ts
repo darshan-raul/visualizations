@@ -28,6 +28,17 @@ export const collections = {
 
 export type CollectionSlug = keyof typeof collections;
 
+export type CollectionGroup = { id: string; label: string; means: string };
+
+/** Reading-order sections inside a collection page. A collection listed here needs `group` and `order` on every topic. */
+export const collectionGroups: Partial<Record<CollectionSlug, CollectionGroup[]>> = {
+  foundations: [
+    { id: 'machine', label: 'The machine', means: 'What runs on one computer' },
+    { id: 'network', label: 'The network', means: 'How computers find and reach each other' },
+    { id: 'web', label: 'The web', means: 'What a browser and a server say to each other' },
+  ],
+};
+
 export const formatLabels = {
   'visual-brief': 'Visual Brief',
   'deep-dive': 'Deep Dive',

@@ -1,0 +1,5 @@
+# The public example.com zone. Anything else is refused, like an authoritative-only server.
+example.com:53 {
+    file /zones/public.zone
+    log
+}

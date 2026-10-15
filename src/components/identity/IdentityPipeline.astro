@@ -1,0 +1,53 @@
+---
+import IdentityIcon from './IdentityIcon.astro';
+import { pipelineFlows,samples } from './pipeline-data';
+const stage=[
+ {n:1,title:'Identity source',question:'Who or what is requesting?',tone:'identity',entries:[['human','Human user','IAM user · Identity Center','identity'],['workload','Workload','EC2 · ECS · EKS · Lambda','workload'],['external','External identity','SAML or OIDC provider','groups'],['iot','Device / IoT','X.509 certificate · IoT policy','workload'],['service','AWS service','Uses a service role','service']]},
+ {n:2,title:'Authenticate',question:'Prove the source identity',tone:'identity',entries:[['keys','Access keys','Key ID + secret','credentials'],['center','Identity Center','Browser sign-in → access token','auth'],['federation','Federation','SAML assertion / OIDC token','groups'],['service','Service or provider','Runtime credential delivery','workload']]},
+ {n:3,title:'Obtain credentials',question:'Select or exchange for AWS creds',tone:'credentials',entries:[['direct','Direct signing','IAM user key; no STS exchange','credentials'],['identity-center','GetRoleCredentials','Assigned account role','identity'],['assume','STS AssumeRole','Signed by existing AWS creds','credentials'],['web','STS web identity','OIDC token; no AWS key needed','auth'],['saml','STS SAML','Assertion + trusted role','auth'],['federation-token','GetFederationToken','IAM user broker + session policy','credentials'],['session-token','GetSessionToken','IAM user + optional MFA','credentials'],['provider','Workload / IoT provider','EC2 · ECS · Lambda · IoT Core','workload']]},
+ {n:4,title:'Sign the request',question:'AWS credentials on an API call',tone:'credentials',entries:[['request','SigV4 request','Access key ID + signature','file'],['token','Session token','Sent with temporary creds','credentials'],['secret','Secret access key','Used locally; never sent','auth']]},
+ {n:5,title:'Authorization',question:'Can this action happen?',tone:'policy',entries:[['policy','Policy evaluation','Identity + resource permissions','policy'],['boundary','Guardrails','Boundary · SCP/RCP · session','file'],['denied','Explicit deny','Overrides an allow','policy']]},
+ {n:6,title:'AWS resource',question:'Run the permitted action',tone:'resource',entries:[['s3','Amazon S3','List reports in this example','resource'],['ec2','Amazon EC2','Instances and related APIs','workload'],['rds','Amazon RDS','Database control-plane APIs','resource'],['lambda','AWS Lambda','Function APIs','workload'],['eks','Amazon EKS','Cluster APIs','workload'],['secrets','Secrets Manager','Secret API actions','credentials']]},
+];
+const concepts=[['IAM users','Persistent account identity','identity','#identity-map--user'],['IAM roles','Trust + permissions','identity','#identity-map--role'],['Federation','External identity proof','auth','#workforce-login'],['Identity Center','Workforce account access','auth','#workforce-login'],['Policies','Resource authorization','policy','#cross-account'],['AWS STS','Temporary sessions','credentials','#cross-account']];
+const primaryFlowIds=new Set(['iam-user','identity-center','cross-account','ec2','denied']);
+---
+<div class="ip" data-ip>
+  <div class="ip-stage-grid" aria-label="Six-stage AWS identity pipeline">
+    {stage.map(s=><section class={`ip-stage is-${s.tone}`} data-ip-stage={s.n}>
+      <header><b>{s.n}</b><div><h3>{s.title}</h3><p>{s.question}</p></div></header>
+      <div class="ip-stage-body">{s.entries.map(([id,label,detail,icon])=><button type="button" class="ip-entry" data-ip-box={`${s.n}:${id}`} data-ip-entry={id} aria-pressed="false" disabled id={s.n===1&&id==='human'?'identity-map--user':s.n===3&&id==='assume'?'identity-map--role':undefined}><IdentityIcon kind={icon} size={25}/><span><strong>{label}</strong><small>{detail}</small></span></button>)}
+      {s.n===4&&<div class="ip-wire"><code>GET /?list-type=2<br/>Host: s3.amazonaws.com<br/>Authorization: AWS4-HMAC-SHA256<br/>X-Amz-Security-Token: …</code></div>}
+      {s.n===5&&<div class="ip-decision"><span class="is-allowed">✓ Allowed →</span><span class="is-denied">× Denied ↓</span></div>}
+      </div>
+    </section>)}
+  </div>
+  <div class="ip-workbench">
+    <section class="ip-flows" aria-labelledby="ip-flows-title"><header><h3 id="ip-flows-title">Common identity flows</h3><p>Choose a route to see the whole path</p></header>
+      <div class="ip-flow-options" role="group" aria-label="Choose a common identity flow">{pipelineFlows.filter(flow=>primaryFlowIds.has(flow.id)).map((flow)=><button type="button" data-ip-flow={flow.id} aria-pressed={flow.id==='cross-account'?'true':'false'}>{flow.label}</button>)}</div>
+      <details class="ip-more-flows"><summary>More routes <span>4</span></summary><div class="ip-flow-options" role="group" aria-label="Choose another identity flow">{pipelineFlows.filter(flow=>!primaryFlowIds.has(flow.id)).map(flow=><button type="button" data-ip-flow={flow.id} aria-pressed="false">{flow.label}</button>)}</div></details>
+      {pipelineFlows.map((flow)=><section class="ip-flow-state" data-ip-flow-state={flow.id}>
+        <p class="ip-flow-note"><strong>{flow.label}</strong> · {flow.note}</p>
+        <ol>{flow.actors.map((actor,j)=><li class:list={[flow.result==='denied'&&j>=4&&'is-denied',j===5&&flow.result==='allowed'&&'is-allowed']}><b>{j+1}</b><IdentityIcon kind={['identity','auth','credentials','file','policy','resource'][j]} size={31}/><strong>{actor}</strong><small>{flow.details[j]}</small></li>)}</ol>
+      </section>)}
+    </section>
+    <section class="ip-example" aria-labelledby="ip-example-title"><header><h3 id="ip-example-title">Credential example</h3><p>Fictional values · no live AWS call</p></header>
+      <div class="ip-sample-options" role="group" aria-label="Choose a credential example">{Object.entries(samples).map(([key,sample])=><button type="button" data-ip-sample={key} aria-pressed={key==='cli'?'true':'false'}>{sample.label}</button>)}</div>
+      {Object.entries(samples).map(([key,sample])=><div class="ip-sample" data-ip-sample-state={key}><pre tabindex="0"><code>{sample.code}</code></pre><p>{sample.note}</p></div>)}
+    </section>
+    <section class="ip-box-inspector" data-ip-box-inspector aria-labelledby="ip-box-title" hidden>
+      <div class="ip-box-inspector-head"><span data-ip-box-stage></span><button type="button" data-ip-box-close aria-label="Close component explanation">×</button></div>
+      <h3 id="ip-box-title" data-ip-box-title></h3>
+      <p data-ip-box-summary></p>
+      <div class="ip-box-actions"><button type="button" data-ip-box-route hidden>Show example route →</button><a data-ip-box-source href="https://docs.aws.amazon.com/IAM/latest/UserGuide/introduction.html" target="_blank" rel="noopener noreferrer">AWS reference ↗</a></div>
+    </section>
+  </div>
+  <div class="ip-bottom"><section class="ip-concepts" aria-label="Key concepts and deeper views"><header><h3>Key concepts</h3><span>Choose a topic to inspect its mechanism</span></header><div>{concepts.map(([name,detail,tone,href])=><a class={`is-${tone}`} href={href} data-ip-concept={href==='#identity-map--user'?'iam-user':href==='#identity-map--role'?'cross-account':undefined}><IdentityIcon kind={tone} size={27}/><strong>{name}</strong><small>{detail}</small><span aria-hidden="true">↗</span></a>)}</div></section>
+  <section class="ip-advanced" aria-label="Advanced identity topics"><h3>Advanced topics</h3><div>
+    <a href="#cross-account">Cross-account trust →</a><a href="#expiry-refresh">MFA &amp; duration →</a>
+    <a href="/aws-authorization-decision-explorer">Condition keys →</a><a href="#session-context">Session attribution →</a>
+    <a href="/aws-authorization-decision-explorer">Permission boundaries →</a><a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/what-is-access-analyzer.html" target="_blank" rel="noopener noreferrer">Access Analyzer ↗</a>
+    <a href="/aws-authorization-decision-explorer">Organizations SCPs →</a><a href="#credential-diagnosis">Find a failure →</a>
+  </div></section></div>
+  <p class="ip-key">The source proves who it is. A provider supplies credentials. The signed request is then authorized for its specific action and resource.</p>
+</div>

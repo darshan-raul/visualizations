@@ -1,0 +1,5 @@
+---
+interface Props { label: string; title: string; detail?: string; tone?: string; actor?: string }
+const { label, title, detail, tone = 'normal', actor } = Astro.props;
+---
+<div class={`ic-node is-${tone}`} data-ic-actor={actor}><span>{label}</span><strong>{title}</strong>{detail && <small>{detail}</small>}<slot /></div>

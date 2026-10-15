@@ -1,0 +1,14 @@
+---
+import { identityLesson } from './identity-lesson';
+const groups=identityLesson.groups;
+const pad=(n:number)=>String(n).padStart(2,'0');
+---
+<span class="ip-index-count"><span>VIEWS</span><strong data-lsn-count>01 / {pad(identityLesson.views.length)}</strong></span>
+{groups.map((group,i)=>{
+ const views=identityLesson.views.filter(v=>v.group===group);
+ return <details class="ip-index-group" data-lsn-group open={i===0}>
+   <summary>{group}</summary>
+   <div>{views.map((view,j)=><a href={`#${view.id}`} data-lsn-link aria-current={i===0&&j===0?'step':undefined}><span>{pad(identityLesson.views.indexOf(view)+1)}</span><strong>{view.label}</strong></a>)}</div>
+ </details>;
+})}
+<a class="ip-index-source" href="#identity-sources">Sources ↗</a>

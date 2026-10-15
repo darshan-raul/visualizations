@@ -1,0 +1,13 @@
+# Stands in for the Route 53 VPC Resolver: a private zone, a forwarding rule, and recursion for everything else.
+example.com:53 {
+    file /zones/private.zone
+    log
+}
+corp.example.com:53 {
+    forward . 172.30.3.30
+    log
+}
+.:53 {
+    forward . 172.30.3.10
+    log
+}

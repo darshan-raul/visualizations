@@ -20,6 +20,8 @@ const topics = defineCollection({
     featured: z.boolean().default(false),
     state: z.enum(['legacy', 'draft', 'reviewed']).default('legacy'),
     related: z.array(z.string()).optional(),
+    group: z.string().optional(),
+    order: z.number().int().positive().optional(),
     sources: z.array(z.object({ label: z.string(), url: z.url() })).optional(),
   }),
 });

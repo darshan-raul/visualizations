@@ -1,0 +1,16 @@
+---
+import IdentityVisual from './IdentityVisual.astro';
+import type { IdentityPanel } from './identity-model';
+interface Props { panel:IdentityPanel }
+const {panel}=Astro.props;
+const aliases=panel.aliases.flatMap(id=>id.startsWith('identity-flow-')?[id,...Array.from({length:7},(_,i)=>`${id}-detail-${i}`),`${id}-legend`,`${id}-arrow`]:[id]);
+---
+<div class="ic-panel" data-ic-panel={panel.id} data-ic-mode={panel.mode}>
+  {aliases.map(id=><span id={id} class="ic-alias"/>)}
+  {panel.states.length>1 && <div class="ic-controls" data-ic-controls hidden role="group" aria-label={panel.mode==='steps'?'Credential journey steps':'Choose a scenario'}>{panel.states.map((state,i)=><button type="button" data-ic-select={i} aria-pressed={i===0?'true':'false'}>{panel.mode==='steps'&&`${i+1}. `}{state.label}</button>)}{panel.mode==='steps'&&<button type="button" data-ic-reset>↺ Restart</button>}</div>}
+  {panel.states.map((state,index)=><section data-ic-state={index} class={`ic-state is-${state.tone??'normal'}`}>
+    <h3 class="ic-state-heading">{state.title}</h3>
+    <IdentityVisual kind={panel.kind} state={state} index={index}/>
+    <div class="ic-state-context" data-ic-context><span class="lsn-kicker">{state.label}</span><h3>{state.title}</h3><p>{state.body}</p><dl class="lsn-facts"><div><dt>Credential context</dt><dd>{state.credential}</dd></div><div><dt>Acting identity</dt><dd>{state.principal}</dd></div>{state.facts?.map(([label,value])=><div><dt>{label}</dt><dd>{value}</dd></div>)}</dl></div>
+  </section>)}
+</div>

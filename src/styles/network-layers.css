@@ -1,0 +1,45 @@
+.network-layers { min-width:0; }
+.layer-model-intro { padding:0 0 22px; border-bottom:1px solid var(--border-strong); }
+.layer-model-intro > span { display:block; margin-bottom:8px; color:var(--cyan); font:.68rem var(--mono); letter-spacing:.09em; }
+.layer-model-intro > strong { font-size:clamp(1.15rem,2vw,1.55rem); letter-spacing:-.03em; }
+.layer-model-intro p { margin:8px 0 0; color:var(--muted); font-size:.9rem; line-height:1.5; }
+.layer-model-layout { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(0,1fr); gap:24px; margin-top:22px; align-items:start; }
+.layer-crosswalk { width:100%; border-collapse:collapse; table-layout:fixed; }
+.layer-crosswalk caption { text-align:left; padding:0 0 12px; color:var(--muted); font:.7rem/1.5 var(--mono); }
+.layer-crosswalk thead th { width:58%; padding:10px 8px; color:var(--cyan); text-align:left; font:.7rem var(--mono); border-bottom:1px solid var(--border-strong); }
+.layer-crosswalk thead th + th { width:42%; }
+.layer-crosswalk tbody th { position:relative; padding:13px 8px 13px 38px; text-align:left; font-weight:400; border-bottom:1px solid var(--border); }
+.layer-number { position:absolute; top:15px; left:7px; color:var(--cyan); font:.68rem var(--mono); }
+.layer-crosswalk tbody strong { display:block; font-size:.86rem; line-height:1.3; }
+.layer-crosswalk small { display:block; margin-top:5px; color:var(--muted); font-size:.72rem; line-height:1.45; }
+.layer-crosswalk td { padding:14px 12px; vertical-align:middle; border:1px dashed var(--border-strong); background:rgba(66,214,232,.04); }
+.layer-band-name { font:.83rem var(--mono); color:var(--cyan); }
+.layer-request { min-width:0; }
+.layer-request h3 { margin:0; color:var(--cyan); font:.7rem/1.5 var(--mono); letter-spacing:.06em; }
+.layer-direction,.layer-receive { margin:8px 0 14px; color:var(--muted); font-size:.76rem; line-height:1.5; }
+.layer-request ol { margin:0; padding:0; list-style:none; }
+.layer-request li { position:relative; display:grid; gap:7px; padding:15px 12px; margin-bottom:24px; border-left:2px solid var(--cyan); background:rgba(66,214,232,.04); }
+.layer-request li:not(:last-child)::after { content:'↓'; position:absolute; bottom:-22px; left:12px; color:var(--cyan); font:1.05rem var(--mono); }
+.layer-request li > span { color:var(--cyan); font:.66rem var(--mono); text-transform:uppercase; letter-spacing:.06em; }
+.layer-request li > strong { font-size:.93rem; }
+.layer-request code { color:var(--text); font:.72rem/1.5 var(--mono); overflow-wrap:anywhere; }
+.layer-request li > small { color:var(--muted); font-size:.75rem; line-height:1.5; }
+.layer-model-notes { padding-top:4px; border-top:1px solid var(--border); }
+.layer-model-notes p { color:var(--muted); font-size:.81rem; line-height:1.6; }
+.layer-model-notes strong { color:var(--text); }
+.layer-model-notes a { color:var(--cyan); text-decoration:underline; text-underline-offset:3px; }
+.layer-model-sources { margin:18px 0 0; color:var(--muted); font:.69rem/1.7 var(--mono); overflow-wrap:anywhere; }
+.layer-model-sources a { color:var(--cyan); text-decoration:underline; text-underline-offset:3px; }
+.protocol-console.is-enhanced .network-layers [data-visual-node]:not(.is-reached) { opacity:1; }
+.network-layers .is-reached { background:rgba(66,214,232,.11); }
+.layer-crosswalk th.is-reached { box-shadow:inset 2px 0 var(--cyan); }
+.layer-crosswalk td.is-reached { border-color:var(--cyan); }
+.layer-request li.is-reached { border-left-width:4px; }
+#osi-tcp-ip .protocol-canvas { display:flex; flex-direction:column; }
+#osi-tcp-ip .protocol-step-index { order:1; margin:0 0 20px; padding-top:0; border-top:0; }
+#osi-tcp-ip .network-layers { order:2; }
+#osi-tcp-ip .protocol-controls { order:3; }
+#osi-tcp-ip .protocol-evidence { order:4; }
+#osi-tcp-ip figcaption { order:5; }
+@media(max-width:800px) { .layer-model-layout { grid-template-columns:1fr; }.layer-request { padding-top:20px; border-top:1px solid var(--border-strong); } }
+@media(max-width:380px) { .layer-crosswalk tbody th { padding-left:29px; padding-right:5px; }.layer-crosswalk tbody strong { font-size:.76rem; }.layer-crosswalk td { padding:12px 7px; }.layer-band-name { font-size:.73rem; }.layer-crosswalk small { font-size:.7rem; }.layer-number { left:3px; font-size:.63rem; } }

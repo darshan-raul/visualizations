@@ -1,0 +1,7 @@
+$ORIGIN example.com.
+$TTL 300
+@       IN SOA ns1.example.com. hostmaster.example.com. 2026101501 7200 3600 1209600 300
+@       IN NS  ns1.example.com.
+ns1     IN A   192.0.2.53
+shop    IN A   192.0.2.10
+status  IN A   192.0.2.30

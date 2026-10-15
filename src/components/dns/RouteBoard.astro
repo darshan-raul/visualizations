@@ -1,0 +1,43 @@
+---
+import { splitRouting, type RouteState } from './dns-lesson';
+/**
+ * Split routing: five places ask for three names. Without JavaScript the table shows every answer as designed and a list
+ * says what each mistake changes; with it, the cells pick a question, the setup buttons break one piece, and the detail
+ * under the table follows the question hop by hop.
+ */
+const STATE: Record<RouteState, string> = { public: 'public view', private: 'private view', corp: 'corporate', fail: 'not found' };
+const { names, places, routes, setups } = splitRouting;
+const placeLabel = Object.fromEntries(places.map((place) => [place.id, place.label]));
+---
+<div class="lsn-controls is-choices dns-route-setups" role="group" aria-label="Choose the setup" data-dns-route-setups hidden>
+  {setups.map((setup, index) => <button type="button" data-dns-setup={setup.id} aria-pressed={index === 0 ? 'true' : 'false'}>{setup.label}</button>)}
+</div>
+<p class="dns-route-summary" data-dns-route-summary>{setups[0].summary}</p>
+<div class="lsn-table-wrap"><table class="lsn-table dns-route-table">
+  <caption>Where each question ends up, as designed. Rows are where the question starts.</caption>
+  <thead><tr><th scope="col">Asked from</th>{names.map((name) => <th scope="col"><code>{name}</code></th>)}</tr></thead>
+  <tbody>
+    {places.map((place) => <tr>
+      <th scope="row">{place.label}<small>{place.sub}</small></th>
+      {routes[place.id].map((route, index) => <td class={`dns-route-cell is-${route.state}`} data-dns-cell={`${place.id}:${index}`}>
+        <span>{STATE[route.state]}</span><b>{route.answer}</b><small>via {route.hops.at(-1)![0]}</small>
+      </td>)}
+    </tr>)}
+  </tbody>
+</table></div>
+<div class="dns-route" data-dns-route hidden aria-labelledby="dns-route-title">
+  <h3 id="dns-route-title" class="dns-route-question"><span data-dns-route-place></span> asks for <code data-dns-route-name></code></h3>
+  <ol class="dns-hops" data-dns-hops aria-label="Where the question goes"></ol>
+  <p class="dns-route-answer" data-dns-route-answer></p>
+  <p class="dns-route-why" data-dns-route-why></p>
+  <section class="lsn-code" aria-label="Check it">
+    <h3>Check it</h3>
+    <pre tabindex="0"><code data-dns-route-check></code></pre>
+  </section>
+</div>
+<ul class="dns-route-mistakes" data-dns-route-mistakes>
+  {setups.slice(1).map((setup) => <li>
+    <b>{setup.label}.</b> {setup.summary} It changes: {Object.entries(setup.changes).flatMap(([place, changed]) => Object.entries(changed ?? {}).map(([index, route]) => `${placeLabel[place]}, ${names[Number(index)]} → ${route!.answer}`)).join('; ')}.
+  </li>)}
+</ul>
+<script is:inline type="application/json" data-dns-route-data set:html={JSON.stringify(splitRouting).replace(/</g, '\\u003c')}></script>

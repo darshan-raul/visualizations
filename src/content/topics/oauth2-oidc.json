@@ -3,6 +3,8 @@
   "summary": "Walk through authorization flows, PKCE, tokens, identity claims, and the trust boundaries behind modern sign-in.",
   "slug": "oauth2-explainer",
   "collection": "foundations",
+  "group": "web",
+  "order": 3,
   "tags": ["Identity", "Security", "Protocols"],
   "technologies": ["OAuth 2.0", "OpenID Connect", "JWT"],
   "format": "flow-explorer",

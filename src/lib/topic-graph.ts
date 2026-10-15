@@ -11,6 +11,8 @@ export type TopicNode = {
   format: string;
   difficulty: string;
   state: string;
+  group?: string;
+  order?: number;
 };
 
 export type TopicEdge = {
@@ -66,6 +68,7 @@ export function buildTopicGraph(topics: TopicEntry[]) {
     format: data.format,
     difficulty: data.difficulty,
     state: data.state,
+    ...(data.group ? { group: data.group, order: data.order } : {}),
   }));
   const tagFrequency = new Map<string, number>();
   for (const node of nodes) for (const tag of node.tags) tagFrequency.set(tag, (tagFrequency.get(tag) || 0) + 1);

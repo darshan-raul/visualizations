@@ -1,0 +1,44 @@
+---
+title: "DNS: From a Name to an Answer"
+summary: "Follow shop.example.com from your app to the root and back, see every cache its answer lands in, look up any record type on a map of the zone, then move the name to a new address and diagnose the ways a lookup fails."
+slug: dns
+collection: foundations
+tags: [Networking, DNS, Troubleshooting, Security]
+technologies: [DNS, dig, DNSSEC, Route 53, CoreDNS]
+format: deep-dive
+difficulty: foundational
+published: 2026-10-15
+reviewed: 2026-10-15
+versionScope: Behaviour per the cited RFCs; resolver defaults (Unbound, glibc, OpenJDK) and Route 53 behaviour read on 2026-10-15; dig output from BIND 9.20
+legacyPath: /dns
+featured: false
+state: reviewed
+related: [kubernetes-dns, networking, http-status-codes, vpc-flow]
+group: network
+order: 2
+sources:
+  - label: "RFC 1034: DNS concepts"
+    url: https://www.rfc-editor.org/rfc/rfc1034.html
+  - label: "RFC 1035: DNS implementation"
+    url: https://www.rfc-editor.org/rfc/rfc1035.html
+  - label: "RFC 9156: QNAME minimisation"
+    url: https://www.rfc-editor.org/rfc/rfc9156.html
+  - label: "RFC 2308: negative caching"
+    url: https://www.rfc-editor.org/rfc/rfc2308.html
+  - label: "RFC 2181: clarifications to the DNS spec"
+    url: https://www.rfc-editor.org/rfc/rfc2181.html
+  - label: "RFC 4033: DNSSEC introduction"
+    url: https://www.rfc-editor.org/rfc/rfc4033.html
+  - label: "RFC 7766: DNS over TCP"
+    url: https://www.rfc-editor.org/rfc/rfc7766.html
+  - label: "RFC 8914: extended DNS errors"
+    url: https://www.rfc-editor.org/rfc/rfc8914.html
+  - label: "nsswitch.conf(5)"
+    url: https://man7.org/linux/man-pages/man5/nsswitch.conf.5.html
+  - label: "Route 53: private hosted zone considerations"
+    url: https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/hosted-zone-private-considerations.html
+---
+
+import DnsConsole from '../../components/dns/DnsConsole.astro';
+
+<DnsConsole published={props.published} reviewed={props.reviewed} />

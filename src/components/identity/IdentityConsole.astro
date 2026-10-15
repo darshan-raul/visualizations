@@ -1,0 +1,27 @@
+---
+import LessonConsole from '../lesson/LessonConsole.astro';
+import IdentityPipeline from './IdentityPipeline.astro';
+import IdentityPipelineIndex from './IdentityPipelineIndex.astro';
+import IdentityPanel from './IdentityPanel.astro';
+import IamPillars from './IamPillars.astro';
+import { panels } from './identity-model';
+import { identityLesson } from './identity-lesson';
+interface Props { published:Date; reviewed?:Date }
+---
+<LessonConsole sourceAliases={["sources", "related-visuals"]} lesson={identityLesson} {...Astro.props}>
+  <IdentityPipelineIndex slot="index"/>
+  <IamPillars slot="view-four-pillars"/>
+  <div slot="view-identity-map"><span id="what-assumerole-creates"/><span id="identity-scenario-label"/><IdentityPipeline/></div>
+  <IdentityPanel slot="view-workforce-login" panel={panels[1]}/>
+  <IdentityPanel slot="view-permission-sets" panel={panels[2]}/>
+  <IdentityPanel slot="view-workload-credentials" panel={panels[3]}/>
+  <IdentityPanel slot="view-signed-request" panel={panels[4]}/>
+  <IdentityPanel slot="view-cross-account" panel={panels[5]}/>
+  <IdentityPanel slot="view-role-chaining" panel={panels[6]}/>
+  <IdentityPanel slot="view-assume-or-pass" panel={panels[7]}/>
+  <IdentityPanel slot="view-vendor-external-id" panel={panels[8]}/>
+  <IdentityPanel slot="view-expiry-refresh" panel={panels[9]}/>
+  <IdentityPanel slot="view-session-context" panel={panels[10]}/>
+  <IdentityPanel slot="view-credential-diagnosis" panel={panels[11]}/>
+</LessonConsole>
+<script>import { initIdentity } from './identity-client'; import { initPipeline } from './pipeline-client'; import { initPillars } from './pillars-client'; initIdentity(); initPipeline(); initPillars();</script>

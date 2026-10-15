@@ -481,6 +481,16 @@ a { color: inherit; }
 .view-switch button[aria-pressed="true"] { background: rgba(66,214,232,.11); color: var(--cyan); }
 .topic-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 12px; }
 .topic-grid[hidden] { display: none; }
+.topic-groups { display: grid; gap: 34px; }
+.topic-groups[hidden], .topic-group[hidden] { display: none; }
+.topic-group > header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 14px; padding: 0 2px 10px; border-bottom: 1px solid var(--border); }
+.topic-group > header span { color: var(--dim); font: .75rem var(--mono); }
+.topic-group > header h2 { margin: 0; font-size: 1.15rem; }
+.topic-group > header p { margin: 0; color: var(--muted); font-size: .9rem; }
+/* A group is a reading order, so its cards sit side by side at one size. */
+.topic-group .topic-card, .topic-group .topic-card.is-featured { grid-column: span 4; }
+@media (max-width: 960px) { .topic-group .topic-card, .topic-group .topic-card.is-featured { grid-column: span 6; } }
+@media (max-width: 650px) { .topic-group .topic-card, .topic-group .topic-card.is-featured { grid-column: 1 / -1; } }
 .topic-card { --collection-accent: var(--text); min-width: 0; grid-column: span 6; }
 .topic-card.is-featured { grid-column: span 12; }
 .topic-card[hidden] { display: none; }

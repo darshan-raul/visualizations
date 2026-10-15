@@ -96,6 +96,16 @@ The AI collection was added on 2026-10-11 at the owner's request, for LLM applic
 
 Do not create many sparse top-level collections. A tag may become a collection later only when there is enough substantial content to justify it.
 
+### Groups inside a collection
+
+Confirmed on 2026-10-15 at the owner's request: a collection page may divide its topics into a few named groups, shown as headings with the topics in reading order. Groups are sections, not collections: they get no route or filter. In the homepage topic tree an expanded collection with groups branches into one node per group, each with its topics in reading order; on narrow screens only the group names are labelled. Foundations is grouped first:
+
+1. **The machine:** Linux, Containers, Docker Multi-Architecture
+2. **The network:** Networking, DNS, SSH
+3. **The web:** HTTP Status Codes, CORS, OAuth 2.0 & OIDC
+
+The groups are defined in `src/lib/catalog.ts`; each topic in a grouped collection sets `group` and `order` in its front matter, and the build fails if one is missing. Collections without groups keep their alphabetical list.
+
 ### Tags
 
 Visualizations can have multiple cross-cutting tags, including:
