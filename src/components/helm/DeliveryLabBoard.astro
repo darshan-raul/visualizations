@@ -1,0 +1,500 @@
+---
+/**
+ * DeliveryLabBoard.astro - Lab 4: Delivery Architecture Switchboard & Drift Simulation
+ * Compares:
+ * 1. CI Push (helm upgrade -i in external runner with admin creds)
+ * 2. Argo CD (Pull / Pure Template Engine: helm template + Server-Side Apply, zero Helm secrets)
+ * 3. Flux (Pull / Cluster Release Manager: Helm Go SDK in-cluster, manages Helm release secrets)
+ * Interactive Drift Simulator: Inject kubectl edit mutation and observe self-healing vs silent divergence.
+ */
+---
+<div class="helm-delivery-board" data-helm-delivery-board>
+  <div class="delivery-toolbar">
+    <div class="delivery-picker">
+      <span class="delivery-lbl">DELIVERY ENGINE:</span>
+      <div class="delivery-btns" role="group" aria-label="Select Delivery Architecture">
+        <button type="button" class="deliv-btn is-active" data-deliv-mode="ci-push">
+          <strong>1. CI Push</strong>
+          <small>helm upgrade -i</small>
+        </button>
+        <button type="button" class="deliv-btn" data-deliv-mode="argo">
+          <strong>2. Argo CD</strong>
+          <small>helm template + SSA</small>
+        </button>
+        <button type="button" class="deliv-btn" data-deliv-mode="flux">
+          <strong>3. Flux CD</strong>
+          <small>helm-controller SDK</small>
+        </button>
+      </div>
+    </div>
+
+    <div class="drift-control">
+      <span class="delivery-lbl">SIMULATE PRODUCTION OUTAGE DRIFT:</span>
+      <button type="button" class="drift-toggle-btn" data-drift-btn aria-pressed="false">
+        <span class="drift-icon">⚡</span>
+        <span data-drift-text>Inject "kubectl edit" (replicas: 3 → 5)</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="delivery-grid">
+    <!-- Col 1: Git Repository -->
+    <div class="delivery-col is-git">
+      <div class="deliv-header">
+        <span class="tag">SOURCE OF TRUTH</span>
+        <h4>Git Repository</h4>
+        <small>payment-api/values-prod.yaml</small>
+      </div>
+      <div class="deliv-card">
+        <pre><code data-deliv-git>replicaCount: 3
+image:
+  repository: payments/api
+  tag: "4.7.2"</code></pre>
+        <div class="git-verdict">
+          Declared state in Git: <strong>3 Replicas</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Col 2: The Execution Engine -->
+    <div class="delivery-col is-engine">
+      <div class="deliv-header">
+        <span class="tag" data-engine-tag>EXTERNAL RUNNER</span>
+        <h4 data-engine-title>CI Runner (Push Model)</h4>
+        <small data-engine-sub>GitHub Actions / GitLab CI</small>
+      </div>
+      <div class="deliv-card engine-card">
+        <div class="engine-step">
+          <span class="step-num">1</span>
+          <div>
+            <strong data-step1-title>Runs helm upgrade --install</strong>
+            <p data-step1-desc>Runner executes Helm binary with administrative KUBECONFIG credentials pushed from secrets store.</p>
+          </div>
+        </div>
+        <div class="engine-step">
+          <span class="step-num">2</span>
+          <div>
+            <strong data-step2-title>Talks to kube-apiserver</strong>
+            <p data-step2-desc>Pushes rendered manifests directly across the cluster firewall perimeter.</p>
+          </div>
+        </div>
+        <div class="engine-badge" data-engine-badge>
+          SECURITY RISK: CI runner holds broad cluster admin credentials
+        </div>
+      </div>
+    </div>
+
+    <!-- Col 3: In-Cluster Runtime & Ledger -->
+    <div class="delivery-col is-cluster">
+      <div class="deliv-header">
+        <span class="tag">TARGET CLUSTER</span>
+        <h4>Namespace: payments</h4>
+        <small>State Ledger & Live Workload</small>
+      </div>
+      <div class="deliv-card cluster-card">
+        <!-- Shelf A: Release Secret Ledger -->
+        <div class="cluster-sub-box">
+          <div class="sub-title">Helm Secret Ledger:</div>
+          <div class="ledger-pill-row" data-deliv-ledger>
+            <span class="pill rev-active">sh.helm.release.v1.payment-api.v3 (deployed)</span>
+          </div>
+          <small class="sub-hint" data-deliv-ledger-hint>helm list finds this release record.</small>
+        </div>
+
+        <!-- Shelf B: Live Deployment Object -->
+        <div class="cluster-sub-box">
+          <div class="sub-title">Live Deployment (spec.replicas):</div>
+          <div class="live-pod-status" data-deliv-pods>
+            <span class="pod-count">3 Running Pods</span>
+            <span class="pod-match">Matches Git Declaration</span>
+          </div>
+        </div>
+
+        <!-- Shelf C: Drift Reaction Box -->
+        <div class="drift-reaction-card" data-drift-card>
+          <div class="reaction-title" data-drift-title>Drift Status: IN SYNC</div>
+          <p data-drift-desc>Cluster reflects the exact values defined in Git.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comparison Matrix Readout -->
+  <div class="deliv-matrix-bar">
+    <div class="matrix-tile">
+      <span>HELM ROLE:</span>
+      <strong data-m-role>Release Manager</strong>
+    </div>
+    <div class="matrix-tile">
+      <span>CREDENTIALS IN CI:</span>
+      <strong data-m-creds>Required (Admin Token)</strong>
+    </div>
+    <div class="matrix-tile">
+      <span>RELEASE SECRETS:</span>
+      <strong data-m-secrets>Created in Namespace</strong>
+    </div>
+    <div class="matrix-tile">
+      <span>DRIFT RECONCILIATION:</span>
+      <strong data-m-drift>None (Silent Divergence)</strong>
+    </div>
+  </div>
+</div>
+
+<style>
+.helm-delivery-board {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: var(--surface-bg, #161a22);
+  border: 1px solid var(--border-subtle, #30363d);
+  border-radius: 8px;
+  padding: 1.25rem;
+  font-size: 0.875rem;
+}
+
+.delivery-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--border-subtle, #30363d);
+  padding-bottom: 1rem;
+}
+
+.delivery-picker,
+.drift-control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.delivery-lbl {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #8b949e);
+}
+
+.delivery-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.deliv-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0.45rem 0.85rem;
+  background: #21262d;
+  border: 1px solid var(--border-subtle, #30363d);
+  border-radius: 6px;
+  color: var(--text-main, #e6edf3);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.deliv-btn small {
+  font-size: 0.72rem;
+  color: var(--text-muted, #8b949e);
+  font-family: monospace;
+}
+
+.deliv-btn:hover {
+  background: #30363d;
+  border-color: #58a6ff;
+}
+
+.deliv-btn.is-active {
+  background: rgba(56, 139, 253, 0.15);
+  border-color: #58a6ff;
+  color: #79c0ff;
+}
+
+.deliv-btn.is-active small {
+  color: #a5d6ff;
+}
+
+.drift-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.95rem;
+  background: #21262d;
+  border: 1px solid #d29922;
+  border-radius: 6px;
+  color: #f0883e;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.drift-toggle-btn:hover {
+  background: rgba(210, 153, 34, 0.15);
+}
+
+.drift-toggle-btn.is-drifting {
+  background: rgba(218, 54, 51, 0.18);
+  border-color: #da3633;
+  color: #f85149;
+}
+
+.delivery-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.delivery-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  background: #0d1117;
+  border: 1px solid var(--border-subtle, #30363d);
+  border-radius: 6px;
+  padding: 0.9rem;
+}
+
+.deliv-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  border-bottom: 1px solid #21262d;
+  padding-bottom: 0.5rem;
+}
+
+.deliv-header .tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #58a6ff;
+}
+
+.deliv-header h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #e6edf3;
+}
+
+.deliv-header small {
+  font-size: 0.72rem;
+  color: var(--text-muted, #8b949e);
+}
+
+.deliv-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+pre {
+  margin: 0;
+  padding: 0.65rem;
+  background: #161a22;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+pre code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+  color: #c9d1d9;
+  line-height: 1.4;
+}
+
+.git-verdict {
+  font-size: 0.8rem;
+  color: var(--text-muted, #8b949e);
+  padding: 0.4rem 0.5rem;
+  background: rgba(56, 139, 253, 0.08);
+  border-radius: 4px;
+  border-left: 3px solid #58a6ff;
+}
+
+.git-verdict strong {
+  color: #58a6ff;
+}
+
+.engine-card {
+  justify-content: space-between;
+}
+
+.engine-step {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+}
+
+.step-num {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #30363d;
+  color: #58a6ff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+}
+
+.engine-step strong {
+  display: block;
+  font-size: 0.82rem;
+  color: #e6edf3;
+}
+
+.engine-step p {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  color: var(--text-muted, #8b949e);
+  line-height: 1.35;
+}
+
+.engine-badge {
+  font-size: 0.72rem;
+  padding: 0.4rem 0.5rem;
+  background: rgba(218, 54, 51, 0.12);
+  border: 1px solid rgba(218, 54, 51, 0.3);
+  border-radius: 4px;
+  color: #f85149;
+  line-height: 1.35;
+}
+
+.cluster-card {
+  gap: 0.6rem;
+}
+
+.cluster-sub-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  background: #161a22;
+  border: 1px solid #21262d;
+  border-radius: 4px;
+  padding: 0.5rem;
+}
+
+.sub-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted, #8b949e);
+}
+
+.ledger-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.pill {
+  font-family: monospace;
+  font-size: 0.72rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 4px;
+  background: #21262d;
+  color: #c9d1d9;
+  border: 1px solid #30363d;
+}
+
+.pill.rev-active {
+  background: rgba(35, 134, 54, 0.18);
+  border-color: #238636;
+  color: #3fb950;
+}
+
+.pill.rev-none {
+  background: rgba(139, 148, 158, 0.12);
+  border-color: #30363d;
+  color: #8b949e;
+  font-style: italic;
+}
+
+.sub-hint {
+  font-size: 0.68rem;
+  color: #8b949e;
+}
+
+.live-pod-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 0.5rem;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+}
+
+.pod-count {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #3fb950;
+}
+
+.pod-match {
+  font-size: 0.7rem;
+  color: #8b949e;
+}
+
+.drift-reaction-card {
+  padding: 0.55rem;
+  border-radius: 4px;
+  background: #161a22;
+  border: 1px solid #30363d;
+}
+
+.reaction-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #3fb950;
+}
+
+.drift-reaction-card p {
+  margin: 0.2rem 0 0;
+  font-size: 0.72rem;
+  color: #8b949e;
+  line-height: 1.35;
+}
+
+.deliv-matrix-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  background: #0d1117;
+  border: 1px solid #21262d;
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+
+.matrix-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.matrix-tile span {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-muted, #8b949e);
+  letter-spacing: 0.05em;
+}
+
+.matrix-tile strong {
+  font-size: 0.78rem;
+  color: #e6edf3;
+}
+
+@media (max-width: 860px) {
+  .delivery-grid {
+    grid-template-columns: 1fr;
+  }
+  .deliv-matrix-bar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+</style>

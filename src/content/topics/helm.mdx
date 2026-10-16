@@ -1,0 +1,52 @@
+---
+title: "Helm: One Chart, Three Jobs"
+summary: "Follow payment-api from a workstation directory to an OCI registry package and an in-cluster release, configure subcharts and umbrella dependencies, and inspect release rollback mechanics."
+slug: helm
+collection: kubernetes
+tags: [Kubernetes, Packaging, Deployment, GitOps]
+technologies: [Helm, OCI, Kubernetes API, Argo CD, Flux]
+format: deep-dive
+difficulty: intermediate
+published: 2026-10-17
+reviewed: 2026-10-17
+versionScope: Helm v4.2.2 CLI behavior, Server-Side Apply defaults, OCI registry distribution, and in-cluster release secret specifications verified on 2026-10-17
+legacyPath: /helm
+featured: false
+state: reviewed
+related: [kubernetes-api-server, containers, github-actions-cheatsheet, secopspipeline, git]
+group: package
+order: 3
+sources:
+  - label: "Helm Overview & Architecture"
+    url: https://helm.sh/docs/overview/
+  - label: "Helm 4 Release Announcement"
+    url: https://helm.sh/blog/helm-4-released/
+  - label: "Charts & Dependencies Guide"
+    url: https://helm.sh/docs/topics/charts/
+  - label: "Values Files & Scoping"
+    url: https://helm.sh/docs/chart_template_guide/values_files/
+  - label: "Subcharts and Globals"
+    url: https://helm.sh/docs/chart_template_guide/subcharts_and_globals/
+  - label: "Library Charts Specification"
+    url: https://helm.sh/docs/topics/library_charts/
+  - label: "helm template reference"
+    url: https://helm.sh/docs/helm/helm_template/
+  - label: "helm dependency build reference"
+    url: https://helm.sh/docs/helm/helm_dependency_build/
+  - label: "helm package, push, pull reference"
+    url: https://helm.sh/docs/helm/helm_package/
+  - label: "Kubernetes Server-Side Apply"
+    url: https://kubernetes.io/docs/reference/using-api/server-side-apply/
+  - label: "helm upgrade & hooks reference"
+    url: https://helm.sh/docs/helm/helm_upgrade/
+  - label: "helm rollback & history reference"
+    url: https://helm.sh/docs/helm/helm_rollback/
+  - label: "Argo CD Helm Integration"
+    url: https://argo-cd.readthedocs.io/en/stable/user-guide/helm/
+  - label: "Flux Helm Controller & HelmRelease"
+    url: https://fluxcd.io/flux/components/helm/helmreleases/
+---
+
+import HelmConsole from '../../components/helm/HelmConsole.astro';
+
+<HelmConsole published={props.published} reviewed={props.reviewed} />

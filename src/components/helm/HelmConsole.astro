@@ -1,0 +1,31 @@
+---
+import LessonConsole from '../lesson/LessonConsole.astro';
+import EnterHelmBoard from './EnterHelmBoard.astro';
+import HelmWorkbench from './HelmWorkbench.astro';
+import ValuesMergeBoard from './ValuesMergeBoard.astro';
+import ScopeFunnelBoard from './ScopeFunnelBoard.astro';
+import DependencyLabBoard from './DependencyLabBoard.astro';
+import FailureLabBoard from './FailureLabBoard.astro';
+import DeliveryLabBoard from './DeliveryLabBoard.astro';
+import { helmLesson } from './helm-lesson';
+
+interface Props {
+  published: Date;
+  reviewed?: Date;
+}
+const { published, reviewed } = Astro.props;
+---
+<LessonConsole lesson={helmLesson} published={published} reviewed={reviewed}>
+  <EnterHelmBoard slot="view-enter" />
+  <HelmWorkbench slot="view-where" />
+  <ValuesMergeBoard slot="view-values" />
+  <ScopeFunnelBoard slot="view-scoping" />
+  <DependencyLabBoard slot="view-dependencies" />
+  <FailureLabBoard slot="view-rollback" />
+  <DeliveryLabBoard slot="view-delivery" />
+</LessonConsole>
+
+<script>
+  import { initHelmConsole } from './helm-client';
+  initHelmConsole();
+</script>

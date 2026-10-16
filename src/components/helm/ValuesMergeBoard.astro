@@ -1,0 +1,257 @@
+---
+/**
+ * ValuesMergeBoard.astro - Hero 1: Which value wins?
+ * Interactive layer stack demonstrating map merging, list replacement, and --set precedence.
+ */
+---
+<div class="helm-values-board" data-helm-values-board>
+  <div class="helm-board-header">
+    <div class="helm-layer-controls" role="group" aria-label="Values layers">
+      <span class="helm-control-label">ACTIVE LAYERS:</span>
+      <label class="helm-chip is-locked"><input type="checkbox" checked disabled /> 1. Chart values.yaml</label>
+      <label class="helm-chip"><input type="checkbox" data-helm-layer="base" checked /> 2. -f values.yaml</label>
+      <label class="helm-chip"><input type="checkbox" data-helm-layer="prod" checked /> 3. -f values-prod.yaml</label>
+      <label class="helm-chip"><input type="checkbox" data-helm-layer="set" checked /> 4. --set tag</label>
+      <button type="button" class="helm-reset-btn" data-helm-reset-values>↺ Reset Layers</button>
+    </div>
+  </div>
+
+  <div class="helm-board-grid">
+    <div class="helm-col helm-inputs-col">
+      <h3>Layer Inputs</h3>
+      <div class="helm-card-layer" data-layer-id="chart">
+        <div class="helm-layer-tag">1. Chart Defaults (values.yaml)</div>
+        <pre><code>replicaCount: 2
+image:
+  repository: payments/api
+  tag: "" # fallback: appVersion 4.7.1
+resources:
+  limits:
+    memory: 256Mi
+ingress:
+  hosts: [payment.example.com]</code></pre>
+      </div>
+
+      <div class="helm-card-layer" data-layer-id="prod">
+        <div class="helm-layer-tag">3. Production (-f values-prod.yaml)</div>
+        <pre><code>replicaCount: 5
+resources:
+  limits:
+    memory: 512Mi
+ingress:
+  hosts: [pay.prod.example.com]</code></pre>
+      </div>
+
+      <div class="helm-card-layer" data-layer-id="set">
+        <div class="helm-layer-tag">4. CLI Flag (--set image.tag=...)</div>
+        <div class="helm-set-input-row">
+          <code>--set image.tag=</code>
+          <input type="text" data-helm-set-input value="4.7.2" maxlength="16" aria-label="Override image tag" />
+        </div>
+      </div>
+    </div>
+
+    <div class="helm-col helm-merged-col">
+      <h3>Merged .Values</h3>
+      <div class="helm-merged-view">
+        <div class="helm-merge-line" data-merge-key="replicas">
+          <span class="k">replicaCount:</span>
+          <b class="v" data-v="replicas">5</b>
+          <span class="source" data-src="replicas">from values-prod.yaml</span>
+        </div>
+        <div class="helm-merge-line" data-merge-key="image">
+          <span class="k">image.repository:</span>
+          <b class="v" data-v="repo">payments/api</b>
+          <span class="source" data-src="repo">from chart defaults</span>
+        </div>
+        <div class="helm-merge-line" data-merge-key="tag">
+          <span class="k">image.tag:</span>
+          <b class="v" data-v="tag">4.7.2</b>
+          <span class="source" data-src="tag">from --set override</span>
+        </div>
+        <div class="helm-merge-line" data-merge-key="memory">
+          <span class="k">resources.limits.memory:</span>
+          <b class="v" data-v="memory">512Mi</b>
+          <span class="source" data-src="memory">from values-prod.yaml</span>
+        </div>
+        <div class="helm-merge-line" data-merge-key="hosts">
+          <span class="k">ingress.hosts:</span>
+          <b class="v" data-v="hosts">[pay.prod.example.com]</b>
+          <span class="source" data-src="hosts">list replaced (not merged)</span>
+        </div>
+      </div>
+
+      <div class="helm-template-render">
+        <h4>Rendered templates/deployment.yaml</h4>
+        <pre><code data-helm-rendered-yaml>apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-api
+spec:
+  replicas: 5
+  template:
+    spec:
+      containers:
+        - name: payment-api
+          image: "payments/api:4.7.2"
+          resources:
+            limits:
+              memory: 512Mi</code></pre>
+      </div>
+    </div>
+  </div>
+  <p class="helm-board-note"><strong>Key Rule:</strong> Maps merge recursively; lists are replaced entirely by the winning layer.</p>
+</div>
+
+<style>
+.helm-values-board {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--surface-bg, #161a22);
+  border: 1px solid var(--border-subtle, #30363d);
+  border-radius: 8px;
+  font-size: 0.875rem;
+}
+.helm-board-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--border-subtle, #30363d);
+  padding-bottom: 0.75rem;
+}
+.helm-layer-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.helm-control-label {
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--text-muted, #8b949e);
+  letter-spacing: 0.05em;
+}
+.helm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--chip-bg, #21262d);
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  border: 1px solid var(--border-subtle, #30363d);
+  cursor: pointer;
+  user-select: none;
+}
+.helm-chip.is-locked {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+.helm-reset-btn {
+  background: transparent;
+  border: 1px solid var(--border-subtle, #30363d);
+  color: var(--text-link, #58a6ff);
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.helm-board-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+@media (max-width: 840px) {
+  .helm-board-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.helm-col h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  color: var(--text-muted, #8b949e);
+  letter-spacing: 0.05em;
+}
+.helm-card-layer {
+  background: var(--layer-bg, #0d1117);
+  border: 1px solid var(--border-subtle, #30363d);
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+  overflow: hidden;
+}
+.helm-layer-tag {
+  background: #1f242c;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #7ee787;
+  border-bottom: 1px solid #30363d;
+}
+.helm-card-layer pre {
+  margin: 0;
+  padding: 0.5rem;
+  font-size: 0.8rem;
+  color: #c9d1d9;
+}
+.helm-set-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+}
+.helm-set-input-row input {
+  background: #161b22;
+  border: 1px solid #58a6ff;
+  color: #f0f6fc;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-family: monospace;
+}
+.helm-merged-view {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.helm-merge-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-family: monospace;
+  font-size: 0.8rem;
+  border-bottom: 1px dashed #21262d;
+  padding-bottom: 0.25rem;
+}
+.helm-merge-line .k { color: #8b949e; }
+.helm-merge-line .v { color: #58a6ff; }
+.helm-merge-line .source { font-size: 0.7rem; color: #7ee787; font-family: sans-serif; }
+.helm-template-render {
+  margin-top: 0.75rem;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 0.5rem;
+}
+.helm-template-render h4 {
+  margin: 0 0 0.25rem 0;
+  font-size: 0.75rem;
+  color: #8b949e;
+}
+.helm-template-render pre {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #e6edf3;
+}
+.helm-board-note {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #d29922;
+}
+</style>

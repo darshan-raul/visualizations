@@ -1,0 +1,259 @@
+---
+/**
+ * DependencyLabBoard.astro - Lab 2: Dependency Time Machine & Supply Chain Lab
+ * 1. SemVer range resolution (~16.2.0 vs 16.2.3 vs 16.2.4)
+ * 2. helm dependency update vs helm dependency build
+ * 3. Exact Chart.lock structure and digest guarantees
+ * 4. Thin Repository (.gitignore archives) vs Vendored Air-gap (commit archives)
+ * 5. Reproducing the out-of-sync error
+ */
+---
+<div class="helm-dep-board" data-helm-dep-board>
+  <div class="dep-toolbar">
+    <div class="dep-timeline-control">
+      <span class="dep-lbl">TIME MACHINE:</span>
+      <button type="button" class="dep-time-btn is-active" data-time="day1">Day 1: Initial Release (v16.2.3 latest)</button>
+      <button type="button" class="dep-time-btn" data-time="day14">Day 14: Upstream Bump (v16.2.4 published)</button>
+      <button type="button" class="dep-time-btn is-err" data-time="tamper">Drift: Chart.yaml modified without updating Lock</button>
+    </div>
+    <div class="dep-repo-control">
+      <span class="dep-lbl">GIT STRATEGY:</span>
+      <button type="button" class="dep-strat-btn is-active" data-strat="thin">Thin Repo (.gitignore charts/*.tgz)</button>
+      <button type="button" class="dep-strat-btn" data-strat="vendored">Vendored Air-Gap (Commit .tgz)</button>
+    </div>
+  </div>
+
+  <div class="dep-grid">
+    <!-- Box 1: Chart.yaml -->
+    <div class="dep-col">
+      <div class="dep-box-header">1. Chart.yaml (Intent)</div>
+      <pre><code>dependencies:
+  - name: postgresql
+    version: <b class="hl" data-dep-range>"~16.2.0"</b>
+    repository: "https://charts.example.com"
+  - name: redis
+    version: "20.1.4"
+    alias: cache</code></pre>
+      <div class="dep-note">
+        <code>~16.2.0</code> accepts any patch version ≥ 16.2.0 and &lt; 16.3.0.
+      </div>
+    </div>
+
+    <!-- Box 2: CLI Action -->
+    <div class="dep-col action-col">
+      <div class="dep-box-header">2. Resolution CLI</div>
+      <div class="cmd-choice">
+        <button type="button" class="dep-action-btn is-active" data-action="build">
+          <strong>helm dependency build</strong>
+          <small>CI Pipeline (Strictly respects lock)</small>
+        </button>
+        <button type="button" class="dep-action-btn" data-action="update">
+          <strong>helm dependency update</strong>
+          <small>Developer (Resolves latest ranges)</small>
+        </button>
+      </div>
+
+      <div class="action-console">
+        <span class="console-lbl">EXECUTION LOG:</span>
+        <pre><code data-dep-log>$ helm dependency build ./payment-api
+Rebuilding dependencies from Chart.lock...
+Fetching postgresql 16.2.3 (matching lockfile)
+Fetching redis 20.1.4 (matching lockfile)
+Dependencies built successfully.</code></pre>
+      </div>
+    </div>
+
+    <!-- Box 3: Chart.lock -->
+    <div class="dep-col">
+      <div class="dep-box-header">3. Chart.lock (Reproducibility)</div>
+      <pre><code data-dep-lock>dependencies:
+- name: postgresql
+  repository: https://charts.example.com
+  version: 16.2.3
+- name: redis
+  repository: oci://registry.example.com
+  version: 20.1.4
+digest: sha256:4b91f0a1c8d4...
+generated: "2026-10-17T00:00:00Z"</code></pre>
+      <div class="lock-verdict" data-dep-verdict>
+        <strong>REPRODUCIBLE IN CI:</strong> Guaranteed identical build across any runner.
+      </div>
+    </div>
+  </div>
+
+  <!-- Git Boundary Banner -->
+  <div class="dep-git-boundary" data-dep-git-banner>
+    <div class="git-badge">GIT COMMIT BOUNDARY: THIN REPOSITORY</div>
+    <div class="git-desc">
+      <span>Tracked in Git:</span> <code>Chart.yaml</code>, <code>Chart.lock</code>, <code>values.yaml</code>, <code>templates/</code>.
+      <span class="sep">|</span>
+      <span>Ignored (.gitignore):</span> <code>charts/*.tgz</code> (downloaded on-the-fly in CI via <code>helm dependency build</code>).
+    </div>
+  </div>
+</div>
+
+<style>
+.helm-dep-board {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: var(--surface-bg, #161a22);
+  border: 1px solid var(--border-subtle, #30363d);
+  border-radius: 8px;
+  padding: 1rem;
+  font-size: 0.85rem;
+}
+.dep-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: 1px solid #21262d;
+  padding-bottom: 0.75rem;
+}
+.dep-timeline-control, .dep-repo-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+.dep-lbl {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #8b949e;
+}
+.dep-time-btn, .dep-strat-btn {
+  background: #21262d;
+  border: 1px solid #30363d;
+  color: #c9d1d9;
+  padding: 0.3rem 0.65rem;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.dep-time-btn:hover, .dep-strat-btn:hover { background: #30363d; }
+.dep-time-btn.is-active, .dep-strat-btn.is-active {
+  background: #1f6feb;
+  color: #fff;
+  border-color: #58a6ff;
+  font-weight: 600;
+}
+.dep-time-btn.is-err.is-active {
+  background: #da3633;
+  border-color: #f85149;
+  color: #fff;
+}
+
+.dep-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr 1fr;
+  gap: 1rem;
+}
+@media (max-width: 960px) {
+  .dep-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.dep-col {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.dep-box-header {
+  font-size: 0.725rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #8b949e;
+  text-transform: uppercase;
+  background: #161b22;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid #21262d;
+}
+.dep-col pre {
+  margin: 0;
+  padding: 0.6rem;
+  font-size: 0.75rem;
+  color: #c9d1d9;
+  flex: 1;
+}
+.hl { color: #58a6ff; font-weight: bold; }
+.dep-note {
+  background: #161b22;
+  border-top: 1px solid #21262d;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.725rem;
+  color: #8b949e;
+}
+
+/* Action col */
+.cmd-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.6rem;
+}
+.dep-action-btn {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.15s ease;
+}
+.dep-action-btn:hover { background: #21262d; }
+.dep-action-btn.is-active {
+  border-color: #58a6ff;
+  background: #1c2d42;
+}
+.dep-action-btn strong { font-size: 0.78rem; color: #f0f6fc; }
+.dep-action-btn small { font-size: 0.68rem; color: #8b949e; }
+.action-console {
+  background: #000;
+  border-top: 1px solid #21262d;
+  padding: 0.5rem 0.6rem;
+  font-family: monospace;
+}
+.console-lbl { font-size: 0.625rem; color: #8b949e; font-weight: bold; }
+.action-console pre { padding: 0.35rem 0; color: #7ee787; font-size: 0.725rem; }
+
+.lock-verdict {
+  background: #161b22;
+  border-top: 1px solid #21262d;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.725rem;
+  color: #7ee787;
+}
+
+.dep-git-boundary {
+  background: #161b22;
+  border: 1px dashed #30363d;
+  border-radius: 6px;
+  padding: 0.65rem 0.9rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.78rem;
+}
+.git-badge {
+  font-size: 0.675rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #f0f6fc;
+  background: #30363d;
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+}
+.git-desc { color: #8b949e; }
+.git-desc code { color: #79c0ff; }
+.git-desc .sep { margin: 0 0.35rem; color: #30363d; }
+</style>
