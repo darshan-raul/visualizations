@@ -475,3 +475,8 @@ When implementation details are unclear, prefer the option that:
 6. Avoids introducing curriculum, accounts, progress tracking, analytics, or unnecessary platform scope.
 
 If a proposed change conflicts with this brief, surface the conflict before implementing it.
+
+
+## AWS IAM redesign and route rename
+
+Confirmed at the owner's request on 2026-10-17: replace the Authorization Decision Explorer with an architectural AWS IAM topic at `/aws-iam` redesigned as "The Kingdom of Access". Retain `/aws-authorization-decision-explorer` as a redirect, including preserved section fragments. The opening view displays the AWS Organization Kingdom and the permanent 7-stage request spine below; all other concepts unfold from it. Features a persistent top Formula Ribbon (WHO Principal → WHAT Action → WHICH THING Resource → UNDER WHAT Conditions) with a toggleable Analogy ↔ Pure AWS Vocabulary lens. Renders architectural SVG/CSS schematics for the fortified Account cities, wearable Role uniform split-flap, STS badge minting desk, laptop outside the kingdom (~/.aws/config & SigV4 wax seal), cross-account trust bridge, central royal passport office (Identity Center), and the 5-gate authorization corridor. Canonical content is `src/content/topics/aws-iam.mdx`.

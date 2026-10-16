@@ -1,0 +1,1515 @@
+/* ==========================================================================
+   AWS IAM: The Kingdom of Access — Console Design System
+   ========================================================================== */
+
+.aws-iam-console .lsn-canvas {
+  background-color: var(--bg);
+  background-image: radial-gradient(#97a3b81a 0.8px, transparent 0.8px);
+  background-size: 24px 24px;
+}
+
+.aws-iam-console .lsn-console-grid {
+  grid-template-columns: 200px minmax(0, 1fr) 285px;
+}
+
+.aws-iam-console .lsn-view-head {
+  margin-bottom: 20px;
+}
+
+.aws-iam-console .lsn-view-head > span {
+  color: var(--purple);
+  font: 600 0.78rem/1.5 var(--mono);
+  letter-spacing: 0.05em;
+}
+
+.aws-iam-console .lsn-view-head h2 {
+  font-size: clamp(1.45rem, 2.4vw, 2.1rem);
+  letter-spacing: -0.03em;
+  color: var(--text);
+  margin: 6px 0 8px;
+}
+
+.aws-iam-console .lsn-view-head p {
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.55;
+  max-width: 68ch;
+}
+
+/* --------------------------------------------------------------------------
+   Vocabulary Lens (Analogy vs Pure AWS)
+   -------------------------------------------------------------------------- */
+.iam-analogy {
+  display: inline;
+}
+.iam-pure {
+  display: block;
+  font: 500 0.73rem/1.4 var(--mono);
+  color: var(--cyan);
+  opacity: 0.85;
+}
+
+.is-pure-aws .iam-analogy {
+  display: none !important;
+}
+.is-pure-aws .iam-pure {
+  display: inline !important;
+  font-size: inherit !important;
+  color: inherit !important;
+  opacity: 1 !important;
+}
+
+/* --------------------------------------------------------------------------
+   1. Persistent Formula Ribbon
+   -------------------------------------------------------------------------- */
+.iam-formula-ribbon {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  margin-bottom: 24px;
+  background: #111422;
+  border: 1px solid #b79aff40;
+  border-radius: 8px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+}
+
+.iam-formula-equation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  font-size: 0.84rem;
+}
+
+.iam-formula-chip {
+  display: inline-flex;
+  flex-direction: column;
+  padding: 4px 9px;
+  background: #181d30;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  min-width: 0;
+}
+.iam-formula-chip small {
+  font: 600 0.65rem/1.2 var(--mono);
+  color: var(--purple);
+  letter-spacing: 0.06em;
+}
+.iam-formula-chip strong {
+  font-size: 0.84rem;
+  color: var(--text);
+  margin-top: 1px;
+}
+.iam-formula-chip code {
+  font: 0.72rem/1.4 var(--mono);
+  color: var(--cyan);
+  margin-top: 2px;
+}
+
+.iam-formula-arrow {
+  color: var(--cyan);
+  font: 0.88rem var(--mono);
+  opacity: 0.75;
+}
+
+.iam-lens-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.iam-lens-label {
+  font: 500 0.72rem var(--mono);
+  color: var(--dim);
+}
+.iam-lens-buttons {
+  display: inline-flex;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--surface-raised);
+}
+.iam-lens-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font: 500 0.74rem var(--sans);
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.iam-lens-btn:hover {
+  color: var(--text);
+  background: #202438;
+}
+.iam-lens-btn.is-active {
+  color: #fff;
+  background: var(--purple);
+}
+
+/* --------------------------------------------------------------------------
+   Common Interactive Container & Controls
+   -------------------------------------------------------------------------- */
+.iam-visual {
+  min-width: 0;
+}
+.iam-stage-container {
+  min-height: 480px;
+  padding: 18px 0;
+}
+
+.iam-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.iam-tools-label {
+  font: 500 0.8rem var(--mono);
+  color: var(--dim);
+}
+
+.iam-visual button,
+.iam-visual select {
+  min-height: 40px;
+  border: 1px solid var(--border-strong);
+  background: #141828;
+  color: var(--text);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font: 500 0.85rem var(--sans);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.iam-visual button:hover,
+.iam-visual button.is-active,
+.iam-visual button[aria-pressed="true"] {
+  border-color: var(--purple);
+  background: #232238;
+}
+
+.iam-eyebrow {
+  display: block;
+  font: 600 0.72rem/1.5 var(--mono);
+  letter-spacing: 0.08em;
+  color: var(--purple);
+  text-transform: uppercase;
+}
+
+.iam-feedback {
+  padding: 14px 18px;
+  border-left: 3px solid var(--purple);
+  background: var(--surface-soft);
+  margin-top: 18px;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.iam-caption {
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--muted);
+  margin-top: 12px;
+}
+
+.iam-code-block,
+.iam-visual pre {
+  background: #090d16;
+  border: 1px solid #ffffff14;
+  border-radius: 6px;
+  padding: 14px 16px;
+  font: 0.8rem/1.6 var(--mono);
+  color: var(--text);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* --------------------------------------------------------------------------
+   VIEW 1: THE AWS KINGDOM
+   -------------------------------------------------------------------------- */
+.iam-scp-decree {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  background: linear-gradient(90deg, #1f1b2c 0%, #151829 100%);
+  border: 1px solid #e5a43b60;
+  border-left: 4px solid var(--amber);
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+.iam-decree-seal {
+  font-size: 1.8rem;
+  flex-shrink: 0;
+}
+.iam-decree-text strong {
+  display: block;
+  color: #fce7b0;
+  font-size: 1rem;
+  margin: 2px 0 4px;
+}
+.iam-decree-text small {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.iam-kingdom-map {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.iam-realm-outside {
+  border: 1px dashed #ffffff28;
+  border-radius: 8px;
+  padding: 16px;
+  background: #0b0f19;
+}
+.iam-realm-tag {
+  display: block;
+  font: 600 0.7rem/1.4 var(--mono);
+  color: var(--dim);
+  letter-spacing: 0.08em;
+  margin-bottom: 14px;
+}
+.iam-outside-entities {
+  display: grid;
+  gap: 14px;
+}
+.iam-realm-card {
+  padding: 14px;
+  border: 1px solid var(--border-strong);
+  background: #121727;
+  border-radius: 6px;
+}
+.iam-realm-card .iam-card-icon {
+  font-size: 1.3rem;
+  margin-bottom: 6px;
+  display: block;
+}
+.iam-realm-card strong {
+  display: block;
+  font-size: 0.92rem;
+  color: var(--text);
+}
+.iam-realm-card small {
+  display: block;
+  font: 0.75rem var(--mono);
+  color: var(--muted);
+  margin: 3px 0 8px;
+}
+.iam-card-link {
+  font: 500 0.78rem var(--sans);
+  color: var(--cyan);
+  text-decoration: none;
+}
+.iam-card-link:hover {
+  text-decoration: underline;
+}
+
+.iam-realm-inside {
+  border: 2px solid #b79aff50;
+  border-radius: 8px;
+  padding: 18px;
+  background: #0d1222;
+}
+.iam-realm-inside-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.iam-realm-inside-header .iam-realm-tag {
+  color: var(--purple);
+  margin: 0;
+}
+.iam-decree-tag {
+  font: 500 0.7rem var(--mono);
+  color: var(--amber);
+  background: #e5a43b18;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.iam-fortress-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.iam-fortress {
+  border: 1px solid var(--border-strong);
+  background: #14192b;
+  border-radius: 6px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+}
+.iam-fortress-battlement {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #ffffff10;
+  margin-bottom: 12px;
+}
+.iam-fortress-battlement > span {
+  font-size: 1.4rem;
+}
+.iam-fortress-title strong {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+.iam-fortress-title small {
+  display: block;
+  font: 0.73rem var(--mono);
+  color: var(--dim);
+}
+.iam-fortress-inhabitants {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 14px;
+  display: grid;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.iam-fortress-inhabitants li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.iam-fortress-inhabitants svg {
+  color: var(--purple);
+  flex-shrink: 0;
+}
+.iam-fortress-inhabitants b {
+  color: var(--text);
+}
+.iam-fortress-note {
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--muted);
+  margin: 0 0 14px;
+}
+.iam-fortress-footer {
+  margin-top: auto;
+}
+.iam-btn-mini {
+  display: inline-block;
+  font: 500 0.75rem var(--sans);
+  color: var(--cyan);
+  text-decoration: none;
+  padding: 4px 8px;
+  background: #42d6e812;
+  border-radius: 4px;
+}
+.iam-btn-mini:hover {
+  background: #42d6e828;
+}
+
+.iam-entrance-strip {
+  padding: 14px 18px;
+  border: 1px solid var(--border-strong);
+  background: #111524;
+  border-radius: 6px;
+}
+.iam-entrance-marker {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.iam-entrance-icon {
+  font-size: 1.6rem;
+  flex-shrink: 0;
+}
+.iam-entrance-marker strong {
+  display: block;
+  font-size: 0.92rem;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+.iam-entrance-marker p {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0;
+}
+
+/* --------------------------------------------------------------------------
+   VIEW 2: WHO ARE YOU? IDENTITIES & WORKLOADS
+   -------------------------------------------------------------------------- */
+.iam-actor-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.iam-actor-btn {
+  background: #13182a;
+}
+
+.iam-actor-display {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.iam-actor-card {
+  padding: 20px;
+  border: 1px solid #b79aff50;
+  background: #121628;
+  border-radius: 8px;
+}
+.iam-actor-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #ffffff12;
+  margin-bottom: 16px;
+}
+.iam-actor-avatar {
+  font-size: 2rem;
+}
+.iam-actor-head strong {
+  display: block;
+  font-size: 1.15rem;
+  color: var(--text);
+}
+.iam-actor-head small {
+  font: 0.78rem var(--mono);
+  color: var(--cyan);
+}
+.iam-actor-meta {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 10px 18px;
+  font-size: 0.85rem;
+  margin: 0;
+}
+.iam-actor-meta dt {
+  color: var(--dim);
+  font: 500 0.75rem var(--mono);
+}
+.iam-actor-meta dd {
+  color: var(--text);
+  margin: 0;
+}
+
+.iam-actor-pipeline-note {
+  padding: 20px;
+  border: 1px solid var(--border-strong);
+  background: #0e1220;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.iam-actor-pipeline-note h3 {
+  font-size: 1.1rem;
+  color: var(--text);
+  margin: 6px 0 10px;
+}
+.iam-actor-pipeline-note p {
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--muted);
+  margin: 0;
+}
+
+.iam-workload-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+  border: 1px solid var(--border-strong);
+  background: #111524;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.iam-workload-table th,
+.iam-workload-table td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid #ffffff10;
+}
+.iam-workload-table th {
+  background: #181d32;
+  font: 600 0.75rem var(--mono);
+  color: var(--purple);
+}
+.iam-workload-table td b {
+  color: var(--text);
+}
+
+/* --------------------------------------------------------------------------
+   VIEW 3: IAM ROLE = WEARABLE UNIFORM
+   -------------------------------------------------------------------------- */
+.iam-uniform-viewer {
+  display: grid;
+  gap: 24px;
+}
+.iam-uniform-figure {
+  border: 2px solid #b79aff60;
+  border-radius: 12px;
+  background: #111528;
+  padding: 24px;
+}
+.iam-uniform-crest {
+  text-align: center;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #ffffff12;
+  margin-bottom: 20px;
+}
+.iam-armor-icon {
+  font-size: 2.2rem;
+  display: block;
+  margin-bottom: 6px;
+}
+.iam-uniform-crest strong {
+  display: block;
+  font-size: 1.4rem;
+  color: var(--text);
+}
+.iam-uniform-crest code {
+  font: 0.8rem var(--mono);
+  color: var(--cyan);
+}
+
+.iam-uniform-flaps {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.iam-flap {
+  padding: 18px;
+  border: 1px solid var(--border-strong);
+  background: #161c32;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+}
+.iam-flap-tag {
+  font: 600 0.72rem var(--mono);
+  color: var(--purple);
+}
+.iam-flap h4 {
+  font-size: 1.05rem;
+  color: var(--text);
+  margin: 4px 0 8px;
+}
+.iam-flap p {
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--muted);
+  margin: 0 0 12px;
+}
+.iam-flap pre {
+  margin: 0 0 12px;
+  font-size: 0.78rem;
+  flex-grow: 1;
+}
+.iam-flap-badge {
+  display: inline-block;
+  font: 500 0.74rem var(--mono);
+  color: var(--green);
+  background: #49d6a315;
+  padding: 4px 8px;
+  border-radius: 4px;
+  align-self: flex-start;
+}
+
+.iam-role-vs-user {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.iam-rvu-card {
+  padding: 18px;
+  border: 1px solid var(--border-strong);
+  background: #111524;
+  border-radius: 8px;
+}
+.iam-rvu-card.is-highlight {
+  border-color: #42d6e850;
+  background: #0f1c29;
+}
+.iam-rvu-card h4 {
+  font-size: 1.05rem;
+  color: var(--text);
+  margin: 6px 0 12px;
+}
+.iam-rvu-card ul {
+  list-style: square;
+  padding-left: 20px;
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* --------------------------------------------------------------------------
+   VIEW 4: STS = TEMPORARY BADGE OFFICE
+   -------------------------------------------------------------------------- */
+.iam-mint-journey {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) 180px minmax(0, 1.3fr);
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.iam-mint-request-box {
+  padding: 18px;
+  border: 1px solid var(--border-strong);
+  background: #131728;
+  border-radius: 8px;
+  text-align: center;
+  margin-top: 8px;
+}
+.iam-call-arrow {
+  display: block;
+  font: 600 0.82rem var(--mono);
+  color: var(--cyan);
+  margin-bottom: 6px;
+}
+.iam-mint-request-box strong {
+  display: block;
+  color: var(--text);
+  font-size: 1rem;
+}
+.iam-mint-request-box small {
+  color: var(--dim);
+  font-size: 0.78rem;
+}
+
+.iam-mint-desk {
+  padding: 24px 16px;
+  border: 2px solid #b79aff80;
+  background: #171c33;
+  border-radius: 10px;
+  text-align: center;
+}
+.iam-machine-seal {
+  font-size: 2.2rem;
+  margin-bottom: 6px;
+}
+.iam-mint-desk strong {
+  display: block;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+.iam-mint-desk small {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--dim);
+  margin-top: 4px;
+}
+
+.iam-badge-pass {
+  border: 1px solid #49d6a360;
+  background: #0d1a1e;
+  border-radius: 10px;
+  padding: 18px;
+  transition: all 0.25s ease;
+  margin-top: 8px;
+}
+.iam-badge-pass.is-expired {
+  border-color: var(--red);
+  background: #25121a;
+}
+.iam-pass-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #ffffff12;
+  margin-bottom: 14px;
+}
+.iam-pass-title {
+  font: 600 0.8rem var(--mono);
+  color: var(--text);
+  letter-spacing: 0.05em;
+}
+.iam-pass-chip {
+  font: 600 0.7rem var(--mono);
+  color: var(--green);
+  background: #49d6a318;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+.iam-badge-pass.is-expired .iam-pass-chip {
+  color: var(--red);
+  background: #fb7e8518;
+}
+
+.iam-pass-body {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.iam-pass-field {
+  display: flex;
+  flex-direction: column;
+}
+.iam-pass-label {
+  font: 500 0.7rem var(--mono);
+  color: var(--dim);
+}
+.iam-pass-key {
+  font: 600 0.9rem var(--mono);
+  color: var(--green);
+}
+.iam-badge-pass.is-expired .iam-pass-key {
+  color: var(--red);
+}
+.iam-pass-secret,
+.iam-pass-token {
+  font: 0.78rem var(--mono);
+  color: var(--cyan);
+}
+
+.iam-pass-footer {
+  padding-top: 12px;
+  border-top: 1px solid #ffffff12;
+}
+.iam-countdown-widget {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.iam-expiry-svg {
+  width: 38px;
+  height: 38px;
+  transform: rotate(-90deg);
+  flex-shrink: 0;
+}
+.iam-expiry-bg {
+  fill: none;
+  stroke: #ffffff14;
+  stroke-width: 3.5;
+}
+.iam-expiry-bar {
+  fill: none;
+  stroke: var(--green);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.35s ease;
+}
+.iam-badge-pass.is-expired .iam-expiry-bar {
+  stroke: var(--red);
+}
+.iam-countdown-text {
+  display: block;
+  font: 600 0.85rem var(--mono);
+  color: var(--text);
+}
+.iam-countdown-widget small {
+  color: var(--dim);
+  font-size: 0.74rem;
+}
+
+/* --------------------------------------------------------------------------
+   VIEW 5: LAPTOP OUTSIDE THE WALLS: PROFILES & SIGV4
+   -------------------------------------------------------------------------- */
+.iam-terminal-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) 140px minmax(0, 1.1fr);
+  align-items: center;
+  gap: 18px;
+}
+.iam-laptop-zone,
+.iam-cloud-zone {
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 18px;
+  background: #101424;
+}
+.iam-laptop-zone {
+  border-left: 4px solid var(--purple);
+}
+.iam-cloud-zone {
+  border-right: 4px solid var(--cyan);
+}
+.iam-zone-header {
+  margin-bottom: 14px;
+}
+.iam-laptop-badge {
+  font: 600 0.68rem var(--mono);
+  color: var(--purple);
+  letter-spacing: 0.08em;
+  display: block;
+}
+.iam-cloud-badge {
+  font: 600 0.68rem var(--mono);
+  color: var(--cyan);
+  letter-spacing: 0.08em;
+  display: block;
+}
+.iam-zone-header h4 {
+  font-size: 1rem;
+  color: var(--text);
+  margin: 3px 0 0;
+}
+.iam-profile-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.iam-cli-command {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: #080c14;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font: 0.8rem var(--mono);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.iam-cli-prompt {
+  color: var(--purple);
+  font-weight: bold;
+}
+.iam-cli-command code span {
+  color: var(--cyan);
+}
+
+.iam-sigv4-pipe {
+  text-align: center;
+  padding: 12px 6px;
+}
+.iam-sigv4-seal {
+  padding: 14px 10px;
+  background: #1f1b2c;
+  border: 1px solid #b79aff60;
+  border-radius: 8px;
+}
+.iam-seal-icon {
+  font-size: 1.8rem;
+  display: block;
+  margin-bottom: 4px;
+}
+.iam-sigv4-seal strong {
+  display: block;
+  font-size: 0.78rem;
+  color: #fff;
+}
+.iam-sigv4-seal small {
+  display: block;
+  font-size: 0.68rem;
+  color: var(--dim);
+  margin-top: 4px;
+}
+.iam-network-arrow {
+  margin-top: 10px;
+  font: 600 0.75rem var(--mono);
+  color: var(--cyan);
+}
+
+.iam-sigv4-verdict {
+  padding: 8px 12px;
+  margin-top: 12px;
+  border-radius: 5px;
+  background: #49d6a315;
+  color: var(--green);
+  font: 500 0.76rem var(--mono);
+}
+
+/* --------------------------------------------------------------------------
+   VIEW 6: CROSS-ACCOUNT BRIDGE
+   -------------------------------------------------------------------------- */
+.iam-bridge-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.iam-bridge-world {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 140px minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.iam-bridge-fortress {
+  border: 1px solid var(--border-strong);
+  background: #111628;
+  border-radius: 8px;
+  padding: 18px;
+}
+.iam-bf-tag {
+  font: 600 0.68rem var(--mono);
+  color: var(--dim);
+}
+.iam-bf-head h4 {
+  font-size: 1rem;
+  color: var(--text);
+  margin: 3px 0 12px;
+}
+.iam-bf-actor {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.iam-bf-actor .iam-actor-icon {
+  font-size: 1.6rem;
+}
+.iam-bf-actor strong {
+  display: block;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+.iam-bf-actor small {
+  color: var(--dim);
+  font: 0.74rem var(--mono);
+}
+.iam-bf-rule {
+  font: 500 0.78rem var(--mono);
+  color: var(--green);
+  padding: 8px 10px;
+  background: #49d6a314;
+  border-radius: 5px;
+}
+
+.iam-bridge-span {
+  text-align: center;
+}
+.iam-bridge-deck {
+  padding: 14px 8px;
+  border-top: 3px solid var(--cyan);
+  border-bottom: 3px solid var(--cyan);
+  background: #42d6e812;
+  border-radius: 4px;
+}
+.iam-bridge-status {
+  font: 600 0.7rem var(--mono);
+  color: var(--cyan);
+  display: block;
+  letter-spacing: 0.04em;
+}
+.iam-chasm-note {
+  font: 500 0.68rem var(--mono);
+  color: var(--dim);
+  margin-top: 6px;
+}
+
+/* Broken Bridge States */
+.iam-bridge-world.is-broken .iam-bridge-deck {
+  border-color: var(--red);
+  background: #fb7e8512;
+}
+.iam-bridge-world.is-broken .iam-bridge-status {
+  color: var(--red);
+}
+.iam-bridge-world.is-broken-caller .iam-bf-a .iam-bf-rule {
+  color: var(--red);
+  background: #fb7e8518;
+}
+.iam-bridge-world.is-broken-trust .iam-bf-b .iam-bf-rule {
+  color: var(--red);
+  background: #fb7e8518;
+}
+
+.iam-bridge-session-result .iam-bsr-card {
+  padding: 16px 20px;
+  border: 1px solid var(--green);
+  background: #0d211f;
+  border-radius: 8px;
+}
+.iam-bridge-output.is-blocked .iam-bsr-card {
+  border-color: var(--red);
+  background: #25121b;
+}
+.iam-bsr-status {
+  font: 600 0.7rem var(--mono);
+  color: var(--green);
+  display: block;
+  margin-bottom: 4px;
+}
+.iam-bridge-output.is-blocked .iam-bsr-status {
+  color: var(--red);
+}
+.iam-bsr-card strong {
+  font-size: 1.05rem;
+  color: var(--text);
+  display: block;
+  margin-bottom: 6px;
+}
+.iam-bsr-card p {
+  font-size: 0.88rem;
+  color: var(--muted);
+  margin: 0;
+}
+
+/* --------------------------------------------------------------------------
+   VIEW 7: IDENTITY CENTER = CENTRAL PASSPORT OFFICE
+   -------------------------------------------------------------------------- */
+.iam-passport-office {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 20px;
+  border: 2px solid #b79aff60;
+  border-radius: 10px;
+  background: #14172c;
+  margin-bottom: 24px;
+}
+.iam-passport-crest {
+  font-size: 2.4rem;
+  flex-shrink: 0;
+}
+.iam-passport-details h3 {
+  font-size: 1.25rem;
+  color: var(--text);
+  margin: 3px 0 6px;
+}
+.iam-passport-details p {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.iam-account-ports {
+  margin-bottom: 24px;
+}
+.iam-port-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+.iam-port-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  padding: 14px;
+  background: #111524;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+}
+.iam-port-btn.is-active {
+  border-color: var(--purple);
+  background: #1d2036;
+}
+.iam-port-city {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.iam-port-btn code {
+  font: 0.72rem var(--mono);
+  color: var(--dim);
+  margin: 3px 0 8px;
+}
+.iam-port-set {
+  font: 500 0.74rem var(--mono);
+  color: var(--cyan);
+}
+
+.iam-provision-revealer {
+  padding: 20px;
+  border: 1px solid var(--border-strong);
+  background: #0e1220;
+  border-radius: 8px;
+}
+.iam-provision-revealer h4 {
+  font-size: 1.05rem;
+  color: var(--text);
+  margin: 4px 0 16px;
+}
+.iam-provision-flow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.iam-prov-step {
+  flex: 1;
+  padding: 14px;
+  border: 1px solid var(--border-strong);
+  background: #14192b;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+}
+.iam-prov-step.is-highlight {
+  border-color: #42d6e860;
+  background: #0f1d2c;
+}
+.iam-prov-step span {
+  font: 600 0.68rem var(--mono);
+  color: var(--dim);
+}
+.iam-prov-step strong {
+  font-size: 0.88rem;
+  color: var(--text);
+  margin: 4px 0;
+}
+.iam-prov-step small,
+.iam-prov-step code {
+  font: 0.74rem var(--mono);
+  color: var(--cyan);
+}
+.iam-prov-arrow {
+  color: var(--purple);
+  font: 600 0.85rem var(--mono);
+}
+
+/* --------------------------------------------------------------------------
+   VIEW 8: THE 5-GATE CHECKPOINT CORRIDOR
+   -------------------------------------------------------------------------- */
+.iam-corridor-pipeline {
+  display: grid;
+  gap: 20px;
+}
+.iam-corridor-gates {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) 110px;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.iam-gate {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  padding: 14px 12px;
+  background: #121727;
+  border: 2px solid #49d6a360;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+.iam-gate.is-denied {
+  border-color: var(--red);
+  background: #25121b;
+  box-shadow: 0 0 16px rgba(251, 126, 133, 0.2);
+}
+.iam-gate-num {
+  font: 600 0.65rem var(--mono);
+  color: var(--dim);
+}
+.iam-gate-badge {
+  font-size: 1.3rem;
+  margin: 6px 0;
+}
+.iam-gate strong {
+  font-size: 0.82rem;
+  color: var(--text);
+  line-height: 1.3;
+}
+.iam-gate small {
+  font: 600 0.72rem var(--mono);
+  color: var(--green);
+  margin-top: auto;
+  padding-top: 8px;
+}
+.iam-gate.is-denied small {
+  color: var(--red);
+}
+
+.iam-gate-target {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 14px;
+  border: 1px dashed #ffffff25;
+  background: #090e18;
+  border-radius: 8px;
+}
+.iam-gate-target span {
+  font: 600 0.65rem var(--mono);
+  color: var(--amber);
+}
+.iam-gate-target strong {
+  font-size: 0.88rem;
+  color: var(--text);
+  margin: 3px 0;
+}
+.iam-gate-target small {
+  font: 0.7rem var(--mono);
+  color: var(--dim);
+}
+
+.iam-verdict {
+  padding: 16px 20px;
+  border-radius: 8px;
+  font: 500 0.95rem/1.5 var(--sans);
+}
+.iam-verdict.is-allowed {
+  border: 1px solid var(--green);
+  background: #0c211f;
+  color: #a7f3d0;
+}
+.iam-verdict.is-denied {
+  border: 1px solid var(--red);
+  background: #27121b;
+  color: #fecdd3;
+}
+
+.iam-gate-inspector {
+  padding: 18px;
+  border: 1px solid var(--border-strong);
+  background: #0e1220;
+  border-radius: 8px;
+}
+.iam-inspector-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.iam-badge-pill {
+  font: 500 0.72rem var(--mono);
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: #49d6a318;
+  color: var(--green);
+}
+
+/* --------------------------------------------------------------------------
+   VIEW 9: CLOUDTRAIL LEDGER & DIAGNOSING DENIALS
+   -------------------------------------------------------------------------- */
+.iam-diagnosis-canvas {
+  display: grid;
+  gap: 24px;
+}
+.iam-ledger-box {
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 20px;
+  background: #101524;
+}
+.iam-ledger-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.iam-ledger-seal {
+  font-size: 1.8rem;
+}
+.iam-ledger-header h4 {
+  font-size: 1.05rem;
+  color: var(--text);
+  margin: 2px 0 0;
+}
+
+.iam-decision-flow {
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 22px;
+  background: #0e1220;
+}
+.iam-decision-flow h4 {
+  font-size: 1.15rem;
+  color: var(--text);
+  margin: 4px 0 16px;
+}
+.iam-diagnostic-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 14px;
+}
+.iam-diagnostic-steps li {
+  padding: 14px 16px;
+  border: 1px solid #ffffff10;
+  border-left: 3px solid var(--purple);
+  background: #14182b;
+  border-radius: 6px;
+}
+.iam-diag-step-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.iam-diag-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--purple);
+  color: #fff;
+  font: 600 0.72rem var(--mono);
+}
+.iam-diagnostic-steps strong {
+  font-size: 0.95rem;
+  color: var(--text);
+}
+.iam-diagnostic-steps p {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.iam-diagnostic-steps code {
+  color: var(--cyan);
+}
+
+/* --------------------------------------------------------------------------
+   3. Permanent Request Spine Bar
+   -------------------------------------------------------------------------- */
+.iam-request-spine {
+  margin-top: 36px;
+  padding: 18px 20px;
+  background: #0b0f1a;
+  border: 1px solid #b79aff40;
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+.iam-spine-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.iam-spine-kicker {
+  font: 700 0.72rem/1.2 var(--mono);
+  letter-spacing: 0.08em;
+  color: var(--purple);
+}
+.iam-spine-legend {
+  font: 500 0.74rem var(--mono);
+  color: var(--dim);
+}
+
+.iam-spine-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+}
+.iam-spine-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.iam-spine-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-strong);
+  background: #131728;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: all 0.18s ease;
+}
+.iam-spine-link:hover {
+  border-color: var(--purple);
+  background: #1c2138;
+}
+.iam-spine-item.is-current .iam-spine-link {
+  border-color: var(--cyan);
+  background: #0f242c;
+  box-shadow: 0 0 18px rgba(66, 214, 232, 0.25);
+}
+
+.iam-spine-num {
+  font: 700 0.8rem var(--mono);
+  color: var(--purple);
+}
+.iam-spine-item.is-current .iam-spine-num {
+  color: var(--cyan);
+}
+.iam-spine-name {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--text);
+  line-height: 1.25;
+}
+.iam-spine-detail {
+  display: block;
+  font: 0.7rem var(--mono);
+  color: var(--dim);
+}
+.iam-spine-divider {
+  color: var(--cyan);
+  font: 0.85rem var(--mono);
+  opacity: 0.6;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive & Accessibility
+   -------------------------------------------------------------------------- */
+@media (max-width: 1200px) {
+  .iam-kingdom-map {
+    grid-template-columns: 1fr;
+  }
+  .iam-mint-journey {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .iam-terminal-split {
+    grid-template-columns: 1fr;
+  }
+  .iam-bridge-world {
+    grid-template-columns: 1fr;
+  }
+  .iam-port-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .iam-corridor-gates {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .iam-fortress-grid {
+    grid-template-columns: 1fr;
+  }
+  .iam-actor-display {
+    grid-template-columns: 1fr;
+  }
+  .iam-uniform-flaps {
+    grid-template-columns: 1fr;
+  }
+  .iam-role-vs-user {
+    grid-template-columns: 1fr;
+  }
+  .iam-corridor-gates {
+    grid-template-columns: 1fr;
+  }
+  .iam-provision-flow {
+    flex-direction: column;
+  }
+  .iam-prov-arrow {
+    transform: rotate(90deg);
+  }
+  .iam-formula-ribbon {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .iam-lens-control {
+    margin-left: 0;
+    margin-top: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iam-visual *,
+  .iam-formula-ribbon *,
+  .iam-request-spine * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

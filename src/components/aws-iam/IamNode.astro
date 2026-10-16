@@ -1,0 +1,6 @@
+---
+import IdentityIcon from '../identity/IdentityIcon.astro';
+interface Props { label: string; sub?: string; kind?: string; tone?: string }
+const {label,sub,kind='policy',tone='identity'}=Astro.props;
+---
+<div class={`iam-node is-${tone}`}><IdentityIcon kind={kind} size={28}/><div><strong>{label}</strong>{sub && <small>{sub}</small>}</div><slot /></div>

@@ -45,9 +45,9 @@ const primaryFlowIds=new Set(['iam-user','identity-center','cross-account','ec2'
   <div class="ip-bottom"><section class="ip-concepts" aria-label="Key concepts and deeper views"><header><h3>Key concepts</h3><span>Choose a topic to inspect its mechanism</span></header><div>{concepts.map(([name,detail,tone,href])=><a class={`is-${tone}`} href={href} data-ip-concept={href==='#identity-map--user'?'iam-user':href==='#identity-map--role'?'cross-account':undefined}><IdentityIcon kind={tone} size={27}/><strong>{name}</strong><small>{detail}</small><span aria-hidden="true">↗</span></a>)}</div></section>
   <section class="ip-advanced" aria-label="Advanced identity topics"><h3>Advanced topics</h3><div>
     <a href="#cross-account">Cross-account trust →</a><a href="#expiry-refresh">MFA &amp; duration →</a>
-    <a href="/aws-authorization-decision-explorer">Condition keys →</a><a href="#session-context">Session attribution →</a>
-    <a href="/aws-authorization-decision-explorer">Permission boundaries →</a><a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/what-is-access-analyzer.html" target="_blank" rel="noopener noreferrer">Access Analyzer ↗</a>
-    <a href="/aws-authorization-decision-explorer">Organizations SCPs →</a><a href="#credential-diagnosis">Find a failure →</a>
+    <a href="/aws-iam">Condition keys →</a><a href="#session-context">Session attribution →</a>
+    <a href="/aws-iam">Permission boundaries →</a><a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/what-is-access-analyzer.html" target="_blank" rel="noopener noreferrer">Access Analyzer ↗</a>
+    <a href="/aws-iam">Organizations SCPs →</a><a href="#credential-diagnosis">Find a failure →</a>
   </div></section></div>
   <p class="ip-key">The source proves who it is. A provider supplies credentials. The signed request is then authorized for its specific action and resource.</p>
 </div>

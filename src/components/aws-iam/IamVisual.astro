@@ -1,0 +1,789 @@
+---
+import Icon from '../identity/IdentityIcon.astro';
+
+interface Props {
+  form: string;
+  activeStep?: number;
+}
+
+const { form, activeStep = 1 } = Astro.props;
+
+const object = 'arn:aws:s3:::prod-artifacts/releases/app.zip';
+const roleArn = 'arn:aws:iam::222222222222:role/ProdReadOnly';
+
+const spineStages = [
+  { href: 'workload-identity', analogy: 'Identity', pure: 'Principal', detail: 'Darshan / Workload' },
+  { href: 'workload-identity', analogy: 'Authentication', pure: 'Auth Proof', detail: 'Password / IMDS / OIDC' },
+  { href: 'assume-role', analogy: 'Role (Uniform)', pure: 'IAM Role', detail: 'ProdReadOnly' },
+  { href: 'temporary-credentials', analogy: 'STS (Badge Desk)', pure: 'STS AssumeRole', detail: 'ASIA… Temporary Keys' },
+  { href: 'profiles', analogy: 'Sealed Request', pure: 'SigV4 Signed', detail: 'CLI ~/.aws/config' },
+  { href: 'policy-evaluation', analogy: 'Corridor Gates', pure: 'Authorization', detail: '5 Policy Checkpoints' },
+  { href: 'real-world-flows', analogy: 'Treasury / Ledger', pure: 'Resource & Audit', detail: 'S3 & CloudTrail' },
+];
+
+const statement = (effect: string, action: string | string[], resource: string | string[] = object) =>
+  JSON.stringify({ Version: '2012-10-17', Statement: [{ Effect: effect, Action: action, Resource: resource }] }, null, 2);
+
+const trustStatement = JSON.stringify({
+  Version: '2012-10-17',
+  Statement: [{
+    Effect: 'Allow',
+    Principal: { AWS: 'arn:aws:iam::111111111111:role/Engineering' },
+    Action: 'sts:AssumeRole'
+  }]
+}, null, 2);
+---
+
+<!-- 1. Top Persistent Formula Ribbon & Vocabulary Lens -->
+<div class="iam-formula-ribbon" data-iam-formula>
+  <div class="iam-formula-equation">
+    <span class="iam-formula-chip is-who">
+      <small>WHO</small>
+      <strong class="iam-term"><span class="iam-analogy">Citizen / Workload</span><span class="iam-pure">Principal</span></strong>
+      <code>ProdReadOnly / darshan</code>
+    </span>
+    <span class="iam-formula-arrow" aria-hidden="true">→</span>
+    <span class="iam-formula-chip is-what">
+      <small>WHAT</small>
+      <strong class="iam-term"><span class="iam-analogy">Royal Order</span><span class="iam-pure">Action</span></strong>
+      <code>s3:GetObject</code>
+    </span>
+    <span class="iam-formula-arrow" aria-hidden="true">→</span>
+    <span class="iam-formula-chip is-which">
+      <small>WHICH THING</small>
+      <strong class="iam-term"><span class="iam-analogy">Treasury Vault</span><span class="iam-pure">Resource</span></strong>
+      <code>releases/app.zip</code>
+    </span>
+    <span class="iam-formula-arrow" aria-hidden="true">→</span>
+    <span class="iam-formula-chip is-rules">
+      <small>UNDER WHAT RULES</small>
+      <strong class="iam-term"><span class="iam-analogy">Kingdom Laws & Gates</span><span class="iam-pure">Conditions</span></strong>
+      <code>TLS=true · SCP allow</code>
+    </span>
+  </div>
+  <div class="iam-lens-control">
+    <span class="iam-lens-label">Vocabulary:</span>
+    <div class="iam-lens-buttons" role="group" aria-label="Terminology lens">
+      <button type="button" class="iam-lens-btn is-active" data-lens-toggle="analogy" aria-pressed="true">Analogy + AWS</button>
+      <button type="button" class="iam-lens-btn" data-lens-toggle="aws" aria-pressed="false">Pure AWS</button>
+    </div>
+  </div>
+</div>
+
+<!-- 2. The Main Interactive Concept Stage -->
+<div class="iam-stage-container">
+
+  <!-- VIEW 1: THE AWS KINGDOM -->
+  {form === 'kingdom' && (
+    <div class="iam-kingdom-canvas">
+      <!-- Kingdom Law Banner -->
+      <div class="iam-scp-decree">
+        <div class="iam-decree-seal">⚖️</div>
+        <div class="iam-decree-text">
+          <span class="iam-eyebrow"><span class="iam-analogy">KINGDOM LAW</span><span class="iam-pure">SERVICE CONTROL POLICY (SCP)</span> · ALL MEMBER ACCOUNTS</span>
+          <strong>"No city may disable CloudTrail. No city may create root user access keys."</strong>
+          <small>Issued at the Organization Root. Account administrators cannot override kingdom law.</small>
+        </div>
+      </div>
+
+      <!-- Outside vs Inside Boundaries -->
+      <div class="iam-kingdom-map">
+        <!-- Outside the kingdom -->
+        <div class="iam-realm-outside">
+          <span class="iam-realm-tag">OUTSIDE THE KINGDOM</span>
+          <div class="iam-outside-entities">
+            <div class="iam-realm-card">
+              <span class="iam-card-icon">🏛️</span>
+              <strong class="iam-term"><span class="iam-analogy">Foreign Passport Office</span><span class="iam-pure">Corporate IdP</span></strong>
+              <small>Microsoft Entra ID / Okta</small>
+              <a href="#identity-center" class="iam-card-link">Passport office →</a>
+            </div>
+            <div class="iam-realm-card">
+              <span class="iam-card-icon">💻</span>
+              <strong class="iam-term"><span class="iam-analogy">Traveller's Laptop</span><span class="iam-pure">Local Workstation</span></strong>
+              <small>~/.aws/config · --profile prod</small>
+              <a href="#profiles" class="iam-card-link">Profile & SigV4 →</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Inside the Organization Kingdom -->
+        <div class="iam-realm-inside">
+          <div class="iam-realm-inside-header">
+            <span class="iam-realm-tag">THE AWS KINGDOM · AWS ORGANIZATION (o-example123456)</span>
+            <span class="iam-decree-tag">Protected by SCPs</span>
+          </div>
+
+          <div class="iam-fortress-grid">
+            <!-- Account A: Dev Fortress -->
+            <div class="iam-fortress iam-fortress-dev">
+              <div class="iam-fortress-battlement">
+                <span>🏰</span>
+                <div class="iam-fortress-title">
+                  <strong><span class="iam-analogy">Dev Fortress</span><span class="iam-pure">Account 111111111111</span></strong>
+                  <small>Engineering Workshops</small>
+                </div>
+              </div>
+              <ul class="iam-fortress-inhabitants">
+                <li><Icon kind="identity" size={16}/> <span>IAM User: <b>Darshan</b></span></li>
+                <li><Icon kind="policy" size={16}/> <span>Role: <b>role/Engineering</b></span></li>
+                <li><Icon kind="workload" size={16}/> <span>Workloads: <b>EC2 & Lambda</b></span></li>
+              </ul>
+              <div class="iam-fortress-footer">
+                <a href="#workload-identity" class="iam-btn-mini">Inspect identities →</a>
+              </div>
+            </div>
+
+            <!-- Staging Fortress -->
+            <div class="iam-fortress iam-fortress-test">
+              <div class="iam-fortress-battlement">
+                <span>🛡️</span>
+                <div class="iam-fortress-title">
+                  <strong><span class="iam-analogy">Test Fortress</span><span class="iam-pure">Account 123456789012</span></strong>
+                  <small>Staging & QA City</small>
+                </div>
+              </div>
+              <p class="iam-fortress-note">Isolated staging fortress. Complete account isolation prevents any blast radius.</p>
+            </div>
+
+            <!-- Account B: Prod Fortress -->
+            <div class="iam-fortress iam-fortress-prod">
+              <div class="iam-fortress-battlement">
+                <span>👑</span>
+                <div class="iam-fortress-title">
+                  <strong><span class="iam-analogy">Prod Fortress</span><span class="iam-pure">Account 222222222222</span></strong>
+                  <small>High-Security Treasury</small>
+                </div>
+              </div>
+              <ul class="iam-fortress-inhabitants">
+                <li><Icon kind="policy" size={16}/> <span>Uniform: <b>ProdReadOnly Role</b></span></li>
+                <li><Icon kind="resource" size={16}/> <span>Treasury: <b>s3://prod-artifacts</b></span></li>
+                <li><Icon kind="credentials" size={16}/> <span>Guards: <b>5-Gate Corridor</b></span></li>
+              </ul>
+              <div class="iam-fortress-footer">
+                <a href="#cross-account" class="iam-btn-mini">Cross-account bridge →</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kingdom Checkpoint Entrance -->
+      <div class="iam-entrance-strip">
+        <div class="iam-entrance-marker">
+          <span class="iam-entrance-icon">🚪</span>
+          <div>
+            <strong>Kingdom Entrance Checkpoint</strong>
+            <p>Darshan from Dev Fortress wants to read <code>releases/app.zip</code> inside Prod Fortress. There is no direct door. Every request must unfold across the 7-stage request spine below.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )}
+
+  <!-- VIEW 2: WHO ARE YOU? IDENTITIES & WORKLOADS -->
+  {form === 'workloads' && (
+    <div class="iam-workloads-canvas">
+      <div class="iam-tools" data-iam-controls>
+        <span class="iam-tools-label">Choose caller:</span>
+        <div class="iam-actor-tabs" role="tablist">
+          <button type="button" class="iam-actor-btn is-active" data-actor="human" role="tab" aria-selected="true">👤 Human (IAM User)</button>
+          <button type="button" class="iam-actor-btn" data-actor="ec2" role="tab" aria-selected="false">💻 EC2 Instance</button>
+          <button type="button" class="iam-actor-btn" data-actor="ecs" role="tab" aria-selected="false">📦 ECS Task</button>
+          <button type="button" class="iam-actor-btn" data-actor="eks" role="tab" aria-selected="false">☸️ EKS Pod</button>
+          <button type="button" class="iam-actor-btn" data-actor="lambda" role="tab" aria-selected="false">⚡ Lambda</button>
+          <button type="button" class="iam-actor-btn" data-actor="federated" role="tab" aria-selected="false">🌐 Federated (OIDC)</button>
+        </div>
+      </div>
+
+      <div class="iam-actor-display" data-actor-display>
+        <div class="iam-actor-card">
+          <div class="iam-actor-head">
+            <span class="iam-actor-avatar" data-actor-icon>👤</span>
+            <div>
+              <strong data-actor-name>Darshan (IAM User)</strong>
+              <small data-actor-arn>arn:aws:iam::111111111111:user/Darshan</small>
+            </div>
+          </div>
+          <dl class="iam-actor-meta">
+            <dt>How Identity is Proven</dt>
+            <dd data-actor-proof>Console Password + MFA Sign-In, or permanent Access Keys</dd>
+            <dt>Credential Mechanism</dt>
+            <dd data-actor-delivery>Local CLI ~/.aws/credentials or IAM User Console session</dd>
+            <dt>Security Best Practice</dt>
+            <dd data-actor-risk>Avoid long-term access keys. Prefer assuming temporary roles via Identity Center.</dd>
+          </dl>
+        </div>
+
+        <div class="iam-actor-pipeline-note">
+          <span class="iam-eyebrow">THE UNIFYING PRINCIPLE</span>
+          <h3>AWS IAM does not care about biology</h3>
+          <p>Whether the request originates from a human keyboard or an automated container pod, AWS receives the exact same thing: a SigV4-signed HTTP API request accompanied by credentials. The entire pipeline downstream is identical.</p>
+        </div>
+      </div>
+
+      <div class="iam-workload-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Caller</th>
+              <th>Identity Mechanism</th>
+              <th>How AWS Delivers Credentials</th>
+              <th>Key Distinction</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>EC2 Instance</b></td>
+              <td>Instance Profile (attached to instance)</td>
+              <td>IMDSv2 (169.254.169.254)</td>
+              <td>Instance profile is a container for one IAM role.</td>
+            </tr>
+            <tr>
+              <td><b>ECS Task</b></td>
+              <td>Task Role</td>
+              <td>Container Credential Endpoint</td>
+              <td>Distinct from Task Execution Role (which runs the agent).</td>
+            </tr>
+            <tr>
+              <td><b>EKS Pod</b></td>
+              <td>EKS Pod Identity / IRSA</td>
+              <td>EKS Auth Agent / Projected OIDC token</td>
+              <td>EKS Pod Identity simplifies IRSA without OIDC thumbprints.</td>
+            </tr>
+            <tr>
+              <td><b>Lambda</b></td>
+              <td>Execution Role</td>
+              <td>AWS Lambda runtime credential provider</td>
+              <td>Assumed directly by <code>lambda.amazonaws.com</code> service.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )}
+
+  <!-- VIEW 3: IAM ROLE = WEARABLE UNIFORM -->
+  {form === 'badge' && (
+    <div class="iam-badge-canvas">
+      <div class="iam-uniform-viewer">
+        <!-- Uniform SVG Representation -->
+        <div class="iam-uniform-figure">
+          <div class="iam-uniform-armor">
+            <div class="iam-uniform-crest">
+              <span class="iam-armor-icon">🛡️</span>
+              <strong><span class="iam-analogy">ProdReadOnly UNIFORM</span><span class="iam-pure">IAM ROLE</span></strong>
+              <code>{roleArn}</code>
+            </div>
+
+            <!-- Two Lapels: Trust vs Permissions -->
+            <div class="iam-uniform-flaps">
+              <!-- Left Lapel: Trust Policy -->
+              <div class="iam-flap iam-flap-trust">
+                <div class="iam-flap-header">
+                  <span class="iam-flap-tag"><span class="iam-analogy">INSIDE LABEL</span><span class="iam-pure">TRUST POLICY</span></span>
+                  <h4>"Who may wear me?"</h4>
+                  <p>Specifies which principal is permitted to call <code>sts:AssumeRole</code> to put on this uniform.</p>
+                </div>
+                <pre tabindex="0"><code>{trustStatement}</code></pre>
+                <span class="iam-flap-badge">Checked by STS at AssumeRole</span>
+              </div>
+
+              <!-- Right Lapel: Permissions Policy -->
+              <div class="iam-flap iam-flap-permissions">
+                <div class="iam-flap-header">
+                  <span class="iam-flap-tag"><span class="iam-analogy">OUTSIDE BADGE</span><span class="iam-pure">PERMISSIONS POLICY</span></span>
+                  <h4>"What may the wearer do?"</h4>
+                  <p>Specifies what AWS API actions the wearer is permitted to execute once wearing this uniform.</p>
+                </div>
+                <pre tabindex="0"><code>{statement('Allow', 's3:GetObject')}</code></pre>
+                <span class="iam-flap-badge">Checked by Resource Service (S3)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Role vs User Mental Model Comparison -->
+        <div class="iam-role-vs-user">
+          <div class="iam-rvu-card">
+            <span class="iam-eyebrow"><span class="iam-analogy">PERMANENT CITIZEN</span><span class="iam-pure">IAM USER</span></span>
+            <h4>Individual Person</h4>
+            <ul>
+              <li>Has a permanent identity & password</li>
+              <li>Can have permanent access keys (<code>AKIA...</code>)</li>
+              <li>Cannot be assumed by callers in other AWS accounts</li>
+              <li>Permanent blast radius if credentials leak</li>
+            </ul>
+          </div>
+          <div class="iam-rvu-card is-highlight">
+            <span class="iam-eyebrow"><span class="iam-analogy">WEARABLE UNIFORM</span><span class="iam-pure">IAM ROLE</span></span>
+            <h4>Temporary Duty Uniform</h4>
+            <ul>
+              <li>Has NO password and NO permanent keys</li>
+              <li>Assumed via <code>sts:AssumeRole</code></li>
+              <li>STS mints short-lived temporary keys (<code>ASIA...</code>)</li>
+              <li>Works seamlessly across accounts and for workloads</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  )}
+
+  <!-- VIEW 4: STS = TEMPORARY BADGE OFFICE -->
+  {form === 'mint' && (
+    <div class="iam-mint-canvas">
+      <div class="iam-mint-journey">
+        <!-- Input request -->
+        <div class="iam-mint-input">
+          <span class="iam-eyebrow">CALLER REQUEST</span>
+          <div class="iam-mint-request-box">
+            <span class="iam-call-arrow">AssumeRole →</span>
+            <strong>Caller: Engineering</strong>
+            <small>Asking for ProdReadOnly</small>
+          </div>
+        </div>
+
+        <!-- STS Issuer -->
+        <div class="iam-mint-desk">
+          <div class="iam-machine-seal">🪪</div>
+          <strong><span class="iam-analogy">STS BADGE OFFICE</span><span class="iam-pure">AWS STS</span></strong>
+          <small>Verifies Trust Policy & Mints Pass</small>
+          <div class="iam-machine-gears"><i></i><i></i></div>
+        </div>
+
+        <!-- Temporary Badge Output -->
+        <div class="iam-mint-output">
+          <span class="iam-eyebrow">ISSUED CREDENTIAL SET</span>
+          <div class="iam-badge-pass" data-credential-card>
+            <div class="iam-pass-header">
+              <span class="iam-pass-title">TEMPORARY ACCESS PASS</span>
+              <span class="iam-pass-chip">ASIA TEMPORARY</span>
+            </div>
+            <div class="iam-pass-body">
+              <div class="iam-pass-field">
+                <span class="iam-pass-label">AccessKeyId</span>
+                <code class="iam-pass-key">ASIAVEXAMPLE7890123</code>
+              </div>
+              <div class="iam-pass-field">
+                <span class="iam-pass-label">SecretAccessKey</span>
+                <code class="iam-pass-secret">••••••••••••••••••••••••••••••••••••••••</code>
+              </div>
+              <div class="iam-pass-field">
+                <span class="iam-pass-label">SessionToken</span>
+                <code class="iam-pass-token">IQoJb3JpZ2luX2Vj... (opaque proof)</code>
+              </div>
+            </div>
+            <div class="iam-pass-footer">
+              <div class="iam-countdown-widget">
+                <svg viewBox="0 0 36 36" class="iam-expiry-svg" aria-hidden="true">
+                  <path class="iam-expiry-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                  <path class="iam-expiry-bar" data-expiry-ring stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                </svg>
+                <div>
+                  <span class="iam-countdown-text" data-expiry-value>60 minutes remaining</span>
+                  <small>Auto-terminates blast radius</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Expiration Slider -->
+      <div class="iam-tools" data-iam-controls>
+        <label for="iam-expiry-range">
+          <span>Advance credential clock:</span>
+          <input id="iam-expiry-range" type="range" min="0" max="60" step="15" value="0" data-expiry />
+        </label>
+        <button type="button" data-expiry-reset>Reset Clock</button>
+      </div>
+      <p class="iam-feedback" data-expiry-feedback aria-live="polite">All three credential fields are required to sign AWS requests. The pass expires automatically without deleting the role.</p>
+    </div>
+  )}
+
+  <!-- VIEW 5: LAPTOP OUTSIDE THE WALLS: PROFILES & SIGV4 -->
+  {form === 'terminal' && (
+    <div class="iam-terminal-canvas">
+      <div class="iam-terminal-split">
+        <!-- Outside: Learner's Laptop -->
+        <div class="iam-laptop-zone">
+          <div class="iam-zone-header">
+            <span class="iam-laptop-badge">OUTSIDE AWS</span>
+            <h4>Learner's Laptop · ~/.aws/config</h4>
+          </div>
+
+          <div class="iam-tools" data-iam-controls>
+            <span class="iam-tools-label">Active profile:</span>
+            <div class="iam-profile-tabs">
+              <button type="button" class="iam-profile-btn is-active" data-profile="prod" aria-pressed="true">--profile prod</button>
+              <button type="button" class="iam-profile-btn" data-profile="dev" aria-pressed="false">--profile dev</button>
+            </div>
+          </div>
+
+          <pre class="iam-code-block" tabindex="0"><code data-profile-config>{`[profile prod]
+role_arn = arn:aws:iam::222222222222:role/ProdReadOnly
+source_profile = dev
+role_session_name = darshan
+region = ap-south-1`}</code></pre>
+
+          <div class="iam-cli-command">
+            <span class="iam-cli-prompt">$</span>
+            <code>aws s3api get-object --bucket prod-artifacts --key releases/app.zip app.zip <span data-profile-flag>--profile prod</span></code>
+          </div>
+          <p class="iam-caption">The profile name <code>prod</code> never travels over the network. AWS IAM has zero knowledge of profiles.</p>
+        </div>
+
+        <!-- Middle: SigV4 Seal & Network Transfer -->
+        <div class="iam-sigv4-pipe">
+          <div class="iam-sigv4-seal">
+            <span class="iam-seal-icon">🔏</span>
+            <strong>SigV4 Cryptographic Wax Seal</strong>
+            <small>HMAC-SHA256 signature proves caller possesses secret without transmitting it</small>
+          </div>
+          <div class="iam-network-arrow">Direct API Call →</div>
+        </div>
+
+        <!-- Inside: AWS Cloud -->
+        <div class="iam-cloud-zone">
+          <div class="iam-zone-header">
+            <span class="iam-cloud-badge">INSIDE AWS</span>
+            <h4>AWS Cloud Gate (Amazon S3)</h4>
+          </div>
+
+          <div class="iam-request-headers">
+            <span class="iam-eyebrow">WHAT AWS ACTUALLY SEES</span>
+            <pre tabindex="0"><code>{`Authorization: AWS4-HMAC-SHA256
+  Credential=ASIAVEXAMPLE.../20261017/ap-south-1/s3/aws4_request,
+  SignedHeaders=host;x-amz-date;x-amz-security-token,
+  Signature=c3ab879f42...
+
+X-Amz-Security-Token: IQoJb3JpZ2luX2Vj...
+X-Amz-Date: 20261017T090000Z`}</code></pre>
+          </div>
+          <div class="iam-sigv4-verdict">
+            <span>✓ Signature Valid</span> · <span>✓ Token Verified</span> · <span>Caller = ProdReadOnly/darshan</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )}
+
+  <!-- VIEW 6: CROSS-ACCOUNT BRIDGE -->
+  {form === 'bridge' && (
+    <div class="iam-bridge-canvas">
+      <div class="iam-tools" data-iam-controls>
+        <span class="iam-tools-label">Bridge state:</span>
+        <div class="iam-bridge-controls">
+          <button type="button" class="iam-bridge-btn is-active" data-bridge-state="ready" aria-pressed="true">Both sides permit (Passage open)</button>
+          <button type="button" class="iam-bridge-btn" data-bridge-state="caller" aria-pressed="false">Break Dev Fortress permission</button>
+          <button type="button" class="iam-bridge-btn" data-bridge-state="trust" aria-pressed="false">Break Prod Fortress trust</button>
+        </div>
+      </div>
+
+      <div class="iam-bridge-world" data-bridge>
+        <!-- Account A -->
+        <div class="iam-bridge-fortress iam-bf-a">
+          <div class="iam-bf-head">
+            <span class="iam-bf-tag">ACCOUNT A (DEV · 111111111111)</span>
+            <h4>Dev Fortress Gate</h4>
+          </div>
+          <div class="iam-bf-actor">
+            <span class="iam-actor-icon">👤</span>
+            <strong>Darshan</strong>
+            <small>Role: Engineering</small>
+          </div>
+          <div class="iam-bf-rule" data-bridge-caller>
+            ✓ Outbound Allow: <code>sts:AssumeRole</code> on Prod role
+          </div>
+        </div>
+
+        <!-- The Chasm and Bridge -->
+        <div class="iam-bridge-span">
+          <div class="iam-bridge-deck">
+            <span class="iam-bridge-status" data-bridge-label>MUTUAL TRUST BRIDGE (ACTIVE)</span>
+            <div class="iam-bridge-rails"></div>
+          </div>
+          <div class="iam-chasm-note">Account Isolation Chasm</div>
+        </div>
+
+        <!-- Account B -->
+        <div class="iam-bridge-fortress iam-bf-b">
+          <div class="iam-bf-head">
+            <span class="iam-bf-tag">ACCOUNT B (PROD · 222222222222)</span>
+            <h4>Prod Fortress Gate</h4>
+          </div>
+          <div class="iam-bf-actor">
+            <span class="iam-actor-icon">🛡️</span>
+            <strong>ProdReadOnly Role</strong>
+            <small>Uniform in Prod</small>
+          </div>
+          <div class="iam-bf-rule" data-bridge-trust>
+            ✓ Inbound Trust: Trusts <code>arn:aws:iam::111111111111:role/Engineering</code>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resulting Session output -->
+      <div class="iam-bridge-session-result" data-bridge-output>
+        <div class="iam-bsr-card">
+          <span class="iam-bsr-status">STS ASSUMEROLE OUTCOME</span>
+          <strong data-bsr-title>AssumeRole Authorized → Session Credentials Minted</strong>
+          <p data-bsr-text>Darshan crosses the bridge and enters Prod Fortress wearing the ProdReadOnly uniform as <code>arn:aws:sts::222222222222:assumed-role/ProdReadOnly/darshan</code>.</p>
+        </div>
+      </div>
+      <p class="iam-feedback" data-bridge-feedback aria-live="polite">AssumeRole succeeds. Cross-account access requires a handshake: caller outbound permission and target trust policy must both agree.</p>
+    </div>
+  )}
+
+  <!-- VIEW 7: IDENTITY CENTER = CENTRAL PASSPORT OFFICE -->
+  {form === 'switchboard' && (
+    <div class="iam-switchboard-canvas">
+      <!-- Central Passport Office -->
+      <div class="iam-passport-office">
+        <div class="iam-passport-crest">🏛️</div>
+        <div class="iam-passport-details">
+          <span class="iam-eyebrow">CENTRAL ROYAL PASSPORT OFFICE</span>
+          <h3>AWS IAM Identity Center (Single Sign-On)</h3>
+          <p>One workforce login for Darshan (via Entra ID or Okta) provides seamless access across all 50 kingdom accounts.</p>
+        </div>
+      </div>
+
+      <!-- Account Switchboard Grid -->
+      <div class="iam-account-ports">
+        <span class="iam-tools-label">Select kingdom account:</span>
+        <div class="iam-port-grid">
+          <button type="button" class="iam-port-btn" data-port="dev">
+            <span class="iam-port-city">🏰 Dev Fortress</span>
+            <code>111111111111</code>
+            <span class="iam-port-set">AdministratorAccess</span>
+          </button>
+          <button type="button" class="iam-port-btn is-active" data-port="prod" aria-pressed="true">
+            <span class="iam-port-city">👑 Prod Fortress</span>
+            <code>222222222222</code>
+            <span class="iam-port-set">ReadOnlyAccess</span>
+          </button>
+          <button type="button" class="iam-port-btn" data-port="test">
+            <span class="iam-port-city">🛡️ Test Fortress</span>
+            <code>123456789012</code>
+            <span class="iam-port-set">PowerUserAccess</span>
+          </button>
+          <button type="button" class="iam-port-btn" data-port="security">
+            <span class="iam-port-city">⚖️ Security Fortress</span>
+            <code>333333333333</code>
+            <span class="iam-port-set">SecurityAuditor</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- How Permission Sets Provision Roles -->
+      <div class="iam-provision-revealer" data-provision-box>
+        <span class="iam-eyebrow">HOW IDENTITY CENTER WORKS UNDER THE HOOD</span>
+        <h4>Permission Set Provisioning Pipeline</h4>
+        <div class="iam-provision-flow">
+          <div class="iam-prov-step">
+            <span>Step 1</span>
+            <strong>Permission Set Template</strong>
+            <small data-prov-set>ReadOnlyAccess</small>
+          </div>
+          <span class="iam-prov-arrow">creates →</span>
+          <div class="iam-prov-step is-highlight">
+            <span>Step 2</span>
+            <strong>Provisioned IAM Role in Target City</strong>
+            <code data-prov-role>AWSReservedSSO_ReadOnlyAccess_8f29c4e1</code>
+          </div>
+          <span class="iam-prov-arrow">mints →</span>
+          <div class="iam-prov-step">
+            <span>Step 3</span>
+            <strong>Temporary Role Credentials</strong>
+            <small>Direct browser console or CLI session</small>
+          </div>
+        </div>
+        <p class="iam-caption">A Permission Set is not a global IAM policy. It is a blueprint that Identity Center materializes as an actual IAM role inside each assigned account.</p>
+      </div>
+    </div>
+  )}
+
+  <!-- VIEW 8: THE 5-GATE CHECKPOINT CORRIDOR -->
+  {form === 'gates' && (
+    <div class="iam-gates-canvas">
+      <!-- Scenario Selector -->
+      <div class="iam-tools" data-iam-controls>
+        <label for="iam-gate-scenario">
+          <span>Choose Authorization Scenario:</span>
+          <select id="iam-gate-scenario" data-eval-scenario>
+            <option value="allow">1. Normal Read: All gates permit → Access Allowed (200 OK)</option>
+            <option value="deny">2. Explicit Deny on Bucket Policy → Gate 2 slams RED! (Access Denied)</option>
+            <option value="scp">3. SCP Kingdom Law blocks S3 in Account → Gate 1 slams RED! (Access Denied)</option>
+            <option value="boundary">4. Action exceeds Permissions Boundary ceiling → Gate 4 slams RED! (Access Denied)</option>
+            <option value="missing">5. No matching Allow in Identity Policy → Gate 3 Implicit Deny! (Access Denied)</option>
+          </select>
+        </label>
+        <button type="button" data-eval-reset>Reset Scenario</button>
+      </div>
+
+      <!-- Checkpoint Corridor Visual -->
+      <div class="iam-corridor-pipeline">
+        <div class="iam-corridor-gates">
+          <!-- Gate 1: SCP -->
+          <button type="button" class="iam-gate is-open" data-gate="0" aria-pressed="true">
+            <span class="iam-gate-num">GATE 1</span>
+            <span class="iam-gate-badge">⚖️</span>
+            <strong><span class="iam-analogy">Kingdom Law</span><span class="iam-pure">SCP</span></strong>
+            <small data-gate-mark="0">Permits</small>
+          </button>
+
+          <!-- Gate 2: Resource Policy -->
+          <button type="button" class="iam-gate is-open" data-gate="1" aria-pressed="false">
+            <span class="iam-gate-num">GATE 2</span>
+            <span class="iam-gate-badge">🚪</span>
+            <strong><span class="iam-analogy">Door Rule</span><span class="iam-pure">Resource Policy</span></strong>
+            <small data-gate-mark="1">No Deny</small>
+          </button>
+
+          <!-- Gate 3: Identity Policy -->
+          <button type="button" class="iam-gate is-open" data-gate="2" aria-pressed="false">
+            <span class="iam-gate-num">GATE 3</span>
+            <span class="iam-gate-badge">📜</span>
+            <strong><span class="iam-analogy">Uniform Grant</span><span class="iam-pure">Identity Policy</span></strong>
+            <small data-gate-mark="2">Allows</small>
+          </button>
+
+          <!-- Gate 4: Boundary -->
+          <button type="button" class="iam-gate is-open" data-gate="3" aria-pressed="false">
+            <span class="iam-gate-num">GATE 4</span>
+            <span class="iam-gate-badge">📏</span>
+            <strong><span class="iam-analogy">Rank Ceiling</span><span class="iam-pure">Permissions Boundary</span></strong>
+            <small data-gate-mark="3">Within Ceiling</small>
+          </button>
+
+          <!-- Gate 5: Session Policy -->
+          <button type="button" class="iam-gate is-open" data-gate="4" aria-pressed="false">
+            <span class="iam-gate-num">GATE 5</span>
+            <span class="iam-gate-badge">⏱️</span>
+            <strong><span class="iam-analogy">Pass Filter</span><span class="iam-pure">Session Policy</span></strong>
+            <small data-gate-mark="4">Permits</small>
+          </button>
+
+          <!-- Target: Treasury -->
+          <div class="iam-gate-target">
+            <span>VAULT</span>
+            <strong>S3 Bucket</strong>
+            <small>releases/app.zip</small>
+          </div>
+        </div>
+
+        <!-- Live Corridor Verdict Banner -->
+        <div class="iam-verdict is-allowed" data-eval-verdict aria-live="polite">
+          ALLOWED · Identity grant survives all applicable guardrails. Request reaches S3 Treasury.
+        </div>
+
+        <!-- Selected Gate JSON & Logic Inspector -->
+        <div class="iam-gate-inspector">
+          <div class="iam-inspector-head">
+            <span class="iam-eyebrow" data-policy-label>Gate 1: Organization SCP · Statement</span>
+            <span class="iam-badge-pill" data-policy-status>Allows S3</span>
+          </div>
+          <pre tabindex="0"><code data-policy-json>{statement('Allow', 's3:*', '*')}</code></pre>
+          <p data-policy-explain>SCPs define the maximum permission boundary for member accounts. This example permits S3 actions through the organization hierarchy.</p>
+        </div>
+      </div>
+    </div>
+  )}
+
+  <!-- VIEW 9: CLOUDTRAIL LEDGER & DIAGNOSING DENIALS -->
+  {form === 'diagnosis' && (
+    <div class="iam-diagnosis-canvas">
+      <!-- The Royal Ledger (CloudTrail) -->
+      <div class="iam-ledger-box">
+        <div class="iam-ledger-header">
+          <span class="iam-ledger-seal">📜</span>
+          <div>
+            <span class="iam-eyebrow"><span class="iam-analogy">THE KINGDOM LEDGER</span><span class="iam-pure">AWS CLOUDTRAIL</span></span>
+            <h4>Unalterable Record of Every Request</h4>
+          </div>
+        </div>
+        <pre class="iam-code-block" tabindex="0"><code>{`{
+  "eventTime": "2026-10-17T09:14:02Z",
+  "eventSource": "s3.amazonaws.com",
+  "eventName": "GetObject",
+  "awsRegion": "ap-south-1",
+  "sourceIPAddress": "203.0.113.42",
+  "userAgent": "aws-cli/2.15.0",
+  "userIdentity": {
+    "type": "AssumedRole",
+    "principalId": "AROA2222EXAMPLE:darshan",
+    "arn": "arn:aws:sts::222222222222:assumed-role/ProdReadOnly/darshan",
+    "accountId": "222222222222"
+  },
+  "requestParameters": {
+    "bucketName": "prod-artifacts",
+    "key": "releases/app.zip"
+  },
+  "responseElements": null,
+  "errorCode": "AccessDenied",
+  "errorMessage": "Access Denied"
+}`}</code></pre>
+      </div>
+
+      <!-- 4-Step AccessDenied Decision Flowchart -->
+      <div class="iam-decision-flow">
+        <span class="iam-eyebrow">SYSTEMATIC TROUBLESHOOTING</span>
+        <h4>Four-Step AccessDenied Diagnostic Tree</h4>
+        <ol class="iam-diagnostic-steps">
+          <li>
+            <div class="iam-diag-step-header">
+              <span class="iam-diag-num">1</span>
+              <strong>Identify Failure Stage: STS or Resource?</strong>
+            </div>
+            <p>Did the error happen while running <code>aws sts assume-role</code>? That means you were rejected at the <b>STS Badge Office</b> (inspect caller outbound allow + target role trust policy). Did the error happen on <code>s3 get-object</code>? That means role assumption succeeded, but you were halted at one of the <b>5 corridor gates</b>.</p>
+          </li>
+          <li>
+            <div class="iam-diag-step-header">
+              <span class="iam-diag-num">2</span>
+              <strong>Verify Who Actually Signed the Request</strong>
+            </div>
+            <p>Never guess who you are. Run <code>aws sts get-caller-identity --profile prod</code>. Often a script runs as the EC2 instance role or wrong local profile rather than the expected assumed role.</p>
+          </li>
+          <li>
+            <div class="iam-diag-step-header">
+              <span class="iam-diag-num">3</span>
+              <strong>Find the Matching Grant vs Blocked Gate</strong>
+            </div>
+            <p>Check the 5 gates in order: (1) Does an SCP deny the action in this account? (2) Does the S3 bucket policy have an explicit deny (e.g. <code>aws:SecureTransport=false</code>)? (3) Does your identity policy grant the exact object ARN <code>prod-artifacts/*</code> instead of just the bucket? (4) Does a Permissions Boundary omit the action?</p>
+          </li>
+          <li>
+            <div class="iam-diag-step-header">
+              <span class="iam-diag-num">4</span>
+              <strong>Validate with IAM Access Analyzer</strong>
+            </div>
+            <p>Run policy validation to check JSON syntax, wildcard traps, and redundant statements: <code>aws access-analyzer validate-policy --policy-document file://policy.json</code>. Refine permissions to least privilege.</p>
+          </li>
+        </ol>
+      </div>
+    </div>
+  )}
+
+</div>
+
+<!-- 3. Permanent 7-Stage Request Pipeline Spine -->
+<nav class="iam-request-spine" aria-label="Permanent AWS Request Pipeline">
+  <div class="iam-spine-header">
+    <span class="iam-spine-kicker">PERMANENT REQUEST SPINE</span>
+    <span class="iam-spine-legend">Click any stage to inspect its mechanism</span>
+  </div>
+  <ol class="iam-spine-steps">
+    {spineStages.map((st, i) => (
+      <li class:list={['iam-spine-item', activeStep === i + 1 && 'is-current']}>
+        <a href={`#${st.href}`} class="iam-spine-link" aria-current={activeStep === i + 1 ? 'step' : undefined}>
+          <span class="iam-spine-index">0{i + 1}</span>
+          <div class="iam-spine-info">
+            <strong class="iam-spine-name"><span class="iam-analogy">{st.analogy}</span><span class="iam-pure">{st.pure}</span></strong>
+            <small class="iam-spine-detail">{st.detail}</small>
+          </div>
+        </a>
+        {i < spineStages.length - 1 && <span class="iam-spine-divider" aria-hidden="true">→</span>}
+      </li>
+    ))}
+  </ol>
+</nav>

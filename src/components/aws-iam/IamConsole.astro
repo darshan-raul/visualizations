@@ -1,0 +1,81 @@
+---
+import LessonConsole from '../lesson/LessonConsole.astro';
+import IamVisual from './IamVisual.astro';
+import { iamLesson } from './iam-lesson';
+
+interface Props { published: Date; reviewed?: Date; }
+
+const aliases: Record<string, string[]> = {
+  'kingdom': ['identity-map', 'request-journey'],
+  'workload-identity': ['users-roles', 'principal-who-signed-the-request'],
+  'assume-role': ['policies', 'policies-where-can-permission-come-from'],
+  'temporary-credentials': ['sessions-what-happens-when-a-role-is-assumed'],
+  'profiles': [],
+  'cross-account': ['cross-account-which-two-sides-must-agree'],
+  'identity-center': ['federation'],
+  'policy-evaluation': [
+    'organizations',
+    'boundaries',
+    'guardrails-how-is-power-capped',
+    'evaluation-why-was-it-allowed-or-denied',
+    'role-and-session-principals-are-different',
+    'principal-grant-title'
+  ],
+  'real-world-flows': [
+    'least-privilege-how-do-you-refine-access',
+    'diagnose-an-accessdenied'
+  ],
+};
+---
+
+<LessonConsole lesson={iamLesson} published={Astro.props.published} reviewed={Astro.props.reviewed} sourceAliases={['sources']}>
+  <div slot="view-kingdom" class="iam-visual iam-visual-kingdom" data-iam-visual="kingdom">
+    {aliases['kingdom']?.map(id => <span id={id} class="lsn-anchor" />)}
+    <IamVisual form="kingdom" activeStep={1} />
+  </div>
+
+  <div slot="view-workload-identity" class="iam-visual iam-visual-workloads" data-iam-visual="workloads">
+    {aliases['workload-identity']?.map(id => <span id={id} class="lsn-anchor" />)}
+    <IamVisual form="workloads" activeStep={1} />
+  </div>
+
+  <div slot="view-assume-role" class="iam-visual iam-visual-badge" data-iam-visual="badge">
+    {aliases['assume-role']?.map(id => <span id={id} class="lsn-anchor" />)}
+    <IamVisual form="badge" activeStep={3} />
+  </div>
+
+  <div slot="view-temporary-credentials" class="iam-visual iam-visual-mint" data-iam-visual="mint">
+    {aliases['temporary-credentials']?.map(id => <span id={id} class="lsn-anchor" />)}
+    <IamVisual form="mint" activeStep={4} />
+  </div>
+
+  <div slot="view-profiles" class="iam-visual iam-visual-terminal" data-iam-visual="terminal">
+    {aliases['profiles']?.map(id => <span id={id} class="lsn-anchor" />)}
+    <IamVisual form="terminal" activeStep={5} />
+  </div>
+
+  <div slot="view-cross-account" class="iam-visual iam-visual-bridge" data-iam-visual="bridge">
+    {aliases['cross-account']?.map(id => <span id={id} class="lsn-anchor" />)}
+    <IamVisual form="bridge" activeStep={3} />
+  </div>
+
+  <div slot="view-identity-center" class="iam-visual iam-visual-switchboard" data-iam-visual="switchboard">
+    {aliases['identity-center']?.map(id => <span id={id} class="lsn-anchor" />)}
+    <IamVisual form="switchboard" activeStep={2} />
+  </div>
+
+  <div slot="view-policy-evaluation" class="iam-visual iam-visual-gates" data-iam-visual="gates">
+    {aliases['policy-evaluation']?.map(id => <span id={id} class="lsn-anchor" />)}
+    <IamVisual form="gates" activeStep={6} />
+  </div>
+
+  <div slot="view-real-world-flows" class="iam-visual iam-visual-diagnosis" data-iam-visual="diagnosis">
+    {aliases['real-world-flows']?.map(id => <span id={id} class="lsn-anchor" />)}
+    <IamVisual form="diagnosis" activeStep={7} />
+  </div>
+</LessonConsole>
+
+<script>
+  import { initIam } from './iam-client';
+  initIam();
+</script>

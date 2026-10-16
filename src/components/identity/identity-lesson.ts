@@ -72,6 +72,6 @@ export const identityLesson: Lesson = {
       evidence: ['CURRENT CREDENTIAL CONTEXT', panels[index].states[0].credential], note: item.note },
   }))],
   sources: identitySources,
-  related: [{label:'AWS authorization decisions',href:'/aws-authorization-decision-explorer'},{label:'OAuth 2.0 & OIDC',href:'/oauth2-explainer'},{label:'SSH trust & authentication',href:'/ssh'}],
+  related: [{label:'AWS authorization decisions',href:'/aws-iam'},{label:'OAuth 2.0 & OIDC',href:'/oauth2-explainer'},{label:'SSH trust & authentication',href:'/ssh'}],
   legend: [{ kind:'identity',label:'identity / trust' },{kind:'hot',label:'request / response'},{kind:'concept',label:'configuration relationship (dashed)'},{kind:'denied',label:'blocked exchange'}],
 };
