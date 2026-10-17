@@ -67,6 +67,7 @@ export type Frame = {
 
 export type View = {
   id: string;
+  aliases?: string[];
   group: string;
   label: string;
   title: string;

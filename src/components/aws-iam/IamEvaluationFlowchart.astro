@@ -1,0 +1,870 @@
+---
+/**
+ * IamEvaluationFlowchart.astro
+ *
+ * Implements the official AWS Policy Evaluation Logic flowchart from the AWS documentation:
+ * "Determining whether a request is allowed or denied within an account"
+ * (https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic.html)
+ *
+ * Features:
+ * 1. Complete 6-column flowchart matching the official AWS documentation:
+ *    - Deny evaluation
+ *    - Organizations SCPs
+ *    - Resource-based policies
+ *    - Identity-based policies
+ *    - IAM permissions boundaries
+ *    - Session policies
+ * 2. 7 interactive presets highlighting the exact evaluation path, decisions, and resulting status.
+ * 3. Step inspector explaining each decision diamond and terminal rule.
+ * 4. High-contrast accessible SVG with mobile-friendly horizontal scrolling.
+ */
+
+interface Props {
+  className?: string;
+}
+const { className = '' } = Astro.props;
+---
+
+<div class:list={['iam-fc-board', className]} data-iam-fc-board>
+  <!-- Interactive Presets Toolbar -->
+  <div class="iam-fc-toolbar" role="region" aria-label="Policy evaluation scenarios">
+    <div class="iam-fc-toolbar-head">
+      <span class="iam-fc-tag">OFFICIAL AWS DECISION LOGIC</span>
+      <span class="iam-fc-subtag">Select a scenario to trace the decision flow through all 6 policy layers:</span>
+    </div>
+    <div class="iam-fc-presets" role="group" aria-label="Preset evaluation scenarios">
+      <button type="button" class="iam-fc-btn is-active" data-iam-fc-preset="role-allow" aria-pressed="true">
+        <span class="iam-fc-btn-num">1</span>
+        <span class="iam-fc-btn-label">Role session (Allow)</span>
+      </button>
+      <button type="button" class="iam-fc-btn is-deny" data-iam-fc-preset="explicit-deny" aria-pressed="false">
+        <span class="iam-fc-btn-num">2</span>
+        <span class="iam-fc-btn-label">Explicit Deny (TLS/Bucket)</span>
+      </button>
+      <button type="button" class="iam-fc-btn is-deny" data-iam-fc-preset="scp-deny" aria-pressed="false">
+        <span class="iam-fc-btn-num">3</span>
+        <span class="iam-fc-btn-label">Blocked by Org SCP</span>
+      </button>
+      <button type="button" class="iam-fc-btn" data-iam-fc-preset="res-policy-allow" aria-pressed="false">
+        <span class="iam-fc-btn-num">4</span>
+        <span class="iam-fc-btn-label">Same-account bucket policy</span>
+      </button>
+      <button type="button" class="iam-fc-btn is-deny" data-iam-fc-preset="boundary-deny" aria-pressed="false">
+        <span class="iam-fc-btn-num">5</span>
+        <span class="iam-fc-btn-label">Capped by Boundary</span>
+      </button>
+      <button type="button" class="iam-fc-btn is-deny" data-iam-fc-preset="missing-grant" aria-pressed="false">
+        <span class="iam-fc-btn-num">6</span>
+        <span class="iam-fc-btn-label">Missing Grant (Implicit deny)</span>
+      </button>
+      <button type="button" class="iam-fc-btn is-deny" data-iam-fc-preset="session-policy-deny" aria-pressed="false">
+        <span class="iam-fc-btn-num">7</span>
+        <span class="iam-fc-btn-label">Session policy restricts</span>
+      </button>
+      <button type="button" class="iam-fc-btn is-reset" data-iam-fc-preset="all" aria-pressed="false" title="Show all decision nodes">
+        <span class="iam-fc-btn-num">↺</span>
+        <span class="iam-fc-btn-label">View full chart</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Flowchart SVG Canvas Wrap (Scrollable on narrow viewports) -->
+  <div class="iam-fc-canvas-wrap" tabindex="0" role="region" aria-label="Interactive AWS Policy Evaluation Flowchart">
+    <div class="iam-fc-scroll-hint"><span>⇄ Scroll horizontally to view all 6 columns</span></div>
+
+    <svg class="iam-fc-svg" viewBox="0 0 1490 650" width="1490" height="650" role="img" aria-labelledby="iam-fc-title iam-fc-desc">
+      <title id="iam-fc-title">AWS Policy Evaluation Logic Flowchart</title>
+      <desc id="iam-fc-desc">
+        A flowchart showing how AWS determines whether a request is allowed or denied across Deny evaluation,
+        Organizations SCPs, Resource-based policies, Identity-based policies, Permissions boundaries, and Session policies.
+      </desc>
+
+      <defs>
+        <!-- Arrowhead Markers -->
+        <marker id="iam-arrow-default" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M1 1 L9 5 L1 9 Z" fill="var(--dim)" />
+        </marker>
+        <marker id="iam-arrow-active" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M1 1 L9 5 L1 9 Z" fill="#38bdf8" />
+        </marker>
+        <marker id="iam-arrow-allow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M1 1 L9 5 L1 9 Z" fill="#34d399" />
+        </marker>
+        <marker id="iam-arrow-deny" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M1 1 L9 5 L1 9 Z" fill="#f87171" />
+        </marker>
+      </defs>
+
+      <!-- 6 Column Zone Bands -->
+      <g class="iam-fc-columns" aria-hidden="true">
+        <rect class="iam-col-band" x="10" y="8" width="200" height="608" rx="8" />
+        <rect class="iam-col-band" x="220" y="8" width="200" height="608" rx="8" />
+        <rect class="iam-col-band" x="430" y="8" width="200" height="608" rx="8" />
+        <rect class="iam-col-band" x="640" y="8" width="200" height="608" rx="8" />
+        <rect class="iam-col-band" x="850" y="8" width="200" height="608" rx="8" />
+        <rect class="iam-col-band" x="1060" y="8" width="420" height="608" rx="8" />
+
+        <!-- Column Header Labels -->
+        <text class="iam-col-title" x="110" y="30" text-anchor="middle">Deny evaluation</text>
+        <text class="iam-col-title" x="320" y="30" text-anchor="middle">Organizations SCPs</text>
+        <text class="iam-col-title" x="530" y="30" text-anchor="middle">Resource-based policies</text>
+        <text class="iam-col-title" x="740" y="30" text-anchor="middle">Identity-based policies</text>
+        <text class="iam-col-title" x="950" y="30" text-anchor="middle">IAM permissions boundaries</text>
+        <text class="iam-col-title" x="1270" y="30" text-anchor="middle">Session policies</text>
+      </g>
+
+      <!-- EDGES / PATHS -->
+      <g class="iam-fc-edges" aria-hidden="true">
+        <!-- Col 1: Deny Eval -->
+        <path id="edge-start-eval" class="iam-edge" d="M110 100 V130" marker-end="url(#iam-arrow-default)" />
+        <path id="edge-eval-deny" class="iam-edge" d="M110 190 V255" marker-end="url(#iam-arrow-default)" />
+        <path id="edge-deny-yes" class="iam-edge" d="M110 365 V424" marker-end="url(#iam-arrow-default)" />
+        <text class="iam-branch-lbl" x="120" y="398">Yes</text>
+        <path id="edge-deny-no" class="iam-edge" d="M190 310 H215 V160 H240" marker-end="url(#iam-arrow-default)" />
+        <text class="iam-branch-lbl" x="202" y="299" text-anchor="middle">No</text>
+
+        <!-- Col 2: SCPs -->
+        <path id="edge-scp-no" class="iam-edge" d="M400 160 H450" marker-end="url(#iam-arrow-default)" />
+        <text class="iam-branch-lbl" x="425" y="150" text-anchor="middle">No</text>
+        <path id="edge-scp-yes" class="iam-edge" d="M320 215 V255" marker-end="url(#iam-arrow-default)" />
+        <text class="iam-branch-lbl" x="330" y="239">Yes</text>
+        <path id="edge-scpallow-no" class="iam-edge" d="M320 365 V424" marker-end="url(#iam-arrow-default)" />
+        <text class="iam-branch-lbl" x="330" y="398">No</text>
+        <path id="edge-scpallow-yes" class="iam-edge" d="M400 310 H425 V160 H450" marker-end="url(#iam-arrow-default)" />
+        <text class="iam-branch-lbl" x="413" y="299">Yes</text>
+
+        <!-- Col 3: Resource-based -->
+        <path id="edge-res-no" class="iam-edge" d="M610 160 H660" marker-end="url(#iam-arrow-default)" />
+        <text class="iam-branch-lbl" x="635" y="150" text-anchor="middle">No</text>
+        <path id="edge-res-yes" class="iam-edge" d="M530 215 V255" marker-end="url(#iam-arrow-default)" />
+        <text class="iam-branch-lbl" x="540" y="239">Yes</text>
+        <path id="edge-resallow-yes" class="iam-edge" d="M530 365 V424" marker-end="url(#iam-arrow-default)" />
+        <text class="iam-branch-lbl" x="540" y="398">Yes</text>
+        <path id="edge-resallow-no" class="iam-edge" d="M610 310 H635 V160 H660" marker-end="url(#iam-arrow-default)" />
+        <text class="iam-branch-lbl" x="623" y="299" text-anchor="middle">No</text>
+
+        <!-- Col 4: Identity-based -->
+        <path id="edge-idhas-no" class="iam-edge" d="M700 187.5 H650 V450 H660" marker-end="url(#iam-arrow-default)" />
+        <text class="iam-branch-lbl" x="660" y="230">No</text>
+        <path id="edge-idhas-yes" class="iam-edge" d="M740 215 V255" marker-end="url(#iam-arrow-default)" />
+        <text class="iam-branch-lbl" x="750" y="239">Yes</text>
+        <path id="edge-idallow-no" class="iam-edge" d="M740 365 V424" marker-end="url(#iam-arrow-default)" />
+        <text class="iam-branch-lbl" x="750" y="398">No</text>
+        <path id="edge-idallow-yes" class="iam-edge" d="M820 310 H845 V160 H870" marker-end="url(#iam-arrow-default)" />
+        <text class="iam-branch-lbl" x="833" y="299">Yes</text>
+
+        <!-- Col 5: Permissions Boundaries -->
+        <path id="edge-bndhas-no" class="iam-edge" d="M1030 160 H1080" marker-end="url(#iam-arrow-default)" />
+        <text class="iam-branch-lbl" x="1055" y="150" text-anchor="middle">No</text>
+        <path id="edge-bndhas-yes" class="iam-edge" d="M950 215 V255" marker-end="url(#iam-arrow-default)" />
+        <text class="iam-branch-lbl" x="960" y="239">Yes</text>
+        <path id="edge-bndallow-no" class="iam-edge" d="M950 365 V424" marker-end="url(#iam-arrow-default)" />
+        <text class="iam-branch-lbl" x="960" y="398">No</text>
+        <path id="edge-bndallow-yes" class="iam-edge" d="M1030 310 H1055 V160 H1080" marker-end="url(#iam-arrow-default)" />
+        <text class="iam-branch-lbl" x="1043" y="299">Yes</text>
+
+        <!-- Col 6: Session Policies -->
+        <path id="edge-sessis-no" class="iam-edge" d="M1240 160 H1300" marker-end="url(#iam-arrow-default)" />
+        <text class="iam-branch-lbl" x="1270" y="150" text-anchor="middle">No</text>
+        <path id="edge-sessis-yes" class="iam-edge" d="M1160 215 V255" marker-end="url(#iam-arrow-default)" />
+        <text class="iam-branch-lbl" x="1170" y="239">Yes</text>
+
+        <path id="edge-sesshas-yes" class="iam-edge" d="M1160 365 V395" marker-end="url(#iam-arrow-default)" />
+        <text class="iam-branch-lbl" x="1170" y="383">Yes</text>
+        <path id="edge-sessallow-yes" class="iam-edge" d="M1160 505 V554" marker-end="url(#iam-arrow-default)" />
+        <text class="iam-branch-lbl" x="1170" y="533">Yes</text>
+        <path id="edge-sessallow-no" class="iam-edge" d="M1240 450 H1300" marker-end="url(#iam-arrow-default)" />
+        <text class="iam-branch-lbl" x="1270" y="440" text-anchor="middle">No</text>
+
+        <path id="edge-sesshas-no" class="iam-edge" d="M1240 310 H1300" marker-end="url(#iam-arrow-default)" />
+        <text class="iam-branch-lbl" x="1270" y="300" text-anchor="middle">No</text>
+        <path id="edge-rolesess-yes" class="iam-edge" d="M1380 255 V186" marker-end="url(#iam-arrow-default)" />
+        <text class="iam-branch-lbl" x="1390" y="226">Yes</text>
+        <path id="edge-rolesess-no" class="iam-edge" d="M1380 365 V424" marker-end="url(#iam-arrow-default)" />
+        <text class="iam-branch-lbl" x="1390" y="398">No</text>
+      </g>
+
+      <!-- NODES -->
+      <g class="iam-fc-nodes">
+        <!-- 1. Start: Decision starts with Deny -->
+        <g id="node-start" class="iam-node is-start" data-iam-node="start" tabindex="0" role="button" aria-label="Step: Decision starts with Deny">
+          <polygon class="iam-octagon" points="40,76 50,52 170,52 180,76 170,100 50,100" />
+          <text class="iam-node-text is-bold" x="110" y="68" dominant-baseline="middle" text-anchor="middle">Decision starts</text>
+          <text class="iam-node-text is-bold" x="110" y="84" dominant-baseline="middle" text-anchor="middle">with Deny</text>
+        </g>
+
+        <!-- 2. Evaluate all applicable policies -->
+        <g id="node-eval" class="iam-node is-box" data-iam-node="eval" tabindex="0" role="button" aria-label="Step: Evaluate all applicable policies">
+          <rect class="iam-rect" x="30" y="130" width="160" height="60" rx="6" />
+          <text class="iam-node-text" x="110" y="152" dominant-baseline="middle" text-anchor="middle">Evaluate all</text>
+          <text class="iam-node-text" x="110" y="168" dominant-baseline="middle" text-anchor="middle">applicable policies</text>
+        </g>
+
+        <!-- 3. Explicit Deny? -->
+        <g id="node-deny" class="iam-node is-gate" data-iam-node="deny" tabindex="0" role="button" aria-label="Decision: Is there an explicit Deny?">
+          <polygon class="iam-diamond" points="110,255 190,310 110,365 30,310" />
+          <text class="iam-node-text" x="110" y="302" dominant-baseline="middle" text-anchor="middle">Is there an</text>
+          <text class="iam-node-text is-bold" x="110" y="318" dominant-baseline="middle" text-anchor="middle">explicit Deny?</text>
+        </g>
+
+        <!-- 4. Outcome: Deny (explicit deny) -->
+        <g id="node-res-exp-deny" class="iam-node is-deny-term" data-iam-node="res-exp-deny" tabindex="0" role="button" aria-label="Final decision: Deny (explicit deny)">
+          <rect class="iam-term is-deny" x="30" y="424" width="160" height="52" rx="22" />
+          <text class="iam-term-text is-bold" x="110" y="442" dominant-baseline="middle" text-anchor="middle">Final decision:</text>
+          <text class="iam-term-text is-sub" x="110" y="458" dominant-baseline="middle" text-anchor="middle">Deny (explicit deny)</text>
+        </g>
+
+        <!-- 5. Col 2: Account in Org with SCP? -->
+        <g id="node-scp-org" class="iam-node is-gate" data-iam-node="scp-org" tabindex="0" role="button" aria-label="Decision: Is the principal's account a member of an organization with an applicable SCP?">
+          <polygon class="iam-diamond" points="320,105 400,160 320,215 240,160" />
+          <text class="iam-node-text is-tiny" x="320" y="144" dominant-baseline="middle" text-anchor="middle">Is account in</text>
+          <text class="iam-node-text is-tiny" x="320" y="160" dominant-baseline="middle" text-anchor="middle">Org with an</text>
+          <text class="iam-node-text is-tiny is-bold" x="320" y="176" dominant-baseline="middle" text-anchor="middle">applicable SCP?</text>
+        </g>
+
+        <!-- 6. Col 2: SCP Allow? -->
+        <g id="node-scp-allow" class="iam-node is-gate" data-iam-node="scp-allow" tabindex="0" role="button" aria-label="Decision: Is there an Allow in the SCP?">
+          <polygon class="iam-diamond" points="320,255 400,310 320,365 240,310" />
+          <text class="iam-node-text" x="320" y="302" dominant-baseline="middle" text-anchor="middle">Is there an</text>
+          <text class="iam-node-text is-bold" x="320" y="318" dominant-baseline="middle" text-anchor="middle">Allow?</text>
+        </g>
+
+        <!-- 7. Col 2 Outcome: Deny (implicit deny) -->
+        <g id="node-res-scp-deny" class="iam-node is-deny-term" data-iam-node="res-scp-deny" tabindex="0" role="button" aria-label="Final decision: Deny (implicit deny)">
+          <rect class="iam-term is-deny" x="240" y="424" width="160" height="52" rx="22" />
+          <text class="iam-term-text is-bold" x="320" y="442" dominant-baseline="middle" text-anchor="middle">Final decision:</text>
+          <text class="iam-term-text is-sub" x="320" y="458" dominant-baseline="middle" text-anchor="middle">Deny (implicit deny)</text>
+        </g>
+
+        <!-- 8. Col 3: Resource-based policy exists? -->
+        <g id="node-res-has" class="iam-node is-gate" data-iam-node="res-has" tabindex="0" role="button" aria-label="Decision: Does requested resource have a resource-based policy?">
+          <polygon class="iam-diamond" points="530,105 610,160 530,215 450,160" />
+          <text class="iam-node-text is-tiny" x="530" y="144" dominant-baseline="middle" text-anchor="middle">Does resource</text>
+          <text class="iam-node-text is-tiny" x="530" y="160" dominant-baseline="middle" text-anchor="middle">have a resource-</text>
+          <text class="iam-node-text is-tiny is-bold" x="530" y="176" dominant-baseline="middle" text-anchor="middle">based policy?</text>
+        </g>
+
+        <!-- 9. Col 3: Resource policy Allow? -->
+        <g id="node-res-allow" class="iam-node is-gate" data-iam-node="res-allow" tabindex="0" role="button" aria-label="Decision: Is there an Allow in the resource-based policy?">
+          <polygon class="iam-diamond" points="530,255 610,310 530,365 450,310" />
+          <text class="iam-node-text" x="530" y="302" dominant-baseline="middle" text-anchor="middle">Is there an</text>
+          <text class="iam-node-text is-bold" x="530" y="318" dominant-baseline="middle" text-anchor="middle">Allow?</text>
+        </g>
+
+        <!-- 10. Col 3 Branch: See Resource-based policies section -->
+        <g id="node-res-branch" class="iam-node is-branch-term" data-iam-node="res-branch" tabindex="0" role="button" aria-label="See the Resource-based policies section">
+          <rect class="iam-term is-warn" x="446" y="424" width="168" height="52" rx="22" />
+          <text class="iam-term-text is-bold" x="530" y="442" dominant-baseline="middle" text-anchor="middle">See Resource-based</text>
+          <text class="iam-term-text is-sub" x="530" y="458" dominant-baseline="middle" text-anchor="middle">policies rule ↗</text>
+        </g>
+
+        <!-- 11. Col 4: Identity-based policy exists? -->
+        <g id="node-id-has" class="iam-node is-gate" data-iam-node="id-has" tabindex="0" role="button" aria-label="Decision: Does principal have an identity-based policy?">
+          <polygon class="iam-diamond" points="740,105 820,160 740,215 660,160" />
+          <text class="iam-node-text is-tiny" x="740" y="144" dominant-baseline="middle" text-anchor="middle">Does principal</text>
+          <text class="iam-node-text is-tiny" x="740" y="160" dominant-baseline="middle" text-anchor="middle">have an identity-</text>
+          <text class="iam-node-text is-tiny is-bold" x="740" y="176" dominant-baseline="middle" text-anchor="middle">based policy?</text>
+        </g>
+
+        <!-- 12. Col 4: Identity policy Allow? -->
+        <g id="node-id-allow" class="iam-node is-gate" data-iam-node="id-allow" tabindex="0" role="button" aria-label="Decision: Is there an Allow in the identity-based policy?">
+          <polygon class="iam-diamond" points="740,255 820,310 740,365 660,310" />
+          <text class="iam-node-text" x="740" y="302" dominant-baseline="middle" text-anchor="middle">Is there an</text>
+          <text class="iam-node-text is-bold" x="740" y="318" dominant-baseline="middle" text-anchor="middle">Allow?</text>
+        </g>
+
+        <!-- 13. Col 4 Outcome: Deny (implicit deny) -->
+        <g id="node-res-id-deny" class="iam-node is-deny-term" data-iam-node="res-id-deny" tabindex="0" role="button" aria-label="Final decision: Deny (implicit deny)">
+          <rect class="iam-term is-deny" x="660" y="424" width="160" height="52" rx="22" />
+          <text class="iam-term-text is-bold" x="740" y="442" dominant-baseline="middle" text-anchor="middle">Final decision:</text>
+          <text class="iam-term-text is-sub" x="740" y="458" dominant-baseline="middle" text-anchor="middle">Deny (implicit deny)</text>
+        </g>
+
+        <!-- 14. Col 5: Permissions Boundary exists? -->
+        <g id="node-bnd-has" class="iam-node is-gate" data-iam-node="bnd-has" tabindex="0" role="button" aria-label="Decision: Does principal have a permissions boundary?">
+          <polygon class="iam-diamond" points="950,105 1030,160 950,215 870,160" />
+          <text class="iam-node-text is-tiny" x="950" y="144" dominant-baseline="middle" text-anchor="middle">Does principal</text>
+          <text class="iam-node-text is-tiny" x="950" y="160" dominant-baseline="middle" text-anchor="middle">have a permissions</text>
+          <text class="iam-node-text is-tiny is-bold" x="950" y="176" dominant-baseline="middle" text-anchor="middle">boundary?</text>
+        </g>
+
+        <!-- 15. Col 5: Boundary Allow? -->
+        <g id="node-bnd-allow" class="iam-node is-gate" data-iam-node="bnd-allow" tabindex="0" role="button" aria-label="Decision: Is there an Allow in the permissions boundary?">
+          <polygon class="iam-diamond" points="950,255 1030,310 950,365 870,310" />
+          <text class="iam-node-text" x="950" y="302" dominant-baseline="middle" text-anchor="middle">Is there an</text>
+          <text class="iam-node-text is-bold" x="950" y="318" dominant-baseline="middle" text-anchor="middle">Allow?</text>
+        </g>
+
+        <!-- 16. Col 5 Outcome: Deny (implicit deny) -->
+        <g id="node-res-bnd-deny" class="iam-node is-deny-term" data-iam-node="res-bnd-deny" tabindex="0" role="button" aria-label="Final decision: Deny (implicit deny)">
+          <rect class="iam-term is-deny" x="870" y="424" width="160" height="52" rx="22" />
+          <text class="iam-term-text is-bold" x="950" y="442" dominant-baseline="middle" text-anchor="middle">Final decision:</text>
+          <text class="iam-term-text is-sub" x="950" y="458" dominant-baseline="middle" text-anchor="middle">Deny (implicit deny)</text>
+        </g>
+
+        <!-- 17. Col 6: Session principal? -->
+        <g id="node-sess-is" class="iam-node is-gate" data-iam-node="sess-is" tabindex="0" role="button" aria-label="Decision: Is the principal a session principal?">
+          <polygon class="iam-diamond" points="1160,105 1240,160 1160,215 1080,160" />
+          <text class="iam-node-text is-tiny" x="1160" y="152" dominant-baseline="middle" text-anchor="middle">Is principal a</text>
+          <text class="iam-node-text is-tiny is-bold" x="1160" y="168" dominant-baseline="middle" text-anchor="middle">session principal*?</text>
+        </g>
+
+        <!-- 18. Col 6 Top Outcome: Allow (non-session e.g. IAM user AKIA) -->
+        <g id="node-res-allow-top" class="iam-node is-allow-term" data-iam-node="res-allow-top" tabindex="0" role="button" aria-label="Final decision: Allow">
+          <rect class="iam-term is-allow" x="1300" y="134" width="160" height="52" rx="22" />
+          <text class="iam-term-text is-bold" x="1380" y="152" dominant-baseline="middle" text-anchor="middle">Final decision:</text>
+          <text class="iam-term-text is-sub" x="1380" y="168" dominant-baseline="middle" text-anchor="middle">Allow</text>
+        </g>
+
+        <!-- 19. Col 6: Session policy exists? -->
+        <g id="node-sess-has" class="iam-node is-gate" data-iam-node="sess-has" tabindex="0" role="button" aria-label="Decision: Is there a session policy?">
+          <polygon class="iam-diamond" points="1160,255 1240,310 1160,365 1080,310" />
+          <text class="iam-node-text is-tiny" x="1160" y="302" dominant-baseline="middle" text-anchor="middle">Is there a</text>
+          <text class="iam-node-text is-tiny is-bold" x="1160" y="318" dominant-baseline="middle" text-anchor="middle">session policy?</text>
+        </g>
+
+        <!-- 20. Col 6: Role session? -->
+        <g id="node-role-sess" class="iam-node is-gate" data-iam-node="role-sess" tabindex="0" role="button" aria-label="Decision: Is this a role session?">
+          <polygon class="iam-diamond" points="1380,255 1460,310 1380,365 1300,310" />
+          <text class="iam-node-text is-tiny" x="1380" y="302" dominant-baseline="middle" text-anchor="middle">Is this a</text>
+          <text class="iam-node-text is-tiny is-bold" x="1380" y="318" dominant-baseline="middle" text-anchor="middle">role session?</text>
+        </g>
+
+        <!-- 21. Col 6: Session policy Allow? -->
+        <g id="node-sess-allow" class="iam-node is-gate" data-iam-node="sess-allow" tabindex="0" role="button" aria-label="Decision: Is there an Allow in the session policy?">
+          <polygon class="iam-diamond" points="1160,395 1240,450 1160,505 1080,450" />
+          <text class="iam-node-text" x="1160" y="442" dominant-baseline="middle" text-anchor="middle">Is there an</text>
+          <text class="iam-node-text is-bold" x="1160" y="458" dominant-baseline="middle" text-anchor="middle">Allow?</text>
+        </g>
+
+        <!-- 22. Col 6 Mid-Right Outcome: Deny (implicit deny) -->
+        <g id="node-res-sess-deny" class="iam-node is-deny-term" data-iam-node="res-sess-deny" tabindex="0" role="button" aria-label="Final decision: Deny (implicit deny)">
+          <rect class="iam-term is-deny" x="1300" y="424" width="160" height="52" rx="22" />
+          <text class="iam-term-text is-bold" x="1380" y="442" dominant-baseline="middle" text-anchor="middle">Final:</text>
+          <text class="iam-term-text is-sub" x="1380" y="458" dominant-baseline="middle" text-anchor="middle">Deny</text>
+        </g>
+
+        <!-- 23. Col 6 Bottom Outcome: Allow (session policy allows) -->
+        <g id="node-res-allow-bot" class="iam-node is-allow-term" data-iam-node="res-allow-bot" tabindex="0" role="button" aria-label="Final decision: Allow">
+          <rect class="iam-term is-allow" x="1080" y="554" width="160" height="52" rx="22" />
+          <text class="iam-term-text is-bold" x="1160" y="572" dominant-baseline="middle" text-anchor="middle">Final decision:</text>
+          <text class="iam-term-text is-sub" x="1160" y="588" dominant-baseline="middle" text-anchor="middle">Allow</text>
+        </g>
+      </g>
+
+      <!-- Flowchart Footnote -->
+      <text class="iam-fc-footnote" x="18" y="636">*A session principal is either a role session (AWS STS AssumeRole) or an IAM federated user session.</text>
+    </svg>
+  </div>
+
+  <!-- Dynamic Trace & Rule Inspector Panel -->
+  <div class="iam-fc-detail" data-iam-fc-detail>
+    <div class="iam-fc-detail-head">
+      <div class="iam-fc-status-badge is-allow" data-iam-status-badge>FINAL DECISION: ALLOW</div>
+      <h3 class="iam-fc-detail-title" data-iam-detail-title>1. Standard Role Session (Allow)</h3>
+    </div>
+
+    <p class="iam-fc-detail-narrative" data-iam-detail-narrative>
+      Darshan assumes the ProdReadOnly role with no extra session policy. No explicit Deny matches,
+      the Organization SCP permits S3, the role's identity policy has Allow s3:GetObject, no boundary restricts it,
+      and as a standard role session, the request passes directly to Allow.
+    </p>
+
+    <!-- Path Steps List -->
+    <div class="iam-fc-path-steps">
+      <span class="iam-fc-steps-heading">DECISION SEQUENCE TRACE:</span>
+      <ol class="iam-fc-steps-list" data-iam-steps-list>
+        <!-- Injected via client script -->
+      </ol>
+    </div>
+
+    <!-- Code Snippet / Policy Preview -->
+    <div class="iam-fc-code-wrap">
+      <span class="iam-fc-code-title" data-iam-code-title>Relevant policy statement in this scenario:</span>
+      <pre tabindex="0"><code class="iam-fc-code" data-iam-code>// Policy document</code></pre>
+    </div>
+
+    <!-- Active Node Note / Citation -->
+    <div class="iam-fc-rule-note">
+      <span class="iam-fc-note-tag">AWS SPECIFICATION RULE:</span>
+      <p data-iam-rule-text>
+        In a single account, an Allow in either an identity-based policy or a resource-based policy permits the action,
+        as long as no explicit Deny, SCP, permissions boundary, or session policy restricts it.
+      </p>
+    </div>
+  </div>
+</div>
+
+<style>
+  .iam-fc-board {
+    container-type: inline-size;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin: 12px 0 24px;
+  }
+
+  /* Toolbar */
+  .iam-fc-toolbar {
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 11px;
+    padding: 12px 16px;
+  }
+  .iam-fc-toolbar-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .iam-fc-tag {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--cyan);
+    background: color-mix(in srgb, var(--cyan) 12%, transparent);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+  .iam-fc-subtag {
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+  .iam-fc-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .iam-fc-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface-raised);
+    border: 1px solid var(--border-strong);
+    color: var(--text);
+    font-size: 0.78rem;
+    font-weight: 500;
+    min-height: 44px;
+    padding: 8px 12px;
+    text-align: left;
+    line-height: 1.4;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+  .iam-fc-btn:hover {
+    background: color-mix(in srgb, var(--cyan) 10%, transparent);
+    border-color: var(--cyan);
+    color: var(--cyan);
+  }
+  .iam-fc-btn.is-active {
+    background: var(--cyan);
+    border-color: var(--cyan);
+    color: var(--bg);
+    font-weight: 600;
+    box-shadow: 0 0 10px color-mix(in srgb, var(--cyan) 35%, transparent);
+  }
+  .iam-fc-btn.is-deny.is-active {
+    background: #702a34;
+    border-color: var(--red);
+    color: var(--text);
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+  }
+  .iam-fc-btn.is-reset {
+    margin-left: auto;
+    background: transparent;
+    border-style: dashed;
+  }
+  .iam-fc-btn-num {
+    font-family: var(--mono);
+    font-size: 10px;
+    opacity: 0.8;
+  }
+
+  /* Flowchart Canvas */
+  .iam-fc-canvas-wrap {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 11px;
+    padding: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .iam-fc-scroll-hint {
+    display: none;
+    font-size: 0.78rem;
+    color: var(--muted);
+    padding: 4px 8px;
+    text-align: right;
+  }
+  @container (max-width: 1508px) {
+    .iam-fc-scroll-hint {
+      display: block;
+    }
+  }
+
+  .iam-fc-svg {
+    display: block;
+    width: 100%;
+    min-width: 1490px;
+    height: auto;
+    user-select: none;
+  }
+
+  /* SVG Shapes & Styling */
+  .iam-col-band {
+    fill: var(--surface-soft);
+    stroke: var(--border-strong);
+    stroke-width: 1;
+    stroke-opacity: 0.5;
+  }
+  .iam-col-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0;
+    fill: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .iam-octagon {
+    fill: #1e293b;
+    stroke: #38bdf8;
+    stroke-width: 1.5;
+  }
+  .iam-rect {
+    fill: #0f172a;
+    stroke: #38bdf8;
+    stroke-width: 1.5;
+  }
+  .iam-diamond {
+    fill: #0369a1;
+    stroke: #38bdf8;
+    stroke-width: 1.5;
+    transition: fill 0.2s, stroke 0.2s;
+  }
+  .iam-term.is-deny {
+    fill: rgba(185, 28, 28, 0.25);
+    stroke: #ef4444;
+    stroke-width: 1.5;
+  }
+  .iam-term.is-allow {
+    fill: rgba(16, 185, 129, 0.25);
+    stroke: #10b981;
+    stroke-width: 1.5;
+  }
+  .iam-term.is-warn {
+    fill: rgba(217, 119, 6, 0.25);
+    stroke: #f59e0b;
+    stroke-width: 1.5;
+  }
+
+  .iam-node {
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.2s;
+  }
+  .iam-node:hover .iam-diamond {
+    fill: #0284c7;
+    stroke: #7dd3fc;
+  }
+  .iam-node:hover .iam-term.is-deny {
+    fill: rgba(220, 38, 38, 0.4);
+  }
+  .iam-node:hover .iam-term.is-allow {
+    fill: rgba(16, 185, 129, 0.4);
+  }
+
+  .iam-node-text {
+    font-size: 11px;
+    fill: #f8fafc;
+    pointer-events: none;
+  }
+  .iam-node-text.is-bold {
+    font-weight: 700;
+  }
+  .iam-node-text.is-tiny {
+    font-size: 11px;
+  }
+
+  .iam-term-text {
+    fill: #ffffff;
+    pointer-events: none;
+  }
+  .iam-term-text.is-bold {
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .iam-term-text.is-sub {
+    font-size: 11px;
+  }
+
+  .iam-edge {
+    fill: none;
+    stroke: var(--dim);
+    stroke-width: 1.5;
+    transition: stroke 0.2s, stroke-width 0.2s;
+  }
+  .iam-branch-lbl {
+    font-size: 11px;
+    font-weight: 600;
+    fill: var(--muted);
+    paint-order: stroke;
+    stroke: var(--surface);
+    stroke-width: 4px;
+    stroke-linejoin: round;
+  }
+  .iam-fc-footnote {
+    font-size: 11px;
+    fill: var(--muted);
+    font-style: italic;
+  }
+
+  /* Active Path Highlights */
+  .iam-fc-board[data-has-active-path="true"] .iam-node {
+    opacity: 0.6;
+  }
+  .iam-fc-board[data-has-active-path="true"] .iam-edge {
+    opacity: 0.55;
+  }
+  .iam-fc-board[data-has-active-path="true"] .iam-branch-lbl {
+    opacity: 0.65;
+  }
+
+  .iam-fc-board .iam-node.is-active-path {
+    opacity: 1 !important;
+  }
+  .iam-fc-board .iam-node.is-active-path .iam-diamond {
+    stroke-width: 2.5;
+    filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.6));
+  }
+  .iam-fc-board .iam-node.is-active-path .iam-term.is-allow {
+    stroke-width: 2.5;
+    filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.7));
+  }
+  .iam-fc-board .iam-node.is-active-path .iam-term.is-deny {
+    stroke-width: 2.5;
+    filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.7));
+  }
+  .iam-fc-board .iam-node.is-active-path .iam-term.is-warn {
+    stroke-width: 2.5;
+    filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.7));
+  }
+
+  .iam-fc-board .iam-edge.is-active-path {
+    opacity: 1 !important;
+    stroke: #38bdf8;
+    stroke-width: 2.5;
+    stroke-dasharray: 6 3;
+    animation: iam-dash 1.2s linear infinite;
+  }
+  .iam-fc-board .iam-edge.is-allow-path {
+    stroke: #34d399 !important;
+  }
+  .iam-fc-board .iam-edge.is-deny-path {
+    stroke: #f87171 !important;
+  }
+  .iam-fc-board .iam-branch-lbl.is-active-path {
+    opacity: 1 !important;
+    fill: #38bdf8;
+    font-weight: 700;
+  }
+
+  @keyframes iam-dash {
+    to {
+      stroke-dashoffset: -18;
+    }
+  }
+
+  /* Details Panel Below Canvas */
+  .iam-fc-detail {
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 11px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .iam-fc-detail-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .iam-fc-status-badge {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 3px 10px;
+    border-radius: 99px;
+  }
+  .iam-fc-status-badge.is-allow {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    border: 1px solid #10b981;
+  }
+  .iam-fc-status-badge.is-deny {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    border: 1px solid #ef4444;
+  }
+  .iam-fc-status-badge.is-branch {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+    border: 1px solid #f59e0b;
+  }
+
+  .iam-fc-detail-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .iam-fc-detail-narrative {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    color: var(--text);
+  }
+
+  /* Path Steps List */
+  .iam-fc-path-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: var(--surface-raised);
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    padding: 8px 12px;
+  }
+  .iam-fc-steps-heading {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+  .iam-fc-steps-list {
+    margin: 0;
+    padding-left: 16px;
+    font-size: 0.78rem;
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .iam-fc-steps-list li {
+    line-height: 1.4;
+  }
+  .iam-fc-steps-list li strong {
+    color: #38bdf8;
+  }
+  .iam-fc-steps-list li.is-pass strong {
+    color: #34d399;
+  }
+  .iam-fc-steps-list li.is-fail strong {
+    color: #f87171;
+  }
+
+  /* Code snippet */
+  .iam-fc-code-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .iam-fc-code-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .iam-fc-code {
+    display: block;
+    background: #090d16;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    padding: 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.45;
+    color: #cbd5e1;
+    overflow-x: auto;
+  }
+
+  /* Rule Note */
+  .iam-fc-rule-note {
+    background: color-mix(in srgb, var(--cyan) 8%, transparent);
+    border-left: 3px solid var(--cyan);
+    padding: 8px 12px;
+    border-radius: 0 8px 8px 0;
+  }
+  .iam-fc-note-tag {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--cyan);
+    display: block;
+    margin-bottom: 2px;
+  }
+  .iam-fc-rule-note p {
+    margin: 0;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: var(--text);
+  }
+
+  /* Keep the wide diagram and policy code inside their own scroll regions. */
+  .iam-fc-board,
+  .iam-fc-detail,
+  .iam-fc-code-wrap {
+    min-width: 0;
+  }
+  .iam-fc-canvas-wrap {
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) var(--surface);
+  }
+  .iam-fc-code-wrap pre {
+    min-width: 0;
+    margin: 0;
+    overflow-x: auto;
+  }
+  .iam-fc-detail-narrative,
+  .iam-fc-rule-note p,
+  .iam-fc-steps-list {
+    overflow-wrap: anywhere;
+  }
+  .iam-fc-presets {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  }
+  .iam-fc-btn.is-reset {
+    margin-left: 0;
+  }
+  .iam-fc-btn.is-reset.is-active {
+    background: var(--cyan);
+  }
+  .iam-fc-btn-num {
+    flex: 0 0 16px;
+    color: inherit;
+  }
+  .iam-fc-detail-title {
+    line-height: 1.4;
+  }
+  .iam-fc-steps-list {
+    padding-left: 20px;
+    gap: 8px;
+  }
+  .iam-node:focus-visible {
+    outline: 3px solid var(--cyan);
+  }
+  @media (max-width: 480px) {
+    .iam-fc-toolbar,
+    .iam-fc-detail {
+      padding: 12px;
+    }
+    .iam-fc-detail-head {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+  }
+</style>

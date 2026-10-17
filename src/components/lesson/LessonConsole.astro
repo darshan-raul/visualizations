@@ -66,6 +66,7 @@ const custom = Object.fromEntries(await Promise.all(views.filter((view) => view.
       {views.map((view, viewIndex) => {
         const max = scale(view);
         return <section id={view.id} class:list={['lsn-view', viewIndex === 0 && 'is-active']} data-lsn-view data-lsn-label={view.label} data-lsn-takeaway={view.takeaway} data-lsn-mode={view.mode} aria-labelledby={`${view.id}-title`}>
+          {view.aliases?.map((alias) => <span id={alias} class="lsn-anchor" aria-hidden="true" />)}
           <header class="lsn-view-head"><span>{pad(viewIndex + 1)} / {view.group.toUpperCase()}{view.hero && ' · INTERACTIVE'}</span><h2 id={`${view.id}-title`} tabindex="-1">{view.title}</h2><p>{view.lede}</p></header>
           {view.mode === 'custom' && <Fragment set:html={custom[view.id]} />}
           {view.frames.length > 1 && (view.mode === 'steps'
