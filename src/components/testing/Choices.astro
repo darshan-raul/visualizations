@@ -1,0 +1,15 @@
+---
+/** Buttons that switch the frames of a view. The lesson client wires them up and unhides them. */
+interface Props { actions: string[]; label: string; steps?: boolean }
+const { actions, label, steps = false } = Astro.props;
+---
+{actions.length > 1 && (steps
+  ? <div class="lsn-controls" data-lsn-steps hidden>
+      <button type="button" class="lsn-primary" data-lsn-next>Next →</button>
+      <button type="button" data-lsn-back>← Back</button>
+      <button type="button" data-lsn-restart>↺ Restart</button>
+      <span data-lsn-step>Step 1 of {actions.length}</span>
+    </div>
+  : <div class="lsn-controls is-choices" data-lsn-choices role="group" aria-label={label} hidden>
+      {actions.map((action, i) => <button type="button" data-lsn-choice={i} aria-pressed={i === 0 ? 'true' : 'false'}>{action}</button>)}
+    </div>)}

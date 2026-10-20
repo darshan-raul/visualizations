@@ -1,0 +1,39 @@
+---
+import Choices from '../Choices.astro';
+import Frame from '../Frame.astro';
+import Where from '../Where.astro';
+import CanaryLab from '../CanaryLab.astro';
+/** View 10: probes, synthetic journeys and canary rollout answer different questions after deploy. */
+const frames = [
+  { action: 'Healthy but broken', caption: 'Every infrastructure signal is green, and login is broken. Probes say the process is alive; only a check that runs the journey notices.' },
+  { action: 'Progressive rollout', caption: 'Send 5% of traffic to the new version and watch it. Widen exposure only while the evidence stays good; roll back the moment it doesn’t.' },
+  { action: 'Canary policy', caption: 'Turn the evidence into a decision with an explicit policy. Change what was observed and see whether the rollout continues, waits or halts.' },
+];
+const tiles = [['CPU', '41%', 'ok'], ['Memory', '62%', 'ok'], ['Pods', '6/6 Running', 'ok'], ['readinessProbe', 'GET /health → 200', 'ok'], ['ALB targets', 'healthy', 'ok'], ['Synthetic: login', '✕ 500 for 3 runs', 'fail']];
+const ladder = ['5%', '25%', '50%', '100%'];
+const watch = ['error rate', 'latency', 'HTTP 5xx', 'CPU', 'business metrics'];
+const signals = [['Health probes', 'Is the process alive and ready?', 'startup · liveness · readiness'], ['Smoke', 'Did the deploy basically work?', 'once, right after deploy'], ['Synthetic', 'Does the journey work right now?', 'every minute, forever'], ['Canary / SLO', 'Is the new version as good as the old?', 'during rollout · over the SLO window']];
+---
+<Choices actions={frames.map((f) => f.action)} label="Choose a production signal" />
+<Frame {...frames[0]} index={0} total={3}>
+  <Where at={[4]} />
+  <ul class="tst-tiles">{tiles.map(([k, v, s]) => <li class={`is-${s}`}><span>{k}</span><strong>{v}</strong></li>)}</ul>
+  <table class="tst-table">
+    <caption>Four production signals, four questions</caption>
+    <thead><tr><th scope="col">Signal</th><th scope="col">Answers</th><th scope="col">When</th></tr></thead>
+    <tbody>{signals.map(([a, b, c]) => <tr><th scope="row">{a}</th><td>{b}</td><td>{c}</td></tr>)}</tbody>
+  </table>
+  <p class="tst-tools">Synthetic tools: Grafana Synthetic Monitoring · Datadog Synthetics · Checkly · Pingdom · scheduled Playwright scripts. Keep production checks read-only where possible, small, deterministic and safe to repeat.</p>
+</Frame>
+<Frame {...frames[1]} index={1} total={3}>
+  <Where at={[4]} />
+  <div class="tst-ladder">
+    <ol>{ladder.map((step, i) => <li><span>{step}</span><i style={`--size:${[5, 25, 50, 100][i]}%`}></i><em>{i < 3 ? 'observe → good?' : 'full rollout'}</em></li>)}</ol>
+    <aside><h3>Watch at every step</h3><ul>{watch.map((w) => <li>{w}</li>)}</ul><p class="is-fail">✕ bad at any step → roll back to 0%</p></aside>
+  </div>
+  <p class="tst-tools">This is testing with real traffic. Rolling back the container doesn’t undo a database migration, so plan the rollback before the rollout.</p>
+</Frame>
+<Frame {...frames[2]} index={2} total={3}>
+  <Where at={[4]} />
+  <CanaryLab />
+</Frame>

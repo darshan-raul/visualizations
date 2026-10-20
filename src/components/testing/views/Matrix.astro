@@ -1,0 +1,17 @@
+---
+import Where from '../Where.astro';
+import { environmentColumns, environmentRows } from '../testing-data';
+/** View 8: the user's environment baseline as a dot grid, so the left-to-right drift is visible. */
+const kind = (v: string) => v === 'Yes' ? 'yes' : v === 'No' ? 'no' : v === 'Maybe' ? 'maybe' : 'limited';
+const limited = [['Small API suite', 'read-only calls or isolated test accounts, cleaned up'], ['Tiny E2E suite', 'a few critical journeys; never charge real customers'], ['Rare performance runs', 'planned, bounded, with stop conditions'], ['DAST, carefully', 'agreed targets, rate limits and stop conditions; active scans can change data']];
+---
+<Where at={[0, 1, 2, 3, 4]} note="a baseline, not a law" />
+<div class="tst-grid-key" aria-hidden="true"><span><i class="is-yes"></i>yes</span><span><i class="is-maybe"></i>maybe</span><span><i class="is-limited"></i>limited scope</span><span><i class="is-no"></i>no</span></div>
+<div class="tst-grid-wrap" tabindex="0" role="region" aria-label="Environment strategy table">
+  <table class="tst-grid">
+    <caption>Where each test runs · a reasonable baseline</caption>
+    <thead><tr><th scope="col">Test</th>{environmentColumns.map((c) => <th scope="col">{c}</th>)}</tr></thead>
+    <tbody>{environmentRows.map((row) => <tr><th scope="row">{row[0]}</th>{row.slice(1).map((v) => <td class={`is-${kind(v)}`}><i aria-hidden="true"></i><span>{v}</span></td>)}</tr>)}</tbody>
+  </table>
+</div>
+<section class="tst-limited"><h3>What “limited” means in production</h3><dl>{limited.map(([k, v]) => <div><dt>{k}</dt><dd>{v}</dd></div>)}</dl></section>

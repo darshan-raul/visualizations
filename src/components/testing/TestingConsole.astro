@@ -1,0 +1,31 @@
+---
+import LessonConsole from '../lesson/LessonConsole.astro';
+import Confidence from './views/Confidence.astro';
+import Scope from './views/Scope.astro';
+import Contracts from './views/Contracts.astro';
+import StaticChecks from './views/StaticChecks.astro';
+import BuildOnce from './views/BuildOnce.astro';
+import Isolation from './views/Isolation.astro';
+import Staging from './views/Staging.astro';
+import Matrix from './views/Matrix.astro';
+import Gates from './views/Gates.astro';
+import Production from './views/Production.astro';
+import Flaky from './views/Flaky.astro';
+import ReleaseLab from './ReleaseLab.astro';
+import { testingLesson } from './testing-data';
+interface Props { published: Date; reviewed?: Date }
+---
+<LessonConsole lesson={testingLesson} published={Astro.props.published} reviewed={Astro.props.reviewed}>
+  <Confidence slot="view-confidence" />
+  <Scope slot="view-test-scope" />
+  <Contracts slot="view-contracts-api" />
+  <StaticChecks slot="view-code-checks" />
+  <BuildOnce slot="view-build-once" />
+  <Isolation slot="view-isolation" />
+  <Staging slot="view-staging-checks" />
+  <Matrix slot="view-environment-strategy" />
+  <Gates slot="view-gates" />
+  <Production slot="view-production-signals" />
+  <Flaky slot="view-flaky-tests" />
+  <ReleaseLab slot="view-release-lab" />
+</LessonConsole>

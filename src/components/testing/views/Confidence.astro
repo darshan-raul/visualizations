@@ -1,0 +1,56 @@
+---
+import Choices from '../Choices.astro';
+import Frame from '../Frame.astro';
+/** View 1: the pyramid, first as cost, then as the doubt each layer removes. */
+const layers = [
+  { name: 'End-to-end', doubt: 'Does the main user journey work?', speed: 'minutes', count: 'tens' },
+  { name: 'System / component', doubt: 'Does one whole service behave?', speed: 'minutes', count: 'tens' },
+  { name: 'Integration', doubt: 'Do real dependencies talk correctly?', speed: 'seconds', count: 'hundreds' },
+  { name: 'Contract / API', doubt: 'Do service interfaces still fit?', speed: 'seconds', count: 'hundreds' },
+  { name: 'Unit', doubt: 'Is the business logic right?', speed: 'milliseconds', count: 'thousands' },
+  { name: 'Static checks', doubt: 'Does the code follow the rules?', speed: 'seconds, no run', count: 'every file' },
+];
+const after = [
+  ['Smoke', 'Is the deployment alive?'],
+  ['Performance', 'Will it handle the expected traffic?'],
+  ['Synthetic', 'Does the production journey work right now?'],
+  ['Observability', 'Will we notice what no test predicted?'],
+];
+const frames = [
+  { action: 'Cost', caption: 'Lower layers are fast and cheap, so you can run thousands on every change. Higher layers exercise more of the real system, so each test costs more and fails for more reasons.' },
+  { action: 'Doubt removed', caption: 'Each layer answers one question. Passing all of them still leaves doubts that only running software can answer.' },
+];
+const questions = [['1', 'What confidence does this test give?', 'views 1–4', '#confidence'], ['2', 'Where should it run?', 'views 5–8', '#build-once'], ['3', 'Should it block the deployment?', 'views 9–12', '#gates']];
+---
+<ol class="tst-questions" aria-label="Three questions to ask of any test">
+  {questions.map(([n, q, where, href]) => <li><a href={href}><span>{n}</span><strong>{q}</strong><small>{where} →</small></a></li>)}
+</ol>
+<Choices actions={frames.map((f) => f.action)} label="Read the pyramid by" />
+{frames.map((frame, index) => <Frame {...frame} index={index} total={frames.length}>
+  <div class:list={['tst-pyramid', index === 1 && 'is-doubt']}>
+    <span class="tst-pyramid-axis is-top">slower · costlier · fewer</span>
+    <ol>
+      {layers.map((layer, i) => <li style={`--w:${38 + i * 12.4}%`}>
+        <div class="tst-pyramid-bar"><strong>{layer.name}</strong></div>
+        <span class="tst-pyramid-note">{index === 0 ? <><b>{layer.speed}</b> · {layer.count}</> : layer.doubt}</span>
+      </li>)}
+    </ol>
+    <span class="tst-pyramid-axis">faster · cheaper · many</span>
+  </div>
+  {index === 1 && <div class="tst-after">
+    <h3>Still unknown after the pyramid passes</h3>
+    <ul>{after.map(([name, q]) => <li><strong>{name}</strong><span>{q}</span></li>)}</ul>
+  </div>}
+</Frame>)}
+<details class="tst-glossary">
+  <summary>Testing vocabulary, grouped</summary>
+  <dl>
+    <div><dt>By scope</dt><dd>unit · component · integration · contract · API · system · end-to-end</dd></div>
+    <div><dt>By purpose</dt><dd>smoke · regression · acceptance · functional · non-functional</dd></div>
+    <div><dt>Performance</dt><dd>load · stress · spike · soak</dd></div>
+    <div><dt>Security</dt><dd>SAST · SCA (dependency scanning) · IaC scanning · secret scanning · DAST</dd></div>
+    <div><dt>Platform</dt><dd>infrastructure tests · policy tests · manifest validation</dd></div>
+    <div><dt>In production</dt><dd>health probes · synthetic tests · canary validation · SLO monitoring · chaos testing</dd></div>
+    <div><dt>Mechanics</dt><dd>mocks · stubs · fakes · fixtures · test isolation · parallelism · coverage · flaky tests · quality gates · ephemeral environments</dd></div>
+  </dl>
+</details>

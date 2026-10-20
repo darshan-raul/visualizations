@@ -1,0 +1,48 @@
+---
+import SystemMap from './SystemMap.astro';
+import { defaults, faults, releaseResults, zones, type Fault } from './testing-model';
+/** View 12: inject a defect, choose coverage, run the release and see which gate catches it. */
+const results = releaseResults(defaults);
+const defects = (Object.keys(faults) as Fault[]).filter((f) => f !== 'healthy');
+const firstFail = (fault: Fault) => releaseResults({ ...defaults, fault }).findIndex((r) => r.status === 'fail');
+---
+<section class="tst-lab" data-release-lab aria-label="Release gate lab">
+  <div class="tst-lab-controls" data-lab-controls hidden>
+    <label>Change under review<select data-fault>{Object.entries(faults).map(([value, label]) => <option value={value}>{label}</option>)}</select></label>
+    <fieldset><legend>Test coverage</legend>
+      <label><input type="checkbox" data-db-double /> Integration uses a database double</label>
+      <label><input type="checkbox" data-large-carts checked /> Staging load includes large carts</label>
+    </fieldset>
+  </div>
+  <ol class="tst-lab-rail" aria-label="Release gates by environment">
+    {zones.map((zone, z) => <li class="tst-lab-zone"><span>{zone}</span><ol>{results.map((r, i) => r.zone === z && <li data-gate={i}><strong>{r.name}</strong><em data-gate-status>Not run</em></li>)}</ol></li>)}
+  </ol>
+  <div class="tst-lab-actions" data-lab-controls hidden>
+    <button type="button" class="lsn-primary" data-run-next>Run next gate →</button>
+    <button type="button" data-run-all>Run to first failure</button>
+    <button type="button" data-run-reset>Reset</button>
+    <span data-lab-position>0 / 8 gates run</span>
+  </div>
+  <div class="tst-lab-result">
+    <div class="tst-assertion" data-assertion data-status="pending">
+      <header><span data-lab-gate>Ready to run</span><strong data-lab-status>NOT RUN</strong></header>
+      <pre data-lab-command>Choose a change and coverage, then run the next gate.</pre>
+      <dl><div><dt>Expected</dt><dd data-lab-expected>Each gate meets its assertion.</dd></div><div><dt>Observed</dt><dd data-lab-observed>No run yet.</dd></div></dl>
+      <p class="tst-lab-stop" data-lab-stop hidden>Stops <b data-lab-blocks></b></p>
+      <p data-lab-reason>The artifact is built once at gate 2 and promoted by digest from there.</p>
+    </div>
+    <SystemMap label="What this gate exercises" />
+  </div>
+  <table class="tst-table tst-catch">
+    <caption>Where each defect is caught, with the coverage chosen above</caption>
+    <thead><tr><th scope="col">Defect</th>{results.map((r) => <th scope="col"><span>{r.name}</span></th>)}</tr></thead>
+    <tbody>{defects.map((fault) => <tr data-catch-row={fault}><th scope="row">{faults[fault]}</th>{results.map((_, i) => {
+      const first = firstFail(fault);
+      const s = i < first ? 'pass' : i === first ? 'catch' : 'skip';
+      return <td data-catch={s}><span>{s === 'pass' ? '✓' : s === 'catch' ? '✕ caught' : '·'}</span></td>;
+    })}</tr>)}</tbody>
+  </table>
+  <p class="tst-live" data-lab-live aria-live="polite"></p>
+  <details class="tst-reference" open data-lab-reference><summary>Every gate in the healthy run</summary><ol>{results.map((r) => <li><h3>{r.name} · {r.environment}</h3><code>{r.command}</code><p>{r.observed}. {r.reason} Failure stops {r.blocks}.</p></li>)}</ol></details>
+</section>
+<script>import { initReleaseLab } from './testing-lab'; initReleaseLab();</script>

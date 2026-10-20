@@ -1,0 +1,13 @@
+---
+/** The delivery pipeline as a thin strip: which stages this view's checks run in. */
+interface Props { at: number[]; note?: string }
+const { at, note } = Astro.props;
+const stages = ['PR checks', 'Build', 'Test env', 'Staging', 'Production'];
+---
+<div class="tst-where">
+  <span class="tst-where-label">RUNS IN</span>
+  <ol aria-label={`Runs in: ${at.length ? at.map((i) => stages[i]).join(', ') : note ?? 'none'}`}>
+    {stages.map((stage, i) => <li class:list={[at.includes(i) && 'is-on']}><i aria-hidden="true"></i>{stage}</li>)}
+  </ol>
+  {note && <span class="tst-where-note">{note}</span>}
+</div>

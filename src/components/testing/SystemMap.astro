@@ -1,0 +1,39 @@
+---
+import type { Actor } from './testing-model';
+/** Checkout as one picture. Each test scope marks which parts are real, which are doubles, and which it skips. */
+interface Props { real?: Actor[]; doubles?: Partial<Record<Actor, string>>; failed?: Actor[]; label: string }
+const { real = [], doubles = {}, failed = [], label } = Astro.props;
+const actors: { id: Actor; name: string; sub: string; x: number; y: number; w: number }[] = [
+  { id: 'browser', name: 'Browser', sub: 'user journey', x: 20, y: 133, w: 150 },
+  { id: 'api', name: 'Checkout API', sub: 'POST /orders', x: 240, y: 133, w: 220 },
+  { id: 'price', name: 'Price function', sub: 'total(price, pct)', x: 240, y: 256, w: 220 },
+  { id: 'database', name: 'Orders database', sub: 'PostgreSQL', x: 580, y: 30, w: 250 },
+  { id: 'payment', name: 'Payment API', sub: 'charge → paymentId', x: 580, y: 133, w: 250 },
+  { id: 'storage', name: 'Receipt storage', sub: 'S3 bucket', x: 580, y: 236, w: 250 },
+];
+const state = (id: Actor) => failed.includes(id) ? 'failed' : doubles[id] ? 'double' : real.includes(id) ? 'real' : 'outside';
+const tag = (id: Actor) => failed.includes(id) ? 'fails' : doubles[id] ?? (real.includes(id) ? 'real' : 'not used');
+const wire = (a: Actor, b: Actor) => [a, b].some((id) => doubles[id]) && [a, b].some((id) => real.includes(id)) ? 'is-double' : [a, b].every((id) => real.includes(id) || failed.includes(id)) ? 'is-real' : '';
+const wires: { ids: [Actor, Actor]; d: string; head: string; label: string; lx: number; ly: number }[] = [
+  { ids: ['browser', 'api'], d: 'M170 165 H232', head: 'M224 159 l8 6 -8 6', label: 'HTTP', lx: 184, ly: 156 },
+  { ids: ['api', 'price'], d: 'M350 197 V248', head: 'M344 240 l6 8 6 -8', label: 'call', lx: 360, ly: 228 },
+  { ids: ['api', 'database'], d: 'M460 150 H520 V62 H572', head: 'M564 56 l8 6 -8 6', label: 'SQL', lx: 530, ly: 54 },
+  { ids: ['api', 'payment'], d: 'M460 165 H572', head: 'M564 159 l8 6 -8 6', label: 'HTTPS', lx: 527, ly: 157 },
+  { ids: ['api', 'storage'], d: 'M460 180 H520 V268 H572', head: 'M564 262 l8 6 -8 6', label: 'PUT', lx: 530, ly: 260 },
+];
+---
+<figure class="tst-map" aria-label={label}>
+  <figcaption class="tst-map-key"><strong>{label}</strong><span><i class="is-real"></i>real</span><span><i class="is-double"></i>test double</span><span><i class="is-outside"></i>not used</span><span><i class="is-failed"></i>fails</span></figcaption>
+  <svg viewBox="0 0 850 340" role="img" aria-label={`${label}. ${actors.map((a) => `${a.name}: ${tag(a.id)}`).join('; ')}.`}>
+    <rect class="tst-map-zone" x="220" y="20" width="260" height="316" rx="10" />
+    <text class="tst-map-zone-label" x="236" y="48">CHECKOUT SERVICE</text>
+    {wires.map((w) => <g class:list={['tst-map-wire', wire(...w.ids)]} data-wire={w.ids.join(' ')}><path d={w.d} /><path class="tst-map-head" d={w.head} /><text x={w.lx} y={w.ly}>{w.label}</text></g>)}
+    {actors.map((a) => <g class={`tst-map-node is-${state(a.id)}`} data-system-actor={a.id}>
+      <rect x={a.x} y={a.y} width={a.w} height="64" rx={a.id === 'database' ? 16 : 6} />
+      <text class="tst-map-name" x={a.x + 14} y={a.y + 27}>{a.name}</text>
+      <text class="tst-map-sub" x={a.x + 14} y={a.y + 48}>{a.sub}</text>
+      <text class="tst-map-tag" x={a.x + 2} y={a.y - 8} data-system-status>{tag(a.id)}</text>
+    </g>)}
+  </svg>
+  <ul class="tst-map-list">{actors.map((a) => <li class={`is-${state(a.id)}`} data-mobile-actor={a.id}><strong>{a.name}</strong><em data-system-status>{tag(a.id)}</em></li>)}</ul>
+</figure>

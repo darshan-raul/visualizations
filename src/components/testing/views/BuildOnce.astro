@@ -1,0 +1,32 @@
+---
+import Choices from '../Choices.astro';
+import Frame from '../Frame.astro';
+import Where from '../Where.astro';
+/** View 5: one commit, one digest, promoted everywhere — versus a rebuild per environment. */
+const envs = ['Test env', 'Staging', 'Production'];
+const frames = [
+  { action: 'Build once', caption: 'One build turns commit abc123 into one image. Its digest names those exact bytes, and the same digest moves through every environment, carrying its evidence with it.' },
+  { action: 'Rebuild per environment', caption: 'Each environment builds its own image. A base image or dependency can change between builds, so production runs bytes that no test ever saw.' },
+];
+const bad = [['sha256:1a7e…', 'tested'], ['sha256:5c03…', 'tested'], ['sha256:e81b…', 'never tested']];
+---
+<Choices actions={frames.map((f) => f.action)} label="Compare build strategies" />
+<Frame {...frames[0]} index={0} total={2}>
+  <Where at={[1, 2, 3, 4]} note="build once, then promote" />
+  <div class="tst-promote">
+    <div class="tst-promote-src"><span>COMMIT</span><code>abc123</code></div>
+    <div class="tst-promote-art">
+      <span>IMMUTABLE ARTIFACT</span><code>image@sha256:9f2c…</code>
+      <ul aria-label="Evidence attached to the digest"><li>SBOM</li><li>CVE scan</li><li>secret scan</li><li>test results</li></ul>
+    </div>
+    <ol class="tst-promote-envs">{envs.map((env) => <li class="is-same"><span>{env}</span><code>sha256:9f2c…</code></li>)}</ol>
+  </div>
+  <p class="tst-tools">Promote by digest, not by a tag like <code>:latest</code> or <code>:staging</code>; tags can be moved to point at different bytes.</p>
+</Frame>
+<Frame {...frames[1]} index={1} total={2}>
+  <Where at={[]} note="three builds, three artifacts" />
+  <div class="tst-promote is-bad">
+    <div class="tst-promote-src"><span>COMMIT</span><code>abc123</code></div>
+    <ol class="tst-promote-envs is-builds">{envs.map((env, i) => <li class:list={[i === 2 ? 'is-untested' : 'is-other']}><span>build → {env}</span><code>{bad[i][0]}</code><em>{bad[i][1]}</em></li>)}</ol>
+  </div>
+</Frame>

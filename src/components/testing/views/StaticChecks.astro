@@ -1,0 +1,37 @@
+---
+import Choices from '../Choices.astro';
+import Frame from '../Frame.astro';
+import Where from '../Where.astro';
+/** View 4: every shipped input gets its own fast checks before anything runs. */
+type Input = { action: string; caption: string; at: number[]; file: string; checks: [string, string][]; snippetTitle: string; snippet: string; bad: number; catchText: string; catcher: number; extra?: { title: string; steps: string[]; asserts: string } };
+const inputs: Input[] = [
+  { action: 'Application code', caption: 'Static checks read the source without running it. Both lines below are valid code; the linter and type-checker pass. SAST flags the query built from user input.', at: [0, 1], file: 'checkout.py',
+    checks: [['Format', 'ruff format · prettier'], ['Lint', 'ruff · eslint · golangci-lint'], ['Type-check', 'mypy · tsc'], ['SAST', 'Semgrep · CodeQL']],
+    snippetTitle: 'checkout.py', snippet: `total = price - (price * pct / 100)\nquery = f"SELECT * FROM orders WHERE id = {order_id}"`, bad: 2, catchText: 'SAST: SQL built from user input', catcher: 3 },
+  { action: 'Terraform', caption: 'Terraform gets the same treatment: format, validate, lint and a policy scan. Infrastructure tests go further and create real resources in a throwaway account.', at: [0, 1], file: 'rds.tf',
+    checks: [['Format', 'terraform fmt -check'], ['Validate', 'terraform validate'], ['Lint', 'tflint'], ['Policy', 'Checkov · tfsec'], ['Plan', 'terraform plan']],
+    snippetTitle: 'rds.tf', snippet: `resource "aws_db_instance" "orders" {\n  publicly_accessible = true\n  storage_encrypted   = false\n}`, bad: 2, catchText: 'Checkov: RDS instance is public', catcher: 3,
+    extra: { title: 'Infrastructure test', steps: ['terraform apply', 'temporary AWS account', 'run assertions', 'terraform destroy'], asserts: 'assert alb_is_https_only()\nassert rds_not_public()\nassert encryption_enabled()\n# Terratest · terraform test · pytest + boto3 · InSpec' } },
+  { action: 'Kubernetes manifests', caption: 'Render the chart first, then validate the output against the Kubernetes schema and your own policies. Policy tests reject manifests the API server would happily accept.', at: [0, 1], file: 'deployment.yaml',
+    checks: [['Lint', 'helm lint'], ['Render', 'helm template'], ['Schema', 'kubeconform'], ['Policy', 'Kyverno CLI · OPA Conftest']],
+    snippetTitle: 'rendered deployment.yaml', snippet: `containers:\n- name: checkout\n  securityContext:\n    privileged: true\n  # resources: missing`, bad: 4, catchText: 'Policy: privileged containers are not allowed', catcher: 3 },
+  { action: 'Container image', caption: 'The built image holds more than your code: libraries and OS packages come with it. Scan the image you will actually deploy.', at: [1], file: 'checkout@sha256:9f2c…',
+    checks: [['SBOM', 'Syft · Trivy'], ['CVEs', 'Trivy · Grype'], ['Secrets', 'Trivy · Gitleaks']],
+    snippetTitle: 'image layers', snippet: `app/          checkout-service\nsite-packages/ requests 2.19.0\n/etc/os-release debian 12\n/app/.env     AWS_SECRET_ACCESS_KEY=…`, bad: 4, catchText: 'Secret scan: credential baked into a layer', catcher: 2 },
+];
+const security = [['SAST', 'source code', 'Semgrep · SonarQube', 'PR'], ['SCA', 'dependencies', 'Trivy · Grype', 'PR · build'], ['IaC', 'Terraform · K8s', 'Checkov · tfsec', 'PR'], ['Secrets', 'repo · image', 'Gitleaks · Trivy', 'PR · build'], ['DAST', 'running app', 'OWASP ZAP', 'staging']];
+---
+<Choices actions={inputs.map((i) => i.action)} label="Choose what is being checked" />
+{inputs.map((input, index) => <Frame action={input.action} caption={input.caption} index={index} total={inputs.length}>
+  <Where at={input.at} />
+  <div class="tst-chain">
+    <div class="tst-chain-file"><span>INPUT</span><code>{input.file}</code></div>
+    <ol class="tst-chain-checks">{input.checks.map(([name, tools], i) => <li class:list={[i === input.catcher && 'is-fail']}><strong>{i === input.catcher ? `✕ ${name}` : `✓ ${name}`}</strong><span>{tools}</span></li>)}</ol>
+  </div>
+  <section class="tst-code is-catch"><h3>{input.snippetTitle}</h3><pre tabindex="0">{input.snippet.split('\n').map((line, i) => <span class:list={['tst-line', i + 1 === input.bad && 'is-bad']}>{line}{'\n'}</span>)}</pre><p>✕ {input.catchText}</p></section>
+  {input.extra && <section class="tst-infra"><h3>{input.extra.title}</h3><ol class="tst-steps">{input.extra.steps.map((s) => <li>{s}</li>)}</ol><pre tabindex="0">{input.extra.asserts}</pre></section>}
+</Frame>)}
+<section class="tst-security" aria-label="Where security scans look">
+  <h3>Security scans, by what they read</h3>
+  <ul>{security.map(([kind, reads, tools, when]) => <li><strong>{kind}</strong><span>{reads}</span><code>{tools}</code><em>{when}</em></li>)}</ul>
+</section>

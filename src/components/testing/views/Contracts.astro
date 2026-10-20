@@ -1,0 +1,47 @@
+---
+import Choices from '../Choices.astro';
+import Frame from '../Frame.astro';
+import Where from '../Where.astro';
+/** View 3: API test vs contract test, through one renamed field. */
+const frames = [
+  { action: 'API test', caption: 'An API test skips the browser and calls the service directly. It is much cheaper than an end-to-end test and checks more than the status code.' },
+  { action: 'A field is renamed', caption: 'The Payment API team renames paymentId to id and status to state. Their own API tests are updated and pass. checkout-service, deployed separately, still reads the old names.' },
+  { action: 'Contract catches it', caption: 'checkout-service publishes what it depends on. The Payment API pipeline replays that contract against the new code and fails before deployment. This is the contract gate in the release lab.' },
+];
+const checks = [['HTTP status', '201 Created', true], ['JSON structure', 'orderId, status present', true], ['Database record', 'one row in orders', true], ['Headers', 'Content-Type: application/json', true], ['Authentication', '401 without a token', true]] as const;
+---
+<Choices actions={frames.map((f) => f.action)} label="Contract walkthrough" steps />
+<Frame {...frames[0]} index={0} total={3} steps>
+  <Where at={[1, 2, 3]} note="small, safe subset in production" />
+  <div class="tst-two">
+    <section class="tst-code"><h3>Request</h3><pre tabindex="0">{`curl -X POST https://api.example.com/orders \\
+  -H "Authorization: Bearer $TEST_TOKEN" \\
+  -d '{"item":"book"}'`}</pre></section>
+    <section class="tst-checklist"><h3>What the test verifies</h3><ul>{checks.map(([k, v]) => <li class="is-pass"><b>✓</b><strong>{k}</strong><span>{v}</span></li>)}</ul></section>
+  </div>
+  <p class="tst-tools">Tools: pytest · Postman/Newman · REST Assured · Karate · Playwright API</p>
+</Frame>
+<Frame {...frames[1]} index={1} total={3} steps>
+  <Where at={[]} note="nothing checks the pair yet" />
+  <div class="tst-pact">
+    <section class="tst-pact-side"><span>CONSUMER · checkout-service</span><h3>Reads</h3><pre>{`{
+  "paymentId": "pay_123",
+  "status": "PAID"
+}`}</pre><p class="is-fail">✕ order saved with no payment reference</p></section>
+    <div class="tst-pact-mid is-broken" aria-hidden="true"><span>expects</span><i></i><span>gets</span></div>
+    <section class="tst-pact-side"><span>PROVIDER · Payment API</span><h3>Now returns</h3><pre>{`{
+  "id": "pay_123",
+  "state": "PAID"
+}`}</pre><p class="is-pass">✓ provider unit and API tests pass</p></section>
+  </div>
+</Frame>
+<Frame {...frames[2]} index={2} total={3} steps>
+  <Where at={[0, 1, 2, 3]} />
+  <ol class="tst-flow">
+    <li><span>CONSUMER CI</span><strong>checkout-service tests record the contract</strong><code>needs paymentId, status</code></li>
+    <li><span>BROKER</span><strong>Contract published, versioned</strong><code>checkout v41 ↔ payment-api</code></li>
+    <li class="is-fail"><span>PROVIDER CI</span><strong>Payment API verifies every consumer contract</strong><code>✕ $.paymentId missing</code></li>
+    <li class="is-stop"><span>GATE</span><strong>Payment API deploy blocked</strong><code>can-i-deploy → no</code></li>
+  </ol>
+  <p class="tst-tools">Neither side needs the other running. Tools: Pact · Spring Cloud Contract · Schemathesis / OpenAPI validation</p>
+</Frame>

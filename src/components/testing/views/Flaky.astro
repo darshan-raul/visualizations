@@ -1,0 +1,54 @@
+---
+import Choices from '../Choices.astro';
+import Frame from '../Frame.astro';
+import Where from '../Where.astro';
+/** View 11: flaky tests — what they look like, why they happen, and what retrying hides. */
+const frames = [
+  { action: 'Same commit, ten runs', caption: 'Nothing changed between these runs: same commit, same artifact, same test. Two of them failed. That test is flaky, and every red result from it now means less.' },
+  { action: 'Why: timing', caption: 'The test sleeps five seconds and then checks. The job usually takes about four, but sometimes seven. Waiting for the condition, with a timeout, removes the guess.' },
+  { action: 'Why: shared data', caption: 'Two tests create the same user. Run in order, both pass. Run in parallel, one of them fails. Unique data per test removes the race.' },
+  { action: 'Retry vs fix', caption: 'Retrying until green hides the flake and teaches everyone to ignore red. Retries are useful as a diagnostic; repeated flakes need an owner.' },
+];
+const runs = ['pass', 'pass', 'fail', 'pass', 'pass', 'pass', 'pass', 'fail', 'pass', 'pass'];
+const jobs = [4.1, 4.4, 7.2, 3.9, 6.1, 4.2];
+const causes = ['timing and async waits', 'race conditions', 'shared test data', 'test execution order', 'eventual consistency', 'unavailable dependencies', 'network instability', 'resource pressure', 'clock and timezone assumptions'];
+const fixCode = 'create_user(f"test-user-{uuid4().hex[:6]}@example.com")';
+const questions = ['Is the test isolated, or does it share state?', 'Does it wait for conditions or sleep?', 'Which external dependencies can it reach?', 'Does it break when run in parallel?', 'Should this suite block production at all?'];
+---
+<Choices actions={frames.map((f) => f.action)} label="Flaky test walkthrough" steps />
+<Frame {...frames[0]} index={0} total={4} steps>
+  <Where at={[0, 1, 2, 3]} note="worst in E2E and integration" />
+  <ol class="tst-runs" aria-label="Ten runs: two failed">{runs.map((r, i) => <li class={`is-${r}`}><span>#{i + 1}</span><b>{r === 'pass' ? '✓' : '✕'}</b></li>)}</ol>
+  <div class="tst-formula"><span>FLAKE RATE</span><div><em>tests that fail, then pass on retry</em><hr /><em>total test executions</em></div><strong>= 120 / 4,000 = 3%</strong></div>
+  <ul class="tst-causes" aria-label="Common causes">{causes.map((c) => <li>{c}</li>)}</ul>
+</Frame>
+<Frame {...frames[1]} index={1} total={4} steps>
+  <Where at={[2, 3]} />
+  <div class="tst-timeline" style="--limit:50%">
+    <span class="tst-timeline-title">job duration per run · dashed line = sleep(5) checks here</span>
+    {jobs.map((t) => <div class:list={['tst-bar', t > 5 && 'is-over']}><span>{t.toFixed(1)} s</span><div class="tst-track"><i style={`--size:${t / 10 * 100}%`}></i></div><b>{t > 5 ? '✕ too early' : '✓'}</b></div>)}
+  </div>
+  <div class="tst-two">
+    <section class="tst-code is-catch"><h3>Guessing</h3><pre tabindex="0"><span class="tst-line is-bad">time.sleep(5){"\n"}</span><span class="tst-line">assert job_finished()</span></pre></section>
+    <section class="tst-code"><h3>Waiting for the condition</h3><pre tabindex="0">{`wait_until(
+    job_finished,
+    timeout=30
+)`}</pre></section>
+  </div>
+</Frame>
+<Frame {...frames[2]} index={2} total={4} steps>
+  <Where at={[0, 2]} />
+  <div class="tst-race">
+    <div><span>TEST A</span><code>create_user("test@example.com")</code></div>
+    <div class="is-fail"><span>TEST B · parallel</span><code>create_user("test@example.com")</code><em>✕ 409 already exists</em></div>
+    <div class="is-pass"><span>FIX</span><code>{fixCode}</code><em>✓ test-user-348928@example.com</em></div>
+  </div>
+</Frame>
+<Frame {...frames[3]} index={3} total={4} steps>
+  <Where at={[0, 1, 2, 3]} />
+  <div class="tst-loops">
+    <section class="is-bad"><h3>The retry trap</h3><ol><li>test fails</li><li>retry</li><li>passes</li><li>ignore</li></ol><p>Soon CI fails 20% of the time, and everyone presses “retry pipeline”. CI has lost credibility.</p></section>
+    <section class="is-good"><h3>The fix loop</h3><ol><li>identify</li><li>quarantine</li><li>assign</li><li>fix</li></ol><p>Quarantine takes the test out of the blocking gate, along with its protection, so it needs an owner and a deadline.</p></section>
+  </div>
+  <section class="tst-ask"><h3>“Our E2E suite is flaky, so we retry it three times in staging.” Ask:</h3><ul>{questions.map((q) => <li>{q}</li>)}</ul></section>
+</Frame>

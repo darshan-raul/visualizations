@@ -1,0 +1,40 @@
+---
+import Choices from '../Choices.astro';
+import Frame from '../Frame.astro';
+import Where from '../Where.astro';
+/** View 6: ephemeral environments, test data, and the collisions parallel runs create. */
+const frames = [
+  { action: 'Shared environment', caption: 'Two pipelines run against one long-lived database. Test A renames a user that test B expects unchanged. Neither test is wrong; they just share state.' },
+  { action: 'Per-PR environment', caption: 'Opening PR #143 creates its own namespace with its own database. The pipeline migrates, seeds known data, runs the tests and deletes everything when the PR closes.' },
+  { action: 'Parallel shards', caption: 'Splitting tests across runners makes CI faster, and makes collisions more likely. Every shard needs its own names, ports and data.' },
+];
+const lifecycle = ['create postgres', 'run migrations', 'seed fixtures', 'run tests', 'destroy'];
+const shards = ['Unit shard 1', 'Unit shard 2', 'Integration A', 'Integration B', 'Security scan'];
+const collisions = [['same username', 'test@example.com', 'test-user-348928@example.com'], ['same port', ':5432', 'random free port'], ['same bucket', 's3://test-receipts', 's3://test-receipts-pr143-a'], ['same namespace', 'ci', 'pr-143-shard-2'], ['shared rate limit', 'one sandbox API key', 'per-shard key or stub']];
+---
+<Choices actions={frames.map((f) => f.action)} label="Choose an environment setup" />
+<Frame {...frames[0]} index={0} total={3}>
+  <Where at={[2]} note="shared, long-lived" />
+  <div class="tst-shared">
+    <div class="tst-shared-run"><span>PIPELINE A</span><code>UPDATE users SET name='Ana B.'<br />WHERE email='test@example.com'</code><em class="is-pass">✓ passes</em></div>
+    <div class="tst-shared-db"><span>SHARED staging-db</span><code>test@example.com → "Ana B."</code></div>
+    <div class="tst-shared-run"><span>PIPELINE B</span><code>expect name == "Ana"</code><em class="is-fail">✕ fails, only sometimes</em></div>
+  </div>
+</Frame>
+<Frame {...frames[1]} index={1} total={3}>
+  <Where at={[0, 2]} note="one environment per PR" />
+  <div class="tst-ns">
+    <div class="tst-ns-box"><span>namespace: pr-143</span><ul><li>frontend</li><li>backend</li><li>redis</li><li>postgres</li></ul></div>
+    <ol class="tst-steps">{lifecycle.map((s) => <li>{s}</li>)}</ol>
+  </div>
+  <p class="tst-tools">Seed with fixtures, factories, snapshots or synthetic data, never a copy of shared production-like state. Testcontainers does the same inside a single CI job.</p>
+</Frame>
+<Frame {...frames[2]} index={2} total={3}>
+  <Where at={[0, 1, 2]} />
+  <div class="tst-fan"><span class="tst-fan-root">Pipeline</span><ul>{shards.map((s) => <li>{s}</li>)}</ul></div>
+  <table class="tst-table">
+    <caption>What collides, and the fix</caption>
+    <thead><tr><th scope="col">Collision</th><th scope="col">Shared</th><th scope="col">Unique per run</th></tr></thead>
+    <tbody>{collisions.map(([k, a, b]) => <tr><th scope="row">{k}</th><td class="is-fail">{a}</td><td class="is-pass">{b}</td></tr>)}</tbody>
+  </table>
+</Frame>

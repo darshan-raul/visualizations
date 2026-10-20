@@ -1,0 +1,54 @@
+---
+import Choices from '../Choices.astro';
+import Frame from '../Frame.astro';
+import Where from '../Where.astro';
+/** View 7: what staging runs — overlapping suites, four traffic shapes, and a threshold that fails. */
+const frames = [
+  { action: 'Suites', caption: 'Smoke, E2E and regression overlap. Regression isn’t a layer: it’s every test that guards behavior that used to work. Smoke is the small “is it alive?” subset.' },
+  { action: 'Traffic shapes', caption: 'Performance testing is four different questions, each with its own traffic shape.' },
+  { action: 'Threshold', caption: 'At 100 requests/s for ten minutes, p95 latency must stay under 300 ms. With large carts in the mix, the last step crosses the line.' },
+];
+const smoke = ['GET /health → 200', 'GET / → 200', 'POST /login → ok', 'GET /products → items', 'database reachable'];
+// Each shape is a polyline in a 120×40 box: x is time, y is requests per second (top = more).
+const shapes = [
+  { name: 'Load', points: '0,30 15,14 105,14 120,30', q: 'Does expected traffic stay within limits?', ex: '1,000 RPS, as in production' },
+  { name: 'Stress', points: '0,36 24,30 48,22 72,14 96,6 120,2', q: 'Where does it break?', ex: '1k → 2k → 4k → 8k: breaks at 9k' },
+  { name: 'Spike', points: '0,34 50,34 54,4 70,4 74,34 120,34', q: 'Does it survive a sudden burst?', ex: '100 → 10,000 RPS in seconds' },
+  { name: 'Soak', points: '0,30 6,16 114,16 120,30', q: 'What degrades over hours?', ex: 'memory, connection and disk leaks over 12 h' },
+];
+const bars = [[10, 90], [25, 115], [50, 170], [75, 220], [100, 340]];
+const scale = 400;
+---
+<Choices actions={frames.map((f) => f.action)} label="Choose a staging check" />
+<Frame {...frames[0]} index={0} total={3}>
+  <Where at={[3]} note="smoke also runs in test env and production" />
+  <div class="tst-venn" aria-label="Regression spans unit, API and E2E suites; smoke is a small subset">
+    <div class="tst-venn-reg"><span>REGRESSION · every test that guards past behavior</span>
+      <ul><li>unit</li><li>integration</li><li>API</li><li class="is-e2e">E2E journeys<small>open site → login → search → add to cart → checkout → order exists</small></li></ul>
+      <div class="tst-venn-smoke"><span>SMOKE · shallow and fast</span><ul>{smoke.map((s) => <li>{s}</li>)}</ul></div>
+    </div>
+  </div>
+  <p class="tst-tools">A bug once broke refunds above ₹10,000. The fix ships with <code>test_refund_above_10000()</code>, and that test joins the regression suite for good.</p>
+</Frame>
+<Frame {...frames[1]} index={1} total={3}>
+  <Where at={[3]} note="rarely, and bounded, in production" />
+  <ul class="tst-shapes">{shapes.map((s) => <li>
+    <svg viewBox="-2 -2 124 44" aria-hidden="true"><line x1="0" y1="40" x2="120" y2="40" /><polyline points={s.points} /></svg>
+    <strong>{s.name}</strong><span>{s.q}</span><small>{s.ex}</small>
+  </li>)}</ul>
+  <p class="tst-tools">Tools: k6 · JMeter · Locust · Gatling. Graphs show requests per second over time.</p>
+</Frame>
+<Frame {...frames[2]} index={2} total={3}>
+  <Where at={[3]} />
+  <div class="tst-bars" role="img" aria-label="p95 latency rises from 90 ms at 10 requests per second to 340 ms at 100, crossing the 300 ms threshold">
+    <span class="tst-bars-title">p95 latency by offered load · dashed line = 300 ms threshold</span>
+    <div class="tst-bars-plot" style={`--limit:${300 / scale * 100}%`}>
+      {bars.map(([rps, ms]) => <div class:list={['tst-bar', ms > 300 && 'is-over']}><span>{rps} req/s</span><div class="tst-track"><i style={`--size:${ms / scale * 100}%`}></i></div><b>{ms} ms</b></div>)}
+    </div>
+  </div>
+  <section class="tst-code"><h3>k6 thresholds</h3><pre tabindex="0">{`thresholds: {
+  http_req_duration: ['p(95)<300'],
+  http_req_failed:   ['rate<0.01'],
+}
+// workload: mixed carts, 100 req/s for 10 min`}</pre></section>
+</Frame>

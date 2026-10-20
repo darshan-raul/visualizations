@@ -1,0 +1,38 @@
+---
+import { evaluateCanary } from './testing-model';
+/** Deterministic canary policy. Sliders change observed evidence; the policy decides continue, wait or halt. */
+const initial = { minutes: 10, requests: 1000, errors: 3, baselineP95: 250, candidateP95: 270 };
+const result = evaluateCanary(initial);
+const controls = [
+  { name: 'minutes', label: 'Observation window', unit: 'min', min: 0, max: 30, step: 1 },
+  { name: 'requests', label: 'Candidate requests', unit: 'requests', min: 0, max: 10000, step: 20 },
+  { name: 'errors', label: 'Candidate failures', unit: 'requests', min: 0, max: 100, step: 1 },
+  { name: 'baselineP95', label: 'Baseline p95', unit: 'ms', min: 50, max: 1000, step: 10 },
+  { name: 'candidateP95', label: 'Candidate p95', unit: 'ms', min: 50, max: 1200, step: 10 },
+] as const;
+const pct = (ms: number) => `${ms / 1200 * 100}%`;
+---
+<section class="tst-canary" data-canary-lab data-verdict="continue" aria-label="Canary policy evaluator">
+  <div class="lsn-controls is-choices" data-canary-controls hidden><button type="button" data-canary-preset="healthy" aria-pressed="true">Healthy candidate</button><button type="button" data-canary-preset="slow" aria-pressed="false">Latency regression</button><button type="button" data-canary-preset="small" aria-pressed="false">Too little traffic</button></div>
+  <div class="tst-split" aria-label="95% of traffic to baseline, 5% to candidate"><span style="flex:95">95% → baseline v1</span><span style="flex:5" title="5% → candidate v2">5%</span></div>
+  <div class="tst-canary-body">
+    <section>
+      <h3>Observed evidence</h3>
+      <div data-canary-controls hidden>{controls.map((c) => <label class="tst-range"><span>{c.label}<strong><output data-canary-value={c.name}>{initial[c.name]}</output> {c.unit}</strong></span><input type="range" name={c.name} min={c.min} max={c.max} step={c.step} value={initial[c.name]} /></label>)}</div>
+      <div class="tst-latency" style={`--limit:${pct(initial.baselineP95 * 1.2)}`} data-latency-chart>
+        <h4>p95 latency · 0–1,200 ms · dashed line = baseline + 20%</h4>
+        <div class="tst-bar"><span>Baseline</span><div class="tst-track"><i data-latency-bar="baseline" style={`--size:${pct(initial.baselineP95)}`}></i></div><b data-latency-label="baseline">{initial.baselineP95} ms</b></div>
+        <div class="tst-bar"><span>Candidate</span><div class="tst-track"><i data-latency-bar="candidate" style={`--size:${pct(initial.candidateP95)}`}></i></div><b data-latency-label="candidate">{initial.candidateP95} ms</b></div>
+      </div>
+      <p class="tst-tools">Candidate error rate: <strong data-canary-rate>0.30%</strong></p>
+    </section>
+    <section>
+      <h3>Promotion policy</h3>
+      <ol class="tst-policy-rows">{result.checks.map((c, i) => <li data-policy-row={i} data-status="pass"><div><strong>{c.name}</strong><span data-policy-status>✓ met</span></div><code data-policy-value>{c.value}</code></li>)}</ol>
+      <div class="tst-decision"><strong data-canary-verdict>CONTINUE</strong><p data-canary-meaning>All four criteria pass in this teaching policy. Proceed to the next controlled rollout step.</p></div>
+    </section>
+  </div>
+  <p class="tst-tools">A breached guardrail halts even in a short window; a clean but small sample waits. This fixed policy doesn’t give statistical confidence, and a relative pass can hide a slowdown shared by both versions.</p>
+  <p class="tst-live" data-canary-live aria-live="polite"></p>
+</section>
+<script>import { initCanaryLab } from './testing-lab'; initCanaryLab();</script>

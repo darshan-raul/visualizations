@@ -1,0 +1,29 @@
+---
+import Choices from '../Choices.astro';
+import Frame from '../Frame.astro';
+/** View 9: each failure stops the promotion it protects; some results only inform. */
+const stages = ['PR', 'Build', 'Test env', 'Staging', 'Production'];
+type Case = { action: string; caption: string; at: number; stops: string; blocking: boolean | 'severity' };
+const cases: Case[] = [
+  { action: 'Lint error', caption: 'A lint failure is cheap to fix and certain. It blocks the merge, so nothing is built from the broken change.', at: 0, stops: 'blocks the merge', blocking: true },
+  { action: 'Critical CVE', caption: 'The image scan finds a critical, fixable vulnerability. The image is built but marked unpromotable.', at: 1, stops: 'blocks the artifact', blocking: true },
+  { action: 'Integration failure', caption: 'The service can’t write to its real database. The artifact never reaches staging.', at: 2, stops: 'blocks deployment', blocking: true },
+  { action: 'Staging E2E failure', caption: 'The checkout journey fails in staging. The release stops one step short of users.', at: 3, stops: 'blocks production', blocking: true },
+  { action: 'Medium CVE', caption: 'A medium-severity finding is recorded and assigned, but doesn’t stop the release. The decision was made in advance, not in the moment.', at: 1, stops: 'recorded · ticket opened', blocking: false },
+  { action: '2% slower', caption: 'Latency rose 2%, inside the agreed budget. The result is kept for trend tracking; the release continues.', at: 3, stops: 'recorded · trend tracked', blocking: false },
+  { action: 'Synthetic fails in prod', caption: 'A synthetic login check fails after rollout. Depending on severity this pages someone, halts the canary or rolls back.', at: 4, stops: 'alert · halt · roll back', blocking: 'severity' },
+];
+const state = (c: Case, i: number) => i < c.at ? 'pass' : i === c.at ? (c.blocking === true ? 'stop' : c.blocking === false ? 'note' : 'alert') : c.blocking === false ? 'pass' : 'skip';
+const policy = [['Lint / format', 'block PR'], ['Unit tests', 'block PR'], ['Critical CVE', 'block artifact'], ['Integration', 'block deployment'], ['Staging E2E', 'block production'], ['Production synthetic', 'alert / roll back by severity'], ['Medium CVE', 'informational'], ['Performance −2%', 'informational'], ['Non-critical browser', 'informational']];
+---
+<Choices actions={cases.map((c) => c.action)} label="Choose a failing result" />
+{cases.map((c, index) => <Frame action={c.action} caption={c.caption} index={index} total={cases.length}>
+  <ol class="tst-gates" aria-label={`${c.action}: ${c.stops}`}>
+    {stages.map((s, i) => <li class={`is-${state(c, i)}`}><span>{s}</span><strong>{state(c, i) === 'pass' ? '✓' : state(c, i) === 'skip' ? '—' : state(c, i) === 'stop' ? '✕' : '!'}</strong>{i === c.at && <em>{c.stops}</em>}</li>)}
+  </ol>
+</Frame>)}
+<table class="tst-table tst-policy">
+  <caption>Write the gate policy down</caption>
+  <thead><tr><th scope="col">Result</th><th scope="col">On failure</th></tr></thead>
+  <tbody>{policy.map(([k, v]) => <tr><th scope="row">{k}</th><td class={v === 'informational' ? 'is-info' : 'is-block'}>{v}</td></tr>)}</tbody>
+</table>

@@ -1,0 +1,9 @@
+---
+/** One state of a view. Without JavaScript every frame stays visible, in order. */
+interface Props { action: string; caption: string; index: number; total: number; steps?: boolean }
+const { action, caption, index, total, steps = false } = Astro.props;
+---
+<figure class:list={['lsn-frame', index === 0 && 'is-active']} data-lsn-frame data-lsn-action={action}>
+  <figcaption>{total > 1 && <span>{steps ? 'STEP' : 'OPTION'} {index + 1} OF {total} · <b>{action}</b></span>}<p>{caption}</p></figcaption>
+  <slot />
+</figure>

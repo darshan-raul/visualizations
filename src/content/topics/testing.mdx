@@ -1,0 +1,58 @@
+---
+title: "Tests Along the Delivery Pipeline"
+summary: "What each kind of test proves, where it should run, and whether its failure should block a deployment, from unit tests and contracts to canaries and flaky tests."
+slug: testing
+collection: devops-sre
+tags: [Testing, CI/CD, DevOps, Reliability, Security]
+technologies: [CI/CD, Containers]
+format: deep-dive
+difficulty: foundational
+published: 2026-10-20
+reviewed: 2026-10-20
+versionScope: "Illustrative delivery pipeline; technical sources reviewed 2026-10-20. Workloads, results, and rollout thresholds are examples."
+legacyPath: /testing
+featured: false
+state: reviewed
+related: [git, github-actions-cheatsheet, secopspipeline]
+sources:
+  - label: "Google SRE: Testing for reliability"
+    url: https://sre.google/sre-book/testing-reliability/
+  - label: "Martin Fowler: The practical test pyramid"
+    url: https://martinfowler.com/articles/practical-test-pyramid.html
+  - label: "Martin Fowler: Test doubles"
+    url: https://martinfowler.com/bliki/TestDouble.html
+  - label: "Pact: Contract tests in CI/CD"
+    url: https://docs.pact.io/pact_nirvana
+  - label: "Playwright: API testing"
+    url: https://playwright.dev/docs/api-testing
+  - label: "Testcontainers: Real dependencies in tests"
+    url: https://testcontainers.com/guides/getting-started-with-testcontainers-for-nodejs/
+  - label: "HashiCorp: Terraform tests"
+    url: https://developer.hashicorp.com/terraform/language/tests
+  - label: "Kyverno: CLI"
+    url: https://kyverno.io/docs/kyverno-cli/
+  - label: "GitHub: Code scanning"
+    url: https://docs.github.com/en/code-security/code-scanning/introduction-to-code-scanning/about-code-scanning
+  - label: "Trivy: Software bill of materials"
+    url: https://trivy.dev/docs/latest/supply-chain/sbom/
+  - label: "Trivy: Secret scanning"
+    url: https://trivy.dev/docs/latest/guide/scanner/secret/
+  - label: "Grafana k6: Test types"
+    url: https://grafana.com/docs/k6/latest/testing-guides/test-types/
+  - label: "Grafana k6: Thresholds"
+    url: https://grafana.com/docs/k6/latest/using-k6/thresholds/
+  - label: "OWASP: Dynamic application security testing"
+    url: https://devguide.owasp.org/en/06-verification/02-tools/01-dast/
+  - label: "Google SRE: Canarying releases"
+    url: https://sre.google/workbook/canarying-releases/
+  - label: "Kubernetes: Health probes"
+    url: https://kubernetes.io/docs/concepts/workloads/pods/probes/
+  - label: "Google Cloud: Synthetic monitoring"
+    url: https://docs.cloud.google.com/monitoring/uptime-checks/introduction
+  - label: "Google Testing Blog: Flaky tests at Google"
+    url: https://testing.googleblog.com/2016/05/flaky-tests-at-google-and-how-we.html
+---
+
+import TestingConsole from '../../components/testing/TestingConsole.astro';
+
+<TestingConsole published={props.published} reviewed={props.reviewed} />

@@ -1,0 +1,45 @@
+---
+import Choices from '../Choices.astro';
+import Frame from '../Frame.astro';
+import SystemMap from '../SystemMap.astro';
+import Where from '../Where.astro';
+import type { Actor } from '../testing-model';
+/** View 2: one checkout system; each test type draws a different line between real and pretend. */
+type Scope = { action: string; caption: string; real: Actor[]; doubles: Partial<Record<Actor, string>>; at: number[]; stats: [string, string][]; code: string; codeTitle: string };
+const scopes: Scope[] = [
+  { action: 'Unit', caption: 'Only the price function runs. It is pure arithmetic and calls nothing, so it needs no stand-ins, runs in milliseconds and fails only when the logic is wrong. Unit tests of code that does call out replace those calls with mocks.',
+    real: ['price'], doubles: {}, at: [0, 1],
+    stats: [['Speed', 'milliseconds'], ['How many', 'hundreds to thousands'], ['Runs on', 'laptop · CI runner']],
+    codeTitle: 'test_discount.py', code: `def calculate_discount(price, percent):\n    return price - (price * percent / 100)\n\ndef test_discount():\n    assert calculate_discount(100, 10) == 90` },
+  { action: 'Component', caption: 'One whole service is real, including its own database. Services it doesn’t own are stubbed or faked, so you test the service without the rest of the platform.',
+    real: ['api', 'price', 'database'], doubles: { payment: 'stub', storage: 'fake' }, at: [1, 2],
+    stats: [['Speed', 'seconds'], ['How many', 'tens to hundreds'], ['Runs on', 'CI runner · test env']],
+    codeTitle: 'component setup', code: `checkout-api      real container\npostgres          real, via Testcontainers\npayment API       stub → always { "status": "PAID" }\nS3                fake → LocalStack` },
+  { action: 'Integration', caption: 'Two real components cross a real boundary. The test starts PostgreSQL, applies migrations, writes an order and reads it back.',
+    real: ['api', 'database'], doubles: {}, at: [0, 1, 2],
+    stats: [['Speed', 'seconds'], ['How many', 'tens to hundreds'], ['Runs on', 'CI runner · test env']],
+    codeTitle: 'CI job', code: `docker compose up -d postgres\nmigrate up\npytest tests/integration/\ndocker compose down -v` },
+  { action: 'End-to-end', caption: 'A browser drives the whole journey: search, add to cart, pay, see the order. Everything is real except the payment sandbox, which avoids charging anyone.',
+    real: ['browser', 'api', 'price', 'database', 'storage'], doubles: { payment: 'sandbox' }, at: [3],
+    stats: [['Speed', 'minutes'], ['How many', 'a few critical journeys'], ['Runs on', 'staging']],
+    codeTitle: 'checkout.spec.ts (Playwright)', code: `await page.goto('/');\nawait page.getByRole('button', { name: 'Add to cart' }).click();\nawait page.getByRole('button', { name: 'Pay' }).click();\nawait expect(page.getByText('Order confirmed')).toBeVisible();` },
+];
+const doubles = [
+  ['Mock', 'Pretends, then checks how it was called.', 'Did checkout call the payment API once?'],
+  ['Stub', 'Returns a canned answer.', 'Exchange rate → always 83.20'],
+  ['Fake', 'A working, lightweight stand-in.', 'LocalStack for S3 · MailHog for SMTP'],
+];
+---
+<Choices actions={scopes.map((s) => s.action)} label="Choose a test scope" />
+{scopes.map((scope, index) => <Frame action={scope.action} caption={scope.caption} index={index} total={scopes.length}>
+  <Where at={scope.at} />
+  <SystemMap real={scope.real} doubles={scope.doubles} label={`${scope.action} test: what is real`} />
+  <div class="tst-two">
+    <dl class="tst-stats">{scope.stats.map(([k, v]) => <div><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+    <section class="tst-code"><h3>{scope.codeTitle}</h3><pre tabindex="0">{scope.code}</pre></section>
+  </div>
+</Frame>)}
+<section class="tst-doubles" aria-label="Kinds of test double">
+  <h3>Three kinds of stand-in</h3>
+  <ul>{doubles.map(([name, what, example]) => <li><strong>{name}</strong><span>{what}</span><code>{example}</code></li>)}</ul>
+</section>
