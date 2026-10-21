@@ -1,0 +1,9 @@
+---
+const lanes = [
+  { name: 'Python', driver: 'SQLAlchemy + psycopg', access: 'Application queries and connections', migration: 'Alembic', detail: 'Python revision scripts · upgrade / downgrade', primary: true },
+  { name: 'Go', driver: 'pgx/v5', access: 'Or database/sql + a compatible driver', migration: 'Same Alembic job', detail: 'Go application · shared database contract', primary: true },
+];
+---
+<div class="mig-package-lanes">{lanes.map(lane => <section><h3>{lane.name}</h3><div class="mig-package-node"><span>APPLICATION ACCESS</span><strong>{lane.driver}</strong><p>{lane.access}</p></div><div class="mig-package-node is-policy"><span>MIGRATION OWNER</span><strong>{lane.migration}</strong><p>{lane.detail}</p></div></section>)}</div>
+<div class="mig-shared-db"><span aria-hidden="true">↳</span><strong>One PostgreSQL database</strong><span aria-hidden="true">↲</span></div>
+<div class="mig-alternatives"><span class="mig-eyebrow">IF YOU CHOOSE GO-NATIVE MIGRATION OWNERSHIP</span><div><section><h3>golang-migrate</h3><p>CLI or Go library. SQL migrations in paired <code>.up.sql</code> and <code>.down.sql</code> files.</p></section><section><h3>goose</h3><p>SQL migrations with annotations, or registered Go migration functions in a custom runner.</p></section></div></div>

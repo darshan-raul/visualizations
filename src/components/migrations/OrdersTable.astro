@@ -1,0 +1,13 @@
+---
+import type { Order, Schema } from './migration-model';
+interface Props { rows: Order[]; schema: Schema; changed?: boolean; liveRows?: boolean }
+const { rows, schema, changed = false, liveRows = false } = Astro.props;
+---
+<div class:list={['mig-table', changed && 'is-changed']}>
+  <div class="mig-table-title"><span class="mig-table-icon" aria-hidden="true">▤</span><strong>orders</strong><span>{schema === 'required' ? 'currency required' : schema === 'expanded' ? 'currency optional' : '2 columns'}</span></div>
+  <table>
+    <caption class="mig-sr">Order rows{schema !== 'original' && ', including the currency column'}</caption>
+    <thead><tr><th scope="col">id</th><th scope="col">total_cents</th>{schema !== 'original' && <th scope="col" class="mig-new-col">currency</th>}</tr></thead>
+    <tbody data-mig-rows={liveRows || undefined}>{rows.map(row => <tr data-order-id={row.id}><td>{row.id}</td><td>{row.cents}</td>{schema !== 'original' && <td class:list={['mig-new-col', row.currency === null && 'is-null']} data-mig-cell>{row.currency ?? 'NULL'}</td>}</tr>)}</tbody>
+  </table>
+</div>

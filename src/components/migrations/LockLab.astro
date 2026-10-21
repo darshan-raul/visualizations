@@ -1,0 +1,20 @@
+---
+const states = [
+  { id: 'waiting', title: 'Migration is waiting', tone: 'warn', app: 'Transaction open', ddl: 'Waiting for table lock', later: 'Queued behind DDL', note: 'The first SELECT finished, but its transaction still holds the lock. The migration has not changed orders.' },
+  { id: 'released', title: 'Blocker committed', tone: 'ok', app: 'Committed · lock released', ddl: 'Lock acquired · change committed', later: 'Query can proceed', note: 'The old transaction ends. DDL gets its lock, adds the column and commits; queued work can proceed.' },
+  { id: 'timeout', title: 'Migration attempt timed out', tone: 'fail', app: 'Still open · unaffected', ddl: 'Lock timeout · rolled back', later: 'Can proceed without queued DDL', note: 'The migration gives up and rolls back its failed transaction. It does not kill the blocker or add the column. Retry after resolving the long transaction.' },
+];
+---
+<div data-mig-locks>
+  <div class="mig-controls" data-lock-controls hidden><button type="button" data-lock-release>Commit the blocker</button><button type="button" data-lock-timeout>Let lock timeout expire</button><button type="button" data-lock-reset>Reset</button></div>
+  {states.map(state => <section class="mig-lock-state" data-lock-state={state.id}>
+    <div class={`mig-lock-heading is-${state.tone}`}><span class="mig-eyebrow">ONE TABLE · ORDERS</span><h3>{state.title}</h3></div>
+    <ol class="mig-lock-lanes">
+      <li><div><span>01 · APPLICATION</span><code>BEGIN; SELECT …</code></div><strong>{state.app}</strong><small>Holds ACCESS SHARE until its transaction ends</small></li>
+      <li class:list={[state.id === 'waiting' && 'is-waiting', state.id === 'timeout' && 'is-failed']}><div><span>02 · MIGRATION</span><code>ALTER TABLE …</code></div><strong>{state.ddl}</strong><small>Needs conflicting ACCESS EXCLUSIVE</small></li>
+      <li><div><span>03 · LATER QUERY</span><code>SELECT …</code></div><strong>{state.later}</strong><small>Can be affected by the lock queue</small></li>
+    </ol>
+    <p class="mig-caption">{state.note}</p>
+  </section>)}
+  <p class="mig-live" aria-live="polite" data-lock-live></p>
+</div>

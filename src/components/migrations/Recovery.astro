@@ -1,0 +1,9 @@
+---
+const decisions = [
+  ['Change did not commit', 'Roll back the failed transaction; fix the cause before retrying.', 'Check the schema is still at the expected starting state.'],
+  ['Expanded schema committed', 'A compatible application rollback can leave the new optional column in place.', 'Check old reads and writes still work.'],
+  ['Data meaning changed', 'Choose a corrective migration, a reviewed downgrade, or a restore/reconciliation plan.', 'Dropping currency after EUR orders exist loses information.'],
+];
+---
+<div class="mig-recovery">{decisions.map(([title, action, check], i) => <section><span class="mig-eyebrow">{String(i + 1).padStart(2, '0')} / OBSERVE FIRST</span><h3>{title}</h3><p>{action}</p><small>{check}</small></section>)}</div>
+<section class="mig-final-check"><h3>Before calling it done</h3><ul><li>Database at the expected revision head or heads</li><li>Old and new application behavior checked</li><li>No historical rows left without currency</li><li>Constraints validated; no unexpected lock waits or query errors</li><li>Recovery plan still fits the data now being written</li></ul></section>

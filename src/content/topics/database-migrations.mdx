@@ -1,0 +1,49 @@
+---
+title: "Database Migrations, One Change at a Time"
+summary: "Start with an app and a table. Add one field, then learn how to ship the change with Alembic, Python and Go."
+slug: database-migrations
+collection: devops-sre
+tags: [Databases, CI/CD, Deployment, Reliability]
+technologies: [PostgreSQL, Alembic, Python, Go]
+format: deep-dive
+difficulty: foundational
+published: 2026-10-21
+reviewed: 2026-10-21
+versionScope: "PostgreSQL 18 behavior; Alembic, SQLAlchemy, psycopg, pgx, golang-migrate and goose sources reviewed 2026-10-21. Local educational simulations."
+legacyPath: /database-migrations
+state: reviewed
+related: [testing, git, rds-backup-retention]
+sources:
+  - label: "Alembic: Tutorial"
+    url: https://alembic.sqlalchemy.org/en/latest/tutorial.html
+  - label: "Alembic: Autogenerate"
+    url: https://alembic.sqlalchemy.org/en/latest/autogenerate.html
+  - label: "PostgreSQL 18: ALTER TABLE"
+    url: https://www.postgresql.org/docs/18/sql-altertable.html
+  - label: "Alembic: Data migrations"
+    url: https://alembic.sqlalchemy.org/en/latest/cookbook.html#data-migrations-general-techniques
+  - label: "PostgreSQL 18: Explicit locking"
+    url: https://www.postgresql.org/docs/18/explicit-locking.html
+  - label: "PostgreSQL 18: Concurrent indexes"
+    url: https://www.postgresql.org/docs/18/sql-createindex.html
+  - label: "Alembic: Revision branches"
+    url: https://alembic.sqlalchemy.org/en/latest/branches.html
+  - label: "Alembic: Commands"
+    url: https://alembic.sqlalchemy.org/en/latest/api/commands.html
+  - label: "SQLAlchemy: PostgreSQL psycopg"
+    url: https://docs.sqlalchemy.org/en/20/dialects/postgresql.html
+  - label: "pgx: PostgreSQL for Go"
+    url: https://github.com/jackc/pgx
+  - label: "golang-migrate"
+    url: https://github.com/golang-migrate/migrate
+  - label: "goose"
+    url: https://pressly.github.io/goose/
+  - label: "golang-migrate: FAQ"
+    url: https://github.com/golang-migrate/migrate/blob/master/FAQ.md
+  - label: "Go: database/sql"
+    url: https://pkg.go.dev/database/sql
+---
+
+import MigrationsConsole from '../../components/migrations/MigrationsConsole.astro';
+
+<MigrationsConsole published={props.published} reviewed={props.reviewed} />

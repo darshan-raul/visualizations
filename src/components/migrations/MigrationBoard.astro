@@ -1,0 +1,16 @@
+---
+import OrdersTable from './OrdersTable.astro';
+import type { Board } from './migration-model';
+interface Props extends Board { showRevision?: boolean; label?: string }
+const { schema, app, rows, result, tone = 'ok', query, revision, changed = false, showRevision = false, label } = Astro.props;
+const apps = app === 'mixed' ? ['old', 'new'] : [app];
+---
+<figure class="mig-board">
+  {label && <figcaption class="mig-scene-label">{label}</figcaption>}
+  <div class="mig-picture">
+    <div class="mig-apps">{apps.map(kind => <div class:list={['mig-app', kind === 'new' && 'is-new']}><span class="mig-eyebrow">YOUR APPLICATION {app === 'mixed' ? (kind === 'old' ? '· OLD' : '· NEW') : ''}</span><div class="mig-app-mark" aria-hidden="true">{kind === 'new' ? '{ + }' : '{ }'}</div><strong>{kind === 'old' ? 'Reads the amount' : 'Reads amount + currency'}</strong><code>{kind === 'old' ? 'id, total_cents' : 'id, total_cents, currency'}</code></div>)}</div>
+    <div class:list={['mig-connection', tone === 'fail' && 'is-failed']}><span>{tone === 'fail' ? 'Query rejected' : 'SQL query'}</span><i aria-hidden="true">{tone === 'fail' ? '→ ✕' : '→'}</i>{query && <code>{query}</code>}</div>
+    <div class="mig-database"><span class="mig-eyebrow">POSTGRESQL</span><OrdersTable rows={rows} schema={schema} changed={changed} />{showRevision && <div class="mig-version"><span>alembic_version</span><strong>{revision ?? '001'}</strong><small>current revision</small></div>}</div>
+  </div>
+  <figcaption class={`mig-result is-${tone}`}><span class="mig-result-mark" aria-hidden="true">{tone === 'fail' ? '✕' : tone === 'warn' ? '…' : '✓'}</span><p>{result}</p></figcaption>
+</figure>

@@ -1,0 +1,14 @@
+---
+import MigrationBoard from './MigrationBoard.astro';
+import { rollout, badRollout } from './migration-model';
+---
+<div data-mig-rollout>
+  <div class="mig-rollout-controls" data-rollout-controls hidden>
+    <div class="mig-controls"><button type="button" data-rollout-next>Next: expand →</button><button type="button" data-rollout-back disabled>← Back</button><button type="button" data-rollout-reset>Reset</button><button type="button" data-rollout-bad>Try app first</button></div>
+    <ol class="mig-stage-strip" aria-label="Deployment stages">{rollout.map((frame, i) => <li data-rollout-stage aria-current={i === 0 ? 'step' : undefined}><span>{i + 1}</span>{frame.label}</li>)}</ol>
+  </div>
+  {rollout.map((frame, i) => <div class="mig-rollout-frame" data-rollout-frame={i}><MigrationBoard {...frame} showRevision label={`${i + 1}. ${frame.label}`} /></div>)}
+  <div class="mig-rollout-frame" data-rollout-failure><MigrationBoard {...badRollout} showRevision label="Wrong order: deploy the new application first" /></div>
+  <p class="mig-caption">The default stays in place during this rollout, so an old insert that omits currency still works after NOT NULL. Remove compatibility behavior only after its users are gone.</p>
+  <p class="mig-live" aria-live="polite" data-rollout-live></p>
+</div>

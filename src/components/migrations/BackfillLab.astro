@@ -1,0 +1,13 @@
+---
+import OrdersTable from './OrdersTable.astro';
+import { oldOrders } from './migration-model';
+---
+<div class="mig-backfill" data-mig-backfill>
+  <div class="mig-lab-toolbar"><div><span class="mig-eyebrow">HISTORICAL ORDERS · ALL USD</span><strong data-backfill-count>0 / 6 filled</strong></div><span class="mig-status" data-backfill-status>Ready for a batch</span></div>
+  <div class="mig-backfill-stage"><div class="mig-worker"><span class="mig-eyebrow">BACKFILL WORKER</span><strong>Find 2 empty rows</strong><span class="mig-worker-arrow" aria-hidden="true">↓</span><strong>Write USD · commit</strong><small>One transaction per batch</small></div><OrdersTable rows={oldOrders} schema="expanded" liveRows /></div>
+  <div class="mig-progress" role="progressbar" aria-label="Historical orders filled" aria-valuemin="0" aria-valuemax="6" aria-valuenow="0" data-backfill-progress><span style="width:0%"></span></div>
+  <div class="mig-controls" data-backfill-controls hidden><button type="button" data-backfill-run>Run a batch</button><button type="button" data-backfill-interrupt>Interrupt a batch</button><button type="button" data-backfill-pause>Pause</button><button type="button" data-backfill-resume hidden>Resume</button><button type="button" data-backfill-insert>Add a new order</button><button type="button" data-backfill-reset>Reset</button></div>
+  <p class="mig-caption" data-backfill-message>Six historical rows have no currency. A new insert that omits currency will get USD from the default.</p>
+  <noscript><p class="mig-caption">After one committed batch, orders 1042 and 1043 hold USD. If the next batch is interrupted before commit, 1044 and 1045 remain NULL. Restart from the remaining NULL rows. Previously committed values stay. A newly inserted order receives USD from the database default.</p></noscript>
+  <p class="mig-live" aria-live="polite" data-backfill-live></p>
+</div>

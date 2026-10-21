@@ -1,0 +1,83 @@
+import addCurrency from './examples/alembic/versions/002_currency.py?raw';
+import requiredCurrency from './examples/alembic/versions/003_required.py?raw';
+import backfillSql from './examples/backfill.sql?raw';
+import goReader from './examples/go/main.go?raw';
+export const sources = [
+  { label: 'Alembic · The migration environment and revisions', url: 'https://alembic.sqlalchemy.org/en/latest/tutorial.html' },
+  { label: 'Alembic · Autogenerate produces candidate migrations', url: 'https://alembic.sqlalchemy.org/en/latest/autogenerate.html' },
+  { label: 'PostgreSQL 18 · ALTER TABLE and defaults', url: 'https://www.postgresql.org/docs/18/sql-altertable.html' },
+  { label: 'Alembic · Data migration techniques', url: 'https://alembic.sqlalchemy.org/en/latest/cookbook.html#data-migrations-general-techniques' },
+  { label: 'PostgreSQL 18 · Lock modes and transactions', url: 'https://www.postgresql.org/docs/18/explicit-locking.html' },
+  { label: 'PostgreSQL 18 · Concurrent indexes', url: 'https://www.postgresql.org/docs/18/sql-createindex.html#SQL-CREATEINDEX-CONCURRENTLY' },
+  { label: 'Alembic · Revision branches and merge points', url: 'https://alembic.sqlalchemy.org/en/latest/branches.html' },
+  { label: 'Alembic · Upgrade, downgrade and stamp', url: 'https://alembic.sqlalchemy.org/en/latest/api/commands.html' },
+  { label: 'SQLAlchemy · PostgreSQL psycopg driver', url: 'https://docs.sqlalchemy.org/en/20/dialects/postgresql.html#module-sqlalchemy.dialects.postgresql.psycopg' },
+  { label: 'Go · pgx PostgreSQL driver', url: 'https://github.com/jackc/pgx' },
+  { label: 'Go · golang-migrate', url: 'https://github.com/golang-migrate/migrate' },
+  { label: 'Go · goose', url: 'https://pressly.github.io/goose/' },
+  { label: 'golang-migrate · Dirty state and locking', url: 'https://github.com/golang-migrate/migrate/blob/master/FAQ.md' },
+  { label: 'Go · database/sql', url: 'https://pkg.go.dev/database/sql' },
+];
+export type InspectCode = { title: string; text: string };
+export type MigrationStep = {
+  id: string; group: string; label: string; title: string; intro: string; takeaway: string;
+  explanation: string; caveat: string; codes: InspectCode[]; sources: number[]; hero?: boolean;
+};
+export const groups = ['One small change', 'Ship it safely', 'Go further'];
+export const steps: MigrationStep[] = [
+  { id: 'one-app-one-table', group: groups[0], label: 'An app & a table', title: 'Your app reads an order.',
+    intro: 'The application reads an amount in cents. Every order is understood to be USD.',
+    takeaway: 'The application reads data in a shape it already understands.',
+    explanation: 'The table definition is the schema. The row is data. They live in the database, separately from the application’s code. In this example the old reader selects named columns, so adding another column will not change its result shape.',
+    caveat: 'The diagrams follow one small example. Real tables can have more constraints, indexes and readers; those dependencies matter when you plan a change.',
+    codes: [{ title: 'Starting table', text: 'CREATE TABLE orders (\n    id integer PRIMARY KEY,\n    total_cents integer NOT NULL\n);\n\nINSERT INTO orders VALUES (1042, 6200);' }], sources: [2] },
+  { id: 'a-new-field', group: groups[0], label: 'A new field', title: 'New code expects a field that isn’t there.',
+    intro: 'The next version wants to read currency. Deploying that code does not add the column to the database.',
+    takeaway: 'Changing the application and changing the database are separate operations.',
+    explanation: 'The new query mentions currency, but the table still has only id and total_cents. PostgreSQL rejects the query before it can return a row. Even a fallback such as COALESCE(currency, \'USD\') needs the column to exist.',
+    caveat: 'Compatibility includes both reads and writes. Here we begin with a read failure; later we keep the old writer working during a rolling deployment.',
+    codes: [{ title: 'What the new code asks', text: 'SELECT id, total_cents, currency\nFROM orders\nWHERE id = 1042;\n\n-- ERROR: column "currency" does not exist' }], sources: [2] },
+  { id: 'change-the-table', group: groups[0], label: 'Change the table', title: 'Add the column before code needs it.',
+    intro: 'A migration is a recorded change to an existing database. This one gives orders a place to store currency.',
+    takeaway: 'A schema migration changes the existing table; the old data is still there.',
+    explanation: 'This change adds a nullable text column without a default. The existing row gets NULL, which means the currency value is missing. It does not yet say USD. The column is deliberately optional while we make the application and stored data ready.',
+    caveat: 'Adding a column is still a database operation that needs a lock. Its cost depends on the exact DDL and database engine; we inspect waiting in step seven.',
+    codes: [{ title: 'The schema change', text: 'ALTER TABLE orders\nADD COLUMN currency text;' }], sources: [2] },
+  { id: 'record-with-alembic', group: groups[1], label: 'Alembic', title: 'Keep the change beside your code.',
+    intro: 'Alembic stores the change in a revision file. A release job applies that revision to each database that needs it.',
+    takeaway: 'A reviewed revision makes the change repeatable across environments.',
+    explanation: 'The file contains upgrade() and downgrade(), with revision and down_revision connecting it to its parent. env.py supplies a database connection. The database’s alembic_version table records its current revision head or heads; it is not a full execution audit log. This example adds the nullable column, then sets a USD database default for later inserts.',
+    caveat: 'Autogenerate drafts candidate operations from SQLAlchemy metadata; review them. It does not design your backfill or deployment order, and it cannot reliably infer renames. Keep credentials in the release environment.',
+    codes: [{ title: 'Author, review, apply', text: 'alembic revision --autogenerate -m "add order currency"\n# Review and edit the generated revision.\nalembic upgrade head\nalembic current' }, { title: 'Reviewed revision · 002_currency.py', text: addCurrency }], sources: [0, 1, 6] },
+  { id: 'fill-existing-rows', group: groups[1], label: 'Fill existing rows', title: 'A default doesn’t fill the rows already there.',
+    intro: 'New orders get USD from the database default. Give the historical orders an explicit value with a backfill.', hero: true,
+    takeaway: 'Defaults handle future inserts; a backfill updates existing rows.',
+    explanation: 'All historical orders in this scenario were USD. A worker selects a small ordered batch of rows whose currency is NULL, updates them, then commits. Each batch is its own transaction. The next batch finds remaining work from the rows themselves, so a restart does not depend on an in-memory counter.',
+    caveat: 'An interrupted, uncommitted batch rolls back; earlier committed batches stay. This example uses one worker and never overwrites a populated currency. Production batches need a suitable access path and monitoring for load, WAL and replica lag.',
+    codes: [{ title: 'One batch · commit separately', text: backfillSql }], sources: [2, 3, 4] },
+  { id: 'deploy-in-order', group: groups[1], label: 'Deploy in order', title: 'Let old and new code overlap safely.',
+    intro: 'During a rolling deployment, both versions can reach the same table. Keep that overlap compatible.', hero: true,
+    takeaway: 'Expand first, deploy compatible code, backfill, then tighten the contract.',
+    explanation: 'Old readers select id and total_cents. Old writers omit currency, so the database default supplies USD. New readers temporarily fall back to USD for missing historical values; new writers explicitly send USD. Validate the data before enforcing NOT NULL. Run one designated migration job before the dependent application rollout; serialization is part of this release design.',
+    caveat: 'Do not enable non-USD orders while old readers still assume USD. After new currencies exist, rolling the application back to that old interpretation can be wrong even when every SQL query succeeds. NOT NULL still permits an omitted value when a database default supplies it.',
+    codes: [{ title: 'Compatible reader and writer', text: "SELECT id, total_cents, COALESCE(currency, 'USD')\nFROM orders;\n\nINSERT INTO orders (id, total_cents, currency)\nVALUES (1048, 7500, 'USD');" }, { title: 'After the backfill · 003_required.py', text: requiredCurrency }], sources: [0, 2, 3] },
+  { id: 'when-a-change-waits', group: groups[2], label: 'When it waits', title: 'A short change can wait behind a long transaction.',
+    intro: 'An application transaction is still using orders. The migration needs a conflicting table lock.', hero: true,
+    takeaway: 'A quick statement can still wait for a lock; bound the wait and inspect the blocker.',
+    explanation: 'In this example a SELECT holds an ACCESS SHARE lock until its transaction ends. ALTER TABLE ADD COLUMN needs ACCESS EXCLUSIVE and must wait. A conflicting queued DDL request can also make later queries wait behind it. Finish the transaction to let DDL proceed, or let lock_timeout cancel this attempt and retry later.',
+    caveat: 'These are PostgreSQL examples, not timing guarantees. A lock timeout does not kill the blocking transaction. CREATE INDEX CONCURRENTLY avoids blocking normal writes but still waits and takes locks; it cannot run inside a transaction block and a failure can leave an invalid index.',
+    codes: [{ title: 'Bound this DDL attempt', text: "BEGIN;\nSET LOCAL lock_timeout = '2s';\nALTER TABLE orders ADD COLUMN note text;\nCOMMIT;\n-- On timeout, roll back the failed transaction before retrying." }, { title: 'Inspect blockers', text: 'SELECT pid, state, wait_event_type, wait_event,\n       pg_blocking_pids(pid) AS blockers\nFROM pg_stat_activity\nWHERE datname = current_database();' }], sources: [2, 4, 5] },
+  { id: 'python-and-go', group: groups[2], label: 'Python & Go', title: 'The language changes. The database contract stays.',
+    intro: 'A Go service can read the same migrated table. It can use the Alembic release job too.',
+    takeaway: 'Choose one migration owner; application language and database driver are separate choices.',
+    explanation: 'Alembic manages revisions using SQLAlchemy; psycopg connects Python to PostgreSQL. Go can use pgx directly or database/sql with a compatible driver. For Go-native migration ownership, golang-migrate offers a CLI/library and SQL up/down files; goose supports SQL files or registered Go migration functions. Those are alternatives to the Alembic workflow shown here.',
+    caveat: 'The tools have different revision and failure models. Do not have multiple tools independently apply the same change. sqlc generates query code and an ORM maps application objects; neither role alone replaces reviewed migrations.',
+    codes: [{ title: 'Python packages', text: 'python -m pip install alembic sqlalchemy "psycopg[binary]"\n# Supply DATABASE_URL through the release environment.' }, { title: 'Go application · pgx/v5', text: goReader }, { title: 'Go-native migration alternatives', text: 'github.com/golang-migrate/migrate/v4\n  000002_currency.up.sql\n  000002_currency.down.sql\n\ngithub.com/pressly/goose/v3\n  SQL files with Up / Down annotations\n  or explicitly registered Go migration functions' }], sources: [0, 8, 9, 10, 11, 13] },
+  { id: 'recover-and-verify', group: groups[2], label: 'Recover & verify', title: 'Check what committed before deciding how to recover.',
+    intro: 'Rolling back application code does not rewind the database. Start with the state that actually exists.',
+    takeaway: 'Recover from observed schema and data state, then verify the application’s contract.',
+    explanation: 'A failed transactional PostgreSQL change can roll back. A committed migration needs a separate recovery decision: keep a compatible expanded schema, write a corrective migration, use a reviewed downgrade, or restore with an understood data-loss/reconciliation plan. Dropping currency after non-USD orders exist destroys meaning that old code cannot recover.',
+    caveat: 'Alembic stamp changes revision metadata without running migration operations. It does not repair a schema. golang-migrate has its own dirty flag and force workflow; those are not Alembic states. Inspect and repair actual state before changing metadata.',
+    codes: [{ title: 'Observe before acting', text: 'alembic current\nalembic heads\nalembic history\n\n# Then check the actual schema, data and application behavior.\n# A revision marker alone does not prove the contract is valid.' }], sources: [0, 7, 12] },
+];
+export const viewIds = steps.map(step => step.id);

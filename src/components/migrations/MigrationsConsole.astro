@@ -1,0 +1,76 @@
+---
+import TopicConsoleShell from '../TopicConsoleShell.astro';
+import MigrationBoard from './MigrationBoard.astro';
+import BackfillLab from './BackfillLab.astro';
+import RolloutLab from './RolloutLab.astro';
+import LockLab from './LockLab.astro';
+import Packages from './Packages.astro';
+import Recovery from './Recovery.astro';
+import { steps, groups, sources } from './migration-data';
+import { oldOrders } from './migration-model';
+interface Props { published: Date; reviewed?: Date }
+const { published, reviewed = published } = Astro.props;
+const date = (value: Date) => new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }).format(value);
+const pad = (value: number) => String(value).padStart(2, '0');
+const oneOrder = oldOrders.slice(0, 1);
+---
+<TopicConsoleShell consoleId="database-migrations" className="lsn-console migration-console" prefix="lsn" collectionHref="/devops-sre" collectionLabel="DevOps & SRE"
+  crumbs={[{ label: 'Library', href: '/' }, { label: 'DevOps & SRE', href: '/devops-sre' }, { label: 'Database migrations' }]}
+  kicker="DEVOPS & SRE / DATABASES" title="Database Migrations, One Change at a Time"
+  summary="Start with an app and a table. Add one field, then learn how to ship the change with Alembic, Python and Go."
+  formatLabel="DEEP DIVE" referenceLabel="POSTGRESQL · ALEMBIC · PYTHON · GO" dates={`Published ${date(published)} · Reviewed ${date(reviewed)}`}>
+  <nav slot="index" class="lsn-index" aria-label="View index">
+    <details class="lsn-index-menu" data-lsn-menu open>
+      <summary class="lsn-index-head"><span>VIEWS</span><strong data-lsn-count>01 / 09</strong></summary>
+      {groups.map((group, groupIndex) => <details class="lsn-index-group" data-lsn-group open={groupIndex === 0}>
+        <summary><span>{pad(groupIndex * 3 + 1)}–{pad(groupIndex * 3 + 3)}</span><strong>{group}</strong><i aria-hidden="true">⌄</i></summary>
+        <div>{steps.filter(step => step.group === group).map(step => <a href={`#${step.id}`} data-lsn-link aria-current={step === steps[0] ? 'step' : undefined}><span>{pad(steps.indexOf(step) + 1)}</span><strong>{step.label}</strong></a>)}</div>
+      </details>)}
+      <a class="lsn-index-sources" href="#database-migrations-sources">↗ Sources</a>
+    </details>
+  </nav>
+  <div slot="main" class="lsn-main">
+    <div class="lsn-toolbar"><div><span class="lsn-kicker">ONE PICTURE, ONE NEW IDEA</span><strong data-lsn-view-title>{steps[0].label}</strong></div><span class="mig-scenario">Orders service · PostgreSQL</span></div>
+    <div class="lsn-canvas">{steps.map((step, index) => <section class:list={['lsn-view', index === 0 && 'is-active']} id={step.id} data-lsn-view data-lsn-label={step.label} data-lsn-takeaway={step.takeaway} aria-labelledby={`${step.id}-title`}>
+      <div class="mig-view-layout">
+      <div class="mig-visual">
+      <header class="lsn-view-head"><span>{pad(index + 1)} / {step.group.toUpperCase()}</span><h2 id={`${step.id}-title`} tabindex="-1">{step.title}</h2><p>{step.intro}</p></header>
+      <div class="mig-view-content">
+        {index === 0 && <MigrationBoard schema="original" app="old" rows={oneOrder} result="Order 1042 · 6200 cents · understood to be USD" />}
+        {index === 1 && <MigrationBoard schema="original" app="new" rows={oneOrder} tone="fail" result={'Query failed: column "currency" does not exist.'} />}
+        {index === 2 && <><div class="mig-sql-change"><span>THE CHANGE</span><code>ALTER TABLE orders ADD COLUMN currency text;</code></div><MigrationBoard schema="expanded" app="old" rows={oneOrder} changed result="Same order, one extra field. NULL means currency has not been filled yet." /></>}
+        {index === 3 && <><div class="mig-revision-flow"><div><span class="mig-eyebrow">VERSIONED WITH YOUR CODE</span><code>versions/002_currency.py</code><small>upgrade() adds the column + default</small></div><div class="mig-revision-arrow"><code>alembic upgrade head</code><span aria-hidden="true">↓</span></div></div><MigrationBoard schema="expanded" app="old" rows={oneOrder} showRevision revision="002" result="Alembic applied revision 002. The database now has the column and a USD default for future inserts." /></>}
+        {index === 4 && <BackfillLab />}
+        {index === 5 && <RolloutLab />}
+        {index === 6 && <LockLab />}
+        {index === 7 && <Packages />}
+        {index === 8 && <Recovery />}
+      </div>
+      </div>
+      <aside class="mig-inspect" aria-labelledby={`${step.id}-explanation`}>
+        <h3 class="mig-inspect-heading" id={`${step.id}-explanation`}>Inside this step</h3>
+        <div><p>{step.explanation}</p>
+          {step.codes.map(code => <section class="mig-code"><h3>{code.title}</h3><pre tabindex="0"><code>{code.text}</code></pre></section>)}
+          {index === 3 && <section class="mig-extra"><h4>What if two branches create different heads?</h4><p>Inspect <code>alembic heads</code> and the revision graph. A merge revision joins the history, but conflicting operations still need review. <code>alembic_version</code> can represent multiple heads.</p></section>}
+          {index === 5 && <p class="mig-caveat">The compact final-constraint example runs in one migration transaction, which retains its locks until commit. For a large table, plan lock-sensitive phases separately; this short example is not an online-DDL recipe.</p>}
+          <p class="mig-caveat">{step.caveat}</p>
+          <div class="mig-step-sources">{step.sources.map(source => <a href={sources[source].url} target="_blank" rel="noopener noreferrer">{sources[source].label} ↗</a>)}</div>
+        </div>
+      </aside>
+      </div>
+      <p class="mig-nojs-point"><strong>Keep this idea:</strong> {step.takeaway}</p>
+    </section>)}</div>
+    <div class="lsn-timeline" data-lsn-timeline hidden><button type="button" data-lsn-prev aria-label="Previous view">←</button><div><span>NOW EXPLORING</span><strong data-lsn-progress>01 / {steps[0].label}</strong></div><button type="button" data-lsn-forward aria-label="Next view">→</button></div>
+    <p class="lsn-live" data-lsn-live aria-live="polite"></p>
+  </div>
+  <Fragment slot="bottom">
+    <div class="lsn-point"><span>THE IDEA TO KEEP</span><p data-lsn-point>{steps[0].takeaway}</p></div>
+    <details class="lsn-reference" id="database-migrations-sources" data-lsn-sources><summary><span>Sources, scope &amp; related visuals</span><i aria-hidden="true">↗</i></summary><div>
+      <p>PostgreSQL-specific behavior checked against PostgreSQL 18 documentation on 2026-10-21. The main walkthrough uses Alembic; Go-native tools are alternatives. Orders and row counts are teaching fixtures. Controls simulate changes locally and never connect to a database. This topic covers schema evolution and backfills, rather than moving databases between hosts.</p>
+      <ul>{sources.map(source => <li><a href={source.url} target="_blank" rel="noopener noreferrer">{source.label} ↗</a></li>)}</ul>
+      <p class="lsn-related"><span>RELATED VISUALS</span><a href="/testing">Tests Along the Delivery Pipeline ↗</a><a href="/git">Git: Snapshots and Moving Labels ↗</a><a href="/rds-backup-retention">RDS Backup Retention ↗</a></p>
+    </div></details>
+    <div class="lsn-sitefoot"><span>Infra, Illustrated. · Visual deep dives into cloud infrastructure.</span><a href="/visualizations">Browse all visuals ↗</a></div>
+  </Fragment>
+</TopicConsoleShell>
+<script>import { initMigrations } from './migration-client'; initMigrations();</script>
