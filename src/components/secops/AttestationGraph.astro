@@ -1,0 +1,76 @@
+---
+---
+
+<div class="secops-attest-board" data-secops-attest>
+  <div class="secops-attest-header">
+    <div>
+      <span class="secops-kicker">SUPPLY CHAIN INTEGRITY &amp; CRYPTOGRAPHIC PROVENANCE</span>
+      <h3>Build Once, Attest, and Keyless Cosign Flow</h3>
+    </div>
+    <span class="secops-tag">SLSA Level 3 · In-toto · Sigstore</span>
+  </div>
+
+  <div class="secops-attest-diagram">
+    <!-- Step 1: Git Commit -->
+    <div class="secops-attest-node is-git" data-node="git">
+      <div class="secops-attest-pill">SOURCE</div>
+      <div class="secops-attest-icon">🐙</div>
+      <h4>Git Commit</h4>
+      <code>sha: 7f2c8a1</code>
+      <small>repo: my-org/payment</small>
+    </div>
+
+    <div class="secops-attest-arrow" aria-hidden="true">
+      <span>BuildKit</span>
+      <strong>→</strong>
+    </div>
+
+    <!-- Step 2: Immutable Digest -->
+    <div class="secops-attest-node is-digest is-active" data-node="digest">
+      <div class="secops-attest-pill is-cyan">IMMUTABLE DIGEST</div>
+      <div class="secops-attest-icon">📦</div>
+      <h4>OCI Manifest</h4>
+      <code>sha256:d4e891b...</code>
+      <small>ECR: payment-gateway</small>
+    </div>
+
+    <div class="secops-attest-arrow" aria-hidden="true">
+      <span>Attest</span>
+      <strong>→</strong>
+    </div>
+
+    <!-- Step 3: SBOM & Provenance -->
+    <div class="secops-attest-node is-sbom" data-node="sbom">
+      <div class="secops-attest-pill is-purple">ATTESTATION</div>
+      <div class="secops-attest-icon">📜</div>
+      <h4>SBOM &amp; SLSA</h4>
+      <code>spdx+json / in-toto</code>
+      <small>packages &amp; builder env</small>
+    </div>
+
+    <div class="secops-attest-arrow" aria-hidden="true">
+      <span>OIDC</span>
+      <strong>→</strong>
+    </div>
+
+    <!-- Step 4: Sigstore Keyless -->
+    <div class="secops-attest-node is-sigstore" data-node="sigstore">
+      <div class="secops-attest-pill is-green">KEYLESS SIGNATURE</div>
+      <div class="secops-attest-icon">🔏</div>
+      <h4>Sigstore Fulcio + Rekor</h4>
+      <code>Cosign Signature</code>
+      <small>Transparency Log entry</small>
+    </div>
+  </div>
+
+  <div class="secops-attest-explainer">
+    <div class="secops-explainer-item">
+      <strong>1. Why Digest Pinning Matters:</strong>
+      <p>Tags such as <code>:latest</code> or <code>:v1.0</code> are mutable references. If an image tag is pushed, scanned, and re-pushed before deploy, the running container can be swapped. Referencing <code>@sha256:d4e891b...</code> binds execution to an exact mathematical hash.</p>
+    </div>
+    <div class="secops-explainer-item">
+      <strong>2. Keyless Cryptography (Sigstore):</strong>
+      <p>Instead of managing private signing keys on disk (which can be stolen or forgotten), GitHub Actions exchanges an OpenID Connect token with Fulcio. Fulcio issues an ephemeral 10-minute certificate containing the repo, branch, and run ID, logged into Rekor's public merkle tree.</p>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,1035 @@
+/* DevSecOps Pipeline Console Styles */
+
+.secops-console.lsn-console .lsn-console-grid {
+  grid-template-columns: 200px minmax(0, 1fr);
+}
+
+.secops-console .lsn-main {
+  display: block;
+}
+
+.secops-console .lsn-canvas {
+  container-type: inline-size;
+  container-name: secops-canvas;
+}
+
+.secops-console .lsn-index-head strong {
+  white-space: nowrap;
+}
+
+.secops-console .lsn-view {
+  padding: 24px 20px;
+}
+
+.secops-console .secops-view-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.48fr);
+  gap: 28px;
+  align-items: start;
+}
+
+.secops-console .secops-visual {
+  min-width: 0;
+}
+
+.secops-console .lsn-view-head h2 {
+  font-size: clamp(1.4rem, 2.6vw, 2.1rem);
+  margin: 8px 0 12px;
+}
+
+.secops-console .lsn-view-head p {
+  max-width: 72ch;
+  margin-bottom: 24px;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.secops-console .secops-scenario {
+  color: var(--cyan);
+  font: 0.75rem/1.5 var(--mono);
+  background: color-mix(in srgb, var(--cyan) 10%, transparent);
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid color-mix(in srgb, var(--cyan) 30%, transparent);
+}
+
+/* Pipeline Spine Rail */
+.secops-pipeline-spine {
+  margin-bottom: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 14px 16px;
+  overflow-x: auto;
+}
+
+.secops-rail {
+  display: flex;
+  align-items: center;
+  min-width: 680px;
+  gap: 6px;
+}
+
+.secops-stage-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  flex: 1;
+  position: relative;
+  padding: 6px 4px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.secops-stage-node.is-current {
+  background: color-mix(in srgb, var(--cyan) 12%, transparent);
+  outline: 1px solid var(--cyan);
+}
+
+.secops-node-num {
+  font: 0.65rem var(--mono);
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+
+.secops-node-bubble {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  display: grid;
+  place-items: center;
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+
+.secops-stage-node.is-current .secops-node-bubble {
+  border-color: var(--cyan);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--cyan) 30%, transparent);
+}
+
+.secops-node-label {
+  font: 500 0.72rem var(--sans);
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.secops-stage-node.is-current .secops-node-label {
+  color: var(--cyan);
+  font-weight: 600;
+}
+
+.secops-node-line {
+  position: absolute;
+  top: 22px;
+  right: -8px;
+  width: 14px;
+  height: 2px;
+  background: var(--border-strong);
+  z-index: 1;
+}
+
+/* Stage Diagnostic Canvas */
+.secops-stage-canvas {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.secops-canvas-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 18px;
+}
+
+.secops-canvas-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.secops-phase-badge {
+  font: 600 0.68rem var(--mono);
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+
+.badge-pr {
+  background: #1f3547;
+  color: var(--cyan);
+}
+.badge-ci {
+  background: #2a2238;
+  color: var(--purple);
+}
+.badge-staging {
+  background: #1f3027;
+  color: var(--green);
+}
+.badge-prod {
+  background: #3d2d10;
+  color: var(--amber);
+}
+
+.secops-actor-badge,
+.secops-tool-badge {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.secops-actor-badge strong {
+  color: var(--text);
+}
+
+.secops-tool-badge code {
+  color: var(--cyan);
+  font-size: 0.76rem;
+}
+
+.secops-gate-badge {
+  font: 600 0.7rem var(--mono);
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.secops-gate-badge.is-blocking {
+  background: color-mix(in srgb, var(--red) 15%, transparent);
+  color: var(--red);
+  border: 1px solid color-mix(in srgb, var(--red) 35%, transparent);
+}
+
+.secops-gate-badge.is-fallback {
+  background: color-mix(in srgb, var(--amber) 15%, transparent);
+  color: var(--amber);
+  border: 1px solid color-mix(in srgb, var(--amber) 35%, transparent);
+}
+
+.secops-sim-control .secops-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 6px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface-raised);
+  color: var(--text);
+  font: 500 0.78rem var(--sans);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.secops-sim-control .secops-toggle-btn:hover {
+  border-color: var(--amber);
+}
+
+.secops-sim-control .secops-toggle-btn[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--red) 15%, transparent);
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.secops-toggle-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: background 0.2s;
+}
+
+.secops-toggle-btn[aria-pressed="true"] .secops-toggle-dot {
+  background: var(--red);
+  box-shadow: 0 0 6px var(--red);
+}
+
+/* State Hero & Cards */
+.secops-state-view {
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.secops-state-hero {
+  padding: 18px 20px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-left: 4px solid var(--green);
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.secops-state-hero.is-fail-hero {
+  border-left-color: var(--red);
+  background: color-mix(in srgb, var(--red) 8%, var(--surface-raised));
+}
+
+.secops-state-badge {
+  display: inline-block;
+  font: 700 0.68rem var(--mono);
+  padding: 2px 7px;
+  border-radius: 3px;
+  margin-bottom: 8px;
+  letter-spacing: 0.05em;
+}
+
+.secops-state-badge.is-pass {
+  background: color-mix(in srgb, var(--green) 20%, transparent);
+  color: var(--green);
+}
+
+.secops-state-badge.is-danger {
+  background: color-mix(in srgb, var(--red) 25%, transparent);
+  color: var(--red);
+}
+
+.secops-state-hero h4 {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+  color: var(--text);
+}
+
+.secops-state-hero p {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.secops-metric-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.secops-metric-item {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  padding: 10px 14px;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.secops-metric-item span {
+  font: 0.7rem var(--mono);
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.secops-metric-item strong {
+  font: 600 0.85rem var(--mono);
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.secops-remedy-box {
+  padding: 14px 18px;
+  border: 1px dashed var(--amber);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--amber) 6%, transparent);
+  margin-top: 14px;
+}
+
+.secops-remedy-box strong {
+  display: block;
+  font: 700 0.72rem var(--mono);
+  color: var(--amber);
+  margin-bottom: 4px;
+}
+
+.secops-remedy-box p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+/* Attestation Graph Styles */
+.secops-attest-board {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 22px;
+  margin: 20px 0;
+}
+
+.secops-attest-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.secops-kicker {
+  font: 600 0.7rem var(--mono);
+  color: var(--cyan);
+  letter-spacing: 0.08em;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.secops-attest-header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.secops-tag {
+  font: 0.72rem var(--mono);
+  color: var(--muted);
+  background: var(--surface-raised);
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+.secops-attest-diagram {
+  display: grid;
+  grid-template-columns: minmax(130px, 1fr) auto minmax(140px, 1.2fr) auto minmax(130px, 1fr) auto minmax(140px, 1.2fr);
+  align-items: center;
+  gap: 10px;
+  padding: 20px 10px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.secops-attest-node {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 12px 10px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 120px;
+}
+
+.secops-attest-node.is-active {
+  border-color: var(--cyan);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--cyan) 25%, transparent);
+}
+
+.secops-attest-pill {
+  font: 700 0.6rem var(--mono);
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--border);
+  color: var(--muted);
+}
+
+.secops-attest-pill.is-cyan {
+  background: color-mix(in srgb, var(--cyan) 18%, transparent);
+  color: var(--cyan);
+}
+.secops-attest-pill.is-purple {
+  background: color-mix(in srgb, var(--purple) 18%, transparent);
+  color: var(--purple);
+}
+.secops-attest-pill.is-green {
+  background: color-mix(in srgb, var(--green) 18%, transparent);
+  color: var(--green);
+}
+
+.secops-attest-icon {
+  font-size: 1.5rem;
+}
+
+.secops-attest-node h4 {
+  margin: 2px 0 0;
+  font-size: 0.85rem;
+}
+
+.secops-attest-node code {
+  font-size: 0.72rem;
+  color: var(--cyan);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.secops-attest-node small {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.secops-attest-arrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--cyan);
+  gap: 2px;
+}
+
+.secops-attest-arrow span {
+  font: 0.65rem var(--mono);
+  color: var(--muted);
+}
+
+.secops-attest-arrow strong {
+  font-size: 1.2rem;
+}
+
+.secops-attest-explainer {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.secops-explainer-item {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  padding: 14px 16px;
+  border-radius: 6px;
+}
+
+.secops-explainer-item strong {
+  display: block;
+  font-size: 0.88rem;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.secops-explainer-item p {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+/* Canary Simulator Styles */
+.secops-canary-sim {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 22px;
+  margin: 20px 0;
+}
+
+.secops-canary-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.secops-canary-header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.secops-canary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.secops-btn {
+  min-height: 38px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface-raised);
+  color: var(--text);
+  font: 500 0.8rem var(--sans);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.secops-btn:hover {
+  border-color: var(--cyan);
+}
+
+.secops-btn.is-active {
+  background: color-mix(in srgb, var(--cyan) 18%, transparent);
+  border-color: var(--cyan);
+  color: var(--cyan);
+  font-weight: 600;
+}
+
+.secops-btn.is-danger-btn {
+  color: var(--amber);
+  border-color: color-mix(in srgb, var(--amber) 40%, transparent);
+}
+
+.secops-btn.is-danger-btn:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.secops-canary-canvas {
+  display: grid;
+  grid-template-columns: minmax(200px, 0.7fr) minmax(0, 1.3fr);
+  gap: 18px;
+  margin-bottom: 16px;
+}
+
+.secops-router-card {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  padding: 16px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.secops-router-card h4 {
+  margin: 6px 0 2px;
+  font-size: 0.95rem;
+}
+
+.secops-router-card p {
+  margin: 0 0 12px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.secops-traffic-display {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.secops-traffic-bar {
+  display: flex;
+  height: 24px;
+  border-radius: 4px;
+  overflow: hidden;
+  font: 600 0.72rem/24px var(--mono);
+  text-align: center;
+}
+
+.secops-bar-stable {
+  background: var(--cyan);
+  color: #0b1015;
+  transition: width 0.3s ease;
+}
+
+.secops-bar-canary {
+  background: var(--purple);
+  color: #fff;
+  transition: width 0.3s ease;
+}
+
+.secops-replicas-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.secops-replica-box {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.secops-replica-box.is-stable {
+  border-left: 3px solid var(--cyan);
+}
+
+.secops-replica-box.is-canary {
+  border-left: 3px solid var(--purple);
+}
+
+.secops-replica-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.secops-pod-count {
+  font: 600 0.72rem var(--mono);
+  color: var(--muted);
+}
+
+.secops-replica-box h5 {
+  margin: 0;
+  font: 0.8rem var(--mono);
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.secops-pod-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 28px;
+  align-items: center;
+}
+
+.pod-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--cyan);
+  display: inline-block;
+  transition: transform 0.2s;
+}
+
+.pod-dot.is-canary-dot {
+  background: var(--purple);
+}
+
+.secops-metric-note {
+  margin: auto 0 0;
+  font: 0.75rem var(--mono);
+  color: var(--muted);
+}
+
+.secops-metric-note strong {
+  color: var(--text);
+}
+
+.secops-canary-status {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.secops-status-badge {
+  font: 700 0.7rem var(--mono);
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.secops-status-badge.is-pass {
+  background: color-mix(in srgb, var(--green) 20%, transparent);
+  color: var(--green);
+}
+
+.secops-status-badge.is-danger {
+  background: color-mix(in srgb, var(--red) 20%, transparent);
+  color: var(--red);
+}
+
+.secops-canary-status p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* Security Matrix & Reference Tables */
+.secops-matrix-board {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.secops-section-head {
+  margin-bottom: 14px;
+}
+
+.secops-section-head h3 {
+  margin: 4px 0 6px;
+  font-size: 1.15rem;
+}
+
+.secops-section-head p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.secops-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.secops-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+  text-align: left;
+}
+
+.secops-data-table th {
+  background: var(--surface-raised);
+  color: var(--muted);
+  padding: 10px 14px;
+  font: 600 0.75rem var(--mono);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border-strong);
+  white-space: nowrap;
+}
+
+.secops-data-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.secops-data-table tr:last-child td {
+  border-bottom: none;
+}
+
+.secops-badge-muted {
+  font: 0.74rem var(--mono);
+  color: var(--muted);
+  background: var(--surface-raised);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.secops-badge-pass {
+  font: 600 0.75rem var(--mono);
+  color: var(--green);
+}
+.secops-badge-warn {
+  font: 600 0.75rem var(--mono);
+  color: var(--amber);
+}
+.secops-badge-info {
+  font: 0.75rem var(--mono);
+  color: var(--cyan);
+}
+
+/* Code Viewer */
+.secops-code-viewer {
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.secops-code-tabs {
+  display: flex;
+  background: var(--surface-raised);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.secops-code-tab {
+  min-height: 42px;
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font: 500 0.8rem var(--mono);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.secops-code-tab:hover {
+  color: var(--text);
+}
+
+.secops-code-tab.is-active {
+  color: var(--cyan);
+  border-bottom-color: var(--cyan);
+  background: color-mix(in srgb, var(--cyan) 6%, transparent);
+}
+
+.secops-code-panel {
+  display: none;
+}
+
+.secops-code-panel.is-active {
+  display: block;
+}
+
+.secops-code-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  font: 0.78rem var(--mono);
+  color: var(--muted);
+}
+
+.secops-copy-btn {
+  min-height: 30px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-raised);
+  color: var(--text);
+  font: 500 0.72rem var(--sans);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.secops-copy-btn:hover {
+  border-color: var(--cyan);
+}
+
+.secops-copy-btn.is-copied {
+  color: var(--green);
+  border-color: var(--green);
+}
+
+.secops-code-panel pre {
+  margin: 0;
+  padding: 16px;
+  overflow-x: auto;
+  font: 0.8rem/1.65 var(--mono);
+  color: var(--text);
+  background: var(--surface);
+  max-height: 480px;
+}
+
+/* Inspector Aside */
+.secops-inspect {
+  min-width: 0;
+  padding-left: 24px;
+  border-left: 1px solid var(--border-strong);
+}
+
+.secops-inspect-heading {
+  margin: 0 0 14px;
+  color: var(--cyan);
+  font: 600 0.74rem/1.6 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.secops-inspect p {
+  color: var(--muted);
+  font-size: 0.94rem;
+  line-height: 1.65;
+  margin-top: 0;
+}
+
+.secops-code-box {
+  margin: 18px 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.secops-code-box h4 {
+  margin: 0;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  font: 0.75rem var(--mono);
+  color: var(--muted);
+  background: var(--surface-raised);
+}
+
+.secops-code-box pre {
+  margin: 0;
+  padding: 14px;
+  white-space: pre-wrap;
+  font: 0.78rem/1.65 var(--mono);
+  color: var(--text);
+}
+
+.secops-caveat {
+  padding: 0 0 0 14px;
+  border-left: 2px solid var(--amber);
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.6;
+  margin: 16px 0;
+}
+
+.secops-step-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 18px;
+}
+
+.secops-step-sources a {
+  color: var(--cyan);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  text-decoration: none;
+}
+
+.secops-step-sources a:hover {
+  text-decoration: underline;
+}
+
+.secops-nojs-point {
+  color: var(--muted);
+  font-size: 0.94rem;
+  line-height: 1.6;
+  margin-top: 16px;
+}
+
+.secops-console.is-enhanced .secops-nojs-point {
+  display: none;
+}
+
+/* Responsive Rules */
+@media (max-width: 1100px) {
+  .secops-console .secops-view-layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .secops-inspect {
+    padding-left: 0;
+    border-left: none;
+    border-top: 1px solid var(--border-strong);
+    padding-top: 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  .secops-console.lsn-console .lsn-console-grid {
+    grid-template-columns: 1fr;
+  }
+  .secops-canary-canvas {
+    grid-template-columns: 1fr;
+  }
+  .secops-replicas-grid {
+    grid-template-columns: 1fr;
+  }
+  .secops-attest-diagram {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .secops-attest-arrow {
+    transform: rotate(90deg);
+  }
+}

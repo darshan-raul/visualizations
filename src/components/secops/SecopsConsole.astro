@@ -1,0 +1,231 @@
+---
+import TopicConsoleShell from '../TopicConsoleShell.astro';
+import PipelineStageBoard from './PipelineStageBoard.astro';
+import AttestationGraph from './AttestationGraph.astro';
+import CanaryRolloutSim from './CanaryRolloutSim.astro';
+import SecurityMatrix from './SecurityMatrix.astro';
+import { steps, groups, sources } from './secops-data';
+
+interface Props {
+  published: Date;
+  reviewed?: Date;
+}
+
+const { published, reviewed = published } = Astro.props;
+const date = (value: Date) =>
+  new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }).format(value);
+const pad = (value: number) => String(value).padStart(2, '0');
+---
+
+<TopicConsoleShell
+  consoleId="secopspipeline"
+  className="lsn-console secops-console"
+  prefix="lsn"
+  collectionHref="/devops-sre"
+  collectionLabel="DevOps & SRE"
+  crumbs={[
+    { label: 'Library', href: '/' },
+    { label: 'DevOps & SRE', href: '/devops-sre' },
+    { label: 'DevSecOps Pipeline' },
+  ]}
+  kicker="DEVOPS & SRE / SUPPLY CHAIN & CI/CD"
+  title="DevSecOps Pipeline: From PR to Production Rollout"
+  summary="Follow an application container from source code checks through immutable digest pinning, keyless Sigstore signing, staged verification, and canary rollback on AWS EKS."
+  formatLabel="FLOW EXPLORER"
+  referenceLabel="GITLEAKS · CODEQL · TRIVY · COSIGN · ARGO ROLLOUTS"
+  dates={`Published ${date(published)} · Reviewed ${date(reviewed)}`}
+>
+  <!-- Index Navigation -->
+  <nav slot="index" class="lsn-index" aria-label="View index">
+    <details class="lsn-index-menu" data-lsn-menu open>
+      <summary class="lsn-index-head">
+        <span>VIEWS</span>
+        <strong data-lsn-count>01 / 10</strong>
+      </summary>
+      {groups.map((group, groupIndex) => {
+        const groupSteps = steps.filter((step) => step.group === group);
+        return (
+          <details class="lsn-index-group" data-lsn-group open={groupIndex === 0}>
+            <summary>
+              <span>{pad(steps.indexOf(groupSteps[0]) + 1)}–{pad(steps.indexOf(groupSteps[groupSteps.length - 1]) + 1)}</span>
+              <strong>{group}</strong>
+              <i aria-hidden="true">⌄</i>
+            </summary>
+            <div>
+              {groupSteps.map((step) => (
+                <a
+                  href={`#${step.id}`}
+                  data-lsn-link
+                  aria-current={step === steps[0] ? 'step' : undefined}
+                >
+                  <span>{pad(steps.indexOf(step) + 1)}</span>
+                  <strong>{step.label}</strong>
+                </a>
+              ))}
+            </div>
+          </details>
+        );
+      })}
+      <a class="lsn-index-sources" href="#secopspipeline-sources">↗ Sources</a>
+    </details>
+  </nav>
+
+  <!-- Main Console -->
+  <div slot="main" class="lsn-main">
+    <div class="lsn-toolbar">
+      <div>
+        <span class="lsn-kicker">SUPPLY CHAIN &amp; RUNTIME GATES</span>
+        <strong data-lsn-view-title>{steps[0].label}</strong>
+      </div>
+      <span class="secops-scenario">payment-gateway · sha: 7f2c8a1 · Amazon EKS</span>
+    </div>
+
+    <div class="lsn-canvas">
+      {steps.map((step, index) => (
+        <section
+          class:list={['lsn-view', index === 0 && 'is-active']}
+          id={step.id}
+          data-lsn-view
+          data-lsn-label={step.label}
+          data-lsn-takeaway={step.takeaway}
+          aria-labelledby={`${step.id}-title`}
+        >
+          <div class="secops-view-layout">
+            <div class="secops-visual">
+              <header class="lsn-view-head">
+                <span>{pad(index + 1)} / {step.group.toUpperCase()}</span>
+                <h2 id={`${step.id}-title`} tabindex="-1">{step.title}</h2>
+                <p>{step.intro}</p>
+              </header>
+
+              <div class="secops-view-content">
+                {step.id === 'build-once' || step.id === 'attest-sign' ? (
+                  <>
+                    <AttestationGraph />
+                    <PipelineStageBoard
+                      activeStepId={step.id}
+                      stageName={step.label}
+                      phase={step.phase}
+                      actor={step.actor}
+                      tool={step.tool}
+                      blocksOnFailure={step.blocksOnFailure}
+                    />
+                  </>
+                ) : step.id === 'deploy-prod' || step.id === 'rollback-prod' ? (
+                  <>
+                    <CanaryRolloutSim />
+                    <PipelineStageBoard
+                      activeStepId={step.id}
+                      stageName={step.label}
+                      phase={step.phase}
+                      actor={step.actor}
+                      tool={step.tool}
+                      blocksOnFailure={step.blocksOnFailure}
+                    />
+                  </>
+                ) : step.id === 'security-matrix' ? (
+                  <SecurityMatrix codes={step.codes} />
+                ) : (
+                  <PipelineStageBoard
+                    activeStepId={step.id}
+                    stageName={step.label}
+                    phase={step.phase}
+                    actor={step.actor}
+                    tool={step.tool}
+                    blocksOnFailure={step.blocksOnFailure}
+                  />
+                )}
+              </div>
+            </div>
+
+            <!-- Context Inspector -->
+            <aside class="secops-inspect" aria-labelledby={`${step.id}-explanation`}>
+              <h3 class="secops-inspect-heading" id={`${step.id}-explanation`}>Inside this gate</h3>
+              <div>
+                <p>{step.explanation}</p>
+
+                {step.codes.map((code) => (
+                  <section class="secops-code-box">
+                    <h4>{code.title}</h4>
+                    <pre tabindex="0"><code>{code.text}</code></pre>
+                  </section>
+                ))}
+
+                <p class="secops-caveat">{step.caveat}</p>
+
+                <div class="secops-step-sources">
+                  {step.sources.map((srcIdx) => (
+                    <a href={sources[srcIdx].url} target="_blank" rel="noopener noreferrer">
+                      {sources[srcIdx].label} ↗
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </aside>
+          </div>
+
+          <p class="secops-nojs-point"><strong>Key Takeaway:</strong> {step.takeaway}</p>
+        </section>
+      ))}
+    </div>
+
+    <!-- Timeline Navigation -->
+    <div class="lsn-timeline" data-lsn-timeline hidden>
+      <button type="button" data-lsn-prev aria-label="Previous gate">←</button>
+      <div>
+        <span>GATE PROGRESSION</span>
+        <strong data-lsn-progress>01 / {steps[0].label}</strong>
+      </div>
+      <button type="button" data-lsn-forward aria-label="Next gate">→</button>
+    </div>
+
+    <p class="lsn-live" data-lsn-live aria-live="polite"></p>
+  </div>
+
+  <!-- Bottom Takeaway, Sources & Links -->
+  <Fragment slot="bottom">
+    <div class="lsn-point">
+      <span>THE IDEA TO KEEP</span>
+      <p data-lsn-point>{steps[0].takeaway}</p>
+    </div>
+
+    <details class="lsn-reference" id="secopspipeline-sources" data-lsn-sources>
+      <summary>
+        <span>Sources, verification scope &amp; related visuals</span>
+        <i aria-hidden="true">↗</i>
+      </summary>
+      <div>
+        <p>
+          Security controls and workflow configurations verified against GitHub Actions documentation, Sigstore Cosign v2+, Aqua Trivy v0.28+, and Argo Rollouts v1.7 on 2026-10-22.
+          This console demonstrates automated software supply chain verification, keyless OIDC authentication with AWS and Sigstore, container digest pinning, and progressive deployment with automatic health reversal.
+        </p>
+        <ul>
+          {sources.map((source) => (
+            <li>
+              <a href={source.url} target="_blank" rel="noopener noreferrer">
+                {source.label} ↗
+              </a>
+            </li>
+          ))}
+        </ul>
+        <p class="lsn-related">
+          <span>RELATED VISUALS</span>
+          <a href="/testing">Tests Along the Delivery Pipeline ↗</a>
+          <a href="/containers">Containers: Kernel Namespaces &amp; Layers ↗</a>
+          <a href="/aws-identity-credential-flows">AWS Identity &amp; Credential Flows ↗</a>
+          <a href="/git">Git: Snapshots &amp; Moving Labels ↗</a>
+        </p>
+      </div>
+    </details>
+
+    <div class="lsn-sitefoot">
+      <span>Infra, Illustrated. · Visual deep dives into cloud infrastructure.</span>
+      <a href="/visualizations">Browse all visuals ↗</a>
+    </div>
+  </Fragment>
+</TopicConsoleShell>
+
+<script>
+  import { initSecops } from './secops-client';
+  initSecops();
+</script>

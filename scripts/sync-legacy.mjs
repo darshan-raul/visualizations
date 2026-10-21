@@ -6,10 +6,14 @@ const legacyPages = [
   'github-actions-cheatsheet.html',
   'oauth2-explainer.html',
   'opentelemetry.html',
-  'secopspipeline.html',
 ];
 
-const migratedPages = ['rds-backup-retention.html', 'vpc-flow.html', 'k8s-networking.html'];
+const migratedPages = [
+  'rds-backup-retention.html',
+  'vpc-flow.html',
+  'k8s-networking.html',
+  'secopspipeline.html',
+];
 
 const root = process.cwd();
 const publicDirectory = join(root, 'public');

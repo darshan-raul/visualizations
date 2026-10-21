@@ -1,0 +1,38 @@
+---
+title: "DevSecOps Pipeline: From PR to Production Rollout"
+summary: "Follow an application container from source code checks through immutable digest pinning, keyless Sigstore signing, staged verification, and canary rollback on AWS EKS."
+slug: secopspipeline
+collection: devops-sre
+tags: [CI/CD, Security, Supply Chain, Kubernetes, AWS]
+technologies: [Gitleaks, CodeQL, Trivy, Cosign, Argo Rollouts, Helm]
+format: flow-explorer
+difficulty: intermediate
+published: 2026-04-24
+reviewed: 2026-10-22
+versionScope: "GitHub Actions runner v2.320+; Sigstore Cosign v2.4+ keyless OIDC; Aqua Trivy v0.28+; Argo Rollouts v1.7+; Amazon EKS v1.31."
+legacyPath: /secopspipeline
+featured: true
+state: reviewed
+related: [testing, containers, aws-identity-credential-flows, git]
+sources:
+  - label: "GitHub Docs: Security hardening for GitHub Actions"
+    url: https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/about-security-hardening-with-openid-connect
+  - label: "Sigstore Cosign: Keyless signatures with OIDC"
+    url: https://docs.sigstore.dev/cosign/signing/overview/
+  - label: "SLSA: Supply-chain Levels for Software Artifacts"
+    url: https://slsa.dev/spec/v1.0/about
+  - label: "Aqua Security: Trivy Container Vulnerability Scanner"
+    url: https://aquasecurity.github.io/trivy/latest/
+  - label: "OWASP ZAP: Baseline Scan Documentation"
+    url: https://www.zaproxy.org/docs/docker/baseline-scan/
+  - label: "Argo Rollouts: Canary Deployment & Automated Rollback"
+    url: https://argoproj.github.io/argo-rollouts/features/canary/
+  - label: "AWS Security: OIDC federation with IAM Identity Providers"
+    url: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html
+  - label: "GitHub dependency-review-action"
+    url: https://github.com/actions/dependency-review-action
+---
+
+import SecopsConsole from '../../components/secops/SecopsConsole.astro';
+
+<SecopsConsole published={props.published} reviewed={props.reviewed} />

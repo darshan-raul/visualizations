@@ -1,0 +1,74 @@
+---
+---
+
+<div class="secops-canary-sim" data-secops-canary>
+  <div class="secops-canary-header">
+    <div>
+      <span class="secops-kicker">PROGRESSIVE DELIVERY &amp; BLAST RADIUS REDUCTION</span>
+      <h3>Argo Rollouts Canary Simulation</h3>
+    </div>
+    <div class="secops-canary-actions">
+      <button type="button" class="secops-btn is-active" data-canary-step="10">10% Canary</button>
+      <button type="button" class="secops-btn" data-canary-step="50">50% Canary</button>
+      <button type="button" class="secops-btn" data-canary-step="100">100% Promoted</button>
+      <button type="button" class="secops-btn is-danger-btn" data-canary-step="rollback">Simulate Spike &amp; Undo</button>
+    </div>
+  </div>
+
+  <div class="secops-canary-canvas">
+    <!-- Traffic Router / Ingress -->
+    <div class="secops-router-card">
+      <span class="secops-pill">INGRESS / ROUTER</span>
+      <h4>Service Router</h4>
+      <p>Splitting production user requests</p>
+      <div class="secops-traffic-display">
+        <div class="secops-traffic-bar">
+          <div class="secops-bar-stable" data-bar-stable style="width: 90%;">90% Stable</div>
+          <div class="secops-bar-canary" data-bar-canary style="width: 10%;">10% Canary</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ReplicaSet Lanes -->
+    <div class="secops-replicas-grid">
+      <!-- Stable ReplicaSet -->
+      <div class="secops-replica-box is-stable" data-box-stable>
+        <div class="secops-replica-head">
+          <span class="secops-pill is-cyan">STABLE REPLICASET</span>
+          <span class="secops-pod-count" data-stable-count>9 Pods Active</span>
+        </div>
+        <h5>v2.14.0 (sha256:8a12bc...)</h5>
+        <div class="secops-pod-dots" data-stable-dots>
+          <span class="pod-dot active"></span>
+          <span class="pod-dot active"></span>
+          <span class="pod-dot active"></span>
+          <span class="pod-dot active"></span>
+          <span class="pod-dot active"></span>
+          <span class="pod-dot active"></span>
+          <span class="pod-dot active"></span>
+          <span class="pod-dot active"></span>
+          <span class="pod-dot active"></span>
+        </div>
+        <p class="secops-metric-note">p99 Latency: <strong>48ms</strong> · HTTP 5xx: <strong>0.01%</strong></p>
+      </div>
+
+      <!-- Canary ReplicaSet -->
+      <div class="secops-replica-box is-canary" data-box-canary>
+        <div class="secops-replica-head">
+          <span class="secops-pill is-purple">CANARY REPLICASET</span>
+          <span class="secops-pod-count" data-canary-count>1 Pod Active</span>
+        </div>
+        <h5>v2.15.0 (sha256:d4e891b...)</h5>
+        <div class="secops-pod-dots" data-canary-dots>
+          <span class="pod-dot is-canary-dot"></span>
+        </div>
+        <p class="secops-metric-note" data-canary-metric>p99 Latency: <strong>49ms</strong> · Analysis: <strong>Healthy (1/5)</strong></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="secops-canary-status" data-canary-status>
+    <div class="secops-status-badge is-pass" data-status-badge>CANARY ACTIVE: STEP 1/3 (10% WEIGHT)</div>
+    <p data-status-desc>Argo Rollouts is routing 10% of production traffic to the new container digest. Prometheus AnalysisTemplate is validating error thresholds for 10 minutes.</p>
+  </div>
+</div>

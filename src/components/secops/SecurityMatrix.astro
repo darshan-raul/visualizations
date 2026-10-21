@@ -1,0 +1,128 @@
+---
+import { securityControls, iamRoles } from './secops-data';
+
+interface Props {
+  codes: { title: string; language: string; text: string }[];
+}
+
+const { codes } = Astro.props;
+---
+
+<div class="secops-matrix-board" data-secops-matrix>
+  <!-- Controls Table -->
+  <section class="secops-table-section">
+    <div class="secops-section-head">
+      <span class="secops-kicker">DEFENSE IN DEPTH</span>
+      <h3>Security Controls &amp; Enforcement Matrix</h3>
+      <p>Every security tool mapped to its pipeline stage, blocking policy, and generated evidence artifact.</p>
+    </div>
+
+    <div class="secops-table-wrap" tabindex="0" role="region" aria-label="Security controls table">
+      <table class="secops-data-table">
+        <thead>
+          <tr>
+            <th scope="col">Control</th>
+            <th scope="col">Tool / Scanner</th>
+            <th scope="col">Pipeline Stage</th>
+            <th scope="col">Blocks?</th>
+            <th scope="col">Evidence Artifact</th>
+          </tr>
+        </thead>
+        <tbody>
+          {securityControls.map(c => (
+            <tr>
+              <td><strong>{c.control}</strong></td>
+              <td><code>{c.tool}</code></td>
+              <td><span class="secops-badge-muted">{c.stage}</span></td>
+              <td>
+                {c.blocks.includes('Yes') ? (
+                  <span class="secops-badge-pass">✅ {c.blocks}</span>
+                ) : c.blocks.includes('Auto') ? (
+                  <span class="secops-badge-warn">↩️ {c.blocks}</span>
+                ) : (
+                  <span class="secops-badge-info">ℹ️ {c.blocks}</span>
+                )}
+              </td>
+              <td><small>{c.output}</small></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- IAM & OIDC Configuration -->
+  <section class="secops-table-section">
+    <div class="secops-section-head">
+      <span class="secops-kicker">LEAST PRIVILEGE CLOUD IDENTITY</span>
+      <h3>AWS IAM Roles &amp; GitHub Actions OIDC Federation</h3>
+      <p>No static AWS access keys are stored in GitHub secrets. Runners exchange ephemeral OpenID Connect tokens for temporary STS credentials scoped strictly per job.</p>
+    </div>
+
+    <div class="secops-table-wrap" tabindex="0" role="region" aria-label="IAM Roles table">
+      <table class="secops-data-table">
+        <thead>
+          <tr>
+            <th scope="col">Role Name</th>
+            <th scope="col">Used In Jobs</th>
+            <th scope="col">Least-Privilege Policy Scope</th>
+          </tr>
+        </thead>
+        <tbody>
+          {iamRoles.map(r => (
+            <tr>
+              <td><code>{r.role}</code></td>
+              <td><span class="secops-badge-muted">{r.jobs}</span></td>
+              <td><code>{r.scope}</code></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- YAML Code Viewer -->
+  <section class="secops-code-section" id="yaml-source">
+    <div class="secops-section-head">
+      <span class="secops-kicker">PRODUCTION ARTIFACTS</span>
+      <h3>Verified GitHub Actions &amp; IAM Configurations</h3>
+      <p>Copy and adapt these verified definitions. Global permissions are eliminated; OIDC identity verification is strictly enforced.</p>
+    </div>
+
+    <div class="secops-code-viewer" data-code-viewer>
+      <div class="secops-code-tabs" role="tablist" aria-label="Configuration files">
+        {codes.map((c, idx) => (
+          <button
+            type="button"
+            role="tab"
+            class:list={['secops-code-tab', idx === 0 && 'is-active']}
+            data-tab-target={`code-tab-${idx}`}
+            aria-selected={idx === 0 ? 'true' : 'false'}
+            aria-controls={`code-panel-${idx}`}
+            id={`code-tab-${idx}`}
+          >
+            {c.title.split(' ')[0]}
+          </button>
+        ))}
+      </div>
+
+      {codes.map((c, idx) => (
+        <div
+          class:list={['secops-code-panel', idx === 0 && 'is-active']}
+          id={`code-panel-${idx}`}
+          role="tabpanel"
+          aria-labelledby={`code-tab-${idx}`}
+          hidden={idx !== 0}
+        >
+          <div class="secops-code-header">
+            <span>{c.title}</span>
+            <button type="button" class="secops-copy-btn" data-copy-btn aria-label={`Copy ${c.title}`}>
+              Copy Snippet
+            </button>
+          </div>
+          <pre tabindex="0"><code>{c.text}</code></pre>
+        </div>
+      ))}
+    </div>
+  </section>
+</div>

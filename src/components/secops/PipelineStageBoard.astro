@@ -1,0 +1,156 @@
+---
+interface Props {
+  activeStepId: string;
+  stageName: string;
+  phase: string;
+  actor: string;
+  tool: string;
+  blocksOnFailure: boolean;
+}
+
+const { activeStepId, stageName, phase, actor, tool, blocksOnFailure } = Astro.props;
+
+const stages = [
+  { id: 'dep-review', num: '01', label: 'PR Review', icon: '🔍', phase: 'pr' },
+  { id: 'code-quality', num: '02', label: 'SAST & Secrets', icon: '🔒', phase: 'ci' },
+  { id: 'build-once', num: '03', label: 'Build Once', icon: '🏗️', phase: 'ci' },
+  { id: 'attest-sign', num: '04', label: 'Scan & Sign', icon: '🛡️', phase: 'ci' },
+  { id: 'deploy-staging', num: '05', label: 'Staging EKS', icon: '🚀', phase: 'staging' },
+  { id: 'dast-staging', num: '06', label: 'DAST Scan', icon: '🕷️', phase: 'staging' },
+  { id: 'promote-gate', num: '07', label: 'Manual Gate', icon: '⏸️', phase: 'staging' },
+  { id: 'deploy-prod', num: '08', label: 'Prod Canary', icon: '🎯', phase: 'prod' },
+  { id: 'rollback-prod', num: '09', label: 'Auto Rollback', icon: '↩️', phase: 'prod' },
+];
+
+const failures: Record<string, { title: string; detail: string; remedy: string }> = {
+  'dep-review': {
+    title: 'PR Blocked: High Vulnerability in package.json',
+    detail: 'Introduced express-fileupload@1.1.7 has CVE-2020-7699 (High). dependency-review-action returns exit code 1.',
+    remedy: 'Branch protection stops merge. Developer must bump to patched version 1.1.10 in the PR branch before merging.',
+  },
+  'code-quality': {
+    title: 'Commit Blocked: Leaked Secret Detected',
+    detail: 'Gitleaks found rule "aws-access-token" matched in payment_processor.go line 42 (commit 7f2c8a1).',
+    remedy: 'Rotate AWS credentials immediately. Rewrite local git history with git-filter-repo before re-pushing.',
+  },
+  'build-once': {
+    title: 'Build Failure: Multi-stage Dockerfile Cache Miss',
+    detail: 'Go compilation failed with missing sum in go.sum. BuildKit stops without producing an image manifest.',
+    remedy: 'Run go mod tidy locally and verify reproducible dependencies before committing.',
+  },
+  'attest-sign': {
+    title: 'Gate Tripped: Trivy Detected Critical CVE in Base OS',
+    detail: 'Found CVE-2024-1086 (Critical) in libssl3. Trivy exited 1 with --severity CRITICAL,HIGH --exit-code 1.',
+    remedy: 'Image is quarantined in ECR and NEVER signed with Cosign. Rebase onto updated distroless base image.',
+  },
+  'deploy-staging': {
+    title: 'Cluster Rejection: Cryptographic Signature Verification Failed',
+    detail: 'cosign verify failed: certificate identity does not match expected repository "my-org/payment-gateway".',
+    remedy: 'Deployment halts immediately. Cluster never pulls or schedules the untrusted container image.',
+  },
+  'dast-staging': {
+    title: 'Staging Gate Failed: Missing CORS & Security Headers',
+    detail: 'OWASP ZAP baseline scan reported Access-Control-Allow-Origin: * on authenticated /checkout API endpoint.',
+    remedy: 'Automatic promotion is blocked. Platform engineer fixes NGINX Ingress annotations on staging.',
+  },
+  'promote-gate': {
+    title: 'Promotion Rejected: Security Lead Declined Release',
+    detail: 'Manual approval window timed out or reviewer flagged pending audit compliance signoff.',
+    remedy: 'Pipeline execution halts cleanly without touching production infrastructure or causing downtime.',
+  },
+  'deploy-prod': {
+    title: 'Production Canary Spike: 5xx Error Rate > 1.5%',
+    detail: 'Prometheus AnalysisTemplate detected HTTP 500 error spike during 10% canary traffic shift.',
+    remedy: 'Argo Rollouts marks rollout degraded and triggers immediate failure event to rollback-prod.',
+  },
+  'rollback-prod': {
+    title: 'Emergency Undo Executed in 1.4 seconds',
+    detail: 'kubectl argo rollouts undo reverted 100% of production traffic to previous stable ReplicaSet.',
+    remedy: 'Zero user downtime sustained. Post-mortem diagnostics saved to GitHub Actions Step Summary.',
+  },
+};
+
+const currentFailure = failures[activeStepId] || failures['dep-review'];
+---
+
+<div class="secops-board" data-secops-board data-step={activeStepId}>
+  <!-- Pipeline Spine -->
+  <div class="secops-pipeline-spine" role="region" aria-label="Pipeline Stages Overview">
+    <div class="secops-rail">
+      {stages.map((s, idx) => {
+        const isCurrent = s.id === activeStepId;
+        return (
+          <div class:list={['secops-stage-node', `phase-${s.phase}`, isCurrent && 'is-current']} data-stage-id={s.id}>
+            <div class="secops-node-num">{s.num}</div>
+            <div class="secops-node-bubble" aria-hidden="true">{s.icon}</div>
+            <div class="secops-node-label">{s.label}</div>
+            {idx < stages.length - 1 && <div class="secops-node-line" aria-hidden="true"></div>}
+          </div>
+        );
+      })}
+    </div>
+  </div>
+
+  <!-- Stage Diagnostic Canvas -->
+  <div class="secops-stage-canvas">
+    <div class="secops-canvas-header">
+      <div class="secops-canvas-tags">
+        <span class:list={['secops-phase-badge', `badge-${phase}`]}>{phase.toUpperCase()} PHASE</span>
+        <span class="secops-actor-badge">ACTOR: <strong>{actor}</strong></span>
+        <span class="secops-tool-badge">TOOL: <code>{tool}</code></span>
+        {blocksOnFailure ? (
+          <span class="secops-gate-badge is-blocking">⛔ BLOCKS ON FAILURE</span>
+        ) : (
+          <span class="secops-gate-badge is-fallback">↩️ AUTO-RECOVERY</span>
+        )}
+      </div>
+
+      <div class="secops-sim-control">
+        <button type="button" class="secops-toggle-btn" data-secops-fail-toggle aria-pressed="false">
+          <span class="secops-toggle-dot" aria-hidden="true"></span>
+          <span class="secops-toggle-text">Simulate Gate Failure</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Normal State Card -->
+    <div class="secops-state-view is-normal" data-secops-normal-view>
+      <div class="secops-state-hero">
+        <div class="secops-state-badge is-pass">✓ PASSING STATE</div>
+        <h4>Normal Execution · Stage Active</h4>
+        <p>Microservice <code>payment-gateway</code> (SHA <code>7f2c8a1</code>) satisfies all security criteria for <strong>{stageName}</strong>.</p>
+      </div>
+      <div class="secops-metric-strip">
+        <div class="secops-metric-item">
+          <span>Target Artifact</span>
+          <strong>sha256:d4e891b...</strong>
+        </div>
+        <div class="secops-metric-item">
+          <span>OIDC Authority</span>
+          <strong>GitHub Actions (token.actions)</strong>
+        </div>
+        <div class="secops-metric-item">
+          <span>Exit Condition</span>
+          <strong>Exit Code 0 (Success)</strong>
+        </div>
+        <div class="secops-metric-item">
+          <span>Next Gate</span>
+          <strong>Automated Progression →</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Failure Simulation Card -->
+    <div class="secops-state-view is-fail" data-secops-fail-view hidden>
+      <div class="secops-state-hero is-fail-hero">
+        <div class="secops-state-badge is-danger">✕ GATE TRIGGERED (SIMULATION)</div>
+        <h4>{currentFailure.title}</h4>
+        <p class="secops-fail-detail">{currentFailure.detail}</p>
+      </div>
+      <div class="secops-remedy-box">
+        <strong>OPERATIONAL ACTION / REMEDY:</strong>
+        <p>{currentFailure.remedy}</p>
+      </div>
+    </div>
+  </div>
+</div>
